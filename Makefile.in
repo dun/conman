@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Makefile.in,v 1.51 2002/09/17 22:48:04 dun Exp $
+# $Id: Makefile.in,v 1.52 2002/09/17 22:48:56 dun Exp $
 ##
 
 PROJECT=	conman
@@ -97,8 +97,9 @@ realclean: clean
 	-rm -f *.tgz* *.rpm
 
 distclean: realclean
-	-rm -f autom4te.cache config.cache config.log config.status Makefile.bak
+	-rm -f config.cache config.log config.status Makefile.bak
 	-rm -f $(AC_OUTPUT)
+	-rm -rf autom4te.cache
 
 depend:
 	-makedepend -Y -- $(COPTS) -- *.[ch] 2>/dev/null
