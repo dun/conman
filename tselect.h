@@ -1,11 +1,14 @@
 /******************************************************************************\
- *  $Id: tselect.h,v 1.2 2001/09/25 20:48:35 dun Exp $
+ *  $Id: tselect.h,v 1.3 2001/09/25 22:58:42 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
 
 #ifndef _TSELECT_H
 #define _TSELECT_H
+
+
+#include <sys/time.h>
 
 
 /***********\
@@ -45,8 +48,18 @@ int tselect(int maxfdp1, fd_set *rset, fd_set *wset, fd_set *xset);
 
 int timeout(CallBackF callback, void *arg, int ms);
 /*
- *  Sets a timer event for tselect() specifying how long the timer
- *    should run and what action should be taken when it expires.
+ *  Sets a timer event for tselect() specifying how long (in milliseconds)
+ *    the timer should run before it expires.  At expiration, the callback
+ *    function will be invoked with the specified arg.
+ *  Returns a timer ID > 0 for use with untimeout(),
+ *    or -1 on memory allocation failure.
+ */
+
+int abtimeout(CallBackF callback, void *arg, const struct timeval *tvp);
+/*
+ *  Sets an "absolute" timer event for tselect() specifying when the timer
+ *    should expire.  At expiration, the callback function will be invoked
+ *    with the specified arg.
  *  Returns a timer ID > 0 for use with untimeout(),
  *    or -1 on memory allocation failure.
  */

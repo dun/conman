@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: tselect.c,v 1.2 2001/09/25 20:48:35 dun Exp $
+ *  $Id: tselect.c,v 1.3 2001/09/25 22:58:42 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ****************************************************************************** 
  *  Based on the implementation in Jon C. Snader's
@@ -13,6 +13,7 @@
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
+#include <assert.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -104,7 +105,7 @@ int tselect(int maxfdp1, fd_set *rset, fd_set *wset, fd_set *xset)
          */
         while (active && !timercmp(&tvNow, &active->tv, <)) {
             DPRINTF("TSELECT: dispatching timer %d for f:%p a:%p.\n",
-                active->id, active->fnc, active->arg); /* narf */
+                active->id, active->fnc, active->arg); /* xyzzy */
             t = active;
             active = active->next;
             t->next = inactive;
@@ -180,28 +181,44 @@ int tselect(int maxfdp1, fd_set *rset, fd_set *wset, fd_set *xset)
 
 int timeout(CallBackF callback, void *arg, int ms)
 {
+    struct timeval tv;
+
+    assert(callback);
+    assert(ms >= 0);
+
+    if (gettimeofday(&tv, NULL) < 0) {
+        perror("ERROR: gettimeofday() failed");
+        exit(1);
+    }
+    tv.tv_usec += ms * 1000;
+    if (tv.tv_usec >= 1000000) {
+        tv.tv_sec += tv.tv_usec / 1000000;
+        tv.tv_usec %= 1000000;
+    }
+    return(abtimeout(callback, arg, &tv));
+}
+
+
+int abtimeout(CallBackF callback, void *arg, const struct timeval *tvp)
+{
     static int id = 1;
     Timer t;
     Timer tCurr;
     Timer *tPrevPtr;
 
+    assert(callback);
+    assert(tvp);
+
     if (!(t = alloc_timer()))
         return(-1);
+
     t->id = id++;
     if (id <= 0)
         id = 1;
 
     t->fnc = callback;
     t->arg = arg;
-    if (gettimeofday(&t->tv, NULL) < 0) {
-        perror("ERROR: gettimeofday() failed");
-        exit(1);
-    }
-    t->tv.tv_usec += ms * 1000;
-    if (t->tv.tv_usec >= 1000000) {
-        t->tv.tv_sec += t->tv.tv_usec / 1000000;
-        t->tv.tv_usec %= 1000000;
-    }
+    t->tv = *tvp;
 
     tPrevPtr = &active;
     tCurr = active;
@@ -212,8 +229,8 @@ int timeout(CallBackF callback, void *arg, int ms)
     *tPrevPtr = t;
     t->next = tCurr;
 
-    DPRINTF("TSELECT: started timer %d for f:%p a:%p in %d secs.\n",
-        t->id, callback, arg, ms/1000); /* narf */
+    DPRINTF("TSELECT: started timer %d for f:%p a:%p in %ld secs.\n",
+        t->id, callback, arg, (tvp->tv_sec - time(NULL))); /* xyzzy */
     return(t->id);
 }
 
@@ -225,6 +242,7 @@ void untimeout(int timerid)
 
     if (timerid <= 0)
         return;
+
     tPrevPtr = &active;
     tCurr = active;
     while (tCurr && timerid != tCurr->id) {
@@ -232,13 +250,13 @@ void untimeout(int timerid)
         tCurr = tCurr->next;
     }
 
-    if (!tCurr)
+    if (!tCurr)				/* timer id not active */
         return;
     *tPrevPtr = tCurr->next;
     tCurr->next = inactive;
     inactive = tCurr;
 
-    DPRINTF("TSELECT: canceled timer %d.\n", timerid); /* narf */
+    DPRINTF("TSELECT: canceled timer %d.\n", timerid); /* xyzzy */
     return;
 }
 
