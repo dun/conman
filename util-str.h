@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-str.h,v 1.2 2001/09/13 20:36:31 dun Exp $
+ *  $Id: util-str.h,v 1.3 2001/10/08 04:02:37 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -44,7 +44,8 @@ size_t append_format_string(char *dst, size_t size, const char *fmt, ...);
  *    or -1 if truncation occurred.
  */
 
-int substitute_string(char *dst, size_t dstlen, char *src, char c, char *sub);
+int substitute_string(char *dst, size_t dstlen, const char *src,
+    char c, char *sub);
 /*
  *  Copies the (src) string into the (dst) buffer of size (dstlen),
  *    substituting all occurrences of char (c) with the string (sub).

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.33 2001/09/27 01:26:00 dun Exp $
+ *  $Id: server.h,v 1.34 2001/10/08 04:02:37 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -97,6 +97,7 @@ typedef struct base_obj {		/* BASE OBJ:                          */
     enum obj_type    type:2;		/*  type of auxiliary obj             */
     unsigned         gotBufWrap:1;	/*  true if circular-buf has wrapped  */
     unsigned         gotEOF:1;		/*  true if obj rcvd EOF on last read */
+    unsigned         gotReset:1;	/*  true if resetting a console obj   */
     aux_obj_t        aux;		/*  auxiliary obj data union          */
 } obj_t;
 
@@ -105,6 +106,7 @@ typedef struct server_conf {
     char            *logDirName;	/* dir prefix for relative logfiles   */
     char            *logFileName;	/* file to which events are logged    */
     char            *pidFileName;	/* file to which pid is written       */
+    char            *resetCmd;		/* cmd to invoke for reset esc-seq    */
     int              tsInterval;	/* minutes between logfile timestamps */
     int              fd;		/* configuration file descriptor      */
     int              port;		/* port number on which to listen     */
@@ -182,6 +184,8 @@ void link_objs(obj_t *src, obj_t *dst);
 void unlink_objs(obj_t *obj1, obj_t *obj2);
 
 void shutdown_obj(obj_t *obj);
+
+void notify_objs(List list1, List list2, char *msg);
 
 int read_from_obj(obj_t *obj, fd_set *pWriteSet);
 

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-esc.c,v 1.14 2001/09/25 20:48:51 dun Exp $
+ *  $Id: server-esc.c,v 1.15 2001/10/08 04:02:37 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -14,18 +14,21 @@
 #include <arpa/telnet.h>
 #include <assert.h>
 #include <errno.h>
+#include <stdlib.h>
 #include <string.h>
 #include "common.h"
 #include "errors.h"
 #include "list.h"
 #include "server.h"
 #include "util.h"
+#include "util-str.h"
 #include "wrapper.h"
 
 
 static void perform_serial_break(obj_t *client);
 static void perform_log_replay(obj_t *client);
 static void perform_quiet_toggle(obj_t *client);
+static void perform_reset(obj_t *client);
 static void perform_suspend(obj_t *client);
 static int process_telnet_cmd(obj_t *telnet, int cmd, int opt);
 
@@ -62,6 +65,9 @@ int process_client_escapes(obj_t *client, void *src, int len)
                 break;
             case ESC_CHAR_QUIET:
                 perform_quiet_toggle(client);
+                break;
+            case ESC_CHAR_RESET:
+                perform_reset(client);
                 break;
             case ESC_CHAR_SUSPEND:
                 perform_suspend(client);
@@ -226,11 +232,46 @@ static void perform_quiet_toggle(obj_t *client)
 /*  Toggles whether informational messages are suppressed by the client.
  */
     assert(is_client_obj(client));
-    x_pthread_mutex_lock(&client->bufLock);
-    client->aux.client.req->enableQuiet ^= 1;
-    x_pthread_mutex_unlock(&client->bufLock);
 
+    client->aux.client.req->enableQuiet ^= 1;
     DPRINTF("Toggled quiet-mode for client [%s].\n", client->name);
+    return;
+}
+
+
+static void perform_reset(obj_t *client)
+{
+/*  Resets all consoles for which this client has write-access.
+ *
+ *  Actually, this routine cannot perform the reset command because
+ *    the command string is stored within the server_conf struct.
+ *    Therefore, this routine sets a reset flag for each affected
+ *    console.  And mux_io() will do the dirty deed when we return.
+ */
+    ListIterator i;
+    obj_t *console;
+    char *now;
+    char buf[MAX_LINE];
+
+    assert(is_client_obj(client));
+
+    now = create_short_time_string(0);
+    i = list_iterator_create(client->readers);
+    while ((console = list_next(i))) {
+        assert(is_console_obj(console));
+        if (console->gotReset)		/* prior reset not yet processed */
+            continue;
+        console->gotReset = 1;
+        log_msg(0, "Console [%s] reset by <%s@%s>", console->name,
+            client->aux.client.req->user, client->aux.client.req->host);
+        snprintf(buf, sizeof(buf), "%sConsole [%s] reset by <%s@%s> at %s%s",
+            CONMAN_MSG_PREFIX, console->name, client->aux.client.req->user,
+            client->aux.client.req->host, now, CONMAN_MSG_SUFFIX);
+        strcpy(&buf[sizeof(buf) - 3], "\r\n");
+        notify_objs(console->readers, console->writers, buf);
+    }
+    list_iterator_destroy(i);
+    free(now);
     return;
 }
 
@@ -245,14 +286,12 @@ static void perform_suspend(obj_t *client)
     int gotSuspend;
 
     assert(is_client_obj(client));
-    x_pthread_mutex_lock(&client->bufLock);
+
     gotSuspend = client->aux.client.gotSuspend ^= 1;
-    x_pthread_mutex_unlock(&client->bufLock);
     /*
-     *  FIX_ME: check_console_state() here looking for downed telnets.
+     *  FIX_ME: Do check_console_state() here looking for downed telnets.
      *    Should it check the state of all readers & writers?
      */
-
     DPRINTF("%s output to client [%s].\n",
         (gotSuspend ? "Suspending" : "Resuming"), client->name);
     return;

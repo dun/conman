@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-file.h,v 1.1 2001/09/06 21:50:52 dun Exp $
+ *  $Id: util-file.h,v 1.2 2001/10/08 04:02:37 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -15,7 +15,12 @@
 #include <unistd.h>
 
 
-void set_descriptor_nonblocking(int fd);
+void set_fd_closed_on_exec(int fd);
+/*
+ *  Sets the file descriptor (fd) to be closed on exec().
+ */
+
+void set_fd_nonblocking(int fd);
 /*
  *  Sets the file descriptor (fd) for non-blocking I/O.
  */

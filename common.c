@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.c,v 1.18 2001/09/23 01:54:52 dun Exp $
+ *  $Id: common.c,v 1.19 2001/10/08 04:02:37 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -37,6 +37,7 @@ char *proto_strs[] = {
     "QUERY",
     "QUIET",
     "REGEX",
+    "RESET",
     "TTY",
     "USER",
     NULL
@@ -65,6 +66,7 @@ req_t * create_req(void)
     req->enableJoin = 0;
     req->enableQuiet = 0;
     req->enableRegex = 0;
+    req->enableReset = 0;
     return(req);
 }
 

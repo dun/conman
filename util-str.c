@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-str.c,v 1.5 2001/09/23 01:54:52 dun Exp $
+ *  $Id: util-str.c,v 1.6 2001/10/08 04:02:37 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util-str.h" for documentation on public functions.
@@ -107,9 +107,11 @@ size_t append_format_string(char *dst, size_t size, const char *fmt, ...)
 }
 
 
-int substitute_string(char *dst, size_t dstlen, char *src, char c, char *sub)
+int substitute_string(char *dst, size_t dstlen, const char *src,
+    char c, char *sub)
 {
-    char *p, *q;
+    const char *p;
+    char *q;
     int n, m;
 
     assert(dst);

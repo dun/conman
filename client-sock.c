@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-sock.c,v 1.22 2001/09/23 01:54:52 dun Exp $
+ *  $Id: client-sock.c,v 1.23 2001/10/08 04:02:37 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -48,8 +48,9 @@ void connect_to_server(client_conf_t *conf)
     if (host_name_to_addr4(conf->req->host, &saddr.sin_addr) < 0)
         err_msg(0, "Unable to resolve hostname [%s]", conf->req->host);
 
-    if (host_name_to_cname(conf->req->host, buf, sizeof(buf)) == NULL)
+    if (host_name_to_cname(conf->req->host, buf, sizeof(buf)) == NULL) {
         conf->req->fqdn = create_string(conf->req->host);
+    }
     else {
         conf->req->fqdn = create_string(buf);
         free(conf->req->host);
@@ -58,10 +59,10 @@ void connect_to_server(client_conf_t *conf)
         conf->req->host = create_string(buf);
     }
 
-    if (connect(sd, (struct sockaddr *) &saddr, sizeof(saddr)) < 0)
+    if (connect(sd, (struct sockaddr *) &saddr, sizeof(saddr)) < 0) {
         err_msg(errno, "Unable to connect to [%s:%d]",
             conf->req->fqdn, conf->req->port);
-
+    }
     conf->req->sd = sd;
     return;
 }
@@ -282,6 +283,12 @@ static void parse_rsp_ok(Lex l, client_conf_t *conf)
             if ((lex_next(l) == '=') && (lex_next(l) == LEX_STR)) {
                 if ((str = lex_decode(create_string(lex_text(l)))))
                     list_append(conf->req->consoles, str);
+            }
+            break;
+        case CONMAN_TOK_OPTION:
+            if (lex_next(l) == '=') {
+                if (lex_next(l) == CONMAN_TOK_RESET)
+                    conf->req->enableReset = 1;
             }
             break;
         case LEX_EOF:

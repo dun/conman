@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.24 2001/09/27 01:26:00 dun Exp $
+ *  $Id: server-conf.c,v 1.25 2001/10/08 04:02:37 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -41,6 +41,7 @@ enum server_conf_toks {
     SERVER_CONF_OPTS,
     SERVER_CONF_PIDFILE,
     SERVER_CONF_PORT,
+    SERVER_CONF_RESETCMD,
     SERVER_CONF_SERVER,
     SERVER_CONF_TIMESTAMP,
 };
@@ -59,6 +60,7 @@ static char *server_conf_strs[] = {
     "OPTS",
     "PIDFILE",
     "PORT",
+    "RESETCMD",
     "SERVER",
     "TIMESTAMP",
     NULL
@@ -81,6 +83,7 @@ server_conf_t * create_server_conf(void)
     conf->logDirName = NULL;
     conf->logFileName = NULL;
     conf->pidFileName = NULL;
+    conf->resetCmd = NULL;
     conf->tsInterval = 0;
     /*
      *  The conf file's fd must be saved and kept open in order to hold an
@@ -131,6 +134,8 @@ void destroy_server_conf(server_conf_t *conf)
             err_msg(errno, "Unable to delete \"%s\"", conf->pidFileName);
         free(conf->pidFileName);
     }
+    if (conf->resetCmd)
+        free(conf->resetCmd);
     if (conf->fd >= 0) {
         if (close(conf->fd) < 0)
             err_msg(errno, "close() failed on fd=%d", conf->fd);
@@ -231,8 +236,7 @@ void process_server_conf_file(server_conf_t *conf)
         err_msg(errno, "Unable to stat \"%s\"", conf->confFileName);
     len = fdStat.st_size;
     if (!(buf = malloc(len + 1)))
-        err_msg(errno, "Unable to allocate memory for parsing \"%s\"",
-            conf->confFileName);
+        out_of_memory();
     if ((n = read_n(conf->fd, buf, len)) < 0)
         err_msg(errno, "Unable to read \"%s\"", conf->confFileName);
     assert(n == len);
@@ -556,6 +560,20 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
                     server_conf_strs[LEX_UNTOK(tok)], n);
             else
                 conf->port = n;
+            break;
+
+        case SERVER_CONF_RESETCMD:
+            if (lex_next(l) != '=')
+                snprintf(err, sizeof(err), "expected '=' after %s keyword",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            else if (lex_next(l) != LEX_STR)
+                snprintf(err, sizeof(err), "expected STRING for %s value",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            else {
+                if (conf->resetCmd)
+                    free(conf->resetCmd);
+                conf->resetCmd = create_string(lex_text(l));
+            }
             break;
 
         case SERVER_CONF_TIMESTAMP:

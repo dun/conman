@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.h,v 1.21 2001/09/23 01:54:52 dun Exp $
+ *  $Id: common.h,v 1.22 2001/10/08 04:02:37 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -39,6 +39,7 @@
 #define ESC_CHAR_INFO		'I'
 #define ESC_CHAR_LOG		'L'
 #define ESC_CHAR_QUIET		'Q'
+#define ESC_CHAR_RESET		'R'
 #define ESC_CHAR_SUSPEND	'Z'
 
 #ifndef NDEBUG
@@ -78,6 +79,7 @@ typedef struct request {
     unsigned  enableJoin:1;		/* true if joining console connection */
     unsigned  enableQuiet:1;		/* true if suppressing info messages  */
     unsigned  enableRegex:1;		/* true if console matching via regex */
+    unsigned  enableReset:1;		/* true if server supports reset cmd  */
 } req_t;
 
 
@@ -111,6 +113,7 @@ enum proto_toks {
     CONMAN_TOK_QUERY,
     CONMAN_TOK_QUIET,
     CONMAN_TOK_REGEX,
+    CONMAN_TOK_RESET,
     CONMAN_TOK_TTY,
     CONMAN_TOK_USER,
 };

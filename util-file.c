@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-file.c,v 1.1 2001/09/06 21:50:52 dun Exp $
+ *  $Id: util-file.c,v 1.2 2001/10/08 04:02:37 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util-file.h" for documentation on public functions.
@@ -22,9 +22,21 @@ static int get_file_lock(int fd, int cmd, int type);
 static pid_t test_file_lock(int fd, int type);
 
 
-void set_descriptor_nonblocking(int fd)
+void set_fd_closed_on_exec(int fd)
+{
+    assert(fd >= 0);
+
+    if (fcntl(fd, F_SETFD, FD_CLOEXEC) < 0)
+        err_msg(errno, "fcntl(F_SETFD) failed");
+    return;
+}
+
+
+void set_fd_nonblocking(int fd)
 {
     int fval;
+
+    assert(fd >= 0);
 
     if ((fval = fcntl(fd, F_GETFL, 0)) < 0)
         err_msg(errno, "fcntl(F_GETFL) failed");

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.33 2001/09/27 23:35:11 dun Exp $
+ *  $Id: server.c,v 1.34 2001/10/08 04:02:37 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -21,6 +21,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include "common.h"
 #include "errors.h"
@@ -37,11 +38,14 @@ static int begin_daemonize(void);
 static void end_daemonize(int fd);
 static void display_configuration(server_conf_t *conf);
 static void exit_handler(int signum);
+static void sig_chld_handler(int signum);
 static void schedule_timestamp(server_conf_t *conf);
 static void timestamp_logfiles(server_conf_t *conf);
 static void create_listen_socket(server_conf_t *conf);
 static void mux_io(server_conf_t *conf);
 static void accept_client(server_conf_t *conf);
+static void reset_console(obj_t *console, const char *cmd);
+static void kill_console_reset(pid_t pid);
 
 
 static int done = 0;
@@ -54,9 +58,10 @@ int main(int argc, char *argv[])
 
     fd = begin_daemonize();
 
+    posix_signal(SIGCHLD, sig_chld_handler);
     posix_signal(SIGHUP, SIG_IGN);
-    posix_signal(SIGPIPE, SIG_IGN);
     posix_signal(SIGINT, exit_handler);
+    posix_signal(SIGPIPE, SIG_IGN);
     posix_signal(SIGTERM, exit_handler);
 
     conf = create_server_conf();
@@ -196,6 +201,16 @@ static void exit_handler(int signum)
 }
 
 
+static void sig_chld_handler(int signum)
+{
+    pid_t pid;
+
+    while ((pid = waitpid(-1, NULL, WNOHANG)) > 0)
+        DPRINTF("Process %d terminated.\n", pid);
+    return;
+}
+
+
 static void display_configuration(server_conf_t *conf)
 {
     ListIterator i;
@@ -221,6 +236,8 @@ static void display_configuration(server_conf_t *conf)
             printf(" KeepAlive");
         if (conf->enableLoopBack)
             printf(" LoopBack");
+        if (conf->resetCmd)
+            printf(" ResetCmd");
         if (conf->tsInterval > 0)
             printf(" TimeStamp=%dm", conf->tsInterval);
         if (conf->enableZeroLogs)
@@ -228,7 +245,7 @@ static void display_configuration(server_conf_t *conf)
     }
     printf("\n");
     printf("Listening on port %d.\n", conf->port);
-    printf("Monitoring %d console%s.\n", n, ((n==1) ? "" : "s"));
+    printf("Monitoring %d console%s.\n", n, ((n == 1) ? "" : "s"));
 
     if (fflush(stdout) < 0)
         err_msg(errno, "Unable to flush standard output");
@@ -308,7 +325,8 @@ static void create_listen_socket(server_conf_t *conf)
     if ((ld = socket(AF_INET, SOCK_STREAM, 0)) < 0)
         err_msg(errno, "Unable to create listening socket");
 
-    set_descriptor_nonblocking(ld);
+    set_fd_nonblocking(ld);
+    set_fd_closed_on_exec(ld);
 
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
@@ -329,8 +347,6 @@ static void create_listen_socket(server_conf_t *conf)
         err_msg(errno, "Unable to listen on port %d", conf->port);
 
     conf->ld = ld;
-    DPRINTF("Listening for connections on port %d (fd=%d).\n",
-        conf->port, conf->ld);
     return;
 }
 
@@ -361,6 +377,9 @@ static void mux_io(server_conf_t *conf)
         list_iterator_reset(i);
         while ((obj = list_next(i))) {
 
+            if (obj->gotReset) {
+                reset_console(obj, conf->resetCmd);
+            }
             if (obj->fd < 0) {
                 continue;
             }
@@ -494,5 +513,60 @@ static void accept_client(server_conf_t *conf)
       (PthreadFunc) process_client, args)) != 0)
         err_msg(rc, "Unable to create new thread");
 
+    return;
+}
+
+
+static void reset_console(obj_t *console, const char *cmd)
+{
+    char cmdbuf[MAX_LINE];
+    pid_t pid;
+
+    assert(is_console_obj(console));
+    assert(console->gotReset);
+    assert(cmd);
+
+    DPRINTF("Resetting console [%s].\n", console->name);
+    console->gotReset = 0;
+
+    if (substitute_string(cmdbuf, sizeof(cmdbuf), cmd,
+      DEFAULT_CONFIG_ESCAPE, console->name) < 0) {
+        log_msg(0, "Unable to reset console [%s]: command too long.",
+            console->name);
+        return;
+    }
+    if ((pid = fork()) < 0) {
+        log_msg(0, "Unable to reset console [%s]: %s.",
+            console->name, strerror(errno));
+        return;
+    }
+    else if (pid == 0) {
+        setpgid(pid, 0);
+        close(STDIN_FILENO);
+        close(STDOUT_FILENO);
+        close(STDERR_FILENO);
+        execl("/bin/sh", "sh", "-c", cmdbuf, NULL);
+        _exit(127);			/* execl() error */
+    }
+    /*  Both parent and child call setpgid() to make the child a process
+     *    group leader.  One of these calls is redundant, but by doing
+     *    both we avoid a race condition.  (cf. APUE 9.4 p244)
+     */
+    setpgid(pid, 0);
+    timeout((CallBackF) kill_console_reset, (void *) pid,
+        RESET_CMD_TIMEOUT * 1000);
+    return;
+}
+
+
+static void kill_console_reset(pid_t pid)
+{
+    assert(pid > 0);
+
+    if (kill(pid, 0) < 0)		/* process is no longer running */
+        return;
+    if (kill(-pid, SIGKILL) == 0)	/* kill entire process group */
+        log_msg(0, "ResetCmd process pid=%d exceeded %ds time limit.",
+            pid, RESET_CMD_TIMEOUT);
     return;
 }

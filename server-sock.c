@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.33 2001/09/25 20:48:51 dun Exp $
+ *  $Id: server-sock.c,v 1.34 2001/10/08 04:02:37 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -84,6 +84,13 @@ void process_client(client_arg_t *args)
         goto err;
     if (validate_req(req) < 0)
         goto err;
+
+    /*  send_rsp() needs to know if the reset command is supported.
+     *    Since it cannot check resetCmd in the server_conf struct,
+     *    we set a flag in the request struct instead.
+     */
+    if (conf->resetCmd)
+        req->enableReset = 1;
 
     switch(req->command) {
     case CONNECT:
@@ -641,25 +648,36 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
     char buf[MAX_SOCK_LINE] = "";	/* init buf for appending with NUL */
     char tmp[MAX_LINE];			/* tmp buffer for lex-encoding strs */
     int n;
+    ListIterator i;
+    obj_t *console;
 
     assert(req->sd >= 0);
     assert(errnum >= 0);
 
     if (errnum == CONMAN_ERR_NONE) {
 
-        ListIterator i;
-        obj_t *console;
-
         n = append_format_string(buf, sizeof(buf), "%s",
             proto_strs[LEX_UNTOK(CONMAN_TOK_OK)]);
 
-        i = list_iterator_create(req->consoles);
-        while ((console = list_next(i))) {
-            n = strlcpy(tmp, console->name, sizeof(tmp));
-            n = append_format_string(buf, sizeof(buf), " %s='%s'",
-                proto_strs[LEX_UNTOK(CONMAN_TOK_CONSOLE)], lex_encode(tmp));
+        /*  If consoles have been defined by this point, the response is to the
+         *    request as opposed to the greeting.  Yeah, it's a bit of a kludge.
+         */
+        if (list_count(req->consoles) > 0) {
+
+            if (req->enableReset) {
+                n = append_format_string(buf, sizeof(buf), " %s=%s",
+                    proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
+                    proto_strs[LEX_UNTOK(CONMAN_TOK_RESET)]);
+            }
+            i = list_iterator_create(req->consoles);
+            while ((console = list_next(i))) {
+                n = strlcpy(tmp, console->name, sizeof(tmp));
+                n = append_format_string(buf, sizeof(buf), " %s='%s'",
+                    proto_strs[LEX_UNTOK(CONMAN_TOK_CONSOLE)], lex_encode(tmp));
+            }
+            list_iterator_destroy(i);
         }
-        list_iterator_destroy(i);
+
         n = append_format_string(buf, sizeof(buf), "\n");
     }
     else {

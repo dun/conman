@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.47 2001/09/26 21:14:20 dun Exp $
+ *  $Id: server-obj.c,v 1.48 2001/10/08 04:02:37 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -34,9 +34,9 @@
 
 static obj_t * create_obj(
     server_conf_t *conf, char *name, int fd, enum obj_type type);
+static void reset_telnet_delay(obj_t *telnet);
 static char * find_trailing_int_str(char *str);
 static void unlink_objs_helper(obj_t *src, obj_t *dst);
-static void notify_objs(List list1, List list2, char *msg);
 
 
 static obj_t * create_obj(
@@ -62,6 +62,12 @@ static obj_t * create_obj(
     obj->type = type;
     obj->gotBufWrap = 0;
     obj->gotEOF = 0;
+    /*
+     *  The gotReset flag only applies to "console" objs.
+     *  But the code is simplified if it is placed in the base obj.
+     *  Besides, the base obj remains the same size due to the bitfields.
+     */
+    obj->gotReset = 0;
 
     /*  Add obj to the master conf->objs list.
      */
@@ -87,7 +93,8 @@ obj_t * create_client_obj(server_conf_t *conf, req_t *req)
     assert(req->user && *req->user);
     assert(req->host && *req->host);
 
-    set_descriptor_nonblocking(req->sd);
+    set_fd_nonblocking(req->sd);
+    set_fd_closed_on_exec(req->sd);
 
     snprintf(name, sizeof(name), "%s@%s:%d", req->user, req->host, req->port);
     name[sizeof(name) - 1] = '\0';
@@ -150,6 +157,8 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name, obj_t *console)
         log_msg(0, "Unable to lock \"%s\".", name);
         goto err;
     }
+    set_fd_nonblocking(fd);		/* redundant but just playing it safe */
+    set_fd_closed_on_exec(fd);
 
     logfile = create_obj(conf, name, fd, LOGFILE);
     logfile->aux.logfile.consoleName = create_string(console->name);
@@ -233,7 +242,8 @@ obj_t * create_serial_obj(
      *    open on a tty will affect subsequent read()s.
      *    Play it safe and be explicit!
      */
-    set_descriptor_nonblocking(fd);
+    set_fd_nonblocking(fd);
+    set_fd_closed_on_exec(fd);
 
     /*  Note that while the initial state of the console dev's termios
      *    are saved, the settings derived from the 'opts' string are not.
@@ -365,13 +375,11 @@ int connect_telnet_obj(obj_t *telnet)
             if (setsockopt(telnet->fd, SOL_SOCKET, SO_KEEPALIVE, &on, n) < 0)
                 err_msg(errno, "Unable to set KEEPALIVE socket option");
         }
-        set_descriptor_nonblocking(telnet->fd);
+        set_fd_nonblocking(telnet->fd);
+        set_fd_closed_on_exec(telnet->fd);
 
-        while (connect(telnet->fd,
-          (struct sockaddr *) &telnet->aux.telnet.saddr,
+        if (connect(telnet->fd, (struct sockaddr *) &telnet->aux.telnet.saddr,
           sizeof(telnet->aux.telnet.saddr)) < 0) {
-            if (errno == EINTR)
-                continue;
             if (errno == EINPROGRESS) {
             /*
              *  NOTE: Bug exists in timeout of connect():
@@ -383,8 +391,9 @@ int connect_telnet_obj(obj_t *telnet)
              */
                 telnet->aux.telnet.conState = TELCON_PENDING;
             }
-            else
+            else {
                 disconnect_telnet_obj(telnet);
+            }
             return(-1);
         }
         /* Success!  Continue after if/else expr. */
@@ -430,7 +439,17 @@ int connect_telnet_obj(obj_t *telnet)
     strcpy(&buf[sizeof(buf) - 3], "\r\n");
     notify_objs(telnet->readers, telnet->writers, buf);
     telnet->aux.telnet.conState = TELCON_UP;
-    telnet->aux.telnet.delay = 0;
+    /*
+     *  Insist that the connection must be up for a minimum length of time
+     *    before resetting the reconnect delay back to zero.  This protects
+     *    against the server spinning on reconnects if the connection is
+     *    being automatically terminated by something like TCPWrappers.
+     *  If the connection is terminated before the timer expires,
+     *    disconnect_telnet_obj() will cancel the timer and the
+     *    exponential backoff will continue.
+     */
+    telnet->aux.telnet.timer = timeout((CallBackF) reset_telnet_delay,
+        telnet, TELNET_MIN_TIMEOUT * 1000);
 
     send_telnet_cmd(telnet, DO, TELOPT_SGA);
     send_telnet_cmd(telnet, DO, TELOPT_ECHO);
@@ -485,6 +504,24 @@ void disconnect_telnet_obj(obj_t *telnet)
     else if (telnet->aux.telnet.delay < TELNET_MAX_TIMEOUT)
         telnet->aux.telnet.delay =
             MIN(telnet->aux.telnet.delay * 2, TELNET_MAX_TIMEOUT);
+    return;
+}
+
+
+static void reset_telnet_delay(obj_t *telnet)
+{
+/*  Resets the telnet obj's delay between reconnect attempts.
+ *  By resetting this delay after a minimum length of time, the server is
+ *    protected against spinning on reconnects where the connection is
+ *    being automatically terminated by something like TCPWrappers.
+ */
+    assert(is_telnet_obj(telnet));
+    telnet->aux.telnet.delay = 0;
+    /*
+     *  Also reset the timer ID since this routine is only invoked
+     *    by a timer when it expires.
+     */
+    telnet->aux.telnet.timer = -1;
     return;
 }
 
@@ -840,7 +877,7 @@ again:
             goto again;
         }
         else if ((errno != EAGAIN) && (errno != EWOULDBLOCK)) {
-            log_msg(20, "Unable to read from %s: %s.",
+            log_msg(20, "Unable to read from [%s]: %s.",
                 obj->name, strerror(errno));
             shutdown_obj(obj);
             obj->bufInPtr = obj->bufOutPtr = obj->buf;
@@ -1060,7 +1097,7 @@ again:
                 goto again;
             }
             else if ((errno != EAGAIN) && (errno != EWOULDBLOCK)) {
-                log_msg(20, "Unable to write to %s: %s.",
+                log_msg(20, "Unable to write to [%s]: %s.",
                     obj->name, strerror(errno));
                 obj->gotEOF = 1;
                 obj->bufInPtr = obj->bufOutPtr = obj->buf;
@@ -1094,5 +1131,6 @@ again:
     assert(obj->bufOutPtr < &obj->buf[MAX_BUF_SIZE]);
 
     x_pthread_mutex_unlock(&obj->bufLock);
+
     return(isDead ? -1 : 0);
 }
