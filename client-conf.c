@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-conf.c,v 1.13 2001/06/12 16:17:47 dun Exp $
+ *  $Id: client-conf.c,v 1.14 2001/06/13 23:45:08 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -42,7 +42,7 @@ client_conf_t * create_client_conf(void)
     /*  Who am I?
      */
     uid = getuid();
-    if ((p = getenv("USER")) || (p = getenv("LOGNAME")))
+    if ((p = getenv("USER")) || (p = getenv("LOGNAME")) || (p = getlogin()))
         passp = getpwnam(p);
     if ((p == NULL) || (passp == NULL) || (passp->pw_uid != uid))
         if (!(passp = getpwuid(uid)))
