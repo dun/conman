@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-logfile.c,v 1.11.2.6 2003/10/04 02:00:22 dun Exp $
+ *  $Id: server-logfile.c,v 1.11.2.7 2003/10/07 23:11:09 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -164,7 +164,11 @@ int open_logfile_obj(obj_t *logfile, int gotTrunc)
     write_obj_data(logfile, msg, strlen(msg), 0);
     free(now);
     free(msg);
-
+    /*
+     *  Since the above console log message is not marked "informational",
+     *    the test in write_obj_data() to re-init the line state will not
+     *    be triggered.  Thusly, we re-initialize the line state here.
+     */
     logfile->aux.logfile.lineState = CONMAN_LOG_LINE_INIT;
 
     DPRINTF((10, "Opened %s%slogfile \"%s\" for console [%s].\n",
