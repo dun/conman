@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: tselect.c,v 1.1 2001/09/23 23:23:15 dun Exp $
+ *  $Id: tselect.c,v 1.2 2001/09/25 20:48:35 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ****************************************************************************** 
  *  Based on the implementation in Jon C. Snader's
@@ -40,7 +40,7 @@
 **  Constants  **
 \***************/
 
-#define TIMER_ALLOC 25
+#define TIMER_ALLOC 10
 
 
 /****************\
@@ -103,11 +103,20 @@ int tselect(int maxfdp1, fd_set *rset, fd_set *wset, fd_set *xset)
         /*  Dispatch timer events that have expired.
          */
         while (active && !timercmp(&tvNow, &active->tv, <)) {
-            active->fnc(active->arg);
+            DPRINTF("TSELECT: dispatching timer %d for f:%p a:%p.\n",
+                active->id, active->fnc, active->arg); /* narf */
             t = active;
             active = active->next;
             t->next = inactive;
             inactive = t;
+            /*
+             *  The timer must be removed from the active list before the
+             *    callback function is invoked in case it calls untimeout().
+             *  O/w, the current timer would be removed by untimeout(),
+             *    and the next timer on the active list would be removed
+             *    when the callback function returned.
+             */
+            t->fnc(t->arg);
         }
 
         if (active) {
@@ -136,12 +145,24 @@ int tselect(int maxfdp1, fd_set *rset, fd_set *wset, fd_set *xset)
             tvDeltaPtr = NULL;
         }
 
+        /*  Temporary kludge to support mux_io() pthread brain-damage
+         *    until ConMan has been thoroughly dethreaded.
+         */
+        tvDelta.tv_sec = 1;
+        tvDelta.tv_usec = 0;
+        tvDeltaPtr = &tvDelta;
+
         while ((n = select(maxfdp1, rset, wset, xset, tvDeltaPtr)) < 0) {
             if (errno != EINTR)
                 return(n);
         }
         if (n > 0)
             return(n);
+
+        /*  Temporary kludge to support mux_io() pthread brain-damage
+         *    until ConMan has been thoroughly dethreaded.
+         */
+        return(0);
 
         /*  One or more timer events have expired.  Because select()
          *    will have zeroed the fdsets, restore them before continuing
@@ -191,6 +212,8 @@ int timeout(CallBackF callback, void *arg, int ms)
     *tPrevPtr = t;
     t->next = tCurr;
 
+    DPRINTF("TSELECT: started timer %d for f:%p a:%p in %d secs.\n",
+        t->id, callback, arg, ms/1000); /* narf */
     return(t->id);
 }
 
@@ -215,6 +238,7 @@ void untimeout(int timerid)
     tCurr->next = inactive;
     inactive = tCurr;
 
+    DPRINTF("TSELECT: canceled timer %d.\n", timerid); /* narf */
     return;
 }
 

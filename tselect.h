@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: tselect.h,v 1.1 2001/09/23 23:23:15 dun Exp $
+ *  $Id: tselect.h,v 1.2 2001/09/25 20:48:35 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -45,9 +45,10 @@ int tselect(int maxfdp1, fd_set *rset, fd_set *wset, fd_set *xset);
 
 int timeout(CallBackF callback, void *arg, int ms);
 /*
- *  Sets a timer event for tselect() specifying how long the timer should run
- *    and what action should be taken when it expires.
- *  Returns the timer ID used by untimeout(), or -1 on memory allocation error.
+ *  Sets a timer event for tselect() specifying how long the timer
+ *    should run and what action should be taken when it expires.
+ *  Returns a timer ID > 0 for use with untimeout(),
+ *    or -1 on memory allocation failure.
  */
 
 void untimeout(int timerid);
