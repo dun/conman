@@ -1,16 +1,12 @@
-# $Id: conman.spec.in,v 1.7 2001/09/26 21:09:11 dun Exp $
+# $Id: conman.spec.in,v 1.8 2001/12/04 01:26:20 dun Exp $
 
-%define name    @PACKAGE@
-%define version @VERSION@
-%define release 1
-
-Name: %name
-Version: %version
-Release: %release
+Name:    @PACKAGE@
+Version: @VERSION@
+Release: 1
 Summary: ConMan - Remote Console Management
 #URL: FOO
 Group: Applications/Communications
-Copyright: LLNL/Internal-Use-Only
+License: LLNL/Internal-Use-Only
 BuildRoot: %{_tmppath}/%{name}-%{version}
 
 Source0: %{name}-%{version}.tgz

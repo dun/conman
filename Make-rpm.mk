@@ -2,7 +2,7 @@
 # Makefile Include for RPM Construction
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Make-rpm.mk,v 1.1 2001/10/07 20:43:49 dun Exp $
+# $Id: Make-rpm.mk,v 1.2 2001/12/04 01:26:20 dun Exp $
 ##
 # NOTES:
 # - requires PACKAGE and VERSION macro definitions to be defined
@@ -63,9 +63,9 @@ rpm-internal: tar-internal
 	cp -p $$tar $$tmp/SOURCES; \
 	($$cvs -Q co -r $$tag -p $(PACKAGE)/$(PACKAGE).spec.in || \
 	  $$cvs -Q co -r $$tag -p $(PACKAGE)/$(PACKAGE).spec) | \
-	  sed -e "s/^\(%define name\).*/\1 $(PACKAGE)/i" \
-	    -e "s/^\(%define version\).*/\1 $$ver/i" \
-	    -e "s/^\(%define release\).*/\1 $$rel/i" \
+	  sed -e "s/^\(Name:\).*/\1 $(PACKAGE)/i" \
+	    -e "s/^\(Version:\).*/\1 $$ver/i" \
+	    -e "s/^\(Release:\).*/\1 $$rel/i" \
 	    >$$tmp/SPECS/$(PACKAGE).spec; \
 	if ! test -s $$tmp/SPECS/$(PACKAGE).spec; then \
 	  echo "ERROR: No $(PACKAGE).spec file (tag=$$tag)" 1>&2; \
