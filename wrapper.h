@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: wrapper.h,v 1.2 2001/09/25 23:17:12 dun Exp $
+ *  $Id: wrapper.h,v 1.3 2001/12/04 06:29:24 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -47,6 +47,14 @@
          if ((errno = pthread_detach(THREAD)) != 0)                            \
              err_msg(errno, "pthread_detach() failed");                        \
      } while (0)
+
+#else /* !USE_PTHREADS */
+
+#  define x_pthread_mutex_init(MUTEX,ATTR)
+#  define x_pthread_mutex_lock(MUTEX)
+#  define x_pthread_mutex_unlock(MUTEX)
+#  define x_pthread_mutex_destroy(MUTEX)
+#  define x_pthread_detach(THREAD)
 
 #endif /* USE_PTHREADS */
 
