@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-obj.c,v 1.66 2002/05/09 08:27:33 dun Exp $
+ *  $Id: server-obj.c,v 1.67 2002/05/09 16:43:04 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -260,6 +260,10 @@ obj_t * create_serial_obj(server_conf_t *conf, char *name,
     get_tty_raw(&tty, fd);
     set_serial_opts(&tty, serial, opts);
     set_tty_mode(&tty, fd);
+
+    /*  Success!
+     */
+    log_msg(LOG_INFO, "Console [%s] connected to \"%s\"", name, dev);
 
     return(serial);
 
@@ -944,6 +948,10 @@ int shutdown_obj(obj_t *obj)
         disconnect_telnet_obj(obj);
         return(0);
     }
+
+    if (is_serial_obj(obj))
+        log_msg(LOG_INFO, "Console [%s] disconnected from \"%s\"",
+            obj->name, obj->aux.serial.dev);
 
     /*  Prepare this obj for destruction by unlinking it from all others.
      */
