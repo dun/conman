@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-net.h,v 1.1 2001/09/06 21:50:52 dun Exp $
+ *  $Id: util-net.h,v 1.2 2001/09/11 12:31:24 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -17,7 +17,7 @@
 #include <unistd.h>
 
 
-#define HOSTENT_SIZE 8192		/* cf. Stevens UNPv1e2 11.15 p304 */
+#define HOSTENT_SIZE 8192		/* cf. Stevens UNPv1 11.15 p304 */
 
 
 struct hostent * get_host_by_name(const char *name,
