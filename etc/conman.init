@@ -1,6 +1,6 @@
 #!/bin/sh
 ##
-# $Id: conman.init,v 1.4 2002/08/21 21:00:03 dun Exp $
+# $Id: conman.init,v 1.5 2002/09/04 23:18:15 dun Exp $
 ##
 # chkconfig:	345 95 5
 # description:	The ConMan daemon is used for remote console management.
@@ -29,6 +29,7 @@ INITLOG_ARGS=""
 case "$1" in
   start)
 	echo -n "Starting ConMan: "
+	ulimit -n 8192
 	daemon $DAEMON
 	RETVAL=$?
 	echo

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: common.h,v 1.39 2002/08/13 23:47:50 dun Exp $
+ *  $Id: common.h,v 1.40 2002/09/04 23:18:15 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -58,7 +58,7 @@
  */
 #define CONMAN_REPLAY_LEN       4096
 #define MAX_BUF_SIZE            8192
-#define MAX_SOCK_LINE           8192
+#define MAX_SOCK_LINE           32768   /* XXX: MCR kludge (was 8192) */
 #define MAX_LINE                1024
 
 /*  Escape codes used to send ctrl info 'tween client & server.
@@ -66,7 +66,7 @@
 #define ESC_CHAR                0xFF
 #define ESC_CHAR_BREAK          'B'
 #define ESC_CHAR_CLOSE          '.'
-#define ESC_CHAR_DEL            'D'     /* gnats:100 del char kludge */
+#define ESC_CHAR_DEL            'D'     /* XXX: gnats:100 del char kludge */
 #define ESC_CHAR_FORCE          'F'
 #define ESC_CHAR_HELP           '?'
 #define ESC_CHAR_INFO           'I'
