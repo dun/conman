@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 #
-# $Id: Makefile.in,v 1.18 2001/08/24 16:09:49 dun Exp $
+# $Id: Makefile.in,v 1.19 2001/08/24 19:15:16 dun Exp $
 ##
 
 PACKAGE=	@PACKAGE@
@@ -96,12 +96,15 @@ $(PACKAGE).spec: $(PACKAGE).spec.in
 # DEVELOPER TARGETS
 
 rpm tar:
-	@if test -z "$(PACKAGE)"; then echo "Undefined PACKAGE"; exit 1; fi; \
-	if test -z "$(VERSION)"; then echo "Undefined VERSION"; exit 1; fi; \
+	@if test -z "$(PACKAGE)"; then \
+	  echo "ERROR: Undefined PACKAGE definition."; exit 1; fi; \
+	if test -z "$(VERSION)"; then \
+	  echo "ERROR: Undefined VERSION definition."; exit 1; fi; \
 	test -z "$$tag" && tag=`echo $(PACKAGE)-$(VERSION) | tr '.' '-'`; \
 	ver=`cvs co -r $$tag -p $(PACKAGE)/VERSION 2>/dev/null | \
 	  sed -ne 's/.*-\(.*\)/\1/p'`; \
-	if test -z "$$ver"; then echo "Undefined VERSION ($$tag)"; exit 1; fi; \
+	if test -z "$$ver"; then \
+	  echo "ERROR: Undefined VERSION definition ($$tag)."; exit 1; fi; \
 	$(MAKE) -s $@-internal tag=$$tag ver=$$ver
 
 rpm-internal:
