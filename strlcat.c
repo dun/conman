@@ -1,4 +1,4 @@
-/*	$OpenBSD: strlcat.c,v 1.1 1998/07/01 01:29:45 millert Exp $	*/
+/*	$OpenBSD: strlcat.c,v 1.8 2001/05/13 15:40:15 deraadt Exp $	*/
 
 /*
  * Copyright (c) 1998 Todd C. Miller <Todd.Miller@courtesan.com>
@@ -28,7 +28,7 @@
  */
 
 #if defined(LIBC_SCCS) && !defined(lint)
-static char *rcsid = "$OpenBSD: strlcat.c,v 1.1 1998/07/01 01:29:45 millert Exp $";
+static char *rcsid = "$OpenBSD: strlcat.c,v 1.8 2001/05/13 15:40:15 deraadt Exp $";
 #endif /* LIBC_SCCS and not lint */
 
 #include <sys/types.h>
@@ -37,10 +37,12 @@ static char *rcsid = "$OpenBSD: strlcat.c,v 1.1 1998/07/01 01:29:45 millert Exp 
 /*
  * Appends src to string dst of size siz (unlike strncat, siz is the
  * full size of dst, not space left).  At most siz-1 characters
- * will be copied.  Always NUL terminates (unless siz == 0).
- * Returns strlen(src); if retval >= siz, truncation occurred.
+ * will be copied.  Always NUL terminates (unless siz <= strlen(dst)).
+ * Returns strlen(src) + MIN(siz, strlen(initial dst)).
+ * If retval >= siz, truncation occurred.
  */
-size_t strlcat(dst, src, siz)
+size_t
+strlcat(dst, src, siz)
 	char *dst;
 	const char *src;
 	size_t siz;
@@ -50,11 +52,11 @@ size_t strlcat(dst, src, siz)
 	register size_t n = siz;
 	size_t dlen;
 
-	/* Find the end of dst and adjust bytes left */
-	while (*d != '\0' && n != 0)
+	/* Find the end of dst and adjust bytes left but don't go past end */
+	while (n-- != 0 && *d != '\0')
 		d++;
 	dlen = d - dst;
-	n -= dlen;
+	n = siz - dlen;
 
 	if (n == 0)
 		return(dlen + strlen(s));
