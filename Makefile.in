@@ -2,8 +2,12 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Makefile.in,v 1.32 2001/10/11 21:42:50 dun Exp $
+# $Id: Makefile.in,v 1.33 2001/12/05 05:53:00 dun Exp $
 ##
+
+PACKAGE=	`sed -ne 's/^\(.*\)-\(.*\)/\1/p' $(top_srcdir)/VERSION`
+VERSION=	`sed -ne 's/^\(.*\)-\(.*\)/\2/p' $(top_srcdir)/VERSION`
+RELEASE=	1
 
 PACKAGE=	@PACKAGE@
 VERSION=	@VERSION@
