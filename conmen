@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ##
-#  $Id: conmen,v 1.8 2001/06/21 17:08:56 dun Exp $
+#  $Id: conmen,v 1.9 2001/08/17 03:06:47 dun Exp $
 #    by Chris Dunlap <cdunlap@llnl.gov>
 ##
 #  ConMen is a wrapper to aid in ConMan broadcast sessions.
@@ -65,7 +65,7 @@ foreach (@consoles) {
     select(undef, undef, undef, 0.2);
 }
 select(undef, undef, undef, 1.0);
-system("$conman -bj $patterns");
+system("$conman -bjQ $patterns");
 kill(TERM, getpid);
 
 exit(0);
