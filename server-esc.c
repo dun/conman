@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-esc.c,v 1.32 2002/07/15 23:02:59 dun Exp $
+ *  $Id: server-esc.c,v 1.33 2002/07/15 23:22:52 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -559,13 +559,13 @@ static int process_telnet_cmd(obj_t *telnet, int cmd, int opt)
      */
     switch(cmd) {
     case DONT:
-        break;
+        /* fall-thru */
     case DO:
         if ((opt != TELOPT_ECHO) && (opt != TELOPT_SGA))
             send_telnet_cmd(telnet, WONT, opt);
         break;
     case WONT:
-        break;
+        /* fall-thru */
     case WILL:
         if ((opt != TELOPT_ECHO) && (opt != TELOPT_SGA))
             send_telnet_cmd(telnet, DONT, opt);
