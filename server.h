@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.h,v 1.55 2002/05/20 06:51:45 dun Exp $
+ *  $Id: server.h,v 1.56 2002/09/17 22:40:25 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -59,7 +59,7 @@
  */
 #ifndef NTELOPTS
 #  define NTELOPTS (1+TELOPT_LAST)
-#endif /* NTELOPTS */
+#endif /* !NTELOPTS */
 
 
 enum obj_type {                         /* type of auxiliary obj (2 bits)    */

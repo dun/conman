@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: util-str.c,v 1.15 2002/05/18 23:13:04 dun Exp $
+ *  $Id: util-str.c,v 1.16 2002/09/17 22:40:25 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -272,7 +272,7 @@ struct tm * get_localtime(time_t *tPtr, struct tm *tmPtr)
     if (!localtime_r(tPtr, tmPtr))
         log_err(errno, "localtime_r() failed");
 
-#endif /* !HAVE_LOCALTIME_R */
+#endif /* HAVE_LOCALTIME_R */
 
     return(tmPtr);
 }

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: list.c,v 1.22 2002/09/15 05:45:48 dun Exp $
+ *  $Id: list.c,v 1.23 2002/09/17 22:40:25 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -55,7 +55,7 @@
 #  ifndef out_of_memory
 #    define out_of_memory() (NULL)
 #  endif /* !out_of_memory */
-#endif /* WITH_OOMF */
+#endif /* !WITH_OOMF */
 
 
 /***************
@@ -82,7 +82,7 @@ struct listIterator {
     struct listIterator  *iNext;        /* iterator chain for list_destroy() */
 #ifndef NDEBUG
     unsigned int          magic;        /* sentinel for asserting validity   */
-#endif /* NDEBUG */
+#endif /* !NDEBUG */
 };
 
 struct list {
@@ -96,7 +96,7 @@ struct list {
 #endif /* WITH_PTHREADS */
 #ifndef NDEBUG
     unsigned int          magic;        /* sentinel for asserting validity   */
-#endif /* NDEBUG */
+#endif /* !NDEBUG */
 };
 
 typedef struct listNode * ListNode;
@@ -167,7 +167,7 @@ static pthread_mutex_t list_free_lock = PTHREAD_MUTEX_INITIALIZER;
 #  define list_mutex_unlock(mutex)
 #  define list_mutex_destroy(mutex)
 
-#endif /* WITH_PTHREADS */
+#endif /* !WITH_PTHREADS */
 
 
 /***************

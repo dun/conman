@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: common.h,v 1.40 2002/09/04 23:18:15 dun Exp $
+ *  $Id: common.h,v 1.41 2002/09/17 22:40:25 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -81,21 +81,21 @@
  */
 #ifndef NDEBUG
 #  define FEATURE_DEBUG " DEBUG"
-#else
+#else /* NDEBUG */
 #  define FEATURE_DEBUG ""
-#endif /* !NDEBUG */
+#endif /* NDEBUG */
 
 #ifdef WITH_DMALLOC
 #  define FEATURE_DMALLOC " DMALLOC"
-#else
+#else /* !WITH_DMALLOC */
 #  define FEATURE_DMALLOC ""
-#endif /* WITH_DMALLOC */
+#endif /* !WITH_DMALLOC */
 
 #ifdef WITH_TCP_WRAPPERS
 #  define FEATURE_TCP_WRAPPERS " TCP-WRAPPERS"
-#else
+#else /* !WITH_TCP_WRAPPERS */
 #  define FEATURE_TCP_WRAPPERS ""
-#endif /* WITH_TCP_WRAPPERS */
+#endif /* !WITH_TCP_WRAPPERS */
 
 #define CLIENT_FEATURES (FEATURE_DEBUG FEATURE_DMALLOC)
 #define SERVER_FEATURES (FEATURE_DEBUG FEATURE_DMALLOC FEATURE_TCP_WRAPPERS)

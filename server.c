@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.c,v 1.62 2002/09/09 22:49:52 dun Exp $
+ *  $Id: server.c,v 1.63 2002/09/17 22:40:25 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -87,10 +87,10 @@ int main(int argc, char *argv[])
 #ifdef NDEBUG
     log_set_file(stderr, LOG_WARNING, 0);
     fd = begin_daemonize();
-#else /* NDEBUG */
+#else /* !NDEBUG */
     log_set_file(stderr, LOG_DEBUG, 0);
     fd = -1;                            /* suppress unused variable warning */
-#endif /* NDEBUG */
+#endif /* !NDEBUG */
 
     posix_signal(SIGCHLD, sig_chld_handler);
     posix_signal(SIGHUP, sig_hup_handler);

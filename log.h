@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: log.h,v 1.3 2002/05/19 03:13:51 dun Exp $
+ *  $Id: log.h,v 1.4 2002/09/17 22:40:25 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -44,7 +44,7 @@
 #  define DPRINTF(args) dprintf args
 #else /* NDEBUG */
 #  define DPRINTF(args)
-#endif /* !NDEBUG */
+#endif /* NDEBUG */
 
 
 void dprintf(int level, const char *format, ...);

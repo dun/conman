@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: lex.c,v 1.19 2002/05/12 19:20:29 dun Exp $
+ *  $Id: lex.c,v 1.20 2002/09/17 22:40:25 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -50,7 +50,7 @@
 #  ifndef out_of_memory
 #    define out_of_memory() (NULL)
 #  endif /* !out_of_memory */
-#endif /* WITH_OOMF */
+#endif /* !WITH_OOMF */
 
 
 /***************\
@@ -74,7 +74,7 @@ struct lexer_state {
     int            gotEOL;              /* true if next token is on new line */
 #ifndef NDEBUG
     unsigned int   magic;               /* sentinel for asserting validity   */
-#endif /* NDEBUG */
+#endif /* !NDEBUG */
 };
 
 
@@ -266,9 +266,9 @@ static int xstrcasecmp(const char *s1, const char *s2)
         p++, q++;
     return(toupper((int) *p) - toupper((int) *q));
 }
-#else
+#else /* HAVE_STRCASECMP */
 #  define xstrcasecmp strcasecmp
-#endif /* !HAVE_STRCASECMP */
+#endif /* HAVE_STRCASECMP */
 
 
 #ifndef NDEBUG

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: tselect.c,v 1.12 2002/05/12 19:20:29 dun Exp $
+ *  $Id: tselect.c,v 1.13 2002/09/17 22:40:25 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -57,7 +57,7 @@
 #  ifndef out_of_memory
 #    define out_of_memory() (NULL)
 #  endif /* !out_of_memory */
-#endif /* WITH_OOMF */
+#endif /* !WITH_OOMF */
 
 
 /***************\

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: wrapper.h,v 1.9 2002/05/12 19:20:29 dun Exp $
+ *  $Id: wrapper.h,v 1.10 2002/09/17 22:40:25 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -77,7 +77,7 @@
 #  define x_pthread_mutex_destroy(MUTEX)
 #  define x_pthread_detach(THREAD)
 
-#endif /* WITH_PTHREADS */
+#endif /* !WITH_PTHREADS */
 
 
 #endif /* !_WRAPPER_H */
