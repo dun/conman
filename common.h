@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.h,v 1.26 2001/12/28 20:13:06 dun Exp $
+ *  $Id: common.h,v 1.27 2001/12/28 23:23:44 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -12,13 +12,20 @@
 #include "list.h"
 
 
+/*  Default escape char for the client.
+ */
 #define DEFAULT_CLIENT_ESCAPE	'&'
+
+/*  Escape char for the server's configuration file.
+ */
 #define DEFAULT_CONFIG_ESCAPE	'&'
 
 /*  Name of daemon for TCP-Wrappers.
  */
 #define CONMAN_DAEMON_NAME	"conmand"
 
+/*  Message prefix/suffix defs for info msgs written to clients & logfiles.
+ */
 #define CONMAN_MSG_PREFIX	"\r\n<ConMan> "
 #define CONMAN_MSG_SUFFIX	".\r\n"
 
@@ -33,6 +40,8 @@
 #define MAX_SOCK_LINE		8192
 #define MAX_LINE		1024
 
+/*  Escape codes used to send ctrl info 'tween client & server.
+ */
 #define ESC_CHAR		0xFF
 #define ESC_CHAR_BREAK		'B'
 #define ESC_CHAR_CLOSE		'.'
@@ -43,6 +52,8 @@
 #define ESC_CHAR_RESET		'R'
 #define ESC_CHAR_SUSPEND	'Z'
 
+/*  Version string information
+ */
 #ifndef NDEBUG
 #  define FEATURE_DEBUG " DEBUG"
 #else
