@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: common.h,v 1.34 2002/05/12 19:20:29 dun Exp $
+ *  $Id: common.h,v 1.35 2002/05/16 04:39:18 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -108,7 +108,7 @@ typedef enum cmd_type {                 /* bit-field limited to 8 values     */
     NONE,
     CONNECT,
     MONITOR,
-    QUERY,
+    QUERY
 } cmd_t;
 
 typedef struct request {
@@ -138,7 +138,7 @@ enum err_type {
     CONMAN_ERR_AUTHENTICATE,
     CONMAN_ERR_NO_CONSOLES,
     CONMAN_ERR_TOO_MANY_CONSOLES,
-    CONMAN_ERR_BUSY_CONSOLES,
+    CONMAN_ERR_BUSY_CONSOLES
 };
 
 enum proto_toks {
@@ -162,7 +162,7 @@ enum proto_toks {
     CONMAN_TOK_REGEX,
     CONMAN_TOK_RESET,
     CONMAN_TOK_TTY,
-    CONMAN_TOK_USER,
+    CONMAN_TOK_USER
 };
 
 extern char *proto_strs[];              /* defined in common.c */

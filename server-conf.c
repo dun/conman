@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-conf.c,v 1.44 2002/05/12 19:20:29 dun Exp $
+ *  $Id: server-conf.c,v 1.45 2002/05/16 04:39:19 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -69,7 +69,7 @@ enum server_conf_toks {
     SERVER_CONF_SEROPTS,
     SERVER_CONF_SERVER,
     SERVER_CONF_TCPWRAPPERS,
-    SERVER_CONF_TIMESTAMP,
+    SERVER_CONF_TIMESTAMP
 };
 
 static char *server_conf_strs[] = {

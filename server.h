@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.h,v 1.48 2002/05/12 19:20:29 dun Exp $
+ *  $Id: server.h,v 1.49 2002/05/16 04:39:19 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -66,7 +66,7 @@ enum obj_type {                         /* bit-field limited to 4 values     */
     CLIENT,
     LOGFILE,
     SERIAL,
-    TELNET,
+    TELNET
 };
 
 typedef struct client_obj {             /* CLIENT AUX OBJ DATA:              */
@@ -83,7 +83,7 @@ typedef struct logfile_opt {            /* LOGFILE OBJ OPTIONS:              */
 typedef enum logfile_sanitize_state {   /* bit-field limited to 4 values     */
     LOG_SANE_INIT,
     LOG_SANE_CR,
-    LOG_SANE_LF,
+    LOG_SANE_LF
 } log_sane_state_t;
 
 typedef struct logfile_obj {            /* LOGFILE AUX OBJ DATA:             */
@@ -111,7 +111,7 @@ typedef enum telnet_connect_state {     /* bit-field limited to 4 values     */
     TELCON_NONE,
     TELCON_DOWN,
     TELCON_PENDING,
-    TELCON_UP,
+    TELCON_UP
 } telcon_state_t;
 
 typedef enum telnet_option_state {      /* rfc1143 Telnet Q-Method opt state */
@@ -120,7 +120,7 @@ typedef enum telnet_option_state {      /* rfc1143 Telnet Q-Method opt state */
     TELOPT_WANT_NO_EMP,
     TELOPT_WANT_NO_OPP,
     TELOPT_WANT_YES_EMP,
-    TELOPT_WANT_YES_OPP,
+    TELOPT_WANT_YES_OPP
 } telopt_state_t;
 
 typedef struct telnet_obj {             /* TELNET AUX OBJ DATA:              */
