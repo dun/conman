@@ -2,7 +2,7 @@
  *  client-tty.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: client-tty.c,v 1.9 2001/05/23 17:24:04 dun Exp $
+ *  $Id: client-tty.c,v 1.10 2001/05/24 20:52:40 dun Exp $
 \******************************************************************************/
 
 
@@ -404,15 +404,13 @@ static void display_connection_msg(client_conf_t *conf, char *msg)
     }
     if (!overflow) {
 
-        if (!conf->enableBroadcast) {
-            assert(list_count(conf->consoles) == 1);
+        if (list_count(conf->consoles) == 1) {
             n = snprintf(ptr, len, "%s Connection to console [%s] %s.\r\n",
                 CONMAN_MSG_PREFIX, (char *) list_peek(conf->consoles), msg);
         }
         else {
-            int count = list_count(conf->consoles);
-            n = snprintf(ptr, len, "%s Broadcast to %d console%s %s.\r\n",
-                CONMAN_MSG_PREFIX, count, (count == 1 ? "" : "s"), msg);
+            n = snprintf(ptr, len, "%s Broadcast to %d consoles %s.\r\n",
+                CONMAN_MSG_PREFIX, list_count(conf->consoles), msg);
         }
         if (n < 0 || n >= len)
             overflow = 1;
