@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.12 2001/05/24 21:15:41 dun Exp $
+ *  $Id: server-sock.c,v 1.13 2001/05/25 18:39:53 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -558,6 +558,9 @@ no_mem:
 
 static int validate_req(req_t *req)
 {
+/*  Validates the given request.
+ *  Returns 0 if the request is valid, or -1 on error.
+ */
     if (list_is_empty(req->consoles)) {
         send_rsp(req, CONMAN_ERR_NO_CONSOLES, "Found no matching consoles.");
         return(-1);
@@ -573,6 +576,12 @@ static int validate_req(req_t *req)
 
 static int check_too_many_consoles(req_t *req)
 {
+/*  Checks to see if the request matches too many consoles
+ *    for the given command.
+ *  A MONITOR command can only affect a single console, as can a
+ *    CONNECT or EXECUTE command unless the broadcast option is enabled.
+ *  Returns 0 if the request is valid, or -1 on error.
+ */
     ListIterator i;
     obj_t *obj;
     char buf[MAX_SOCK_LINE];
@@ -613,6 +622,10 @@ static int check_too_many_consoles(req_t *req)
 
 static int check_busy_consoles(req_t *req)
 {
+/*  Checks to see if a "writable" request affects any consoles
+ *    that are currently busy (unless the force option is enabled).
+ *  Returns 0 if the request is valid, or -1 on error.
+ */
     List busy = NULL;
     ListIterator i = NULL;
     obj_t *obj;
@@ -666,6 +679,9 @@ static int check_busy_consoles(req_t *req)
                 obj->writer->name);
 
         delta = create_time_delta_string(t);
+        /*
+         *  FIX_ME: Inconsistent use of socket name as <%s>?
+         */
         snprintf(buf, sizeof(buf), "Console [%s] in use by <%s> (idle %s).\n",
             obj->name, obj->writer->name, (delta ? delta : "???"));
         if (delta)
@@ -788,6 +804,9 @@ static void perform_query_cmd(req_t *req)
 
 static void perform_monitor_cmd(req_t *req, server_conf_t *conf)
 {
+/*  Performs the MONITOR command, placing the client in a
+ *    "read-only" session with a single console.
+ */
     obj_t *socket;
     obj_t *console;
 
@@ -811,6 +830,11 @@ static void perform_monitor_cmd(req_t *req, server_conf_t *conf)
 
 static void perform_connect_cmd(req_t *req, server_conf_t *conf)
 {
+/*  Performs the CONNECT command.  If a single console is specified,
+ *    the client is placed in a "read-write" session with that console.
+ *    Otherwise, the client is placed in a "write-only" broadcast session
+ *    affecting multiple consoles.
+ */
     obj_t *socket;
     obj_t *console;
     ListIterator i;
