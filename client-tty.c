@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-tty.c,v 1.43 2002/05/08 00:10:54 dun Exp $
+ *  $Id: client-tty.c,v 1.44 2002/05/12 19:20:29 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -7,7 +7,7 @@
  *  UCRL-CODE-2002-009.
  *  
  *  This file is part of ConMan, a remote console management program.
- *  For details, see <http://www.llnl.gov/linux/conman.html>.
+ *  For details, see <http://www.llnl.gov/linux/conman/>.
  *  
  *  ConMan is free software; you can redistribute it and/or modify it under
  *  the terms of the GNU General Public License as published by the Free

@@ -1,4 +1,4 @@
-.\" $Id: conman.conf.5.in,v 1.1 2002/05/11 23:24:52 dun Exp $
+.\" $Id: conman.conf.5.in,v 1.2 2002/05/12 19:20:29 dun Exp $
 
 .TH CONMAN.CONF 5 "@DATE@" "@PROJECT@-@VERSION@" "LLNL"
 
@@ -143,4 +143,4 @@ The ConMan FTP site:
   \fBftp://ftp.llnl.gov/pub/linux/conman/\fR
 .PP
 The ConMan Web page:
-  \fBhttp://www.llnl.gov/linux/conman.html\fR
+  \fBhttp://www.llnl.gov/linux/conman/\fR
