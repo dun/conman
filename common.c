@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.c,v 1.20 2001/12/14 07:43:03 dun Exp $
+ *  $Id: common.c,v 1.21 2001/12/26 21:01:51 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -103,6 +103,8 @@ void destroy_req(req_t *req)
 
 void get_tty_mode(struct termios *tty, int fd)
 {
+/*  Gets the tty values associated with 'fd' and stores them in 'tty'.
+ */
     assert(fd >= 0);
     assert(tty != NULL);
 
@@ -116,6 +118,8 @@ void get_tty_mode(struct termios *tty, int fd)
 
 void set_tty_mode(struct termios *tty, int fd)
 {
+/*  Sets the tty values associated with 'fd' to those stored in 'tty'.
+ */
     assert(fd >= 0);
     assert(tty != NULL);
 
@@ -129,6 +133,11 @@ void set_tty_mode(struct termios *tty, int fd)
 
 void get_tty_raw(struct termios *tty, int fd)
 {
+/*  Gets the tty values associated with 'fd' and stores them in 'tty',
+ *    adjusting them to reflect the device is operating in "raw" mode.
+ *  Note that the 'fd' device is not placed in raw mode by this call;
+ *    to do so, invoke set_tty_mode() with the updated termios struct.
+ */
     assert(tty != NULL);
 
     get_tty_mode(tty, fd);
