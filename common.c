@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.c,v 1.13 2001/08/14 23:16:47 dun Exp $
+ *  $Id: common.c,v 1.14 2001/08/17 02:45:06 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -8,8 +8,10 @@
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
+#include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <termios.h>
 #include <unistd.h>
 #include "common.h"
 #include "errors.h"
@@ -98,5 +100,52 @@ void destroy_req(req_t *req)
         list_destroy(req->consoles);
 
     free(req);
+    return;
+}
+
+
+void get_tty_mode(int fd, struct termios *tty)
+{
+    assert(fd >= 0);
+    assert(tty);
+
+    if (!isatty(fd))
+        return;
+    if (tcgetattr(fd, tty) < 0)
+        err_msg(errno, "tcgetattr() failed on fd=%d", fd);
+    return;
+}
+
+
+void set_tty_mode(int fd, struct termios *tty)
+{
+    assert(fd >= 0);
+    assert(tty);
+
+    if (!isatty(fd))
+        return;
+    if (tcsetattr(fd, TCSAFLUSH, tty) < 0)
+        err_msg(errno, "tcgetattr() failed on fd=%d", fd);
+    return;
+}
+
+
+void get_tty_raw(struct termios *tty)
+{
+    assert(tty);
+
+    tty->c_iflag = 0;
+    tty->c_oflag = 0;
+    tty->c_lflag = 0;
+    /*
+     *  Ignore modem status lines, enable receiver, set 8 bits/char.
+     *  Implicitly clear size bits (CSIZE), disable parity checking (PARENB).
+     */
+    tty->c_cflag = CLOCAL | CREAD | CS8;
+
+    /*  read() does not return until data is present (may block indefinitely).
+     */
+    tty->c_cc[VMIN] = 1;
+    tty->c_cc[VTIME] = 0;
     return;
 }

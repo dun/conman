@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client.h,v 1.11 2001/08/14 23:17:02 dun Exp $
+ *  $Id: client.h,v 1.12 2001/08/17 02:45:06 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -19,7 +19,7 @@ typedef struct client_conf {
     int             logd;		/* connection logfile descriptor      */
     int             errnum;		/* error number from issuing command  */
     char           *errmsg;		/* error message from issuing command */
-    struct termios  term;		/* saved "cooked" terminal mode       */
+    struct termios  tty;		/* saved "cooked" terminal mode       */
     unsigned        enableVerbose:1;	/* true if verbose output requested   */
     unsigned        isClosedByClient:1;	/* true if socket closed by client    */
 } client_conf_t;

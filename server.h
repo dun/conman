@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.23 2001/08/17 01:53:06 dun Exp $
+ *  $Id: server.h,v 1.24 2001/08/17 02:45:07 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -32,7 +32,7 @@ typedef struct client_obj {		/* CLIENT AUX OBJ DATA:               */
 typedef struct console_obj {		/* CONSOLE AUX OBJ DATA:              */
     char            *dev;		/*  console device name               */
     struct base_obj *logfile;		/*  log obj ref for console output    */
-    struct termios   term;		/*  saved cooked tty mode             */
+    struct termios   tty;		/*  saved cooked tty mode             */
 } console_obj_t;
 
 typedef struct logfile_obj {		/* LOGFILE AUX OBJ DATA:              */

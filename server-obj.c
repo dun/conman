@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.30 2001/08/17 01:52:49 dun Exp $
+ *  $Id: server-obj.c,v 1.31 2001/08/17 02:45:06 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -33,8 +33,6 @@
 
 static obj_t * create_obj(
     server_conf_t *conf, char *name, int fd, enum obj_type type);
-static void set_raw_console_mode(obj_t *obj);
-static void restore_console_mode(obj_t *obj);
 static void unlink_objs_helper(obj_t *src, obj_t *dst);
 
 
@@ -48,6 +46,7 @@ obj_t * create_console_obj(
     ListIterator i;
     obj_t *console;
     int fd = -1;
+    struct termios tty;
 
     assert(conf);
     assert(name && *name);
@@ -100,8 +99,10 @@ obj_t * create_console_obj(
 
     console = create_obj(conf, name, fd, CONSOLE);
     console->aux.console.dev = create_string(dev);
-    set_raw_console_mode(console);
     console->aux.console.logfile = NULL;
+    get_tty_mode(fd, &console->aux.console.tty);
+    get_tty_raw(&tty);
+    set_tty_mode(fd, &tty);
 
     return(console);
 
@@ -285,7 +286,7 @@ void destroy_obj(obj_t *obj)
         if (tcflush(obj->fd, TCIOFLUSH) < 0)
             err_msg(errno, "Unable to flush tty device for console [%s]",
                 obj->name);
-        restore_console_mode(obj);
+        set_tty_mode(obj->fd, &obj->aux.console.tty);
     }
     if (obj->fd >= 0) {
         if (close(obj->fd) < 0)
@@ -328,50 +329,6 @@ void destroy_obj(obj_t *obj)
         free(obj->name);
 
     free(obj);
-    return;
-}
-
-
-static void set_raw_console_mode(obj_t *obj)
-{
-    struct termios term;
-
-    assert(obj->fd >= 0);
-    assert(obj->type == CONSOLE);
-
-    if (tcgetattr(obj->fd, &term) < 0)
-        err_msg(errno, "tcgetattr(%s) failed", obj->aux.console.dev);
-    obj->aux.console.term = term;
-
-    term.c_iflag = 0;
-    term.c_oflag = 0;
-    term.c_lflag = 0;
-    /*
-     *  Ignore modem status lines, enable receiver, set 8 bits/char.
-     *  Implicitly clear size bits (CSIZE), disable parity checking (PARENB).
-     */
-    term.c_cflag = CLOCAL | CREAD | CS8;
-
-    /*  read() does not return until data is present (may block indefinitely)
-     */
-    term.c_cc[VMIN] = 1;
-    term.c_cc[VTIME] = 0;
-
-    DPRINTF("Setting raw terminal mode on [%s].\n", obj->name);
-    if (tcsetattr(obj->fd, TCSAFLUSH, &term) < 0)
-        err_msg(errno, "tcsetattr(%s) failed", obj->aux.console.dev);
-    return;
-}
-
-
-static void restore_console_mode(obj_t *obj)
-{
-    assert(obj->fd >= 0);
-    assert(obj->type == CONSOLE);
-
-    if (tcsetattr(obj->fd, TCSAFLUSH, &obj->aux.console.term) < 0)
-        err_msg(errno, "tcsetattr(%s) failed", obj->aux.console.dev);
-    DPRINTF("Restored cooked terminal mode on [%s].\n", obj->name);
     return;
 }
 

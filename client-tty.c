@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-tty.c,v 1.31 2001/08/17 01:52:28 dun Exp $
+ *  $Id: client-tty.c,v 1.32 2001/08/17 02:45:06 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -23,8 +23,6 @@
 
 
 static void exit_handler(int signum);
-static void set_raw_tty_mode(int fd, struct termios *old);
-static void restore_tty_mode(int fd, struct termios *new);
 static int read_from_stdin(client_conf_t *conf);
 static int write_to_stdout(client_conf_t *conf);
 static int send_esc_seq(client_conf_t *conf, char c);
@@ -43,6 +41,7 @@ void connect_console(client_conf_t *conf)
 {
 /*  Connect client to the remote console(s).
  */
+    struct termios tty;
     fd_set rset, rsetBak;
     int n;
 
@@ -61,7 +60,9 @@ void connect_console(client_conf_t *conf)
     Signal(SIGTSTP, SIG_DFL);
     Signal(SIGTERM, exit_handler);
 
-    set_raw_tty_mode(STDIN_FILENO, &conf->term);
+    get_tty_mode(STDIN_FILENO, &conf->tty);
+    get_tty_raw(&tty);
+    set_tty_mode(STDIN_FILENO, &tty);
 
     locally_display_status(conf, "opened");
 
@@ -97,7 +98,7 @@ void connect_console(client_conf_t *conf)
     if (!conf->isClosedByClient)
         locally_display_status(conf, "terminated by peer");
 
-    restore_tty_mode(STDIN_FILENO, &conf->term);
+    set_tty_mode(STDIN_FILENO, &conf->tty);
     return;
 }
 
@@ -107,52 +108,6 @@ static void exit_handler(int signum)
 /*  Exit-handler to break out of while-loop in connect_console().
  */
     done = 1;
-    return;
-}
-
-
-static void set_raw_tty_mode(int fd, struct termios *old)
-{
-    struct termios term;
-
-    assert(fd >= 0);
-
-    if (!isatty(fd))
-        return;
-    if (tcgetattr(fd, &term) < 0)
-        err_msg(errno, "tcgetattr() failed on fd=%d", fd);
-    if (old)
-        *old = term;
-
-    term.c_iflag = 0;
-    term.c_oflag = 0;
-    term.c_lflag = 0;
-    /*
-     *  Ignore modem status lines, enable receiver, set 8 bits/char.
-     *  Implicitly clear size bits (CSIZE), disable parity checking (PARENB).
-     */
-    term.c_cflag = CLOCAL | CREAD | CS8;
-
-    /*  read() does not return until data is present (may block indefinitely).
-     */
-    term.c_cc[VMIN] = 1;
-    term.c_cc[VTIME] = 0;
-
-    if (tcsetattr(fd, TCSAFLUSH, &term) < 0)
-        err_msg(errno, "tcgetattr() failed on fd=%d", fd);
-    return;
-}
-
-
-static void restore_tty_mode(int fd, struct termios *new)
-{
-    assert(fd >= 0);
-    assert(new);
-
-    if (!isatty(fd))
-        return;
-    if (tcsetattr(fd, TCSAFLUSH, new) < 0)
-        err_msg(errno, "tcgetattr() failed on fd=%d", fd);
     return;
 }
 
@@ -408,17 +363,20 @@ static int perform_suspend_esc(client_conf_t *conf, char c)
  *    data to this client in its circular write buffer.
  *  Returns 1 on success, or 0 if the socket connection has been closed.
  */
+    struct termios tty;
+
     locally_echo_esc(conf->escapeChar, c);
 
     if (!send_esc_seq(conf, c))
         return(0);
     locally_display_status(conf, "suspended");
-    restore_tty_mode(STDIN_FILENO, &conf->term);
+    set_tty_mode(STDIN_FILENO, &conf->tty);
 
     if (kill(getpid(), SIGTSTP) < 0)
         err_msg(errno, "Unable to suspend client (pid %d)", getpid());
 
-    set_raw_tty_mode(STDIN_FILENO, &conf->term);
+    get_tty_raw(&tty);
+    set_tty_mode(STDIN_FILENO, &tty);
     locally_display_status(conf, "resumed");
     if (!send_esc_seq(conf, c))
         return(0);

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.h,v 1.15 2001/08/17 01:52:16 dun Exp $
+ *  $Id: common.h,v 1.16 2001/08/17 02:45:06 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -7,6 +7,7 @@
 #ifndef _COMMON_H
 #define _COMMON_H
 
+#include <termios.h>
 #include "lex.h"
 #include "list.h"
 
@@ -124,6 +125,12 @@ extern char *proto_strs[];		/* defined in common.c */
 req_t * create_req(void);
 
 void destroy_req(req_t *req);
+
+void get_tty_mode(int fd, struct termios *tty);
+
+void set_tty_mode(int fd, struct termios *tty);
+
+void get_tty_raw(struct termios *tty);
 
 
 #endif /* !_COMMON_H */
