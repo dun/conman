@@ -2,7 +2,7 @@
  *  errors.h
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: errors.h,v 1.1 2001/05/04 15:26:40 dun Exp $
+ *  $Id: errors.h,v 1.2 2001/05/11 22:47:05 dun Exp $
 \******************************************************************************/
 
 
@@ -28,7 +28,7 @@
 #define DPRINTF(fmt, args...) \
   do { fprintf(stderr, fmt, ##args); } while (0)
 #define LDPRINTF(fmt, args...) \
-  do { fprintf(stderr, "%s:%d: " ##fmt, __FILE__, __LINE__, ##args); } while (0)
+  do { fprintf(stderr, "%s:%d: " fmt, __FILE__, __LINE__, ##args); } while (0)
 #else /* NDEBUG */
 #define DPRINTF(fmt, args...)
 #define LDPRINTF(fmt, args...)
