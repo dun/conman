@@ -2,18 +2,22 @@
 # Makefile Include for RPM Construction
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Make-rpm.mk,v 1.7 2001/12/05 04:23:47 dun Exp $
+# $Id: Make-rpm.mk,v 1.8 2001/12/05 18:51:14 dun Exp $
 ##
-# NOTES:
-# - requires PACKAGE and VERSION macro definitions to be defined
-# - requires the project to be under CVS version control
+# REQUIREMENTS:
+# - requires project to be under CVS version control
+# - requires PACKAGE and VERSION makefile macro definitions to be defined
+# - supports optional RELEASE makefile macro definition for the rpm target
 # - requires a "VERSION" file of the format "$(PACKAGE)-$(VERSION)" to
 #     reside in the top-level directory of the CVS project (eg, foo-1.2.3);
 #     this file should be used to define $(PACKAGE) and $(VERSION)
-# - requires an RPM spec file named "$(PACKAGE).spec.in" or "$(PACKAGE).spec"
+# - requires RPM spec file named "$(PACKAGE).spec.in" or "$(PACKAGE).spec"
 #     to reside in the top-level directory of the CVS project
+##
+# NOTES:
 # - RPM will be built directly from the CVS repository based on the CVS tag
-# - CVS tag will be based on the contents of the VERSION file by default
+# - CVS tag will be based on the contents of the VERSION file by default;
+#     this allows the version information to be stored and tagged within CVS
 # - CVS tag can be specified on the make cmdline to override the default
 #     (eg, make rpm tag=foo-1-2-3)
 # - CVS "HEAD" tag can be used to build the most recent version in CVS
@@ -24,12 +28,12 @@
 #     from CVS by using a CVS date spec "-D" based on the RPM's "Build Date"
 #     (eg, rpm -qp --queryformat="%{BUILDTIME:date}\n" foo-1.2.3-1.i386.rpm)
 # - RPM release number can be specified on the make cmdline to override the
-#     default value of 1 (eg, make rpm tag=HEAD rel=13)
-# - RPM will be signed with a PGP/GPG key if one is defined in ~/.rpmmacros
+#     default of 1 or the RELEASE macro def (eg, make rpm tag=HEAD rel=13)
+# - RPM will be signed with a PGP/GPG key if one is specified in ~/.rpmmacros
 ##
-# TO BUILD A NEW RELEASE:
+# USAGE:
 # - update and cvs commit the "VERSION" file in the top-level directory
-# - cvs tag/rtag the project with a tag of the form "foo-1-2-3"
+# - cvs tag/rtag the project with a tag of the form "foo-1-2-3" (foo v1.2.3)
 # - make rpm
 ##
 
@@ -94,8 +98,8 @@ tar-internal:
 	echo "creating $$tar (tag=$$tag)"; \
 	if ! $$mkdir $$tmp >/dev/null; then \
 	  echo "ERROR: Cannot create \"$$tmp\" dir." 1>&2; exit 1; fi; \
-	(cd $$tmp; $$cvs -Q export -r $$tag -d $$name $$pkg) && \
-	  (cd $$tmp; tar cf - $$name) | gzip -c9 >$$tar; \
+	(cd $$tmp; $$cvs -Q export -r $$tag -d $$name $$pkg) \
+	  && (cd $$tmp; tar cf - $$name) | gzip -c9 >$$tar; \
 	rm -rf $$tmp; \
 	if ! test -f $$tar; then \
 	  echo "ERROR: Cannot create $$tar." 1>&2; exit 1; fi
