@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util.h,v 1.7 2001/07/31 20:11:22 dun Exp $
+ *  $Id: util.h,v 1.8 2001/08/06 18:36:26 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -37,11 +37,20 @@ char * create_string(const char *str);
  *  Note that the caller is responsible for freeing this string.
  */
 
-char * create_fmt_string(const char *fmt, ...);
+char * create_format_string(const char *fmt, ...);
 /*
  *  Creates and returns a new string specified by the format-string (fmt)
  *    (or throws a fatal error if insufficient memory is available).
  *  Note that the caller is responsible for freeing this string.
+ */
+
+size_t append_format_string(char *dst, size_t size, const char *fmt, ...);
+/*
+ *  Appends the string specified by the format-string (fmt) to a
+ *    NUL-terminated string (dst) within a buffer of size (size).
+ *  Note that (size) is the full size of (dst), not the space remaining.
+ *  Returns the new length of the NUL-terminated string (dst),
+ *    or -1 if truncation occurred.
  */
 
 void destroy_string(char *str);

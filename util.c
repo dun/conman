@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util.c,v 1.10 2001/07/31 20:11:22 dun Exp $
+ *  $Id: util.c,v 1.11 2001/08/06 18:36:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util.h" for documentation on public functions.
@@ -45,7 +45,7 @@ char * create_string(const char *str)
 }
 
 
-char * create_fmt_string(const char *fmt, ...)
+char * create_format_string(const char *fmt, ...)
 {
     va_list vargs;
     int n, len;
@@ -53,6 +53,7 @@ char * create_fmt_string(const char *fmt, ...)
 
     if (!fmt)
         return(NULL);
+
     va_start(vargs, fmt);
     if ((len = vsnprintf(p, 0, fmt, vargs)) < 0)
         len = MAX_STR_SIZE;
@@ -62,9 +63,39 @@ char * create_fmt_string(const char *fmt, ...)
         err_msg(0, "Out of memory");
     n = vsnprintf(p, len, fmt, vargs);
     va_end(vargs);
+
     if (n < 0 || n >= len)
         p[len - 1] = '\0';		/* ensure str is NUL-terminated */
     return(p);
+}
+
+
+size_t append_format_string(char *dst, size_t size, const char *fmt, ...)
+{
+    char *p = dst;
+    int nAvail = size;
+    int lenOrig;
+    va_list vargs;
+    int n;
+
+    if (!dst || !fmt)
+        return(0);
+
+    while ((nAvail > 0) && *p)
+        nAvail--, p++;
+    if (nAvail <= 1)
+        return(-1);
+    lenOrig = p - dst;
+
+    va_start(vargs, fmt);
+    n = vsnprintf(p, nAvail, fmt, vargs);
+    va_end(vargs);
+
+    if (n < 0 || n >= nAvail) {
+        dst[size - 1] = '\0';		/* ensure dst is NUL-terminated */
+        return(-1);
+    }
+    return(lenOrig + n);
 }
 
 
