@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: lex.c,v 1.12 2001/12/14 07:43:03 dun Exp $
+ *  $Id: lex.c,v 1.13 2001/12/15 14:33:49 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "lex.h" for documentation on public functions.
@@ -22,14 +22,14 @@
 **  Out of Memory  **
 \*******************/
 
-#ifdef USE_OOMF
+#ifdef WITH_OOMF
 #  undef out_of_memory
    extern void * out_of_memory(void);
-#else /* !USE_OOMF */
+#else /* !WITH_OOMF */
 #  ifndef out_of_memory
 #    define out_of_memory() (NULL)
 #  endif /* !out_of_memory */
-#endif /* USE_OOMF */
+#endif /* WITH_OOMF */
 
 
 /***************\

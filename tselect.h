@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: tselect.h,v 1.3 2001/09/25 22:58:42 dun Exp $
+ *  $Id: tselect.h,v 1.4 2001/12/15 14:33:49 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -20,7 +20,7 @@
  *
  *  When a timer memory allocation request fails, out_of_memory() is returned.
  *  By default, this is a macro definition that returns NULL; this macro may
- *  be redefined to invoke another routine instead.  Furthermore, if USE_OOMF
+ *  be redefined to invoke another routine instead.  Furthermore, if WITH_OOMF
  *  is defined, this macro will not be defined and the allocation routine
  *  will expect an external Out-Of-Memory Function to be defined.
  */

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: tselect.c,v 1.6 2001/12/14 21:18:47 dun Exp $
+ *  $Id: tselect.c,v 1.7 2001/12/15 14:33:49 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ****************************************************************************** 
  *  Based on the implementation in Jon C. Snader's
@@ -28,14 +28,14 @@
 **  Out of Memory  **
 \*******************/
 
-#ifdef USE_OOMF
+#ifdef WITH_OOMF
 #  undef out_of_memory
    extern void * out_of_memory(void);
-#else /* !USE_OOMF */
+#else /* !WITH_OOMF */
 #  ifndef out_of_memory
 #    define out_of_memory() (NULL)
 #  endif /* !out_of_memory */
-#endif /* USE_OOMF */
+#endif /* WITH_OOMF */
 
 
 /***************\

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util.c,v 1.16 2001/09/22 21:32:52 dun Exp $
+ *  $Id: util.c,v 1.17 2001/12/15 14:33:49 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util.h" for documentation on public functions.
@@ -17,7 +17,7 @@
 #include "util.h"
 
 
-#ifdef USE_OOMF
+#ifdef WITH_OOMF
 #undef out_of_memory
 void * out_of_memory(void)
 {
@@ -26,7 +26,7 @@ void * out_of_memory(void)
     err_msg(0, "Out of memory");
     return(NULL);                       /* not reached, but prevents warnings */
 }
-#endif /* USE_OOMF */
+#endif /* WITH_OOMF */
 
 
 SigFunc * posix_signal(int signum, SigFunc *f)

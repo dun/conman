@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: list.c,v 1.14 2001/12/14 07:43:03 dun Exp $
+ *  $Id: list.c,v 1.15 2001/12/15 14:33:49 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "list.h" for documentation on public functions.
@@ -10,12 +10,12 @@
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#ifdef USE_PTHREADS
+#ifdef WITH_PTHREADS
 #  include <errno.h>
 #  include <pthread.h>
 #  include <stdio.h>
 #  include <unistd.h>
-#endif /* USE_PTHREADS */
+#endif /* WITH_PTHREADS */
 
 #include <assert.h>
 #include <stdlib.h>
@@ -27,14 +27,14 @@
 **  Out of Memory  **
 \*******************/
 
-#ifdef USE_OOMF
+#ifdef WITH_OOMF
 #  undef out_of_memory
    extern void * out_of_memory(void);
-#else /* !USE_OOMF */
+#else /* !WITH_OOMF */
 #  ifndef out_of_memory
 #    define out_of_memory() (NULL)
 #  endif /* !out_of_memory */
-#endif /* USE_OOMF */
+#endif /* WITH_OOMF */
 
 
 /***************\
@@ -70,9 +70,9 @@ struct list {
     struct listIterator  *iNext;	/* iterator chain for list_destroy()  */
     ListDelF              fDel;		/* function to delete node data       */
     int                   count;	/* number of nodes in list            */
-#ifdef USE_PTHREADS
+#ifdef WITH_PTHREADS
     pthread_mutex_t       mutex;	/* mutex to protect access to list    */
-#endif /* USE_PTHREADS */
+#endif /* WITH_PTHREADS */
 #ifndef NDEBUG
     unsigned int          magic;	/* sentinel for asserting validity    */
 #endif /* NDEBUG */
@@ -102,18 +102,18 @@ static void list_iterator_free(ListIterator i);
 static List freeLists = NULL;
 static ListNode freeListNodes = NULL;
 static ListIterator freeListIterators = NULL;
-#ifdef USE_PTHREADS
+#ifdef WITH_PTHREADS
 static pthread_mutex_t freeListsLock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t freeListNodesLock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t freeListIteratorsLock = PTHREAD_MUTEX_INITIALIZER;
-#endif /* USE_PTHREADS */
+#endif /* WITH_PTHREADS */
 
 
 /************\
 **  Macros  **
 \************/
 
-#ifdef USE_PTHREADS
+#ifdef WITH_PTHREADS
 
 #  define list_mutex_init(mutex)                                               \
      do {                                                                      \
@@ -139,14 +139,14 @@ static pthread_mutex_t freeListIteratorsLock = PTHREAD_MUTEX_INITIALIZER;
              perror("ERROR: pthread_mutex_destroy() failed"), exit(1);         \
      } while (0)
 
-#else /* !USE_PTHREADS */
+#else /* !WITH_PTHREADS */
 
 #  define list_mutex_init(mutex)
 #  define list_mutex_lock(mutex)
 #  define list_mutex_unlock(mutex)
 #  define list_mutex_destroy(mutex)
 
-#endif /* USE_PTHREADS */
+#endif /* WITH_PTHREADS */
 
 
 /***************\

@@ -2485,7 +2485,7 @@ echo "$as_me:2484: result: $ac_cv_humor" >&5
 echo "${ECHO_T}$ac_cv_humor" >&6
 
 cat >>confdefs.h <<\EOF
-#define USE_PTHREADS 1
+#define WITH_PTHREADS 1
 EOF
 
 ac_config_commands="$ac_config_commands default-1"
