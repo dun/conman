@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 #
-# $Id: Makefile.in,v 1.10 2001/08/21 18:24:05 dun Exp $
+# $Id: Makefile.in,v 1.11 2001/08/21 18:35:49 dun Exp $
 ##
 
 PACKAGE=	@PACKAGE@
@@ -113,7 +113,7 @@ rpm: $(PACKAGE)-$(VERSION).tgz
 	cp -p $(PACKAGE)-$(VERSION).tgz $$tmp/SOURCES; \
 	echo "creating $(PACKAGE)-$(VERSION) RPM"; \
 	rpm --showrc | egrep "_(gpg|pgp)_name" >/dev/null && sign="--sign"; \
-	rpm -ba --quiet $$sign --define _topdir$$tmp \
+	rpm -ba $$sign --quiet --define "_topdir $$tmp" \
 	  $$tmp/SPECS/$(PACKAGE).spec && \
 	    cp -p $$tmp/RPMS/*/$(PACKAGE)-$(VERSION)*.*.rpm \
 	      $$tmp/SRPMS/$(PACKAGE)-$(VERSION)*.src.rpm ./; \
