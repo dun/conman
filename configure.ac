@@ -3,7 +3,7 @@ dnl
 dnl ConMan AutoConf Config Jazz
 dnl   by Chris Dunlap <cdunlap@llnl.gov>
 dnl
-dnl $Id: configure.in,v 1.6 2001/08/17 21:24:13 dun Exp $
+dnl $Id: configure.ac,v 1.1 2001/09/17 22:13:44 dun Exp $
 
 
 dnl Prologue.

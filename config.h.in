@@ -1,4 +1,4 @@
-/* config.h.in.  Generated automatically from configure.in by autoheader.  */
+/* config.h.in.  Generated automatically from configure.ac by autoheader.  */
 
 /* Define if you have the `inet_aton' function. */
 #undef HAVE_INET_ATON
