@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-conf.c,v 1.41 2002/03/29 05:39:51 dun Exp $
+ *  $Id: client-conf.c,v 1.42 2002/03/29 06:59:55 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -288,6 +288,11 @@ static void display_client_help(char *prog)
     printf("  -r        Match console names via regex instead of globbing.\n");
     printf("  -v        Be verbose.\n");
     printf("  -V        Display version information.\n");
+    printf("\n");
+    printf("  Once a connection is established, enter \"%s%c\""
+           " to close the session,\n", esc, ESC_CHAR_CLOSE);
+    printf("    or \"%s%c\" to see a list of currently available"
+           " escape sequences.\n", esc, ESC_CHAR_HELP);
     printf("\n");
     return;
 }
