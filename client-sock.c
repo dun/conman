@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-sock.c,v 1.13 2001/06/15 17:04:29 dun Exp $
+ *  $Id: client-sock.c,v 1.14 2001/06/18 21:32:07 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -156,6 +156,16 @@ int send_req(client_conf_t *conf)
         n = snprintf(ptr, len, " %s='%s'",
             proto_strs[LEX_UNTOK(CONMAN_TOK_PROGRAM)],
             lex_encode(conf->req->program));
+        if (n < 0 || n >= len)
+            goto overflow;
+        ptr += n;
+        len -= n;
+    }
+
+    if (conf->req->enableRegex) {
+        n = snprintf(ptr, len, " %s=%s",
+            proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
+            proto_strs[LEX_UNTOK(CONMAN_TOK_REGEX)]);
         if (n < 0 || n >= len)
             goto overflow;
         ptr += n;

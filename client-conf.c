@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-conf.c,v 1.17 2001/06/15 17:04:29 dun Exp $
+ *  $Id: client-conf.c,v 1.18 2001/06/18 21:32:07 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -104,7 +104,7 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
     char *str;
 
     opterr = 1;
-    while ((c = getopt(argc, argv, "bd:e:fhjl:mqx:vV")) != -1) {
+    while ((c = getopt(argc, argv, "bd:e:fhjl:mqrx:vV")) != -1) {
         switch(c) {
         case '?':			/* invalid option */
             exit(1);
@@ -148,6 +148,9 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
         case 'q':
             conf->req->command = QUERY;
             break;
+        case 'r':
+            conf->req->enableRegex = 1;
+            break;
         case 'x':
             conf->req->command = EXECUTE;
             if (conf->req->program)
@@ -190,8 +193,11 @@ static void display_client_help(char *prog)
     printf("  -l FILE   Log connection to file.\n");
     printf("  -m        Monitor connection (read-only).\n");
     printf("  -q        Query server about specified console(s).\n");
+    printf("  -r        Match console names via regular expressions.\n");
     printf("  -x FILE   Execute file on specified console(s).\n");
-    printf("  -v        Be verbose.\n");
+/*
+ *  printf("  -v        Be verbose.\n");
+ */
     printf("  -V        Display version information.\n");
     printf("\n");
     return;

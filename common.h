@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.h,v 1.7 2001/06/15 15:46:44 dun Exp $
+ *  $Id: common.h,v 1.8 2001/06/18 21:32:07 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -14,8 +14,9 @@
 #define DEFAULT_CONMAN_HOST	"127.0.0.1"
 #define DEFAULT_CONMAN_PORT	7890
 #define DEFAULT_SERVER_CONF	"/etc/conman.conf"
-#define DEFAULT_CONSOLE_BAUD	9600
+
 #define DEFAULT_CLIENT_ESCAPE	'&'
+#define DEFAULT_CONSOLE_BAUD	9600
 
 #define CONMAN_MSG_PREFIX	"\r\n<ConMan> "
 #define CONMAN_MSG_SUFFIX	".\r\n"
@@ -64,6 +65,7 @@ typedef struct request {
     int    enableBroadcast;		/* true if b-casting to many consoles */
     int    enableForce;			/* true if forcing console connection */
     int    enableJoin;			/* true if joining console connection */
+    int    enableRegex;			/* true if console matching via regex */
     char  *program;			/* program name for EXECUTE cmd       */
     List   consoles;			/* list of consoles affected by cmd   */
 } req_t;
@@ -102,6 +104,7 @@ enum proto_toks {
     CONMAN_TOK_OPTION,
     CONMAN_TOK_PROGRAM,
     CONMAN_TOK_QUERY,
+    CONMAN_TOK_REGEX,
     CONMAN_TOK_TTY,
     CONMAN_TOK_USER,
 };

@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ##
-#  $Id: conmen,v 1.6 2001/06/18 16:40:59 dun Exp $
+#  $Id: conmen,v 1.7 2001/06/18 21:32:07 dun Exp $
 #    by Chris Dunlap <cdunlap@llnl.gov>
 ##
 #  ConMen is a wrapper to aid in ConMan broadcast sessions.
@@ -27,7 +27,7 @@ $help = `conman -h`;
 ($def_dst) = ($help =~ /-d .* \(default: ([^\)]*)\)/);
 ($def_esc) = ($help =~ /-e .* \(default: ([^\)]*)\)/);
 
-print_usage() if (!@ARGV || !getopts('d:e:fg:hjmV') || $opt_h);
+print_usage() if (!@ARGV || !getopts('d:e:fg:hjmrV') || $opt_h);
 
 ($opt_f + $opt_j + $opt_m <= 1)
     or die("ERROR: Only one mode [fjm] can be specified.\n");
@@ -36,6 +36,7 @@ exec("conman -V") if ($opt_V);
 $conman = "conman";
 $conman .= " -d \'$opt_d\'" if ($opt_d);
 $conman .= " -e \'$opt_e\'" if ($opt_e);
+$conman .= " -r" if ($opt_r);
 
 if ($opt_f) {
     $mode = "-f";
@@ -71,7 +72,7 @@ exit(0);
 sub print_usage
 {
     ($prog) = ($0 =~ m|(?:.*/)?([^/]*)|);
-    print("Usage: $prog [-d <host>] [-e <char>] [-hfjmV] <console(s)>\n");
+    print("Usage: $prog [-d <host>] [-e <char>] [-hfjmrV] <console(s)>\n");
     print("\n");
     print("  -h        Display this help.\n");
     print("  -d HOST   Specify location of server (default: $def_dst).\n");
@@ -80,6 +81,7 @@ sub print_usage
     print("  -g SIZE   Specify xterm's geometry (eg, 80x24).\n");
     print("  -j        Join connections (console sharing).\n");
     print("  -m        Monitor connections (read-only).\n");
+    print("  -r        Match console names via regular expressions.\n");
     print("  -V        Display version information.\n");
     print("\n");
     exit(0);

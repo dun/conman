@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.c,v 1.7 2001/06/15 15:46:44 dun Exp $
+ *  $Id: common.c,v 1.8 2001/06/18 21:32:07 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -35,6 +35,7 @@ char *proto_strs[] = {
     "OPTION",
     "PROGRAM",
     "QUERY",
+    "REGEX",
     "TTY",
     "USER",
     NULL
@@ -61,6 +62,7 @@ req_t * create_req(void)
     req->enableBroadcast = 0;
     req->enableForce = 0;
     req->enableJoin = 0;
+    req->enableRegex = 0;
     req->program = NULL;
     if (!(req->consoles = list_create((ListDelF) destroy_string))) {
         free(req);

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.19 2001/06/15 15:46:45 dun Exp $
+ *  $Id: server-sock.c,v 1.20 2001/06/18 21:32:07 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -11,6 +11,7 @@
 #include <arpa/inet.h>
 #include <assert.h>
 #include <errno.h>
+#include <fnmatch.h>
 #include <pthread.h>
 #include <regex.h>
 #include <stdlib.h>
@@ -31,6 +32,10 @@ static int parse_greeting(Lex l, req_t *req);
 static int recv_req(req_t *req);
 static int parse_cmd_opts(Lex l, req_t *req);
 static int query_consoles(server_conf_t *conf, req_t *req);
+static int query_consoles_via_globbing(
+    server_conf_t *conf, req_t *req, List matches);
+static int query_consoles_via_regex(
+    server_conf_t *conf, req_t *req, List matches);
 static int validate_req(req_t *req);
 static int check_too_many_consoles(req_t *req);
 static int check_busy_consoles(req_t *req);
@@ -357,6 +362,8 @@ static int parse_cmd_opts(Lex l, req_t *req)
                     req->enableForce = 1;
                 else if (lex_prev(l) == CONMAN_TOK_JOIN)
                     req->enableJoin = 1;
+                else if (lex_prev(l) == CONMAN_TOK_REGEX)
+                    req->enableRegex = 1;
             }
             break;
         case CONMAN_TOK_PROGRAM:
@@ -382,42 +389,111 @@ static int parse_cmd_opts(Lex l, req_t *req)
 
 static int query_consoles(server_conf_t *conf, req_t *req)
 {
-/*  Queries the server's conf to resolve the console names
- *    specified in the client's request.
- *  The req->consoles list initially contains strings constructed
- *    while parsing the client's request in parse_command().
- *    These strings are combined into a regex pattern and then
- *    matched against the console objs in the conf->objs list.
+/*  Queries the server's conf to resolve the console names specified
+ *    in the client's request.
  *  Returns 0 on success, or -1 on error.
- *    Upon a successful return, the req->consoles list is replaced
- *    with a list of console obj_t's.
+ *    Upon a successful return, the req->consoles list of strings
+ *    is replaced with a list of console obj_t's.
  */
-    ListIterator i;
-    char buf[MAX_SOCK_LINE];
-    char *p;
-    int rc;
-    regex_t rex;
-    regmatch_t match;
     List matches;
+    int rc;
+
+    if (list_is_empty(req->consoles) && (req->command != QUERY))
+        return(0);
+
+    /*  The NULL destructor is used for 'matches' because the matches list
+     *    will only contain refs to objs contained in the conf->objs list.
+     *    These objs will be destroyed when the conf->objs list is destroyed.
+     */
+    if (!(matches = list_create(NULL)))
+        err_msg(0, "Out of memory");
+
+    if (req->enableRegex)
+        rc = query_consoles_via_regex(conf, req, matches);
+    else
+        rc = query_consoles_via_globbing(conf, req, matches);
+
+    /*  Replace original list of strings with list of obj_t's.
+     */
+    list_destroy(req->consoles);
+    req->consoles = matches;
+    list_sort(req->consoles, (ListCmpF) compare_objs);
+
+    return(rc);
+}
+
+
+static int query_consoles_via_globbing(
+    server_conf_t *conf, req_t *req, List matches)
+{
+/*  Match request patterns against console names using shell-style globbing.
+ *  This is less efficient than matching via regular expressions
+ *    since the console list must be traversed for each pattern, and the
+ *    matches list must be traversed for each match to prevent duplicates.
+ */
+    char *p;
+    ListIterator i, j;
+    char *pat;
     obj_t *obj;
 
     /*  An empty list for the QUERY command matches all consoles.
      */
     if (list_is_empty(req->consoles)) {
-        if (req->command != QUERY)
-            return(0);
-        if (!(p = strdup(".*")))
-            goto no_mem;
-        if (!list_append(req->consoles, p)) {
-            free(p);
-            goto no_mem;
+        p = create_string("*");
+        if (!list_append(req->consoles, p))
+            err_msg(0, "Out of memory");
+    }
+
+    if (!(i = list_iterator_create(req->consoles)))
+        err_msg(0, "Out of memory");
+    if (!(j = list_iterator_create(conf->objs)))
+        err_msg(0, "Out of memory");
+
+    /*  Search objs for console names matching console patterns in the request.
+     */
+    while ((pat = list_next(i))) {
+        list_iterator_reset(j);
+        while ((obj = list_next(j))) {
+            if (obj->type != CONSOLE)
+                continue;
+            if (!fnmatch(pat, obj->name, 0)
+                && !list_find_first(matches, (ListFindF) find_obj, obj)) {
+                if (!list_append(matches, obj))
+                    err_msg(0, "Out of memory");
+            }
         }
+    }
+    list_iterator_destroy(i);
+    list_iterator_destroy(j);
+    return(0);
+}
+
+
+static int query_consoles_via_regex(
+    server_conf_t *conf, req_t *req, List matches)
+{
+/*  Match request patterns against console names using regular expressions.
+ */
+    char *p;
+    ListIterator i;
+    char buf[MAX_SOCK_LINE];
+    int rc;
+    regex_t rex;
+    regmatch_t match;
+    obj_t *obj;
+
+    /*  An empty list for the QUERY command matches all consoles.
+     */
+    if (list_is_empty(req->consoles)) {
+        p = create_string(".*");
+        if (!list_append(req->consoles, p))
+            err_msg(0, "Out of memory");
     }
 
     /*  Combine console patterns via alternation to create single regex.
      */
     if (!(i = list_iterator_create(req->consoles)))
-        goto no_mem;
+        err_msg(0, "Out of memory");
     strlcpy(buf, list_next(i), sizeof(buf));
     while ((p = list_next(i))) {
         strlcat(buf, "|", sizeof(buf));
@@ -436,52 +512,24 @@ static int query_consoles(server_conf_t *conf, req_t *req)
         return(-1);
     }
 
-    /*  Search objs for consoles matching the regex.
-     *  The NULL destructor is used here because the matches list will
-     *    only contain references to objs contained in the conf->objs list.
-     *    These objs will be destroyed when the conf->objs list is destroyed.
+    if (!(i = list_iterator_create(conf->objs)))
+        err_msg(0, "Out of memory");
+
+    /*  Search objs for console names matching console patterns in the request.
      */
-    if (!(matches = list_create(NULL))) {
-        regfree(&rex);
-        goto no_mem;
-    }
-    if (!(i = list_iterator_create(conf->objs))) {
-        list_destroy(matches);
-        regfree(&rex);
-        goto no_mem;
-    }
     while ((obj = list_next(i))) {
         if (obj->type != CONSOLE)
             continue;
         if (!regexec(&rex, obj->name, 1, &match, 0)
           && (match.rm_so == 0)
           && (match.rm_eo == strlen(obj->name))) {
-            if (!list_append(matches, obj)) {
-                list_iterator_destroy(i);
-                list_destroy(matches);
-                regfree(&rex);
-                goto no_mem;
-            }
+            if (!list_append(matches, obj))
+                err_msg(0, "Out of memory");
         }
     }
     list_iterator_destroy(i);
     regfree(&rex);
-
-    /*  Sort the resulting obj_t list.
-     */
-    list_sort(matches, (ListCmpF) compare_objs);
-
-    /*  Replace original consoles-string list with regex-matched obj_t list.
-     */
-    list_destroy(req->consoles);
-    req->consoles = matches;
-
     return(0);
-
-no_mem:
-    send_rsp(req, CONMAN_ERR_NO_RESOURCES,
-        "Insufficient resources to process request.");
-    return(-1);
 }
 
 
