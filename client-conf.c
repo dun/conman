@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-conf.c,v 1.37 2001/12/30 21:21:17 dun Exp $
+ *  $Id: client-conf.c,v 1.38 2002/01/02 17:14:22 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -220,13 +220,13 @@ static void read_consoles_from_file(List consoles, char *file)
         /*  Remove trailing whitespace.
          */
         q = strchr(buf, '\0') - 1;
-        while ((q >= buf) && isspace(*q))
+        while ((q >= buf) && isspace((int) *q))
             *q-- = '\0';
 
         /*  Remove leading whitespace.
          */
         p = buf;
-        while ((p < q) && isspace(*p))
+        while ((p < q) && isspace((int) *p))
             p++;
 
         /*  Skip comments and empty lines.

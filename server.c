@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.43 2001/12/30 02:08:43 dun Exp $
+ *  $Id: server.c,v 1.44 2002/01/02 17:14:22 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -647,7 +647,7 @@ static void kill_console_reset(pid_t *arg)
  */
     pid_t pid;
 
-    assert(arg);
+    assert(arg != NULL);
     pid = *arg;
     assert(pid > 0);
     free(arg);
