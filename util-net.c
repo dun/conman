@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-net.c,v 1.2 2001/09/06 22:37:38 dun Exp $
+ *  $Id: util-net.c,v 1.3 2001/09/06 23:04:41 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util-net.h" for documentation on public functions.
@@ -51,7 +51,7 @@ struct hostent * get_host_by_name(const char *name,
 
     if ((hptr = gethostbyname(name)))
         n = copy_hostent(hptr, buf, buflen);
-    else if (h_err)
+    if (h_err)
         *h_err = h_errno;
 
     if ((rc = pthread_mutex_unlock(&lock)) != 0)
@@ -84,7 +84,7 @@ struct hostent * get_host_by_addr(const char *addr, int len, int type,
 
     if ((hptr = gethostbyaddr(addr, len, type)))
         n = copy_hostent(hptr, buf, buflen);
-    else if (h_err)
+    if (h_err)
         *h_err = h_errno;
 
     if ((rc = pthread_mutex_unlock(&lock)) != 0)
@@ -106,7 +106,7 @@ const char * host_strerror(int h_err)
         return("Transient host name lookup failure");
     else if (h_err == NO_RECOVERY)
         return("Unknown server error");
-    else if ((h_err == NO_ADDRESS) || (h_errno == NO_DATA))
+    else if ((h_err == NO_ADDRESS) || (h_err == NO_DATA))
         return("No address associated with name");
     return("Unknown error");
 }
