@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.13 2001/06/18 17:27:17 dun Exp $
+ *  $Id: server.c,v 1.14 2001/06/19 20:49:23 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -188,6 +188,7 @@ static void mux_io(server_conf_t *conf)
 
         list_iterator_reset(i);
         while ((obj = list_next(i))) {
+
             if (obj->fd < 0) {
                 continue;
             }
@@ -231,13 +232,21 @@ static void mux_io(server_conf_t *conf)
          */
         list_iterator_reset(i);
         while ((obj = list_next(i))) {
-            if (obj->fd < 0)
+
+            if (obj->fd < 0) {
                 continue;
-            if (FD_ISSET(obj->fd, &rset))
-                read_from_obj(obj, &wset);
-            if (FD_ISSET(obj->fd, &wset))
+            }
+            if (FD_ISSET(obj->fd, &rset)) {
+                if (read_from_obj(obj, &wset) < 0) {
+                    list_delete(i);
+                    continue;
+                }
+            }
+            if (FD_ISSET(obj->fd, &wset)) {
                 if (write_to_obj(obj) < 0)
                     list_delete(i);
+                    continue;
+            }
         }
     }
 

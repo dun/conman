@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.19 2001/06/18 22:45:09 dun Exp $
+ *  $Id: server-obj.c,v 1.20 2001/06/19 20:49:23 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -491,10 +491,12 @@ void shutdown_obj(obj_t *obj)
 }
 
 
-void read_from_obj(obj_t *obj, fd_set *pWriteSet)
+int read_from_obj(obj_t *obj, fd_set *pWriteSet)
 {
 /*  Reads data from the obj's file descriptor and writes it out
  *    to the circular-buffer of each obj in its "readers" list.
+ *  Returns 0 on success, or -1 if the obj is ready to be destroyed.
+ *
  *  The ptr to select()'s write-set is an optimization used to "prime"
  *    the set for write_to_obj().  This allows data read to be written out
  *    to those objs not yet traversed during the current list iteration,
@@ -518,10 +520,11 @@ again:
             goto again;
         }
         else if ((errno != EAGAIN) && (errno != EWOULDBLOCK)) {
-            obj->bufInPtr = obj->bufOutPtr = obj->buf;	/* flush buf */
-            shutdown_obj(obj);
-            log_msg(20, "read error=%d on fd=%d (%s): %s",
+            log_msg(20, "Read error=%d on fd=%d (%s): %s",
                 errno, obj->fd, obj->name, strerror(errno));
+            shutdown_obj(obj);
+            obj->bufInPtr = obj->bufOutPtr = obj->buf;
+            return(-1);
         }
     }
     else if (n == 0) {
@@ -557,7 +560,7 @@ again:
         }
         list_iterator_destroy(i);
     }
-    return;
+    return(0);
 }
 
 
@@ -670,13 +673,12 @@ int write_obj_data(obj_t *obj, void *src, int len)
 int write_to_obj(obj_t *obj)
 {
 /*  Writes data from the obj's circular-buffer out to its file descriptor.
- *  Returns -1 if obj buffer has been flushed and the obj is ready to remove
- *    from the objs list; o/w, returns 0.
+ *  Returns 0 on success, or -1 if the obj is ready to be destroyed.
  */
     int rc;
     int avail;
     int n;
-    int isFlushed = 0;
+    int isDead = 0;
 
     assert(obj->fd >= 0);
 
@@ -714,10 +716,10 @@ again:
                 goto again;
             }
             else if ((errno != EAGAIN) && (errno != EWOULDBLOCK)) {
-                obj->gotEOF = 1;
-                obj->bufInPtr = obj->bufOutPtr = obj->buf;	/* flush buf */
-                log_msg(20, "write error=%d on fd=%d (%s): %s",
+                log_msg(20, "Write error=%d on fd=%d (%s): %s",
                     errno, obj->fd, obj->name, strerror(errno));
+                obj->gotEOF = 1;
+                obj->bufInPtr = obj->bufOutPtr = obj->buf;
             }
         }
         else if (n > 0) {
@@ -738,7 +740,7 @@ again:
      *    notify mux_io() that the obj can be deleted from the objs list.
      */
     if (obj->gotEOF && (obj->bufInPtr == obj->bufOutPtr))
-        isFlushed = 1;
+        isDead = 1;
 
     /*  Assert the buffer's input and output ptrs are valid upon exit.
      */
@@ -750,5 +752,5 @@ again:
     if ((rc = pthread_mutex_unlock(&obj->bufLock)) != 0)
         err_msg(rc, "pthread_mutex_unlock() failed for [%s]", obj->name);
 
-    return(isFlushed ? -1 : 0);
+    return(isDead ? -1 : 0);
 }

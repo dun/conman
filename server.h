@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.17 2001/06/15 15:46:45 dun Exp $
+ *  $Id: server.h,v 1.18 2001/06/19 20:49:23 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -124,7 +124,7 @@ void unlink_objs(obj_t *obj1, obj_t *obj2);
 
 void shutdown_obj(obj_t *obj);
 
-void read_from_obj(obj_t *obj, fd_set *pWriteSet);
+int read_from_obj(obj_t *obj, fd_set *pWriteSet);
 
 int write_obj_data(obj_t *obj, void *src, int len);
 
