@@ -3,7 +3,7 @@ dnl
 dnl ConMan AutoConf Config Jazz
 dnl   by Chris Dunlap <cdunlap@llnl.gov>
 dnl
-dnl $Id: configure.ac,v 1.3 2001/09/22 21:32:52 dun Exp $
+dnl $Id: configure.ac,v 1.4 2001/12/12 18:36:28 dun Exp $
 
 
 dnl Prologue.
@@ -16,11 +16,11 @@ AC_PREFIX_DEFAULT(/usr)
 
 dnl Read package and version info from VERSION.
 dnl
-PACKAGE="`sed -ne 's/^\(.*\)-\(.*\)/\1/p' $srcdir/VERSION`"
-AC_DEFINE_UNQUOTED(PACKAGE, "$PACKAGE", [Define the package name.])
-AC_SUBST(PACKAGE)
-VERSION="`sed -ne 's/^\(.*\)-\(.*\)/\2/p' $srcdir/VERSION`"
-AC_DEFINE_UNQUOTED(VERSION, "$VERSION", [Define the package version.])
+PROJECT="`perl -ne 'print,exit if s/^\s*NAME:\s*(\S*).*/\1/i' $srcdir/META`"
+AC_DEFINE_UNQUOTED(PROJECT, "$PROJECT", [Define the project's name.])
+AC_SUBST(PROJECT)
+VERSION="`perl -ne 'print,exit if s/^\s*VERSION:\s*(\S*).*/\1/i' $srcdir/META`"
+AC_DEFINE_UNQUOTED(VERSION, "$VERSION", [Define the project's version.])
 AC_SUBST(VERSION)
 
 

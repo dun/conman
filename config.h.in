@@ -39,13 +39,13 @@
 /* Define if you are building a production release. */
 #undef NDEBUG
 
-/* Define the package name. */
-#undef PACKAGE
+/* Define the project's name. */
+#undef PROJECT
 
 /* Define if using Pthreads. */
 #undef USE_PTHREADS
 
-/* Define the package version. */
+/* Define the project's version. */
 #undef VERSION
 
 /* Define if using the debug malloc library. */

@@ -2,10 +2,10 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Makefile.in,v 1.36 2001/12/12 00:27:32 dun Exp $
+# $Id: Makefile.in,v 1.37 2001/12/12 18:36:28 dun Exp $
 ##
 
-PACKAGE=	conman
+PROJECT=	conman
 
 SHELL=		@SHELL@
 CC=		@CC@
@@ -65,12 +65,12 @@ install: $(PROGS)
 	$(INSTALL) -m 644 etc/conman.conf $(DESTDIR)/etc
 	$(mkinstalldirs) $(DESTDIR)/etc/rc.d/init.d
 	$(INSTALL) -m 755 etc/conman.init $(DESTDIR)/etc/rc.d/init.d/conman
-	pkg="$(PACKAGE)"; \
+	proj="$(PROJECT)"; \
 	for f in `cd lib && find * -name CVS -prune -o -type f -print`; do \
-	  $(mkinstalldirs) `dirname $(DESTDIR)$(libdir)/$$pkg/$$f`; \
-	  $(INSTALL) -m 755 lib/$$f $(DESTDIR)$(libdir)/$$pkg/$$f; \
+	  $(mkinstalldirs) `dirname $(DESTDIR)$(libdir)/$$proj/$$f`; \
+	  $(INSTALL) -m 755 lib/$$f $(DESTDIR)$(libdir)/$$proj/$$f; \
 	done; \
-	chmod 644 $(DESTDIR)$(libdir)/$$pkg/*.exp
+	chmod 644 $(DESTDIR)$(libdir)/$$proj/*.exp
 
 clean:
 	-rm -f *.o *.a *~ \#* .\#* cscope*.out core core.* *.core
@@ -94,7 +94,7 @@ Makefile: Makefile.in config.status
 config.status: META
 	./config.status --recheck
 
-$(PACKAGE).spec: $(PACKAGE).spec.in
+$(PROJECT).spec: $(PROJECT).spec.in
 	./config.status $@
 
 
