@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.25 2001/09/17 16:20:17 dun Exp $
+ *  $Id: server.c,v 1.26 2001/09/17 22:08:13 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -8,6 +8,7 @@
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
+#include <arpa/telnet.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <netinet/in.h>
@@ -374,6 +375,8 @@ static void mux_io(server_conf_t *conf)
                     obj->aux.telnet.conState = TELCON_UP;
                     x_pthread_mutex_unlock(&obj->bufLock);
                     DPRINTF("Console [%s] is UP.\n", obj->name);
+                    send_telnet_cmd(obj, DO, TELOPT_SGA);
+                    send_telnet_cmd(obj, DO, TELOPT_ECHO);
                 }
                 continue;
             }

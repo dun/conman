@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.29 2001/09/17 16:20:17 dun Exp $
+ *  $Id: server.h,v 1.30 2001/09/17 22:08:14 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -138,6 +138,8 @@ void process_server_conf_file(server_conf_t *conf);
 int process_client_escapes(obj_t *client, void *src, int len);
 
 int process_telnet_escapes(obj_t *telnet, void *src, int len);
+
+int send_telnet_cmd(obj_t *telnet, int cmd, int opt);
 
 
 /******************\

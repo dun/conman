@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.42 2001/09/17 16:20:17 dun Exp $
+ *  $Id: server-obj.c,v 1.43 2001/09/17 22:08:13 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -657,7 +657,7 @@ int read_from_obj(obj_t *obj, fd_set *pWriteSet)
 {
 /*  Reads data from the obj's file descriptor and writes it out
  *    to the circular-buffer of each obj in its "readers" list.
- *  Returns 0 on success, or -1 if the obj is ready to be destroyed.
+ *  Returns >=0 on success, or -1 if the obj is ready to be destroyed.
  *
  *  The ptr to select()'s write-set is an optimization used to "prime"
  *    the set for write_to_obj().  This allows data read to be written out
@@ -710,21 +710,26 @@ again:
             n = process_telnet_escapes(obj, buf, n);
         }
 
-        if (!(i = list_iterator_create(obj->readers)))
-            err_msg(0, "Out of memory");
-        while ((reader = list_next(i))) {
-            /*
-             *  If the obj's gotEOF flag is set,
-             *    no more data can be written into its buffer.
-             */
-            if (!reader->gotEOF) {
-                if (write_obj_data(reader, buf, n, 0) > 0)
-                    FD_SET(reader->fd, pWriteSet);
+        /*  Ensure the buffer still contains data
+         *    after the escape characters have been processed.
+         */
+        if (n > 0) {
+            if (!(i = list_iterator_create(obj->readers)))
+                err_msg(0, "Out of memory");
+            while ((reader = list_next(i))) {
+                /*
+                 *  If the obj's gotEOF flag is set,
+                 *    no more data can be written into its buffer.
+                 */
+                if (!reader->gotEOF) {
+                    if (write_obj_data(reader, buf, n, 0) > 0)
+                        FD_SET(reader->fd, pWriteSet);
+                }
             }
+            list_iterator_destroy(i);
         }
-        list_iterator_destroy(i);
     }
-    return(0);
+    return(n);
 }
 
 
