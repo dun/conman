@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.c,v 1.6 2001/06/12 16:17:48 dun Exp $
+ *  $Id: common.c,v 1.7 2001/06/15 15:46:44 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -79,7 +79,7 @@ void destroy_req(req_t *req)
 
     if (req->sd >= 0) {
         if (close(req->sd) < 0)
-            err_msg(errno, "close(%d) failed", req->sd);
+            err_msg(errno, "close() failed on fd=%d", req->sd);
         req->sd = -1;
     }
     if (req->user)

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.16 2001/06/12 19:55:27 dun Exp $
+ *  $Id: server.h,v 1.17 2001/06/15 15:46:45 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -58,7 +58,7 @@ typedef struct base_obj {		/* BASE OBJ:                          */
     pthread_mutex_t  bufLock;		/*  lock protecting access to buf     */
     List             readers;		/*  list of objs that i write to      */
     List             writers;		/*  list of objs that write to me     */
-    enum obj_type    type;		/*  type of auxxiliary obj            */
+    enum obj_type    type;		/*  type of auxiliary obj             */
     aux_obj_t        aux;		/*  auxiliary obj data                */
 } obj_t;
 

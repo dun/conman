@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.9 2001/06/12 16:17:48 dun Exp $
+ *  $Id: server-conf.c,v 1.10 2001/06/15 15:46:44 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -77,7 +77,7 @@ void destroy_server_conf(server_conf_t *conf)
         free(conf->logname);
     if (conf->ld >= 0) {
         if (close(conf->ld) < 0)
-            err_msg(errno, "close(%d) failed", conf->ld);
+            err_msg(errno, "close() failed on fd=%d", conf->ld);
         conf->ld = -1;
     }
     if (conf->objs)

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util.h,v 1.5 2001/06/12 16:17:48 dun Exp $
+ *  $Id: util.h,v 1.6 2001/06/15 15:46:45 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -52,7 +52,7 @@ void destroy_string(char *str);
 char * create_date_time_string(time_t t);
 /*
  *  Creates and returns a new string with the specified date & time
- *    in the format "MM/DD/YYYY HH/MM/SS" in a thread-safe manner
+ *    in the format "MM/DD/YYYY HH:MM:SS" in a thread-safe manner
  *    (or throws a fatal error if something strange happens).
  *  If no time is given (t=0), the current date & time is used.
  *  Note that the caller is responsible for freeing this string.
@@ -61,7 +61,7 @@ char * create_date_time_string(time_t t);
 char * create_time_string(time_t t);
 /*
  *  Creates and returns a new string with the specified
- *    time in the format "HH/MM" in a thread-safe manner
+ *    time in the format "HH:MM" in a thread-safe manner
  *    (or throws a fatal error if something strange happens).
  *  If no time is given (t=0), the current date & time is used.
  *  Note that the caller is responsible for freeing this string.
@@ -114,7 +114,7 @@ SigFunc * Signal(int signum, SigFunc *f);
  *  A wrapper for the historical signal() function to do things the Posix way.
  */
 
-char * get_hostname_via_addr(void *addr, char *buf, int len);
+char * get_hostname_by_addr(void *addr, char *buf, int len);
 /*
  *  A thread-safe alternative to be used in place of gethostbyaddr().
  *  Resolves the socket address structure (struct in_addr *) (addr),

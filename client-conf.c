@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-conf.c,v 1.14 2001/06/13 23:45:08 dun Exp $
+ *  $Id: client-conf.c,v 1.15 2001/06/15 15:46:44 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -84,7 +84,7 @@ void destroy_client_conf(client_conf_t *conf)
         free(conf->log);
     if (conf->logd >= 0) {
         if (close(conf->logd) < 0)
-            err_msg(errno, "close(%d) failed", conf->logd);
+            err_msg(errno, "close() failed on fd=%d", conf->logd);
         conf->logd = -1;
     }
     if (conf->errmsg)
@@ -209,10 +209,10 @@ void open_client_log(client_conf_t *conf)
         err_msg(errno, "Unable to open logfile [%s]", conf->log);
 
     now = create_date_time_string(0);
-    str = create_fmt_string("\r\n%sLog started at %s%s\r\n",
+    str = create_fmt_string("%sLog started at %s%s",
         CONMAN_MSG_PREFIX, now, CONMAN_MSG_SUFFIX);
     if (write_n(conf->logd, str, strlen(str)) < 0)
-        err_msg(errno, "write(%d) failed", conf->logd);
+        err_msg(errno, "write() failed on fd=%d", conf->logd);
     free(now);
     free(str);
 
@@ -229,15 +229,15 @@ void close_client_log(client_conf_t *conf)
     assert(conf->logd >= 0);
 
     now = create_date_time_string(0);
-    str = create_fmt_string("\r\n%sLog finished at %s%s\r\n",
+    str = create_fmt_string("%sLog finished at %s%s",
         CONMAN_MSG_PREFIX, now, CONMAN_MSG_SUFFIX);
     if (write_n(conf->logd, str, strlen(str)) < 0)
-        err_msg(errno, "write(%d) failed", conf->logd);
+        err_msg(errno, "write() failed on fd=%d", conf->logd);
     free(now);
     free(str);
 
     if (close(conf->logd) < 0)
-        err_msg(errno, "close(%d) failed", conf->logd);
+        err_msg(errno, "close() failed on fd=%d", conf->logd);
     conf->logd = -1;
 
     return;

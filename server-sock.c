@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.18 2001/06/12 16:17:48 dun Exp $
+ *  $Id: server-sock.c,v 1.19 2001/06/15 15:46:45 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -67,7 +67,7 @@ void process_client(client_arg_t *args)
 
     if (!(req = create_req())) {
         if (close(sd) < 0)
-            err_msg(errno, "close(%d) failed", sd);
+            err_msg(errno, "close() failed on fd=%d", sd);
         return;
     }
     resolve_req(req, sd);
@@ -134,7 +134,7 @@ static void resolve_req(req_t *req, int sd)
      *    Either way, copy buf to prevents having to code everything as
      *    (req->host ? req->host : req->ip).
      */
-    get_hostname_via_addr(&addr.sin_addr, buf, sizeof(buf));
+    get_hostname_by_addr(&addr.sin_addr, buf, sizeof(buf));
     req->host = create_string(buf);
 
     return;

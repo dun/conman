@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.16 2001/06/12 19:55:27 dun Exp $
+ *  $Id: server-obj.c,v 1.17 2001/06/15 15:46:44 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -57,7 +57,7 @@ obj_t * create_console_obj(List objs, char *name, char *dev,
     if (!isatty(fd)) {
         log_msg(0, "Console %s is not a TTY device", name);
         if (close(fd) < 0)
-            err_msg(errno, "close(%d) failed", fd);
+            err_msg(errno, "close() failed on fd=%d", fd);
         return(NULL);
     }
     console = create_obj(CONSOLE, objs, name, fd);
@@ -98,7 +98,7 @@ obj_t * create_logfile_obj(List objs, char *name, obj_t *console)
     console->aux.console.logfile = logfile;
 
     now = create_date_time_string(0);
-    msg = create_fmt_string("\r\n%sConsole %s log started at %s%s\r\n",
+    msg = create_fmt_string("%sConsole %s log started at %s%s",
         CONMAN_MSG_PREFIX, console->name, now, CONMAN_MSG_SUFFIX);
     write_obj_data(logfile, msg, strlen(msg));
     free(now);
@@ -205,7 +205,7 @@ void destroy_obj(obj_t *obj)
     }
     if (obj->fd >= 0) {
         if (close(obj->fd) < 0)
-            err_msg(errno, "close(%d) failed", obj->fd);
+            err_msg(errno, "close() failed on fd=%d", obj->fd);
         obj->fd = -1;
     }
     if ((rc = pthread_mutex_destroy(&obj->bufLock)) != 0)
@@ -365,7 +365,7 @@ void link_objs(obj_t *src, obj_t *dst)
         now = create_time_string(0);
         tty = src->aux.client.req->tty;
         snprintf(buf, sizeof(buf),
-            "\r\n%sConsole %s %s%s by %s@%s%s%s at %s%s\r\n",
+            "%sConsole %s %s%s by %s@%s%s%s at %s%s",
             CONMAN_MSG_PREFIX, dst->name,
             (gotJoin ? "joined" : "stolen"), (gotBcast ? " for B/C" : ""),
             src->aux.client.req->user, src->aux.client.req->host,
@@ -437,9 +437,8 @@ static void unlink_objs_helper(obj_t *src, obj_t *dst)
         now = create_time_string(0);
         tty = dst->aux.client.req->tty;
         snprintf(buf, sizeof(buf),
-            "\r\n%sConsole %s departed by %s@%s%s%s at %s%s\r\n",
-            CONMAN_MSG_PREFIX, src->name,
-            dst->aux.client.req->user, dst->aux.client.req->host,
+            "%sConsole %s departed by %s@%s%s%s at %s%s", CONMAN_MSG_PREFIX,
+            src->name, dst->aux.client.req->user, dst->aux.client.req->host,
             (tty ? " on " : ""), (tty ? tty : ""), now, CONMAN_MSG_SUFFIX);
         free(now);
         buf[sizeof(buf) - 2] = '\n';

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.h,v 1.6 2001/06/12 16:17:48 dun Exp $
+ *  $Id: common.h,v 1.7 2001/06/15 15:46:44 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -17,8 +17,8 @@
 #define DEFAULT_CONSOLE_BAUD	9600
 #define DEFAULT_CLIENT_ESCAPE	'&'
 
-#define CONMAN_MSG_PREFIX	"<ConMan> "
-#define CONMAN_MSG_SUFFIX	"."
+#define CONMAN_MSG_PREFIX	"\r\n<ConMan> "
+#define CONMAN_MSG_SUFFIX	".\r\n"
 
 /*  Notes regarding the recommended sizes of various constants:
  *

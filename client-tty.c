@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-tty.c,v 1.19 2001/06/12 19:55:27 dun Exp $
+ *  $Id: client-tty.c,v 1.20 2001/06/15 15:46:44 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -32,7 +32,7 @@ static void perform_close_esc(client_conf_t *conf, char c);
 static void perform_help_esc(client_conf_t *conf, char c);
 static void perform_suspend_esc(client_conf_t *conf, char c);
 static void locally_echo_esc(char e, char c);
-static void display_connection_msg(client_conf_t *conf, char *msg);
+static void locally_display_status(client_conf_t *conf, char *msg);
 
 
 static int done = 0;
@@ -57,7 +57,7 @@ void connect_console(client_conf_t *conf)
 
     set_raw_tty_mode(STDIN_FILENO, &conf->term);
 
-    display_connection_msg(conf, "opened");
+    locally_display_status(conf, "opened");
 
     FD_ZERO(&rsetBak);
     FD_SET(STDIN_FILENO, &rsetBak);
@@ -85,11 +85,11 @@ void connect_console(client_conf_t *conf)
     }
 
     if (close(conf->req->sd) < 0)
-        err_msg(errno, "close(%d) failed", conf->req->sd);
+        err_msg(errno, "close() failed on fd=%d", conf->req->sd);
     conf->req->sd = -1;
 
     if (!conf->closedByClient)
-        display_connection_msg(conf, "terminated by peer");
+        locally_display_status(conf, "terminated by peer");
 
     restore_tty_mode(STDIN_FILENO, &conf->term);
     return;
@@ -112,7 +112,7 @@ static void set_raw_tty_mode(int fd, struct termios *old)
     assert(fd >= 0);
 
     if (tcgetattr(fd, &term) < 0)
-        err_msg(errno, "tcgetattr(%d) failed", fd);
+        err_msg(errno, "tcgetattr() failed on fd=%d", fd);
     if (old)
         *old = term;
 
@@ -135,7 +135,7 @@ static void set_raw_tty_mode(int fd, struct termios *old)
     term.c_cc[VTIME] = 0;
 
     if (tcsetattr(fd, TCSANOW, &term) < 0)
-        err_msg(errno, "tcgetattr(%d) failed", fd);
+        err_msg(errno, "tcgetattr() failed on fd=%d", fd);
     return;
 }
 
@@ -146,7 +146,7 @@ static void restore_tty_mode(int fd, struct termios *new)
     assert(new);
 
     if (tcsetattr(fd, TCSANOW, new) < 0)
-        err_msg(errno, "tcgetattr(%d) failed", fd);
+        err_msg(errno, "tcgetattr() failed on fd=%d", fd);
     return;
 }
 
@@ -168,7 +168,7 @@ static int read_from_stdin(client_conf_t *conf)
 
     while ((n = read(STDIN_FILENO, &c, 1)) < 0) {
         if (errno != EINTR)
-            err_msg(errno, "read(%d) failed", conf->req->sd);
+            err_msg(errno, "read() failed on fd=%d", conf->req->sd);
     }
     if (n == 0)
         return(0);
@@ -232,7 +232,7 @@ static int read_from_stdin(client_conf_t *conf)
         if (write_n(conf->req->sd, buf, p - buf) < 0) {
             if (errno == EPIPE)
                 return(0);
-            err_msg(errno, "write(%d) failed", conf->req->sd);
+            err_msg(errno, "write() failed on fd=%d", conf->req->sd);
         }
     }
     return(1);
@@ -253,14 +253,14 @@ static int write_to_stdout(client_conf_t *conf)
      */
     while ((n = read(conf->req->sd, buf, sizeof(buf))) < 0) {
         if (errno != EINTR)
-            err_msg(errno, "read(%d) failed", conf->req->sd);
+            err_msg(errno, "read() failed on fd=%d", conf->req->sd);
     }
     if (n > 0) {
         if (write_n(STDOUT_FILENO, buf, n) < 0)
-            err_msg(errno, "write(%d) failed", STDOUT_FILENO);
+            err_msg(errno, "write() failed on fd=%d", STDOUT_FILENO);
         if (conf->logd >= 0)
             if (write_n(conf->logd, buf, n) < 0)
-                err_msg(errno, "write(%d) failed", conf->logd);
+                err_msg(errno, "write() failed on fd=%d", conf->logd);
     }
     return(n);
 }
@@ -275,7 +275,7 @@ static void send_esc_seq(client_conf_t *conf, char c)
     buf[0] = ESC_CHAR;
     buf[1] = c;
     if (write_n(conf->req->sd, buf, sizeof(buf)) < 0)
-        err_msg(errno, "write(%d) failed", STDOUT_FILENO);
+        err_msg(errno, "write() failed on fd=%d", STDOUT_FILENO);
     return;
 }
 
@@ -286,10 +286,10 @@ static void perform_close_esc(client_conf_t *conf, char c)
  */
     locally_echo_esc(conf->escapeChar, c);
 
-    display_connection_msg(conf, "closed");
+    locally_display_status(conf, "closed");
 
     if (shutdown(conf->req->sd, SHUT_WR) < 0)
-        err_msg(errno, "shutdown(%d) failed", conf->req->sd);
+        err_msg(errno, "shutdown() failed on fd=%d", conf->req->sd);
 
     conf->closedByClient = 1;
     return;
@@ -318,7 +318,7 @@ static void perform_help_esc(client_conf_t *conf, char c)
     write_esc_char(ESC_CHAR_SUSPEND, escSuspend);
 
     str = create_fmt_string(
-        "Supported ConMan Escape Sequences:\r\n"
+        "\r\nSupported ConMan Escape Sequences:\r\n"
         "  %2s%-2s -  Display this help message.\r\n"
         "  %2s%-2s -  Terminate the connection.\r\n"
         "  %2s%-2s -  Send the escape character by typing it twice.\r\n"
@@ -329,7 +329,7 @@ static void perform_help_esc(client_conf_t *conf, char c)
         escChar, escBreak, escChar, escLog, CONMAN_REPLAY_LEN,
         escChar, escSuspend);
     if (write_n(STDOUT_FILENO, str, strlen(str)) < 0)
-        err_msg(errno, "write(%d) failed", STDOUT_FILENO);
+        err_msg(errno, "write() failed on fd=%d", STDOUT_FILENO);
     free(str);
     return;
 }
@@ -345,14 +345,14 @@ static void perform_suspend_esc(client_conf_t *conf, char c)
     locally_echo_esc(conf->escapeChar, c);
 
     send_esc_seq(conf, c);
-    display_connection_msg(conf, "suspended");
+    locally_display_status(conf, "suspended");
     restore_tty_mode(STDIN_FILENO, &conf->term);
 
     if (kill(getpid(), SIGTSTP) < 0)
         err_msg(errno, "Unable to suspend client (pid %d)", getpid());
 
     set_raw_tty_mode(STDIN_FILENO, &conf->term);
-    display_connection_msg(conf, "resumed");
+    locally_display_status(conf, "resumed");
     send_esc_seq(conf, c);
 
     return;
@@ -363,21 +363,16 @@ static void locally_echo_esc(char e, char c)
 {
 /*  Locally echo an escape character sequence on stdout.
  */
-    char buf[6];
+    char buf[4];
     char *p = buf;
 
     p = write_esc_char(e, p);
     p = write_esc_char(c, p);
 
-    /*  Append a CR/LF since tty is in raw mode.
-     */
-    *p++ = '\r';
-    *p++ = '\n';
-
     assert((p - buf) <= sizeof(buf));
 
     if (write_n(STDOUT_FILENO, buf, p - buf) < 0)
-        err_msg(errno, "write(%d) failed", STDOUT_FILENO);
+        err_msg(errno, "write() failed on fd=%d", STDOUT_FILENO);
     return;
 }
 
@@ -411,7 +406,7 @@ char * write_esc_char(char c, char *dst)
 }
 
 
-static void display_connection_msg(client_conf_t *conf, char *msg)
+static void locally_display_status(client_conf_t *conf, char *msg)
 {
 /*  Displays (msg) regarding the state of the console connection.
  */
@@ -433,12 +428,12 @@ static void display_connection_msg(client_conf_t *conf, char *msg)
     if (!overflow) {
 
         if (list_count(conf->req->consoles) == 1) {
-            n = snprintf(ptr, len, "%sConnection to console %s %s%s\r\n",
+            n = snprintf(ptr, len, "%sConnection to console %s %s%s",
                 CONMAN_MSG_PREFIX, (char *) list_peek(conf->req->consoles),
                 msg, CONMAN_MSG_SUFFIX);
         }
         else {
-            n = snprintf(ptr, len, "%sBroadcast to %d consoles %s%s\r\n",
+            n = snprintf(ptr, len, "%sBroadcast to %d consoles %s%s",
                 CONMAN_MSG_PREFIX, list_count(conf->req->consoles),
                 msg, CONMAN_MSG_SUFFIX);
         }
@@ -453,6 +448,6 @@ static void display_connection_msg(client_conf_t *conf, char *msg)
         snprintf(ptr, 3, "\r\n");
     }
     if (write_n(STDOUT_FILENO, buf, strlen(buf)) < 0)
-        err_msg(errno, "write(%d) failed", STDOUT_FILENO);
+        err_msg(errno, "write() failed on fd=%d", STDOUT_FILENO);
     return;
 }

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-sock.c,v 1.11 2001/06/12 16:17:47 dun Exp $
+ *  $Id: client-sock.c,v 1.12 2001/06/15 15:46:44 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -92,7 +92,7 @@ int send_greeting(client_conf_t *conf)
              *  FIX_ME: NOT_IMPLEMENTED_YET
              */
             if (close(conf->req->sd) < 0)
-                err_msg(errno, "close(%d) failed", conf->req->sd);
+                err_msg(errno, "close() failed on fd=%d", conf->req->sd);
             conf->req->sd = -1;
         }
         return(-1);
@@ -360,10 +360,10 @@ void display_error(client_conf_t *conf)
     p = create_fmt_string("ERROR: %s\n\n",
         (conf->errmsg ? conf->errmsg : "Unspecified"));
     if (write_n(STDERR_FILENO, p, strlen(p)) < 0)
-        err_msg(errno, "write(%d) failed", STDERR_FILENO);
+        err_msg(errno, "write() failed on fd=%d", STDERR_FILENO);
     if (conf->logd >= 0)
         if (write_n(conf->logd, p, strlen(p)) < 0)
-            err_msg(errno, "write(%d) failed", conf->logd);
+            err_msg(errno, "write() failed on fd=%d", conf->logd);
     free(p);
 
     if (conf->errnum != CONMAN_ERR_LOCAL)
@@ -381,10 +381,10 @@ void display_error(client_conf_t *conf)
 
     if (p) {
         if (write_n(STDERR_FILENO, p, strlen(p)) < 0)
-            err_msg(errno, "write(%d) failed", STDERR_FILENO);
+            err_msg(errno, "write() failed on fd=%d", STDERR_FILENO);
         if (conf->logd >= 0)
             if (write_n(conf->logd, p, strlen(p)) < 0)
-                err_msg(errno, "write(%d) failed", conf->logd);
+                err_msg(errno, "write() failed on fd=%d", conf->logd);
     }
 
     exit(2);
@@ -408,10 +408,10 @@ void display_data(client_conf_t *conf, int fd)
         if (n == 0)
             break;
         if (write_n(fd, buf, n) < 0)
-            err_msg(errno, "write(%d) failed", fd);
+            err_msg(errno, "write() failed on fd=%d", fd);
         if (conf->logd >= 0)
             if (write_n(conf->logd, buf, n) < 0)
-                err_msg(errno, "write(%d) failed", conf->logd);
+                err_msg(errno, "write() failed on fd=%d", conf->logd);
     }
     return;
 }
@@ -431,10 +431,10 @@ void display_consoles(client_conf_t *conf, int fd)
         if (n < 0 || n >= sizeof(buf))
             err_msg(0, "Buffer overflow");
         if (write_n(fd, buf, n) < 0)
-            err_msg(errno, "write(%d) failed", fd);
+            err_msg(errno, "write() failed on fd=%d", fd);
         if (conf->logd >= 0)
             if (write_n(conf->logd, buf, n) < 0)
-                err_msg(errno, "write(%d) failed", conf->logd);
+                err_msg(errno, "write() failed on fd=%d", conf->logd);
     }
     list_iterator_destroy(i);
     return;

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util.c,v 1.8 2001/06/12 16:17:48 dun Exp $
+ *  $Id: util.c,v 1.9 2001/06/15 15:46:45 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util.h" for documentation on public functions.
@@ -288,7 +288,7 @@ ssize_t read_line(int fd, void *buf, size_t maxlen)
 }
 
 
-char * get_hostname_via_addr(void *addr, char *buf, int len)
+char * get_hostname_by_addr(void *addr, char *buf, int len)
 {
     static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
     int rc;
