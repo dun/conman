@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-conf.c,v 1.11 2001/05/29 23:45:24 dun Exp $
+ *  $Id: client-conf.c,v 1.12 2001/05/31 18:23:03 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -39,6 +39,7 @@ client_conf_t * create_client_conf(void)
     client_conf_t *conf;
     uid_t uid;
     struct passwd *passp;
+    char *p;
 
     if (!(conf = malloc(sizeof(client_conf_t))))
         err_msg(0, "Out of memory");
@@ -51,6 +52,10 @@ client_conf_t * create_client_conf(void)
     if (!(passp = getpwuid(uid)))
         err_msg(errno, "Unable to lookup UID %d", uid);
     conf->req->user = create_string(passp->pw_name);
+    p = ttyname(STDIN_FILENO);
+    if (strstr(p, "/dev/") == p)
+        p += 5;
+    conf->req->tty = create_string(p);
 
     /*  Must copy host string constant since it will eventually be free()'d.
      */
@@ -204,8 +209,8 @@ void open_client_log(client_conf_t *conf)
     if ((conf->logd = open(conf->log, flags, S_IRUSR | S_IWUSR)) < 0)
         err_msg(errno, "Unable to open logfile [%s]", conf->log);
 
-    now = create_time_string(0);
-    str = create_fmt_string("\r\n%s Log started %s.\r\n",
+    now = create_date_time_string(0);
+    str = create_fmt_string("\r\n%s Log started at %s.\r\n",
         CONMAN_MSG_PREFIX, now);
     if (write_n(conf->logd, str, strlen(str)) < 0)
         err_msg(errno, "write(%d) failed", conf->logd);
@@ -224,8 +229,8 @@ void close_client_log(client_conf_t *conf)
         return;
     assert(conf->logd >= 0);
 
-    now = create_time_string(0);
-    str = create_fmt_string("\r\n%s Log finished %s.\r\n",
+    now = create_date_time_string(0);
+    str = create_fmt_string("\r\n%s Log finished at %s.\r\n",
         CONMAN_MSG_PREFIX, now);
     if (write_n(conf->logd, str, strlen(str)) < 0)
         err_msg(errno, "write(%d) failed", conf->logd);
