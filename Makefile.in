@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Makefile.in,v 1.44 2002/02/08 18:12:25 dun Exp $
+# $Id: Makefile.in,v 1.45 2002/03/14 03:24:10 dun Exp $
 ##
 
 PROJECT=	conman
@@ -55,29 +55,29 @@ conmand: $(SERVER_OBJS)
 	$(CC) $(COPTS) -c $<
 
 install: $(PROGS)
-	$(mkinstalldirs) $(DESTDIR)$(bindir)
+	$(mkinstalldirs) -m 755 $(DESTDIR)$(bindir)
 	$(INSTALL) conman $(DESTDIR)$(bindir)/
 	$(INSTALL) conmen $(DESTDIR)$(bindir)/
-	$(mkinstalldirs) $(DESTDIR)$(sbindir)
+	$(mkinstalldirs) -m 755 $(DESTDIR)$(sbindir)
 	$(INSTALL) conmand $(DESTDIR)$(sbindir)/
-	if ! test -f $(DESTDIR)$(CONF); then \
-	  $(mkinstalldirs) $(DESTDIR)/etc; \
+	if test ! -f $(DESTDIR)$(CONF); then \
+	  $(mkinstalldirs) -m 755 $(DESTDIR)/etc; \
 	  $(INSTALL) -m 644 etc/conman.conf \
 	    $(DESTDIR)$(CONF); \
 	fi;
-	if ! test -f $(DESTDIR)/etc/logrotate.d/conman; then \
-	  $(mkinstalldirs) $(DESTDIR)/etc/logrotate.d; \
+	if test ! -f $(DESTDIR)/etc/logrotate.d/conman; then \
+	  $(mkinstalldirs) -m 755 $(DESTDIR)/etc/logrotate.d; \
 	  $(INSTALL) -m 644 etc/conman.logrotate \
 	    $(DESTDIR)/etc/logrotate.d/conman; \
 	fi;
-	if ! test -f $(DESTDIR)/etc/rc.d/init.d/conman; then \
-	  $(mkinstalldirs) $(DESTDIR)/etc/rc.d/init.d; \
+	if test ! -f $(DESTDIR)/etc/rc.d/init.d/conman; then \
+	  $(mkinstalldirs) -m 755 $(DESTDIR)/etc/rc.d/init.d; \
 	  $(INSTALL) -m 755 etc/conman.init \
 	    $(DESTDIR)/etc/rc.d/init.d/conman; \
 	fi;
 	proj="$(PROJECT)"; \
 	for f in `cd lib && find * -name CVS -prune -o -type f -print`; do \
-	  $(mkinstalldirs) `dirname $(DESTDIR)$(libdir)/$$proj/$$f`; \
+	  $(mkinstalldirs) -m 755 `dirname $(DESTDIR)$(libdir)/$$proj/$$f`; \
 	  $(INSTALL) -m 755 lib/$$f $(DESTDIR)$(libdir)/$$proj/$$f; \
 	done; \
 	chmod 644 $(DESTDIR)$(libdir)/$$proj/*.exp
@@ -96,7 +96,7 @@ distclean: realclean
 depend:
 	-makedepend -Y -- $(COPTS) -- *.[ch] 2>/dev/null
 
-tags: $(PROGS)
+tags: *.[ch]
 	-ctags * 2>/dev/null
 
 include Make-rpm.mk
