@@ -1,13 +1,14 @@
 /******************************************************************************\
- *  $Id: conman.h,v 1.7 2001/05/24 20:56:08 dun Exp $
+ *  $Id: common.h,v 1.1 2001/05/29 23:45:24 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
 
-#ifndef _CONMAN_H
-#define _CONMAN_H
+#ifndef _COMMON_H
+#define _COMMON_H
 
 #include "lex.h"
+#include "list.h"
 
 
 #define CONMAN_MSG_PREFIX	"<ConMan>"
@@ -28,6 +29,21 @@ typedef enum cmd_type {
     MONITOR,
     QUERY,
 } cmd_t;
+
+typedef struct request {
+    int    sd;				/* socket descriptor                  */
+    char  *user;			/* login name of client user          */
+    char  *host;			/* remote hostname (or ip) string     */
+    char  *ip;				/* remote ip addr string              */
+    int    port;			/* remote port number                 */
+    cmd_t  command;			/* conman command to perform          */
+    int    enableBroadcast;		/* true if b-casting to many consoles */
+    int    enableForce;			/* true if forcing console connection */
+    int    enableJoin;			/* true if joining console connection */
+    char  *program;			/* program name for EXECUTE cmd       */
+    List   consoles;			/* list of consoles affected by cmd   */
+} req_t;
+
 
 enum err_type {
     CONMAN_ERR_NONE,
@@ -54,7 +70,6 @@ enum proto_toks {
     CONMAN_TOK_MONITOR,
     CONMAN_TOK_CONNECT,
     CONMAN_TOK_EXECUTE,
-    CONMAN_TOK_GOODBYE,
     CONMAN_TOK_CODE,
     CONMAN_TOK_MESSAGE,
     CONMAN_TOK_USER,
@@ -63,9 +78,19 @@ enum proto_toks {
     CONMAN_TOK_OPTION,
     CONMAN_TOK_BROADCAST,
     CONMAN_TOK_FORCE,
+    CONMAN_TOK_JOIN,
 };
 
 extern char *proto_strs[];		/* defined in common.c */
 
 
-#endif /* !_CONMAN_H */
+/**************\
+**  common.c  **
+\**************/
+
+req_t * create_req(void);
+
+void destroy_req(req_t *req);
+
+
+#endif /* !_COMMON_H */

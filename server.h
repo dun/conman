@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.10 2001/05/25 18:39:42 dun Exp $
+ *  $Id: server.h,v 1.11 2001/05/29 23:45:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -12,7 +12,7 @@
 #include <sys/types.h>
 #include <termios.h>
 #include <time.h>
-#include "conman.h"
+#include "common.h"
 #include "list.h"
 
 
@@ -35,6 +35,7 @@ typedef struct logfile_obj {		/* LOGFILE AUX OBJ DATA:              */
 } logfile_obj_t;
 
 typedef struct socket_obj {		/* SOCKET AUX OBJ DATA:               */
+    req_t           *req;		/*  client request info               */
     int              gotIAC;		/*  true if rcvd IAC escape on fd     */
     time_t           timeLastRead;	/*  time last data was read from fd   */
 } socket_obj_t;
@@ -94,7 +95,7 @@ obj_t * create_console_obj(List objs, char *name, char *dev,
 
 obj_t * create_logfile_obj(List objs, char *logfile, char *console);
 
-obj_t * create_socket_obj(List objs, char *user, char *ip, int port, int sd);
+obj_t * create_socket_obj(List objs, req_t *req);
 
 void destroy_obj(obj_t *obj);
 

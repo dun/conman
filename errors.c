@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: errors.c,v 1.4 2001/05/24 20:56:08 dun Exp $
+ *  $Id: errors.c,v 1.5 2001/05/29 23:45:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "errors.h" for documentation on public functions.
@@ -15,7 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "conman.h"
+#include "common.h"
 
 
 #ifndef MAX_LINE

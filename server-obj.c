@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.9 2001/05/25 18:39:42 dun Exp $
+ *  $Id: server-obj.c,v 1.10 2001/05/29 23:45:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
+#include "common.h"
 #include "errors.h"
 #include "list.h"
 #include "server.h"
@@ -106,27 +107,28 @@ obj_t * create_logfile_obj(List objs, char *logfile, char *console)
 }
 
 
-obj_t * create_socket_obj(List objs, char *user, char *ip, int port, int sd)
+obj_t * create_socket_obj(List objs, req_t *req)
 {
 /*  Creates a new socket object and adds it to the master (objs) list.
  *    Note: the socket is open and set for non-blocking I/O.
- *  Returns the new object, or NULL on error.
+ *  Returns the new object.
  */
     char name[MAX_LINE];
     obj_t *obj;
 
     assert(objs);
-    assert(user && *user);
-    assert(ip && *ip);
-    assert(port > 0);
-    assert(sd >= 0);
+    assert(req);
+    assert(req->sd >= 0);
+    assert(req->user);
+    assert(req->host);
 
-    set_descriptor_nonblocking(sd);
+    set_descriptor_nonblocking(req->sd);
 
-    snprintf(name, sizeof(name), "%s@%s:%d", user, ip, port);
+    snprintf(name, sizeof(name), "%s@%s", req->user, req->host);
     name[sizeof(name) - 1] = '\0';
-    obj = create_obj(SOCKET, objs, name, sd);
+    obj = create_obj(SOCKET, objs, name, req->sd);
 
+    obj->aux.socket.req = req;
     obj->aux.socket.gotIAC = 0;
     time(&obj->aux.socket.timeLastRead);
     if (obj->aux.socket.timeLastRead == ((time_t) -1))
@@ -183,6 +185,9 @@ void destroy_obj(obj_t *obj)
  */
     int rc;
 
+    if (!obj)
+        return;
+
     DPRINTF("Destroyed object [%s].\n", obj->name);
 
     assert(obj->fd >= 0);
@@ -215,6 +220,13 @@ void destroy_obj(obj_t *obj)
             free(obj->aux.logfile.console);
         break;
     case SOCKET:
+        if (obj->aux.socket.req) {
+        /*
+         *  Prevent destroy_req() from closing 'sd' a second time.
+         */
+            obj->aux.socket.req->sd = -1;
+            destroy_req(obj->aux.socket.req);
+        }
         break;
     default:
         err_msg(0, "Invalid object (%d) at %s:%d",

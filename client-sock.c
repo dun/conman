@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-sock.c,v 1.8 2001/05/24 20:56:08 dun Exp $
+ *  $Id: client-sock.c,v 1.9 2001/05/29 23:45:24 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -20,7 +20,7 @@
 #include <sys/types.h>
 #include <sys/utsname.h>
 #include <unistd.h>
-#include "conman.h"
+#include "common.h"
 #include "client.h"
 #include "errors.h"
 #include "lex.h"
@@ -37,28 +37,28 @@ void connect_to_server(client_conf_t *conf)
     struct sockaddr_in addr;
     struct hostent *hostp;
 
-    assert(conf->dhost);
-    assert(conf->dport > 0);
+    assert(conf->req->host);
+    assert(conf->req->port > 0);
 
     if ((sd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
         err_msg(errno, "socket() failed");
 
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(conf->dport);
+    addr.sin_port = htons(conf->req->port);
 
     /*  Note: gethostbyname() is not thread-safe, but that's OK here.
      */
-    if (!(hostp = gethostbyname(conf->dhost)))
+    if (!(hostp = gethostbyname(conf->req->host)))
         err_msg(0, "Unable to resolve host [%s]: %s",
-            conf->dhost, hstrerror(h_errno));
+            conf->req->host, hstrerror(h_errno));
     memcpy(&addr.sin_addr.s_addr, hostp->h_addr, hostp->h_length);
 
     if (connect(sd, (struct sockaddr *) &addr, sizeof(addr)) < 0)
         err_msg(errno, "Unable to connect to [%s:%d]",
-            conf->dhost, conf->dport);
+            conf->req->host, conf->req->port);
 
-    conf->sd = sd;
+    conf->req->sd = sd;
     return;
 }
 
@@ -68,11 +68,11 @@ int send_greeting(client_conf_t *conf)
     char buf[MAX_SOCK_LINE];
     int n;
 
-    assert(conf->sd >= 0);
+    assert(conf->req->sd >= 0);
 
     n = snprintf(buf, sizeof(buf), "%s %s='%s'\n",
         proto_strs[LEX_UNTOK(CONMAN_TOK_HELLO)],
-        proto_strs[LEX_UNTOK(CONMAN_TOK_USER)], lex_encode(conf->user));
+        proto_strs[LEX_UNTOK(CONMAN_TOK_USER)], lex_encode(conf->req->user));
 
     if (n < 0 || n >= sizeof(buf)) {
         conf->errnum = CONMAN_ERR_LOCAL;
@@ -80,10 +80,10 @@ int send_greeting(client_conf_t *conf)
         return(-1);
     }
 
-    if (write_n(conf->sd, buf, strlen(buf)) < 0) {
+    if (write_n(conf->req->sd, buf, strlen(buf)) < 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
         conf->errmsg = create_fmt_string("Cannot send greeting to [%s:%d]: %s",
-            conf->dhost, conf->dport, strerror(errno));
+            conf->req->host, conf->req->port, strerror(errno));
         return(-1);
     }
 
@@ -92,9 +92,9 @@ int send_greeting(client_conf_t *conf)
             /*
              *  FIX_ME: NOT_IMPLEMENTED_YET
              */
-            if (close(conf->sd) < 0)
-                err_msg(errno, "close(%d) failed", conf->sd);
-            conf->sd = -1;
+            if (close(conf->req->sd) < 0)
+                err_msg(errno, "close(%d) failed", conf->req->sd);
+            conf->req->sd = -1;
         }
         return(-1);
     }
@@ -111,12 +111,12 @@ int send_req(client_conf_t *conf)
     char *cmd;
     char *str;
 
-    assert(conf->sd >= 0);
+    assert(conf->req->sd >= 0);
 
     ptr = buf;
     len = sizeof(buf) - 1;		/* reserve space for terminating \n */
 
-    switch(conf->command) {
+    switch(conf->req->command) {
     case QUERY:
         cmd = proto_strs[LEX_UNTOK(CONMAN_TOK_QUERY)];
         break;
@@ -131,7 +131,7 @@ int send_req(client_conf_t *conf)
         break;
     default:
         err_msg(0, "Invalid command (%d) at %s:%d",
-            conf->command, __FILE__, __LINE__);
+            conf->req->command, __FILE__, __LINE__);
         break;
     }
 
@@ -141,18 +141,18 @@ int send_req(client_conf_t *conf)
     ptr += n;
     len -= n;
 
-    if ((conf->command == EXECUTE) && (conf->program != NULL)) {
+    if ((conf->req->command == EXECUTE) && (conf->req->program != NULL)) {
         n = snprintf(ptr, len, " %s='%s'",
             proto_strs[LEX_UNTOK(CONMAN_TOK_PROGRAM)],
-            lex_encode(conf->program));
+            lex_encode(conf->req->program));
         if (n < 0 || n >= len)
             goto overflow;
         ptr += n;
         len -= n;
     }
 
-    if ((conf->command == CONNECT) || (conf->command == EXECUTE)) {
-        if (conf->enableForce) {
+    if ((conf->req->command == CONNECT) || (conf->req->command == EXECUTE)) {
+        if (conf->req->enableForce) {
             n = snprintf(ptr, len, " %s=%s",
                 proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
                 proto_strs[LEX_UNTOK(CONMAN_TOK_FORCE)]);
@@ -161,7 +161,16 @@ int send_req(client_conf_t *conf)
             ptr += n;
             len -= n;
         }
-        if (conf->enableBroadcast) {
+        if (conf->req->enableJoin) {
+            n = snprintf(ptr, len, " %s=%s",
+                proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
+                proto_strs[LEX_UNTOK(CONMAN_TOK_JOIN)]);
+            if (n < 0 || n >= len)
+                goto overflow;
+            ptr += n;
+            len -= n;
+        }
+        if (conf->req->enableBroadcast) {
             n = snprintf(ptr, len, " %s=%s",
                 proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
                 proto_strs[LEX_UNTOK(CONMAN_TOK_BROADCAST)]);
@@ -175,7 +184,7 @@ int send_req(client_conf_t *conf)
     /*  Empty the consoles list here because it will be filled in
      *    with the actual console names in recv_rsp().
      */
-    while ((str = list_pop(conf->consoles))) {
+    while ((str = list_pop(conf->req->consoles))) {
         n = snprintf(ptr, len, " %s='%s'",
             proto_strs[LEX_UNTOK(CONMAN_TOK_CONSOLE)], lex_encode(str));
         free(str);
@@ -192,23 +201,23 @@ int send_req(client_conf_t *conf)
     *ptr++ = '\n';
     *ptr++ = '\0';
 
-    if (write_n(conf->sd, buf, strlen(buf)) < 0) {
+    if (write_n(conf->req->sd, buf, strlen(buf)) < 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
         conf->errmsg = create_fmt_string(
             "Unable to send greeting to [%s:%d]: %s",
-            conf->dhost, conf->dport, strerror(errno));
+            conf->req->host, conf->req->port, strerror(errno));
         return(-1);
     }
 
     /*  For both QUERY and EXECUTE commands, the write-half of the
      *    socket connection can be closed once the request is sent.
      */
-    if ((conf->command == QUERY) || (conf->command == EXECUTE)) {
-        if (shutdown(conf->sd, SHUT_WR) < 0) {
+    if ((conf->req->command == QUERY) || (conf->req->command == EXECUTE)) {
+        if (shutdown(conf->req->sd, SHUT_WR) < 0) {
             conf->errnum = CONMAN_ERR_LOCAL;
             conf->errmsg = create_fmt_string(
                 "Unable to close write-half of connection to [%s:%d]: %s",
-                conf->dhost, conf->dport, strerror(errno));
+                conf->req->host, conf->req->port, strerror(errno));
             return(-1);
         }
     }
@@ -230,19 +239,19 @@ int recv_rsp(client_conf_t *conf)
     int done = 0;
     int tok;
 
-    assert(conf->sd >= 0);
+    assert(conf->req->sd >= 0);
 
-    if ((n = read_line(conf->sd, buf, sizeof(buf))) < 0) {
+    if ((n = read_line(conf->req->sd, buf, sizeof(buf))) < 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
         conf->errmsg = create_fmt_string(
             "Cannot read response from [%s:%d]: %s",
-            conf->dhost, conf->dport, strerror(errno));
+            conf->req->host, conf->req->port, strerror(errno));
         return(-1);
     }
     else if (n == 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
-        conf->errmsg = create_fmt_string(
-            "Connection terminated by [%s:%d]", conf->dhost, conf->dport);
+        conf->errmsg = create_fmt_string("Connection terminated by [%s:%d]",
+            conf->req->host, conf->req->port);
         return(-1);
     }
 
@@ -275,8 +284,8 @@ int recv_rsp(client_conf_t *conf)
         return(0);
     if (conf->errnum == CONMAN_ERR_NONE) {
         conf->errnum = CONMAN_ERR_LOCAL;
-        conf->errmsg = create_fmt_string(
-            "Received invalid reponse from [%s:%d]", conf->dhost, conf->dport);
+        conf->errmsg = create_fmt_string("Received invalid reponse from"
+            " [%s:%d]", conf->req->host, conf->req->port);
     }
     return(-1);
 }
@@ -294,7 +303,7 @@ static void parse_rsp_ok(Lex l, client_conf_t *conf)
         case CONMAN_TOK_CONSOLE:
             if ((lex_next(l) == '=') && (lex_next(l) == LEX_STR)) {
                 if ((str = lex_decode(create_string(lex_text(l)))))
-                    if (!list_append(conf->consoles, str))
+                    if (!list_append(conf->req->consoles, str))
                         err_msg(0, "Out of memory");
             }
             break;
@@ -353,27 +362,30 @@ void display_error(client_conf_t *conf)
         (conf->errmsg ? conf->errmsg : "Unspecified"));
     if (write_n(STDERR_FILENO, p, strlen(p)) < 0)
         err_msg(errno, "write(%d) failed", STDERR_FILENO);
-    if (conf->ld >= 0)
-        if (write_n(conf->ld, p, strlen(p)) < 0)
-            err_msg(errno, "write(%d) failed", conf->ld);
+    if (conf->logd >= 0)
+        if (write_n(conf->logd, p, strlen(p)) < 0)
+            err_msg(errno, "write(%d) failed", conf->logd);
     free(p);
 
     if (conf->errnum != CONMAN_ERR_LOCAL)
         display_data(conf, STDERR_FILENO);
 
-    if (conf->errnum == CONMAN_ERR_TOO_MANY_CONSOLES && !conf->enableBroadcast)
+    if ((conf->errnum == CONMAN_ERR_TOO_MANY_CONSOLES)
+      && (!conf->req->enableBroadcast))
         p = "\nDo you want to broadcast (option -b)?\n\n";
-    else if (conf->errnum == CONMAN_ERR_BUSY_CONSOLES && !conf->enableForce)
-        p = "\nDo you want to force the connection (option -f)?\n\n";
+    else if ((conf->errnum == CONMAN_ERR_BUSY_CONSOLES)
+      && ((!conf->req->enableForce) && (!conf->req->enableJoin)))
+        p = "\nDo you want to force (option -f) or join (option -j)"
+          " the connection?\n\n";
     else
         p = NULL;
 
     if (p) {
         if (write_n(STDERR_FILENO, p, strlen(p)) < 0)
             err_msg(errno, "write(%d) failed", STDERR_FILENO);
-        if (conf->ld >= 0)
-            if (write_n(conf->ld, p, strlen(p)) < 0)
-                err_msg(errno, "write(%d) failed", conf->ld);
+        if (conf->logd >= 0)
+            if (write_n(conf->logd, p, strlen(p)) < 0)
+                err_msg(errno, "write(%d) failed", conf->logd);
     }
 
     exit(2);
@@ -387,20 +399,20 @@ void display_data(client_conf_t *conf, int fd)
 
     assert(fd >= 0);
 
-    if (conf->sd < 0)
+    if (conf->req->sd < 0)
         return;
 
     for (;;) {
-        n = read(conf->sd, buf, sizeof(buf));
+        n = read(conf->req->sd, buf, sizeof(buf));
         if (n < 0)
             err_msg(errno, "Unable to read data from socket");
         if (n == 0)
             break;
         if (write_n(fd, buf, n) < 0)
             err_msg(errno, "write(%d) failed", fd);
-        if (conf->ld >= 0)
-            if (write_n(conf->ld, buf, n) < 0)
-                err_msg(errno, "write(%d) failed", conf->ld);
+        if (conf->logd >= 0)
+            if (write_n(conf->logd, buf, n) < 0)
+                err_msg(errno, "write(%d) failed", conf->logd);
     }
     return;
 }
@@ -413,7 +425,7 @@ void display_consoles(client_conf_t *conf, int fd)
     char buf[MAX_LINE];
     int n;
 
-    if (!(i = list_iterator_create(conf->consoles)))
+    if (!(i = list_iterator_create(conf->req->consoles)))
         err_msg(0, "Out of memory");
     while ((p = list_next(i))) {
         n = snprintf(buf, sizeof(buf), "%s\n", p);
@@ -421,9 +433,9 @@ void display_consoles(client_conf_t *conf, int fd)
             err_msg(0, "Buffer overflow");
         if (write_n(fd, buf, n) < 0)
             err_msg(errno, "write(%d) failed", fd);
-        if (conf->ld >= 0)
-            if (write_n(conf->ld, buf, n) < 0)
-                err_msg(errno, "write(%d) failed", conf->ld);
+        if (conf->logd >= 0)
+            if (write_n(conf->logd, buf, n) < 0)
+                err_msg(errno, "write(%d) failed", conf->logd);
     }
     list_iterator_destroy(i);
     return;

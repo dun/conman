@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.8 2001/05/24 20:56:08 dun Exp $
+ *  $Id: server.c,v 1.9 2001/05/29 23:45:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -18,7 +18,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <unistd.h>
-#include "conman.h"
+#include "common.h"
 #include "errors.h"
 #include "list.h"
 #include "server.h"

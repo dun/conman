@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.6 2001/05/24 20:56:08 dun Exp $
+ *  $Id: server-conf.c,v 1.7 2001/05/29 23:45:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -18,7 +18,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "conman.h"
+#include "common.h"
 #include "errors.h"
 #include "lex.h"
 #include "list.h"
@@ -77,6 +77,9 @@ server_conf_t * create_server_conf(void)
 
 void destroy_server_conf(server_conf_t *conf)
 {
+    if (!conf)
+        return;
+
     if (conf->filename)
         free(conf->filename);
     if (conf->logname)
@@ -88,6 +91,7 @@ void destroy_server_conf(server_conf_t *conf)
     }
     if (conf->objs)
         list_destroy(conf->objs);
+
     free(conf);
     return;
 }

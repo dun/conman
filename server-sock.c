@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.13 2001/05/25 18:39:53 dun Exp $
+ *  $Id: server-sock.c,v 1.14 2001/05/29 23:45:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -18,29 +18,14 @@
 #include <sys/socket.h>
 #include <time.h>
 #include <unistd.h>
-#include "conman.h"
+#include "common.h"
 #include "errors.h"
 #include "lex.h"
 #include "server.h"
 #include "util.h"
 
 
-typedef struct request {
-    int    sd;				/* client socket descriptor           */
-    int    port;			/* port number in use by client host  */
-    char  *ip;				/* ip addr string of client           */
-    char  *host;			/* name of client host or ip addr str */
-    char  *user;			/* name of client user                */
-    cmd_t  command;			/* command to perform for client      */
-    int    enableBroadcast;		/* true if b-casting to many consoles */
-    int    enableForce;			/* true if forcing console connection */
-    char  *program;			/* program name for EXECUTE cmd       */
-    List   consoles;			/* list of consoles affected by cmd   */
-} req_t;
-
-
-static req_t * create_req(int sd);
-static void destroy_req(req_t *req);
+static void resolve_req(req_t *req, int sd);
 static int recv_greeting(req_t *req);
 static int parse_greeting(Lex l, req_t *req);
 static int recv_req(req_t *req);
@@ -80,11 +65,12 @@ void process_client(client_arg_t *args)
     if ((rc = pthread_detach(pthread_self())) != 0)
         err_msg(rc, "pthread_detach() failed");
 
-    if (!(req = create_req(sd))) {
+    if (!(req = create_req())) {
         if (close(sd) < 0)
             err_msg(errno, "close(%d) failed", sd);
         return;
     }
+    resolve_req(req, sd);
 
     if (recv_greeting(req) < 0)
         goto err;
@@ -116,106 +102,41 @@ void process_client(client_arg_t *args)
             req->command, __FILE__, __LINE__);
         break;
     }
-
-    destroy_req(req);
     return;
 
 err:
-    /*  Only close the client's socket connection on error,
-     *    since it may be further handled by mux_io().
-     */
-    if (req->sd > 0) {
-        if (close(req->sd) < 0)
-            log_msg(0, "Error closing connection from %s: %s",
-                req->ip, strerror(errno));
-        req->sd = -1;
-    }
     destroy_req(req);
     return;
 }
 
 
-static req_t * create_req(int sd)
+static void resolve_req(req_t *req, int sd)
 {
-/*  Creates a request struct.
- *  Returns the new struct, or NULL or error.
+/*  Resolves the network information associated with the
+ *    peer at the other end of the socket connection.
  */
-    req_t *req;
     struct sockaddr_in addr;
     socklen_t addrlen = sizeof(addr);
     char buf[MAX_LINE];
 
     assert(sd >= 0);
 
+    req->sd = sd;
     if (getpeername(sd, &addr, &addrlen) < 0)
         err_msg(errno, "getpeername() failed");
-
     if (!inet_ntop(AF_INET, &addr.sin_addr, buf, sizeof(buf)))
         err_msg(errno, "inet_ntop() failed");
-
-    if (!(req = malloc(sizeof(req_t)))) {
-        log_msg(0, "Request from %s terminated: out of memory", buf);
-        return(NULL);
-    }
-
-    req->sd = sd;
-    req->user = NULL;
-    req->command = NONE;
-    req->enableBroadcast = 0;
-    req->enableForce = 0;
-    req->program = NULL;
-    /*
-     *  The "consoles" list will initially contain strings received while
-     *    parsing the client's request.  These strings will then be matched
-     *    against the server's conf during query_consoles().
-     *  The destroy_string() destructor is used here because the initial
-     *    list of strings will be destroyed when query_consoles()
-     *    replaces it with a list of console objects.
-     */
-    if (!(req->consoles = list_create((ListDelF) destroy_string)))
-        goto err;
-
     req->port = ntohs(addr.sin_port);
-    if (!(req->ip = strdup(buf)))
-        goto err;
-
-    /*  Attempt to resolve IP address.  If it succeeds, buf contains
-     *    host string.  If it fails, buf is unchanged with IP addr string.
+    req->ip = create_string(buf);
+    /*
+     *  Attempt to resolve IP address.  If it succeeds, buf contains
+     *    host string; if it fails, buf is unchanged with IP addr string.
      *    Either way, copy buf to prevents having to code everything as
      *    (req->host ? req->host : req->ip).
      */
     get_hostname_via_addr(&addr.sin_addr, buf, sizeof(buf));
-    if (!(req->host = strdup(buf)))
-        goto err;
+    req->host = create_string(buf);
 
-    return(req);
-
-err:
-    destroy_req(req);
-    log_msg(0, "Request from %s terminated: out of memory", buf);
-    return(NULL);
-}
-
-
-static void destroy_req(req_t *req)
-{
-/*  Destroys a request struct.
- *  The client's socket connection is not shutdown here
- *    since it may be further handled by mux_io().
- */
-    DPRINTF("Destroyed request from %s.\n", req->host);
-
-    if (req->ip)
-        free(req->ip);
-    if (req->host)
-        free(req->host);
-    if (req->user)
-        free(req->user);
-    if (req->program)
-        free(req->program);
-    if (req->consoles)
-        list_destroy(req->consoles);
-    free(req);
     return;
 }
 
@@ -247,7 +168,7 @@ static int recv_greeting(req_t *req)
         return(-1);
     }
 
-    DPRINTF("Received greeting: %s", buf);
+    DPRINTF("Received greeting: %s", buf); /* xyzzy */
 
     if (!(l = lex_create(buf, proto_strs))) {
         send_rsp(req, CONMAN_ERR_NO_RESOURCES,
@@ -354,7 +275,7 @@ static int recv_req(req_t *req)
         return(-1);
     }
 
-    DPRINTF("Received request: %s", buf);
+    DPRINTF("Received request: %s", buf); /* xyzzy */
 
     if (!(l = lex_create(buf, proto_strs))) {
         send_rsp(req, CONMAN_ERR_NO_RESOURCES,
@@ -424,10 +345,12 @@ static int parse_cmd_opts(Lex l, req_t *req)
             break;
         case CONMAN_TOK_OPTION:
             if (lex_next(l) == '=') {
-                if (lex_next(l) == CONMAN_TOK_FORCE)
-                    req->enableForce = 1;
-                else if (lex_prev(l) == CONMAN_TOK_BROADCAST)
+                if (lex_next(l) == CONMAN_TOK_BROADCAST)
                     req->enableBroadcast = 1;
+                else if (lex_prev(l) == CONMAN_TOK_FORCE)
+                    req->enableForce = 1;
+                else if (lex_prev(l) == CONMAN_TOK_JOIN)
+                    req->enableJoin = 1;
             }
             break;
         case CONMAN_TOK_PROGRAM:
@@ -623,7 +546,7 @@ static int check_too_many_consoles(req_t *req)
 static int check_busy_consoles(req_t *req)
 {
 /*  Checks to see if a "writable" request affects any consoles
- *    that are currently busy (unless the force option is enabled).
+ *    that are currently busy (unless the force or join option is enabled).
  *  Returns 0 if the request is valid, or -1 on error.
  */
     List busy = NULL;
@@ -638,7 +561,7 @@ static int check_busy_consoles(req_t *req)
 
     if ((req->command == QUERY) || (req->command == MONITOR))
         return(0);
-    if (req->enableForce)
+    if (req->enableForce || req->enableJoin)
         return(0);
 
     if (!(busy = list_create(NULL)))
@@ -776,7 +699,7 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
         return(-1);
     }
 
-    DPRINTF("Sent response: %s", buf);
+    DPRINTF("Sent response: %s", buf); /* xyzzy */
     return(0);
 }
 
@@ -793,11 +716,7 @@ static void perform_query_cmd(req_t *req)
     assert(!list_is_empty(req->consoles));
 
     send_rsp(req, CONMAN_ERR_NONE, NULL);
-
-    if (close(req->sd) < 0)
-        err_msg(errno, "close(%d) failed", req->sd);
-    req->sd = -1;
-
+    destroy_req(req);
     return;
 }
 
@@ -814,15 +733,9 @@ static void perform_monitor_cmd(req_t *req, server_conf_t *conf)
     assert(req->command == MONITOR);
     assert(list_count(req->consoles) == 1);
 
-    console = list_peek(req->consoles);
-    socket = create_socket_obj(
-        conf->objs, req->user, req->ip, req->port, req->sd);
-    if (!socket) {
-        send_rsp(req, CONMAN_ERR_NO_RESOURCES,
-            "Insufficient resources to process request.");
-        return;
-    }
     send_rsp(req, CONMAN_ERR_NONE, NULL);
+    socket = create_socket_obj(conf->objs, req);
+    console = list_peek(req->consoles);
     link_objs(console, socket);
     return;
 }
@@ -844,14 +757,8 @@ static void perform_connect_cmd(req_t *req, server_conf_t *conf)
     assert(req->sd >= 0);
     assert(req->command == CONNECT);
 
-    socket = create_socket_obj(
-        conf->objs, req->user, req->ip, req->port, req->sd);
-    if (!socket) {
-        send_rsp(req, CONMAN_ERR_NO_RESOURCES,
-            "Insufficient resources to process request.");
-        return;
-    }
     send_rsp(req, CONMAN_ERR_NONE, NULL);
+    socket = create_socket_obj(conf->objs, req);
 
     if (list_count(req->consoles) == 1) {
         /*
@@ -882,7 +789,7 @@ static void perform_connect_cmd(req_t *req, server_conf_t *conf)
 
         /*  Move the req->consoles objs list to socket->readers.
          *    Once moved, req->consoles must be set to NULL in order
-         *    to prevent destroy_request() from destroying the list.
+         *    to prevent destroy_req() from destroying the list.
          */
         socket->readers = req->consoles;
         req->consoles = NULL;
@@ -898,6 +805,6 @@ static void perform_execute_cmd(req_t *req, server_conf_t *conf)
 
     /*  FIX_ME: NOT_IMPLEMENTED_YET
      */
-
+    destroy_req(req);
     return;
 }

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-tty.c,v 1.11 2001/05/24 20:56:08 dun Exp $
+ *  $Id: client-tty.c,v 1.12 2001/05/29 23:45:24 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -16,7 +16,7 @@
 #include <sys/socket.h>
 #include <termios.h>
 #include <unistd.h>
-#include "conman.h"
+#include "common.h"
 #include "client.h"
 #include "errors.h"
 #include "util.h"
@@ -49,8 +49,8 @@ void connect_console(client_conf_t *conf)
     fd_set rset, rsetBak;
     int n;
 
-    assert(conf->sd >= 0);
-    assert((conf->command == CONNECT) || (conf->command == MONITOR));
+    assert(conf->req->sd >= 0);
+    assert((conf->req->command == CONNECT) || (conf->req->command == MONITOR));
 
     Signal(SIGHUP, SIG_IGN);
     Signal(SIGINT, SIG_IGN);
@@ -65,11 +65,11 @@ void connect_console(client_conf_t *conf)
 
     FD_ZERO(&rsetBak);
     FD_SET(STDIN_FILENO, &rsetBak);
-    FD_SET(conf->sd, &rsetBak);
+    FD_SET(conf->req->sd, &rsetBak);
 
     while (!done) {
         rset = rsetBak;
-        while ((n = select(conf->sd+1, &rset, NULL, NULL, NULL)) <= 0) {
+        while ((n = select(conf->req->sd+1, &rset, NULL, NULL, NULL)) <= 0) {
             if (errno != EINTR)
                 err_msg(errno, "select() failed");
             else if (done)
@@ -82,15 +82,15 @@ void connect_console(client_conf_t *conf)
             if (!read_from_stdin(conf))
                 done = 1;
         }
-        if (FD_ISSET(conf->sd, &rset)) {
+        if (FD_ISSET(conf->req->sd, &rset)) {
             if (!write_to_stdout(conf))
                 done = 1;
         }
     }
 
-    if (close(conf->sd) < 0)
-        err_msg(errno, "close(%d) failed", conf->sd);
-    conf->sd = -1;
+    if (close(conf->req->sd) < 0)
+        err_msg(errno, "close(%d) failed", conf->req->sd);
+    conf->req->sd = -1;
 
     if (!conf->closedByClient)
         display_connection_msg(conf, "terminated by peer");
@@ -171,7 +171,7 @@ static int read_from_stdin(client_conf_t *conf)
 
     while ((n = read(STDIN_FILENO, &c, 1)) < 0) {
         if (errno != EINTR)
-            err_msg(errno, "read(%d) failed", conf->sd);
+            err_msg(errno, "read(%d) failed", conf->req->sd);
     }
     if (n == 0)
         return(0);
@@ -216,11 +216,11 @@ static int read_from_stdin(client_conf_t *conf)
      *    The server would discard them anyways, but why waste resources.
      *  Besides, we're now practicing conservation here in California. ;)
      */
-    if (conf->command == CONNECT) {
-        if (write_n(conf->sd, buf, p - buf) < 0) {
+    if (conf->req->command == CONNECT) {
+        if (write_n(conf->req->sd, buf, p - buf) < 0) {
             if (errno == EPIPE)
                 return(0);
-            err_msg(errno, "write(%d) failed", conf->sd);
+            err_msg(errno, "write(%d) failed", conf->req->sd);
         }
     }
     return(1);
@@ -239,16 +239,16 @@ static int write_to_stdout(client_conf_t *conf)
     /*  Stdin has to be processed character-by-character to check for
      *    escape sequences.  For human input, this isn't too bad.
      */
-    while ((n = read(conf->sd, buf, sizeof(buf))) < 0) {
+    while ((n = read(conf->req->sd, buf, sizeof(buf))) < 0) {
         if (errno != EINTR)
-            err_msg(errno, "read(%d) failed", conf->sd);
+            err_msg(errno, "read(%d) failed", conf->req->sd);
     }
     if (n > 0) {
         if (write_n(STDOUT_FILENO, buf, n) < 0)
             err_msg(errno, "write(%d) failed", STDOUT_FILENO);
-        if (conf->ld >= 0)
-            if (write_n(conf->ld, buf, n) < 0)
-                err_msg(errno, "write(%d) failed", conf->ld);
+        if (conf->logd >= 0)
+            if (write_n(conf->logd, buf, n) < 0)
+                err_msg(errno, "write(%d) failed", conf->logd);
     }
     return(n);
 }
@@ -262,8 +262,8 @@ static void perform_close_esc(client_conf_t *conf, char c)
 
     display_connection_msg(conf, "closed");
 
-    if (shutdown(conf->sd, SHUT_WR) < 0)
-        err_msg(errno, "shutdown(%d) failed", conf->sd);
+    if (shutdown(conf->req->sd, SHUT_WR) < 0)
+        err_msg(errno, "shutdown(%d) failed", conf->req->sd);
 
     conf->closedByClient = 1;
     return;
@@ -391,7 +391,7 @@ static void display_connection_msg(client_conf_t *conf, char *msg)
     int n;
     int overflow = 0;
 
-    assert ((conf->command == CONNECT) || (conf->command == MONITOR));
+    assert((conf->req->command == CONNECT) || (conf->req->command == MONITOR));
 
     if (!strcmp(msg, "terminated by peer")) {
         n = snprintf(ptr, len, "\r\n");
@@ -402,13 +402,14 @@ static void display_connection_msg(client_conf_t *conf, char *msg)
     }
     if (!overflow) {
 
-        if (list_count(conf->consoles) == 1) {
+        if (list_count(conf->req->consoles) == 1) {
             n = snprintf(ptr, len, "%s Connection to console [%s] %s.\r\n",
-                CONMAN_MSG_PREFIX, (char *) list_peek(conf->consoles), msg);
+                CONMAN_MSG_PREFIX, (char *) list_peek(conf->req->consoles),
+                msg);
         }
         else {
             n = snprintf(ptr, len, "%s Broadcast to %d consoles %s.\r\n",
-                CONMAN_MSG_PREFIX, list_count(conf->consoles), msg);
+                CONMAN_MSG_PREFIX, list_count(conf->req->consoles), msg);
         }
         if (n < 0 || n >= len)
             overflow = 1;

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-conf.c,v 1.10 2001/05/24 20:56:08 dun Exp $
+ *  $Id: client-conf.c,v 1.11 2001/05/29 23:45:24 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -18,7 +18,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "conman.h"
+#include "common.h"
 #include "client.h"
 #include "errors.h"
 #include "util.h"
@@ -42,29 +42,26 @@ client_conf_t * create_client_conf(void)
 
     if (!(conf = malloc(sizeof(client_conf_t))))
         err_msg(0, "Out of memory");
+    if (!(conf->req = create_req()))
+        err_msg(0, "Out of memory");
 
-    conf->sd = -1;
-
+    /*  Who am I?
+     */
     uid = getuid();
     if (!(passp = getpwuid(uid)))
         err_msg(errno, "Unable to lookup UID %d", uid);
-    conf->user = create_string(passp->pw_name);
+    conf->req->user = create_string(passp->pw_name);
 
     /*  Must copy host string constant since it will eventually be free()'d.
      */
-    conf->dhost = create_string(DEFAULT_CONMAN_HOST);
-    conf->dport = DEFAULT_CONMAN_PORT;
+    conf->req->host = create_string(DEFAULT_CONMAN_HOST);
+    conf->req->port = DEFAULT_CONMAN_PORT;
+    conf->req->command = CONNECT;
 
-    conf->command = CONNECT;
     conf->escapeChar = DEFAULT_CLIENT_ESCAPE;
-    conf->enableBroadcast = 0;
-    conf->enableForce = 0;
     conf->enableVerbose = 0;
-    conf->program = NULL;
     conf->log = NULL;
-    conf->ld = -1;
-    if (!(conf->consoles = list_create((ListDelF) destroy_string)))
-        err_msg(0, "Out of memory");
+    conf->logd = -1;
     conf->closedByClient = 0;
     conf->errnum = CONMAN_ERR_NONE;
     conf->errmsg = NULL;
@@ -75,26 +72,20 @@ client_conf_t * create_client_conf(void)
 
 void destroy_client_conf(client_conf_t *conf)
 {
-    if (conf->sd >= 0) {
-        if (close(conf->sd) < 0)
-            err_msg(errno, "close(%d) failed", conf->sd);
-        conf->sd = -1;
-    }
-    if (conf->user)
-        free(conf->user);
-    if (conf->program)
-        free(conf->program);
+    if (!conf)
+        return;
+
+    destroy_req(conf->req);
     if (conf->log)
         free(conf->log);
-    if (conf->ld >= 0) {
-        if (close(conf->ld) < 0)
-            err_msg(errno, "close(%d) failed", conf->ld);
-        conf->ld = -1;
+    if (conf->logd >= 0) {
+        if (close(conf->logd) < 0)
+            err_msg(errno, "close(%d) failed", conf->logd);
+        conf->logd = -1;
     }
-    if (conf->consoles)
-        list_destroy(conf->consoles);
     if (conf->errmsg)
         free(conf->errmsg);
+
     free(conf);
     return;
 }
@@ -107,7 +98,7 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
     char *str;
 
     opterr = 1;
-    while ((c = getopt(argc, argv, "bd:e:fhl:qrx:vV")) != -1) {
+    while ((c = getopt(argc, argv, "bd:e:fhjl:qrx:vV")) != -1) {
         switch(c) {
         case '?':			/* invalid option */
             exit(1);
@@ -118,22 +109,27 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
             printf("%s-%s%s\n", PACKAGE, VERSION, DEBUG_STRING);
             exit(0);
         case 'b':
-            conf->enableBroadcast = 1;
+            conf->req->enableBroadcast = 1;
             break;
         case 'd':
-            if (conf->dhost)
-                free(conf->dhost);
+            if (conf->req->host)
+                free(conf->req->host);
             if ((str = strchr(optarg, ':'))) {
                 *str++ = '\0';
-                conf->dport = atoi(str);
+                conf->req->port = atoi(str);
             }
-            conf->dhost = create_string(optarg);
+            conf->req->host = create_string(optarg);
             break;
         case 'e':
             conf->escapeChar = optarg[0];
             break;
         case 'f':
-            conf->enableForce = 1;
+            conf->req->enableForce = 1;
+            conf->req->enableJoin = 0;
+            break;
+        case 'j':
+            conf->req->enableForce = 0;
+            conf->req->enableJoin = 1;
             break;
         case 'l':
             if (conf->log)
@@ -141,16 +137,16 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
             conf->log = create_string(optarg);
             break;
         case 'q':
-            conf->command = QUERY;
+            conf->req->command = QUERY;
             break;
         case 'r':
-            conf->command = MONITOR;
+            conf->req->command = MONITOR;
             break;
         case 'x':
-            conf->command = EXECUTE;
-            if (conf->program)
-                free(conf->program);
-            conf->program = create_string(optarg);
+            conf->req->command = EXECUTE;
+            if (conf->req->program)
+                free(conf->req->program);
+            conf->req->program = create_string(optarg);
             break;
         case 'v':
             conf->enableVerbose = 1;
@@ -163,7 +159,7 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
 
     for (i=optind; i<argc; i++) {
         str = create_string(argv[i]);
-        if (!list_append(conf->consoles, str))
+        if (!list_append(conf->req->consoles, str))
             err_msg(0, "Out of memory");
     }
     return;
@@ -183,7 +179,8 @@ static void display_client_help(char *prog)
     printf("  -d HOST   Specify location of server"
         " (default: %s:%d).\n", DEFAULT_CONMAN_HOST, DEFAULT_CONMAN_PORT);
     printf("  -e CHAR   Set escape character (default: '%s').\n", esc);
-    printf("  -f        Force open connection.\n");
+    printf("  -f        Force connection by stealing console.\n");
+    printf("  -j        Join connection with existing write-sessions.\n");
     printf("  -l FILE   Log connection to file.\n");
     printf("  -q        Query server about specified console(s).\n");
     printf("  -r        Monitor (read-only) a particular console.\n");
@@ -202,16 +199,16 @@ void open_client_log(client_conf_t *conf)
 
     if (!conf->log)
         return;
-    assert(conf->ld < 0);
+    assert(conf->logd < 0);
 
-    if ((conf->ld = open(conf->log, flags, S_IRUSR | S_IWUSR)) < 0)
+    if ((conf->logd = open(conf->log, flags, S_IRUSR | S_IWUSR)) < 0)
         err_msg(errno, "Unable to open logfile [%s]", conf->log);
 
     now = create_time_string(0);
     str = create_fmt_string("\r\n%s Log started %s.\r\n",
         CONMAN_MSG_PREFIX, now);
-    if (write_n(conf->ld, str, strlen(str)) < 0)
-        err_msg(errno, "write(%d) failed", conf->ld);
+    if (write_n(conf->logd, str, strlen(str)) < 0)
+        err_msg(errno, "write(%d) failed", conf->logd);
     free(now);
     free(str);
 
@@ -225,19 +222,19 @@ void close_client_log(client_conf_t *conf)
 
     if (!conf->log)
         return;
-    assert(conf->ld >= 0);
+    assert(conf->logd >= 0);
 
     now = create_time_string(0);
     str = create_fmt_string("\r\n%s Log finished %s.\r\n",
         CONMAN_MSG_PREFIX, now);
-    if (write_n(conf->ld, str, strlen(str)) < 0)
-        err_msg(errno, "write(%d) failed", conf->ld);
+    if (write_n(conf->logd, str, strlen(str)) < 0)
+        err_msg(errno, "write(%d) failed", conf->logd);
     free(now);
     free(str);
 
-    if (close(conf->ld) < 0)
-        err_msg(errno, "close(%d) failed", conf->ld);
-    conf->ld = -1;
+    if (close(conf->logd) < 0)
+        err_msg(errno, "close(%d) failed", conf->logd);
+    conf->logd = -1;
 
     return;
 }

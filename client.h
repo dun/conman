@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client.h,v 1.8 2001/05/24 20:56:08 dun Exp $
+ *  $Id: client.h,v 1.9 2001/05/29 23:45:24 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -9,25 +9,17 @@
 
 
 #include <termios.h>
-#include "conman.h"
+#include "common.h"
 #include "list.h"
 
 
 typedef struct client_conf {
-    int             sd;			/* server socket descriptor           */
-    char           *user;		/* name of local user                 */
-    char           *dhost;		/* conman daemon host name            */
-    int             dport;		/* conman daemon port number          */
-    cmd_t           command;		/* command to send to conman daemon   */
+    req_t          *req;		/* client request info                */
     int             escapeChar;		/* char to issue client escape seq    */
-    int             enableBroadcast;	/* true if b-casting to many consoles */
-    int             enableForce;	/* true if forcing console connection */
     int             enableVerbose;	/* true if to be more verbose to user */
-    char           *program;		/* program name for EXECUTE cmd       */
     char           *log;		/* connection logfile name            */
-    int             ld;			/* connection logfile descriptor      */
-    List            consoles;		/* list of consoles affected by cmd   */
-    int             closedByClient;	/* true if client closed console conn */
+    int             logd;		/* connection logfile descriptor      */
+    int             closedByClient;	/* true if socket closed by client    */
     int             errnum;		/* error number from issuing command  */
     char           *errmsg;		/* error message from issuing command */
     struct termios  term;		/* saved "cooked" terminal mode       */

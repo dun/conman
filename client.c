@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client.c,v 1.4 2001/05/24 20:56:08 dun Exp $
+ *  $Id: client.c,v 1.5 2001/05/29 23:45:24 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "conman.h"
+#include "common.h"
 #include "client.h"
 #include "errors.h"
 
@@ -33,15 +33,16 @@ int main(int argc, char *argv[])
         display_error(conf);
     else if (recv_rsp(conf) < 0)
         display_error(conf);
-    else if (conf->command == QUERY)
+    else if (conf->req->command == QUERY)
         display_consoles(conf, STDOUT_FILENO);
-    else if (conf->command == EXECUTE)
+    else if (conf->req->command == EXECUTE)
         display_data(conf, STDOUT_FILENO);
-    else if ((conf->command == CONNECT) || (conf->command == MONITOR))
+    else if ((conf->req->command == CONNECT)
+      || (conf->req->command == MONITOR))
         connect_console(conf);
     else
         err_msg(0, "Invalid command (%d) at %s:%d",
-            conf->command, __FILE__, __LINE__);
+            conf->req->command, __FILE__, __LINE__);
 
     close_client_log(conf);
     destroy_client_conf(conf);
