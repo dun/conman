@@ -1,3 +1,8 @@
+2003-10-22  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* lib/examples/shell_cmd_1.exp, lib/examples/shell_cmd_n.exp:
+	Tweaked to handle cmd starting with regex metachar {gnats:316}.
+
 2003-10-21  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* lib/examples/shell_cmd_1.exp, lib/examples/shell_cmd_n.exp:

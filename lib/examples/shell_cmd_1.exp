@@ -1,6 +1,6 @@
 #!/usr/bin/expect --
 ###############################################################################
-# $Id: shell_cmd_1.exp,v 1.1.2.1 2003/10/22 00:21:01 dun Exp $
+# $Id: shell_cmd_1.exp,v 1.1.2.2 2003/10/22 21:42:00 dun Exp $
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ###############################################################################
 # USAGE:
@@ -56,18 +56,15 @@ proc do_shell_cmd {spawn_id output_id console cmd {echo 1} {tmout 3}} {
     -gl "\n" {
       exp_continue -continue_timer
     }
-    timeout {
+    default {
       exp_send -i $output_id "ERROR: No shell prompt.\n"; return 0
-    }
-    eof {
-      exp_send -i $output_id "ERROR: Encountered EOF.\n"; return 0
     }
   }
 
   exp_send -- "$cmdstr\r"
   set timeout $tmout
   expect {
-    -re "^$cmdstr\r+\n" {
+    -re "^ *$cmdstr\r+\n" {
       exp_continue -continue_timer
     }
     -re "^$prompt\$" {
@@ -77,11 +74,8 @@ proc do_shell_cmd {spawn_id output_id console cmd {echo 1} {tmout 3}} {
       if {$echo} {exp_send -i $output_id "$expect_out(1,string)\n"}
       exp_continue -continue_timer
     }
-    timeout {
+    default {
       exp_send -i $output_id "ERROR: Timed-out.\n"; return 0
-    }
-    eof {
-      exp_send -i $output_id "ERROR: Encountered EOF.\n"; return 0
     }
   }
   return 1
