@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.15 2001/08/06 22:12:02 dun Exp $
+ *  $Id: server.c,v 1.16 2001/08/07 17:36:38 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -13,6 +13,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/resource.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -68,6 +69,7 @@ int main(int argc, char *argv[])
 
 static void daemonize(void)
 {
+    struct rlimit limit;
     pid_t pid;
     int devnull;
 
@@ -76,6 +78,13 @@ static void daemonize(void)
      */
     return;
 #endif /* !NDEBUG */
+
+    /*  Disable creation of core files.
+     */
+    limit.rlim_cur = 0;
+    limit.rlim_max = 0;
+    if (setrlimit(RLIMIT_CORE, &limit) < 0)
+        err_msg(errno, "setrlimit() failed");
 
     /*  Automatically background the process and
      *    ensure child is not a process group leader.
