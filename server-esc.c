@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-esc.c,v 1.34.2.2 2003/04/04 05:57:07 dun Exp $
+ *  $Id: server-esc.c,v 1.34.2.3 2003/09/26 18:05:29 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -51,6 +51,7 @@ static void perform_serial_break(obj_t *client);
 static void perform_del_char_seq(obj_t *client);
 static void perform_console_writer_linkage(obj_t *client);
 static void perform_log_replay(obj_t *client);
+static void perform_log_timestamp(obj_t *client);
 static void perform_quiet_toggle(obj_t *client);
 static void perform_reset(obj_t *client);
 static void perform_suspend(obj_t *client);
@@ -97,8 +98,11 @@ int process_client_escapes(obj_t *client, void *src, int len)
                 client->aux.client.req->enableJoin = 1;
                 perform_console_writer_linkage(client);
                 break;
-            case ESC_CHAR_LOG:
+            case ESC_CHAR_LOG_REPLAY:
                 perform_log_replay(client);
+                break;
+            case ESC_CHAR_LOG_TIMESTAMP:
+                perform_log_timestamp(client);
                 break;
             case ESC_CHAR_MONITOR:
                 client->aux.client.req->enableForce = 0;
@@ -263,12 +267,13 @@ static void perform_log_replay(obj_t *client)
     logfile = get_console_logfile_obj(console);
 
     if (!logfile) {
-        n = snprintf((char *) ptr, len, "%sConsole [%s] is not being logged%s",
+        n = snprintf((char *) ptr, len,
+            "%sConsole [%s] is not being logged -- cannot replay%s",
             CONMAN_MSG_PREFIX, console->name, CONMAN_MSG_SUFFIX);
         if ((n < 0) || (n >= len)) {
             log_msg(LOG_WARNING,
-                "Insufficient buffer to replay console %s log for %s",
-                console->name, client->name);
+                "Insufficient buffer to write message to console %s log",
+                console->name);
             return;
         }
         ptr += n;
@@ -335,6 +340,48 @@ static void perform_log_replay(obj_t *client)
 }
 
 
+static void perform_log_timestamp(obj_t *client)
+{
+/*  Toggles newline timestamping in the logs of the corresponding consoles.
+ */
+    ListIterator i;
+    obj_t *console;
+    obj_t *logfile;
+    const char *op;
+    char *str;
+
+    assert(is_client_obj(client));
+
+    i = list_iterator_create(client->readers);
+    while ((console = list_next(i))) {
+
+        assert(is_console_obj(console));
+        logfile = get_console_logfile_obj(console);
+
+        if (!logfile) {
+            str = create_format_string(
+                "%sConsole [%s] is not being logged -- cannot timestamp%s",
+                CONMAN_MSG_PREFIX, console->name, CONMAN_MSG_SUFFIX);
+        }
+        else {
+            assert(is_logfile_obj(logfile));
+            logfile->aux.logfile.enableTimestamps ^= 1;
+            logfile->aux.logfile.enableProcessing = 1;
+            logfile->aux.logfile.enableProcCheck = 1;
+            op = (logfile->aux.logfile.enableTimestamps)
+                ? "enabled" : "disabled";
+            DPRINTF((5, "Timestamping %s for log [%s].\n", op, logfile->name));
+            str = create_format_string("%sConsole [%s] timestamping %s%s",
+                CONMAN_MSG_PREFIX, console->name, op, CONMAN_MSG_SUFFIX);
+        }
+        write_obj_data(client, str, strlen(str), 1);
+        free(str);
+    }
+    list_iterator_destroy(i);
+    return;
+}
+
+
 static void perform_quiet_toggle(obj_t *client)
 {
 /*  Toggles whether informational messages are suppressed by the client.
@@ -345,13 +392,14 @@ static void perform_quiet_toggle(obj_t *client)
     assert(is_client_obj(client));
 
     client->aux.client.req->enableQuiet ^= 1;
-    DPRINTF((5, "Toggled quiet-mode for client [%s].\n", client->name));
 
     if (client->aux.client.req->enableQuiet)
-        op = "Enabled", action = "suppressed";
+        op = "enabled", action = "suppressed";
     else
-        op = "Disabled", action = "displayed";
-    str = create_format_string("%s%s quiet-mode -- info msgs will be %s%s",
+        op = "disabled", action = "displayed";
+
+    DPRINTF((5, "Quiet-mode %s for client [%s].\n", op, client->name));
+    str = create_format_string("%sQuiet-mode %s -- info msgs will be %s%s",
         CONMAN_MSG_PREFIX, op, action, CONMAN_MSG_SUFFIX);
     /*
      *  Technically, this is an informational message.  But, it is marked as

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.h,v 1.55.2.2 2003/07/24 20:13:17 dun Exp $
+ *  $Id: server.h,v 1.55.2.3 2003/09/26 18:05:29 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -80,17 +80,20 @@ typedef struct logfile_opt {            /* LOGFILE OBJ OPTIONS:              */
     unsigned         enableSanitize:1;  /*  true if logfile being sanitized  */
 } logopt_t;
 
-typedef enum logfile_sanitize_state {   /* log CR/LF insanity state (2 bits) */
-    CONMAN_LOG_SANE_INIT,
-    CONMAN_LOG_SANE_CR,
-    CONMAN_LOG_SANE_LF
-} log_sane_state_t;
+typedef enum logfile_line_state {       /* log CR/LF newline state (2 bits)  */
+    CONMAN_LOG_LINE_IN,
+    CONMAN_LOG_LINE_CR,
+    CONMAN_LOG_LINE_LF
+} log_line_state_t;
 
 typedef struct logfile_obj {            /* LOGFILE AUX OBJ DATA:             */
     struct base_obj *console;           /*  con obj ref for name expansion   */
     char            *fmtName;           /*  name with conversion specifiers  */
     logopt_t         opts;              /*  local options                    */
-    unsigned         sanitizeState:2;   /*  log_sane_state_t CR/LF insanity  */
+    unsigned         enableProcCheck:1; /*  true if recomputing proc flag    */
+    unsigned         enableProcessing:1;/*  true if input processing req'd   */
+    unsigned         enableTimestamps:1;/*  true if timestamping each line   */
+    unsigned         lineState:2;       /*  log_line_state_t CR/LF state     */
 } logfile_obj_t;
 
 typedef struct serial_opt {             /* SERIAL OBJ OPTIONS:               */
@@ -275,7 +278,7 @@ int open_logfile_obj(obj_t *logfile, int gotTrunc);
 
 obj_t * get_console_logfile_obj(obj_t *console);
 
-int write_sanitized_log_data(obj_t *log, const void *src, int len);
+int write_log_data(obj_t *log, const void *src, int len);
 
 
 /******************\
@@ -319,7 +322,7 @@ int shutdown_obj(obj_t *obj);
 
 int read_from_obj(obj_t *obj, fd_set *pWriteSet);
 
-int write_obj_data(obj_t *obj, void *src, int len, int isInfo);
+int write_obj_data(obj_t *obj, const void *src, int len, int isInfo);
 
 int write_to_obj(obj_t *obj);
 

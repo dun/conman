@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: util-str.c,v 1.15 2002/05/18 23:13:04 dun Exp $
+ *  $Id: util-str.c,v 1.15.2.1 2003/09/26 18:05:29 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -237,6 +237,24 @@ char * create_time_delta_string(time_t t)
 
     assert((n >= 0) && (n < sizeof(buf)));
     return(create_string(buf));
+}
+
+
+int write_time_string(time_t t, char *dst, size_t dstlen)
+{
+    struct tm tm;
+    int n;
+
+    if (dstlen <= 20)                   /* "YYYY-MM-DD HH:MM:SS " + NUL */
+        return(0);
+
+    get_localtime(&t, &tm);
+
+    if (!(n = strftime(dst, dstlen, "%Y-%m-%d %H:%M:%S ", &tm)))
+        return(0);
+
+    assert(n == 20);
+    return(n);
 }
 
 

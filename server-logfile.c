@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-logfile.c,v 1.11.2.1 2003/07/12 00:12:24 dun Exp $
+ *  $Id: server-logfile.c,v 1.11.2.2 2003/09/26 18:05:29 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -173,79 +173,120 @@ obj_t * get_console_logfile_obj(obj_t *console)
 
     if (!logfile || (logfile->fd < 0))
         return(NULL);
+    assert(is_logfile_obj(logfile));
     return(logfile);
 }
 
 
-int write_sanitized_log_data(obj_t *log, const void *src, int len)
+int write_log_data(obj_t *log, const void *src, int len)
 {
-/*  Writes a sanitized version of the buffer (src) of length (len) into
- *    the logfile obj (log); the original (src) buffer is not modified.
- *    This strips the data to 7-bit ASCII and causes control characters
- *    to be displayed as two-character printable sequences.
+/*  Writes a potentially modified version of the buffer (src) of length (len)
+ *    into the logfile obj (log); the original (src) buffer is not modified.
+ *  This routine is intended for writing data that was read from a console,
+ *    not informational messages.
+ *  If sanitized logs are enabled, data is stripped to 7-bit ASCII and
+ *    control/binary characters are displayed as two-character printable
+ *    sequences.
+ *  If newline timestamping is enabled, the current timestamp is appended
+ *    after each newline.
  *  Returns the number of bytes written into the logfile obj's buffer.
- *
- *  Note that this routine can sanitize at most ((MAX_BUF_SIZE - 1) / 2)
- *    bytes of data since the worst-case scenario causes results in a
- *    twofold expansion.
  */
+    const int minbuf = 25;              /* cr/lf + timestamp + meta/char */
     unsigned char buf[MAX_BUF_SIZE - 1];
     const unsigned char *p;
     unsigned char *q;
-    int c;
+    const unsigned char * const qLast = buf + sizeof(buf);
+    int n = 0;
 
     assert(is_logfile_obj(log));
-    assert(log->aux.logfile.opts.enableSanitize);
+    assert(sizeof(buf) >= minbuf);
 
-    /*  An obj's circular-buffer is empty when (bufInPtr == bufOutPtr).
-     *    Thus, it can hold at most (MAX_BUF_SIZE - 1) bytes of data.
+    /*  If no additional processing is needed, listen to Biff Tannen:
+     *    "make like a tree and get outta here".
      */
-    if (len > sizeof(buf) / 2)
-        len = sizeof(buf) / 2;
-
-    DPRINTF((15, "Sanitizing %d bytes for [%s] log.\n",
-        len, log->aux.logfile.console->name));
+    if (!log->aux.logfile.enableProcessing) {
+        return(write_obj_data(log, src, len, 0));
+    }
+    /*  If the enableProcCheck flag is set,
+     *    recompute whether additional processing is needed.
+     *  This check is placed inside the processing enabled block in order
+     *    to eliminate testing this flag when log processing is not enabled.
+     */
+    if (log->aux.logfile.enableProcCheck) {
+        log->aux.logfile.enableProcCheck = 0;
+        log->aux.logfile.enableProcessing =
+            log->aux.logfile.opts.enableSanitize
+            || log->aux.logfile.enableTimestamps;
+        DPRINTF((10, "Set processing=%d for [%s] log \"%s\".\n",
+            log->aux.logfile.enableProcessing,
+            log->aux.logfile.console->name, log->name));
+        if (!log->aux.logfile.enableProcessing) {
+            log->aux.logfile.lineState = CONMAN_LOG_LINE_IN;
+            return(write_obj_data(log, src, len, 0));
+        }
+    }
+    DPRINTF((15, "Processing %d bytes for [%s] log \"%s\".\n",
+        len, log->aux.logfile.console->name, log->name));
 
     for (p=src, q=buf; len>0; p++, len--) {
-
-        /*  A "sanitize" state machine is used to properly sanitize CR/LF line
+        /*
+         *  A newline state machine is used to properly sanitize CR/LF line
          *    terminations.  This is responsible for coalescing multiple CRs,
          *    swapping LF/CR to CR/LF, prepending a CR to a lonely LF, and
          *    appending a LF to a lonely CR to prevent characters from being
          *    overwritten.
          */
         if (*p == '\r') {
-            if (log->aux.logfile.sanitizeState == CONMAN_LOG_SANE_INIT)
-                log->aux.logfile.sanitizeState = CONMAN_LOG_SANE_CR;
+            if (log->aux.logfile.lineState == CONMAN_LOG_LINE_IN)
+                log->aux.logfile.lineState = CONMAN_LOG_LINE_CR;
         }
         else if (*p == '\n') {
-            log->aux.logfile.sanitizeState = CONMAN_LOG_SANE_LF;
+            log->aux.logfile.lineState = CONMAN_LOG_LINE_LF;
             *q++ = '\r';
             *q++ = '\n';
+            if (log->aux.logfile.enableTimestamps)
+                q += write_time_string(0, q, qLast - q);
         }
         else {
-            if (log->aux.logfile.sanitizeState == CONMAN_LOG_SANE_CR) {
+            if (log->aux.logfile.lineState == CONMAN_LOG_LINE_CR) {
                 *q++ = '\r';
                 *q++ = '\n';
+                if (log->aux.logfile.enableTimestamps)
+                    q += write_time_string(0, q, qLast - q);
             }
-            log->aux.logfile.sanitizeState = CONMAN_LOG_SANE_INIT;
+            log->aux.logfile.lineState = CONMAN_LOG_LINE_IN;
 
-            c = *p & 0x7F;              /* strip data to 7-bit ASCII */
+            if (log->aux.logfile.opts.enableSanitize) {
 
-            if (c < 0x20) {             /* ASCII ctrl-chars */
-                *q++ = '^';
-                *q++ = c + '@';
-            }
-            else if (c == 0x7F) {       /* ASCII DEL char */
-                *q++ = '^';
-                *q++ = c + '?';
+                int c = *p & 0x7F;      /* strip data to 7-bit ASCII */
+
+                if (c < 0x20) {         /* ASCII ctrl-chars */
+                    *q++ = (*p & 0x80) ? '~' : '^';
+                    *q++ = c + '@';
+                }
+                else if (c == 0x7F) {   /* ASCII DEL char */
+                    *q++ = (*p & 0x80) ? '~' : '^';
+                    *q++ = '?';
+                }
+                else {
+                    if (*p & 0x80)
+                        *q++ = '`';
+                    *q++ = c;
+                }
             }
             else {
-                *q++ = c;
+                *q++ = *p;
             }
         }
+        /*  Flush internal buffer before it overruns.
+         */
+        if ((qLast - q) < minbuf) {
+            assert((q >= buf) && (q <= qLast));
+            n += write_obj_data(log, buf, q - buf, 0);
+            q = buf;
+        }
     }
-
-    assert((q >= buf) && (q <= buf + sizeof(buf)));
-    return(write_obj_data(log, buf, q - buf, 0));
+    assert((q >= buf) && (q <= qLast));
+    n += write_obj_data(log, buf, q - buf, 0);
+    return(n);
 }

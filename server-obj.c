@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-obj.c,v 1.70.2.3 2003/07/24 20:13:17 dun Exp $
+ *  $Id: server-obj.c,v 1.70.2.4 2003/09/26 18:05:29 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -186,8 +186,16 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name,
     }
     logfile = create_obj(conf, name, -1, CONMAN_OBJ_LOGFILE);
     logfile->aux.logfile.console = console;
-    logfile->aux.logfile.sanitizeState = CONMAN_LOG_SANE_INIT;
+    logfile->aux.logfile.enableTimestamps = 0;
+    logfile->aux.logfile.lineState = CONMAN_LOG_LINE_IN;
     logfile->aux.logfile.opts = *opts;
+    /*
+     *  Initialize both ProcCheck and Processing flags as enabled.
+     *    This will force the Processing flag to be set by write_log_data().
+     */
+    logfile->aux.logfile.enableProcCheck = 1;
+    logfile->aux.logfile.enableProcessing = 1;
+
     if (strchr(name, '%'))
         logfile->aux.logfile.fmtName = create_string(name);
     else
@@ -1178,10 +1186,10 @@ int read_from_obj(obj_t *obj, fd_set *pWriteSet)
  *    select()'d on the next list iteration in mux_io()'s outer-loop.
  *  An obj's circular-buffer is empty when (bufInPtr == bufOutPtr).
  *    Thus, it can hold at most (MAX_BUF_SIZE - 1) bytes of data.
- *  But if the obj is a logfile that is being sanitized, its data can
- *    grow by up to a factor of two; this places a limit on the amount
- *    of data read by this routine at ((MAX_BUF_SIZE / 2) - 1) bytes.
- *  This routine's internal buffer is set accordingly.
+ *  But if the obj is a logfile, its data can grow as a result of the
+ *    additional processing.  This routine's internal buffer is reduced
+ *    somewhat to reduce the likelihood of log data being dropped.
+ *  FIXME: cbuf should eliminate the need to limit the size of buf[].
  */
     unsigned char buf[(MAX_BUF_SIZE / 2) - 1];
     int n, m;
@@ -1237,9 +1245,8 @@ again:
                  *    no more data can be written into its buffer.
                  */
                 if (!reader->gotEOF) {
-                    if (is_logfile_obj(reader)
-                      && reader->aux.logfile.opts.enableSanitize)
-                        m = write_sanitized_log_data(reader, buf, n);
+                    if (is_logfile_obj(reader))
+                        m = write_log_data(reader, buf, n);
                     else
                         m = write_obj_data(reader, buf, n, 0);
                     if (m > 0)
@@ -1253,7 +1260,7 @@ again:
 }
 
 
-int write_obj_data(obj_t *obj, void *src, int len, int isInfo)
+int write_obj_data(obj_t *obj, const void *src, int len, int isInfo)
 {
 /*  Writes the buffer (src) of length (len) into the object's (obj)
  *    circular-buffer.  If (isInfo) is true, the data is considered

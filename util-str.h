@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: util-str.h,v 1.8 2002/05/12 19:20:29 dun Exp $
+ *  $Id: util-str.h,v 1.8.2.1 2003/09/26 18:05:29 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -100,6 +100,14 @@ char * create_time_delta_string(time_t t);
  *  The difference is broken-down into years, weeks, days, hours,
  *    minutes, and seconds.
  *  Note that the caller is responsible for freeing this string.
+ */
+
+int write_time_string(time_t t, char *dst, size_t dstlen);
+/*
+ *  Writes the time string "YYYY-MM-DD HH:MM:SS " specified by (t)
+ *    into the buffer (dst) of size (dstlen).
+ *  If no time is given (t=0), the current date & time is used.
+ *  Returns the number of characters written (not including the NUL).
  */
 
 struct tm * get_localtime(time_t *tPtr, struct tm *tmPtr);
