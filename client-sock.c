@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-sock.c,v 1.20 2001/09/06 21:55:19 dun Exp $
+ *  $Id: client-sock.c,v 1.21 2001/09/13 02:53:14 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -32,7 +32,7 @@ static void parse_rsp_err(Lex l, client_conf_t *conf);
 void connect_to_server(client_conf_t *conf)
 {
     int sd;
-    struct sockaddr_in addr;
+    struct sockaddr_in saddr;
     char buf[MAX_LINE];
     char *p;
 
@@ -42,10 +42,10 @@ void connect_to_server(client_conf_t *conf)
     if ((sd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
         err_msg(errno, "socket() failed");
 
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(conf->req->port);
-    if (host_name_to_addr4(conf->req->host, &addr.sin_addr) < 0)
+    memset(&saddr, 0, sizeof(saddr));
+    saddr.sin_family = AF_INET;
+    saddr.sin_port = htons(conf->req->port);
+    if (host_name_to_addr4(conf->req->host, &saddr.sin_addr) < 0)
         err_msg(0, "Unable to resolve hostname [%s]", conf->req->host);
 
     if (host_name_to_cname(conf->req->host, buf, sizeof(buf)) == NULL)
@@ -58,7 +58,7 @@ void connect_to_server(client_conf_t *conf)
         conf->req->host = create_string(buf);
     }
 
-    if (connect(sd, (struct sockaddr *) &addr, sizeof(addr)) < 0)
+    if (connect(sd, (struct sockaddr *) &saddr, sizeof(saddr)) < 0)
         err_msg(errno, "Unable to connect to [%s:%d]",
             conf->req->fqdn, conf->req->port);
 
