@@ -2,7 +2,7 @@
  *  list.h
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: list.h,v 1.1 2001/05/04 15:26:41 dun Exp $
+ *  $Id: list.h,v 1.2 2001/05/14 15:30:05 dun Exp $
 \******************************************************************************/
 
 
@@ -115,6 +115,7 @@ int list_delete_all(List l, ListFindF f, void *key);
 void list_sort(List l, ListCmpF f);
 /*
  *  Sorts list (l) into ascending order according to the function (f).
+ *  Note: Sorting a list resets all iterators associated with the list.
  *  Note: The sort algorithm is stable.
  */
 
