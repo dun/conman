@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client.h,v 1.10 2001/06/12 16:17:48 dun Exp $
+ *  $Id: client.h,v 1.11 2001/08/14 23:17:02 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -15,13 +15,13 @@
 typedef struct client_conf {
     req_t          *req;		/* client request info                */
     int             escapeChar;		/* char to issue client escape seq    */
-    int             enableVerbose;	/* true if to be more verbose to user */
     char           *log;		/* connection logfile name            */
     int             logd;		/* connection logfile descriptor      */
-    int             closedByClient;	/* true if socket closed by client    */
     int             errnum;		/* error number from issuing command  */
     char           *errmsg;		/* error message from issuing command */
     struct termios  term;		/* saved "cooked" terminal mode       */
+    unsigned        enableVerbose:1;	/* true if verbose output requested   */
+    unsigned        isClosedByClient:1;	/* true if socket closed by client    */
 } client_conf_t;
 
 
