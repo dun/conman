@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.34 2001/10/08 04:02:37 dun Exp $
+ *  $Id: server.h,v 1.35 2001/10/11 18:59:22 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -61,7 +61,7 @@ typedef struct logfile_obj {		/* LOGFILE AUX OBJ DATA:              */
 
 typedef struct serial_obj {		/* SERIAL AUX OBJ DATA:               */
     char            *dev;		/*  local serial device name          */
-    struct base_obj *logfile;		/*  log obj ref for console output    */
+    struct base_obj *logfile;		/*  log obj ref for console replay    */
     struct termios   tty;		/*  saved cooked tty mode             */
 } serial_obj_t;
 
@@ -69,7 +69,7 @@ typedef struct telnet_obj {		/* TELNET AUX OBJ DATA:               */
     char            *host;		/*  remote telnetd host name (or ip)  */
     int              port;		/*  remote telnetd port number        */
     sockaddr_t       saddr;		/*  n/w address of terminal server    */
-    struct base_obj *logfile;		/*  log obj ref for console output    */
+    struct base_obj *logfile;		/*  log obj ref for console replay    */
     int              timer;		/*  timer id for reconnects           */
     int              delay;		/*  secs until next reconnect attempt */
     int              iac;		/*  -1, or last char if in IAC seq    */
@@ -162,6 +162,8 @@ int send_telnet_cmd(obj_t *telnet, int cmd, int opt);
 obj_t * create_client_obj(server_conf_t *conf, req_t *req);
 
 obj_t * create_logfile_obj(server_conf_t *conf, char *name, obj_t *console);
+
+int open_logfile_obj(obj_t *logfile, int gotTrunc);
 
 obj_t * create_serial_obj(
     server_conf_t *conf, char *name, char *dev, char *opts);

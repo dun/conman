@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-esc.c,v 1.15 2001/10/08 04:02:37 dun Exp $
+ *  $Id: server-esc.c,v 1.16 2001/10/11 18:59:22 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -157,6 +157,9 @@ static void perform_log_replay(obj_t *client)
         logfile = console->aux.serial.logfile;
     else if (is_telnet_obj(console))
         logfile = console->aux.telnet.logfile;
+    else
+        err_msg(0, "INTERNAL: Unrecognized console [%s] type=%d at %s:%d",
+            console->name, console->type, __FILE__, __LINE__);
 
     if (!logfile) {
         n = snprintf(ptr, len, "%sConsole [%s] is not being logged%s",

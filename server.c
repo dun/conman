@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.34 2001/10/08 04:02:37 dun Exp $
+ *  $Id: server.c,v 1.35 2001/10/11 18:59:22 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -39,16 +39,19 @@ static void end_daemonize(int fd);
 static void display_configuration(server_conf_t *conf);
 static void exit_handler(int signum);
 static void sig_chld_handler(int signum);
+static void sig_hup_handler(int signum);
 static void schedule_timestamp(server_conf_t *conf);
 static void timestamp_logfiles(server_conf_t *conf);
 static void create_listen_socket(server_conf_t *conf);
 static void mux_io(server_conf_t *conf);
+static void reopen_logfiles(List objs);
 static void accept_client(server_conf_t *conf);
 static void reset_console(obj_t *console, const char *cmd);
 static void kill_console_reset(pid_t pid);
 
 
 static int done = 0;
+static int reconfig = 0;
 
 
 int main(int argc, char *argv[])
@@ -59,7 +62,7 @@ int main(int argc, char *argv[])
     fd = begin_daemonize();
 
     posix_signal(SIGCHLD, sig_chld_handler);
-    posix_signal(SIGHUP, SIG_IGN);
+    posix_signal(SIGHUP, sig_hup_handler);
     posix_signal(SIGINT, exit_handler);
     posix_signal(SIGPIPE, SIG_IGN);
     posix_signal(SIGTERM, exit_handler);
@@ -87,6 +90,11 @@ int main(int argc, char *argv[])
 
 static int begin_daemonize(void)
 {
+/*  Begins the daemonization of the process.
+ *  Despite the fact that this routine backgrounds the process, control
+ *    will not be returned to the shell until end_daemonize() is called.
+ *  Returns an 'fd' to pass to end_daemonize() to complete the daemonization.
+ */
     struct rlimit limit;
     int fdPair[2];
     pid_t pid;
@@ -158,6 +166,9 @@ static int begin_daemonize(void)
 
 static void end_daemonize(int fd)
 {
+/*  Completes the daemonization of the process,
+ *    where 'fd' is the value returned by begin_daemonize().
+ */
     int devNull;
 
 #ifndef NDEBUG
@@ -195,8 +206,16 @@ static void end_daemonize(int fd)
 
 static void exit_handler(int signum)
 {
-    log_msg(0, "Exiting on signal %d.", signum);
+    log_msg(0, "Exiting on signal=%d.", signum);
     done = 1;
+    return;
+}
+
+
+static void sig_hup_handler(int signum)
+{
+    log_msg(0, "Performing reconfig on signal=%d.", signum);
+    reconfig = 1;
     return;
 }
 
@@ -213,6 +232,8 @@ static void sig_chld_handler(int signum)
 
 static void display_configuration(server_conf_t *conf)
 {
+/*  Displays a summary of the server's configuration.
+ */
     ListIterator i;
     obj_t *obj;
     int n = 0;
@@ -309,6 +330,8 @@ static void timestamp_logfiles(server_conf_t *conf)
     list_iterator_destroy(i);
     free(now);
 
+    /*  If any logfile objs exist, schedule a timer for the next timestamp.
+     */
     if (gotLogs)
         schedule_timestamp(conf);
 
@@ -318,6 +341,8 @@ static void timestamp_logfiles(server_conf_t *conf)
 
 static void create_listen_socket(server_conf_t *conf)
 {
+/*  Creates the socket on which to listen for client connections.
+ */
     int ld;
     struct sockaddr_in addr;
     const int on = 1;
@@ -353,6 +378,9 @@ static void create_listen_socket(server_conf_t *conf)
 
 static void mux_io(server_conf_t *conf)
 {
+/*  Multiplexes I/O between all of the objs in the configuration.
+ *  This routine is the heart of ConMan.
+ */
     ListIterator i;
     fd_set rset, wset;
     struct timeval tval;
@@ -368,6 +396,11 @@ static void mux_io(server_conf_t *conf)
     i = list_iterator_create(conf->objs);
 
     while (!done) {
+
+        if (reconfig) {
+            reopen_logfiles(conf->objs);
+            reconfig = 0;
+        }
 
         FD_ZERO(&rset);
         FD_ZERO(&wset);
@@ -419,7 +452,7 @@ static void mux_io(server_conf_t *conf)
         while ((n = tselect(maxfd+1, &rset, &wset, NULL)) < 0) {
             if (errno != EINTR)
                 err_msg(errno, "Unable to multiplex I/O");
-            else if (done)
+            else if (done || reconfig)
                 /* i need a */ break;
         }
         if (n <= 0)
@@ -461,6 +494,27 @@ static void mux_io(server_conf_t *conf)
         }
     }
 
+    list_iterator_destroy(i);
+    return;
+}
+
+
+static void reopen_logfiles(List objs)
+{
+/*  Reopens all of the logfiles in the 'objs' list.
+ */
+    ListIterator i;
+    obj_t *logfile;
+
+    /*  FIX_ME: Re-Open server's logfile here as well.
+     */
+    i = list_iterator_create(objs);
+    while ((logfile = list_next(i))) {
+        if (!is_logfile_obj(logfile))
+            continue;
+        if (open_logfile_obj(logfile, 0) < 0)
+            list_delete(i);
+    }
     list_iterator_destroy(i);
     return;
 }
@@ -519,6 +573,8 @@ static void accept_client(server_conf_t *conf)
 
 static void reset_console(obj_t *console, const char *cmd)
 {
+/*  Resets the 'console' obj by performing the reset 'cmd' in a subshell.
+ */
     char cmdbuf[MAX_LINE];
     pid_t pid;
 
@@ -553,6 +609,9 @@ static void reset_console(obj_t *console, const char *cmd)
      *    both we avoid a race condition.  (cf. APUE 9.4 p244)
      */
     setpgid(pid, 0);
+    /*
+     *  Set a timer to ensure the reset cmd does not exceed its time limit.
+     */
     timeout((CallBackF) kill_console_reset, (void *) pid,
         RESET_CMD_TIMEOUT * 1000);
     return;
@@ -561,6 +620,8 @@ static void reset_console(obj_t *console, const char *cmd)
 
 static void kill_console_reset(pid_t pid)
 {
+/*  Terminates the "ResetCmd" process 'pid' if it has exceeded its time limit.
+ */
     assert(pid > 0);
 
     if (kill(pid, 0) < 0)		/* process is no longer running */

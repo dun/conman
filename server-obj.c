@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.48 2001/10/08 04:02:37 dun Exp $
+ *  $Id: server-obj.c,v 1.49 2001/10/11 18:59:22 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -69,11 +69,7 @@ static obj_t * create_obj(
      */
     obj->gotReset = 0;
 
-    /*  Add obj to the master conf->objs list.
-     */
-    list_append(conf->objs, obj);
-
-    DPRINTF("Created object [%s] on fd=%d.\n", obj->name, obj->fd);
+    DPRINTF("Created object [%s].\n", obj->name);
     return(obj);   
 }
 
@@ -99,14 +95,14 @@ obj_t * create_client_obj(server_conf_t *conf, req_t *req)
     snprintf(name, sizeof(name), "%s@%s:%d", req->user, req->host, req->port);
     name[sizeof(name) - 1] = '\0';
     client = create_obj(conf, name, req->sd, CLIENT);
-
     client->aux.client.req = req;
     time(&client->aux.client.timeLastRead);
     if (client->aux.client.timeLastRead == (time_t) -1)
-        err_msg(errno, "time() failed");
+        err_msg(errno, "What time is it?");
     client->aux.client.gotEscape = 0;
     client->aux.client.gotSuspend = 0;
 
+    list_append(conf->objs, client);
     return(client);
 }
 
@@ -119,9 +115,6 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name, obj_t *console)
  */
     ListIterator i;
     obj_t *logfile;
-    int flags;
-    int fd = -1;
-    char *now, *msg;
 
     assert(conf);
     assert(name && *name);
@@ -143,46 +136,76 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name, obj_t *console)
         }
     }
     list_iterator_destroy(i);
-    if (logfile != NULL)
-        goto err;
+    if (logfile != NULL)		/* found duplicate name */
+        return(NULL);
 
-    flags = O_WRONLY | O_CREAT | O_APPEND | O_NONBLOCK;
-    if (conf->enableZeroLogs)
-        flags |= O_TRUNC;
-    if ((fd = open(name, flags, S_IRUSR | S_IWUSR)) < 0) {
-        log_msg(0, "Unable to open logfile \"%s\": %s.", name, strerror(errno));
-        goto err;
-    }
-    if (get_write_lock(fd) < 0) {
-        log_msg(0, "Unable to lock \"%s\".", name);
-        goto err;
-    }
-    set_fd_nonblocking(fd);		/* redundant but just playing it safe */
-    set_fd_closed_on_exec(fd);
-
-    logfile = create_obj(conf, name, fd, LOGFILE);
+    logfile = create_obj(conf, name, -1, LOGFILE);
     logfile->aux.logfile.consoleName = create_string(console->name);
+
+    if (open_logfile_obj(logfile, conf->enableZeroLogs) < 0) {
+        destroy_obj(logfile);
+        return(NULL);
+    }
+
     if (is_serial_obj(console))
         console->aux.serial.logfile = logfile;
     else if (is_telnet_obj(console))
         console->aux.telnet.logfile = logfile;
     else
-        assert(is_console_obj(console));
+        err_msg(0, "INTERNAL: Unrecognized console [%s] type=%d at %s:%d",
+            console->name, console->type, __FILE__, __LINE__);
+    list_append(conf->objs, logfile);
+    return(logfile);
+}
+
+
+int open_logfile_obj(obj_t *logfile, int gotTrunc)
+{
+/*  (Re)opens the specified 'logfile' obj; the logfile will be truncated
+ *    if 'gotTrunc' is true (ie, non-zero).
+ *  Returns 0 if the logfile is successfully opened; o/w, returns -1.
+ */
+    int flags;
+    char *now, *msg;
+
+    assert(logfile);
+    assert(is_logfile_obj(logfile));
+    assert(logfile->name);
+    assert(logfile->aux.logfile.consoleName);
+
+    if (logfile->fd >= 0) {
+        if (close(logfile->fd) < 0) {
+            log_msg(0, "Unable to close logfile \"%s\": %s.",
+                logfile->name, strerror(errno));
+            return(-1);
+        }
+    }
+    flags = O_WRONLY | O_CREAT | O_APPEND | O_NONBLOCK;
+    if (gotTrunc)
+        flags |= O_TRUNC;
+    if ((logfile->fd = open(logfile->name, flags, S_IRUSR | S_IWUSR)) < 0) {
+        log_msg(0, "Unable to open logfile \"%s\": %s.",
+            logfile->name, strerror(errno));
+        return(-1);
+    }
+    if (get_write_lock(logfile->fd) < 0) {
+        log_msg(0, "Unable to lock \"%s\".", logfile->name);
+        return(-1);
+    }
+    set_fd_nonblocking(logfile->fd);	/* redundant but just playing it safe */
+    set_fd_closed_on_exec(logfile->fd);
 
     now = create_long_time_string(0);
-    msg = create_format_string("%sConsole [%s] log started at %s%s",
-        CONMAN_MSG_PREFIX, console->name, now, CONMAN_MSG_SUFFIX);
+    msg = create_format_string("%sConsole [%s] log opened at %s%s",
+        CONMAN_MSG_PREFIX, logfile->aux.logfile.consoleName, now,
+        CONMAN_MSG_SUFFIX);
     write_obj_data(logfile, msg, strlen(msg), 0);
     free(now);
     free(msg);
 
-    return(logfile);
-
-err:
-    if (fd >= 0)
-        if (close(fd) < 0)
-            err_msg(errno, "close() failed on fd=%d", fd);
-    return(NULL);
+    DPRINTF("Logfile \"%s\" opened for console [%s].\n",
+        logfile->name, logfile->aux.logfile.consoleName);
+    return(0);
 }
 
 
@@ -258,12 +281,13 @@ obj_t * create_serial_obj(
     set_serial_opts(&tty, serial, opts);
     set_tty_mode(&tty, fd);
 
+    list_append(conf->objs, serial);
     return(serial);
 
 err:
     if (fd >= 0)
         if (close(fd) < 0)
-            err_msg(errno, "close() failed on fd=%d", fd);
+            err_msg(errno, "Unable to close console [%s]", name);
     return(NULL);
 }
 
@@ -339,6 +363,7 @@ obj_t * create_telnet_obj(
      */
     telnet->aux.telnet.enableKeepAlive = conf->enableKeepAlive;
 
+    list_append(conf->objs, telnet);
     connect_telnet_obj(telnet);
     return(telnet);
 }
@@ -420,7 +445,7 @@ int connect_telnet_obj(obj_t *telnet)
         /* Success!  Continue after if/else expr. */
     }
     else {
-        err_msg(0, "Console [%s] is in an unknown telnet state %d.\n",
+        err_msg(0, "Console [%s] is in an unknown telnet state=%d.\n",
             telnet->aux.telnet.conState);
     }
 
@@ -475,7 +500,7 @@ void disconnect_telnet_obj(obj_t *telnet)
         telnet->aux.telnet.timer = -1;
     }
     if (close(telnet->fd) < 0)
-        err_msg(errno, "close() of <%s:%d> failed for [%s]",
+        err_msg(errno, "Unable to close connection to <%s:%d> for [%s]",
             telnet->aux.telnet.host, telnet->aux.telnet.port, telnet->name);
     telnet->fd = -1;
 
@@ -529,18 +554,32 @@ static void reset_telnet_delay(obj_t *telnet)
 void destroy_obj(obj_t *obj)
 {
 /*  Destroys the object, closing the fd and freeing resources as needed.
- *  Note: This routine is ONLY called via the objs list destructor.
+ *
+ *  NOTE: Be sure the destroyed obj is removed from the master objs list;
+ *    this routine will normally be called via the objs list destructor.
  */
-    if (!obj)
-        return;
-
+    assert(obj);
     DPRINTF("Destroyed object [%s].\n", obj->name);
-/*
- *  FIX_ME? Ensure obj buf is flushed (if not suspended) before destruction.
+
+/*  FIX_ME? Ensure obj buf is flushed (if not suspended) before destruction.
  *
  *  assert(obj->bufInPtr == obj->bufOutPtr); */
 
-    if (is_serial_obj(obj)) {
+    switch(obj->type) {
+    case CLIENT:
+        if (obj->aux.client.req) {
+            /*
+             *  Prevent destroy_req() from closing 'sd' a second time.
+             */
+            obj->aux.client.req->sd = -1;
+            destroy_req(obj->aux.client.req);
+        }
+        break;
+    case LOGFILE:
+        if (obj->aux.logfile.consoleName)
+            free(obj->aux.logfile.consoleName);
+        break;
+    case SERIAL:
         /*
          *  According to the UNIX Programming FAQ v1.37
          *    <http://www.faqs.org/faqs/unix-faq/programmer/faq/>
@@ -554,49 +593,36 @@ void destroy_obj(obj_t *obj)
         if (tcflush(obj->fd, TCIOFLUSH) < 0)
             err_msg(errno, "Unable to flush tty device for console [%s]",
                 obj->name);
+        if (obj->aux.serial.dev)
+            free(obj->aux.serial.dev);
         set_tty_mode(&obj->aux.serial.tty, obj->fd);
+        /*
+         *  Do not destroy obj->aux.serial.logfile since it is only a ref.
+         */
+        break;
+    case TELNET:
+        if (obj->aux.telnet.host)
+            free(obj->aux.telnet.host);
+        /*
+         *  Do not destroy obj->aux.telnet.logfile since it is only a ref.
+         */
+        break;
+    default:
+        err_msg(0, "INTERNAL: Unrecognized object [%s] type=%d at %s:%d",
+            obj->name, obj->type, __FILE__, __LINE__);
+        break;
     }
-    if (obj->fd >= 0) {
-        if (close(obj->fd) < 0)
-            err_msg(errno, "close() failed on fd=%d", obj->fd);
-        obj->fd = -1;
-    }
+
     x_pthread_mutex_destroy(&obj->bufLock);
     if (obj->readers)
         list_destroy(obj->readers);
     if (obj->writers)
         list_destroy(obj->writers);
-
-    switch(obj->type) {
-    case CLIENT:
-        if (obj->aux.client.req) {
-        /*
-         *  Prevent destroy_req() from closing 'sd' a second time.
-         */
-            obj->aux.client.req->sd = -1;
-            destroy_req(obj->aux.client.req);
-        }
-        break;
-    case LOGFILE:
-        if (obj->aux.logfile.consoleName)
-            free(obj->aux.logfile.consoleName);
-        break;
-    case SERIAL:
-        if (obj->aux.serial.dev)
-            free(obj->aux.serial.dev);
-        /* Do not destroy obj->aux.serial.logfile since it is only a ref. */
-        break;
-    case TELNET:
-        if (obj->aux.telnet.host)
-            free(obj->aux.telnet.host);
-        /* Do not destroy obj->aux.telnet.logfile since it is only a ref. */
-        break;
-    default:
-        err_msg(0, "Invalid object (%d) at %s:%d",
-            obj->type, __FILE__, __LINE__);
-        break;
+    if (obj->fd >= 0) {
+        if (close(obj->fd) < 0)
+            err_msg(errno, "Unable to close object [%s]", obj->name);
+        obj->fd = -1;
     }
-
     if (obj->name)
         free(obj->name);
 
@@ -897,7 +923,7 @@ again:
             x_pthread_mutex_lock(&obj->bufLock);
             time(&obj->aux.client.timeLastRead);
             if (obj->aux.client.timeLastRead == (time_t) -1)
-                err_msg(errno, "time() failed");
+                err_msg(errno, "What time it is?");
             x_pthread_mutex_unlock(&obj->bufLock);
             n = process_client_escapes(obj, buf, n);
         }

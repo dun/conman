@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.34 2001/10/08 04:02:37 dun Exp $
+ *  $Id: server-sock.c,v 1.35 2001/10/11 18:59:22 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -106,12 +106,9 @@ void process_client(client_arg_t *args)
             goto err;
         break;
     default:
-        /*  This should not happen, as invalid commands
-         *    will be detected by validate_req().
-         */
-        log_msg(0, "INTERNAL ERROR: Received invalid command (%d) at %s:%d",
-            req->command, __FILE__, __LINE__);
-        break;
+        log_msg(0, "Received invalid command=%d from <%s@%s>.",
+            req->command, req->user, req->host);
+        goto err;
     }
     return;
 

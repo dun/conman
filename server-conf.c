@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.25 2001/10/08 04:02:37 dun Exp $
+ *  $Id: server-conf.c,v 1.26 2001/10/11 18:59:22 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -68,7 +68,7 @@ static char *server_conf_strs[] = {
 
 
 static void display_server_help(char *prog);
-static void kill_daemon(server_conf_t *conf);
+static void signal_daemon(server_conf_t *conf, int signum);
 static void parse_console_directive(Lex l, server_conf_t *conf);
 static void parse_server_directive(Lex l, server_conf_t *conf);
 
@@ -89,7 +89,8 @@ server_conf_t * create_server_conf(void)
      *  The conf file's fd must be saved and kept open in order to hold an
      *    fcntl-style lock.  This lock is used to ensure only one instance
      *    of a given configuration can be running.  It is also used to
-     *    support the '-k' cmdline option to kill a running daemon.
+     *    obtain the pid of an active daemon in order to support the
+     *    '-k' and '-r' cmdline options.
      */
     conf->fd = -1;
     /*
@@ -123,8 +124,6 @@ void destroy_server_conf(server_conf_t *conf)
     if (!conf)
         return;
 
-    if (conf->confFileName)
-        free(conf->confFileName);
     if (conf->logDirName)
         free(conf->logDirName);
     if (conf->logFileName)
@@ -138,16 +137,18 @@ void destroy_server_conf(server_conf_t *conf)
         free(conf->resetCmd);
     if (conf->fd >= 0) {
         if (close(conf->fd) < 0)
-            err_msg(errno, "close() failed on fd=%d", conf->fd);
+            err_msg(errno, "Unable to close \"%s\"", conf->confFileName);
         conf->fd = -1;
     }
     if (conf->ld >= 0) {
         if (close(conf->ld) < 0)
-            err_msg(errno, "close() failed on fd=%d", conf->ld);
+            err_msg(errno, "Unable to close listening socket");
         conf->ld = -1;
     }
     if (conf->objs)
         list_destroy(conf->objs);
+    if (conf->confFileName)
+        free(conf->confFileName);
 
     free(conf);
     return;
@@ -158,10 +159,10 @@ void process_server_cmd_line(int argc, char *argv[], server_conf_t *conf)
 {
     int c;
     int n;
-    int killDaemon = 0;
+    int signum = 0;
 
     opterr = 0;
-    while ((c = getopt(argc, argv, "c:hkp:vVz")) != -1) {
+    while ((c = getopt(argc, argv, "c:hkp:rvVz")) != -1) {
         switch(c) {
         case 'c':
             if (conf->confFileName)
@@ -172,13 +173,16 @@ void process_server_cmd_line(int argc, char *argv[], server_conf_t *conf)
             display_server_help(argv[0]);
             exit(0);
         case 'k':
-            killDaemon = 1;
+            signum = SIGTERM;
             break;
         case 'p':
             if ((n = atoi(optarg)) <= 0)
                 fprintf(stderr, "WARNING: Ignoring invalid port \"%d\".\n", n);
             else
                 conf->port = n;
+            break;
+        case 'r':
+            signum = SIGHUP;
             break;
         case 'v':
             conf->enableVerbose = 1;
@@ -198,8 +202,8 @@ void process_server_cmd_line(int argc, char *argv[], server_conf_t *conf)
         }
     }
 
-    if (killDaemon) {
-        kill_daemon(conf);
+    if (signum) {
+        signal_daemon(conf, signum);
         exit(0);
     }
     return;
@@ -294,6 +298,8 @@ void process_server_conf_file(server_conf_t *conf)
 
 static void display_server_help(char *prog)
 {
+/*  Displays a help message for the server's command-line options.
+ */
     printf("Usage: %s [OPTIONS]\n", prog);
     printf("\n");
     printf("  -c FILE   Specify alternate configuration (default: %s).\n",
@@ -302,6 +308,8 @@ static void display_server_help(char *prog)
     printf("  -k        Kill daemon running with specified configuration.\n");
     printf("  -p PORT   Specify alternate port number (default: %d).\n",
         atoi(DEFAULT_CONMAN_PORT));
+    printf("  -r        Reconfigure daemon running with specified "
+        "configuration.\n");
     printf("  -v        Be verbose.\n");
     printf("  -V        Display version information.\n");
     printf("  -z        Zero console log files.\n");
@@ -310,9 +318,17 @@ static void display_server_help(char *prog)
 }
 
 
-static void kill_daemon(server_conf_t *conf)
+static void signal_daemon(server_conf_t *conf, int signum)
 {
+/*  Sends the 'signum' signal to the daemon running with the
+ *    configuration specified by 'conf'.
+ */
     pid_t pid;
+    char *msg;
+
+    assert(conf);
+    assert(conf->confFileName);
+    assert(signum > 0);
 
     if ((conf->fd = open(conf->confFileName, O_RDONLY)) < 0)
         err_msg(errno, "Unable to open \"%s\"", conf->confFileName);
@@ -322,11 +338,19 @@ static void kill_daemon(server_conf_t *conf)
             printf("Configuration \"%s\" is not active.\n", conf->confFileName);
     }
     else {
-        if (kill(pid, SIGTERM) < 0)
-            err_msg(errno, "Unable to send SIGTERM to pid %d.\n", pid);
-        if (conf->enableVerbose)
-            printf("Configuration \"%s\" (pid %d) terminated.\n",
-                conf->confFileName, (int) pid);
+        if (kill(pid, signum) < 0)
+            err_msg(errno, "Unable to send signal=%d to pid %d.\n",
+                signum, pid);
+        else if (conf->enableVerbose) {
+            if (signum == SIGHUP)
+                msg = "reconfigured on";
+            else if (signum == SIGTERM)
+                msg = "terminated on";
+            else
+                msg = "sent";
+            printf("Configuration \"%s\" (pid %d) %s signal=%d.\n",
+                conf->confFileName, (int) pid, msg, signum);
+        }
     }
 
     destroy_server_conf(conf);
