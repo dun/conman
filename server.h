@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.h,v 1.54 2002/05/20 02:47:31 dun Exp $
+ *  $Id: server.h,v 1.55 2002/05/20 06:51:45 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -175,8 +175,9 @@ typedef struct server_conf {
     int              port;              /* port number on which to listen    */
     int              ld;                /* listening socket descriptor       */
     List             objs;              /* list of all server obj_t's        */
-    logopt_t         logopts;           /* global opts for logfile objects   */
-    seropt_t         seropts;           /* global opts for serial objects    */
+    char            *globalLogName;     /* global log name (must contain &)  */
+    logopt_t         globalLogopts;     /* global opts for logfile objects   */
+    seropt_t         globalSeropts;     /* global opts for serial objects    */
     unsigned         enableKeepAlive:1; /* true if using TCP keep-alive      */
     unsigned         enableLoopBack:1;  /* true if only listening on loopback*/
     unsigned         enableTCPWrap:1;   /* true if TCP-Wrappers is enabled   */

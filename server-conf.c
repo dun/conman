@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-conf.c,v 1.52 2002/05/20 02:47:31 dun Exp $
+ *  $Id: server-conf.c,v 1.53 2002/05/20 06:51:45 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -163,11 +163,12 @@ server_conf_t * create_server_conf(void)
     conf->port = 0;
     conf->ld = -1;
     conf->objs = list_create((ListDelF) destroy_obj);
-    conf->logopts.enableSanitize = DEFAULT_LOGOPT_SANITIZE;
-    conf->seropts.bps = DEFAULT_SEROPT_BPS;
-    conf->seropts.databits = DEFAULT_SEROPT_DATABITS;
-    conf->seropts.parity = DEFAULT_SEROPT_PARITY;
-    conf->seropts.stopbits = DEFAULT_SEROPT_STOPBITS;
+    conf->globalLogName = NULL;
+    conf->globalLogopts.enableSanitize = DEFAULT_LOGOPT_SANITIZE;
+    conf->globalSeropts.bps = DEFAULT_SEROPT_BPS;
+    conf->globalSeropts.databits = DEFAULT_SEROPT_DATABITS;
+    conf->globalSeropts.parity = DEFAULT_SEROPT_PARITY;
+    conf->globalSeropts.stopbits = DEFAULT_SEROPT_STOPBITS;
     conf->enableKeepAlive = 1;
     conf->enableLoopBack = 0;
     conf->enableTCPWrap = 0;
@@ -222,6 +223,8 @@ void destroy_server_conf(server_conf_t *conf)
     }
     if (conf->objs)
         list_destroy(conf->objs);
+    if (conf->globalLogName)
+        free(conf->globalLogName);
     if (conf->confFileName)
         free(conf->confFileName);
 
@@ -427,13 +430,14 @@ static void signal_daemon(server_conf_t *conf, int signum)
 
 static void parse_console_directive(Lex l, server_conf_t *conf)
 {
-/*  CONSOLE NAME="<str>" DEV="<file>" [LOG="<file>"] \
- *    [LOGOPTS="<str>"] [SEROPTS="<str>"]
+/*  CONSOLE NAME="<str>" DEV="<file>" \
+ *    [LOG="<file>"] [LOGOPTS="<str>"] [SEROPTS="<str>"]
  */
     char *directive;                    /* name of directive being parsed */
     int line;                           /* line# where directive begins */
     int tok;
     int done = 0;
+    int gotEmptyLogName = 0;
     char err[MAX_LINE] = "";
     char name[MAX_LINE] = "";
     char dev[MAX_LINE] = "";
@@ -449,8 +453,8 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
 
     /*  Set options to global values which may be overridden.
      */
-    logopts = conf->logopts;
-    seropts = conf->seropts;
+    logopts = conf->globalLogopts;
+    seropts = conf->globalSeropts;
 
     while (!done && !*err) {
         tok = lex_next(l);
@@ -464,7 +468,7 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else
-                strlcpy(name, lex_text(l), MAX_LINE);
+                strlcpy(name, lex_text(l), sizeof(name));
             break;
 
         case SERVER_CONF_DEV:
@@ -475,21 +479,25 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else
-                strlcpy(dev, lex_text(l), MAX_LINE);
+                strlcpy(dev, lex_text(l), sizeof(dev));
             break;
 
         case SERVER_CONF_LOG:
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if ((lex_next(l) != LEX_STR) || is_empty_string(lex_text(l)))
+            else if (lex_next(l) != LEX_STR)
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
+            else if (is_empty_string(lex_text(l))) {
+                gotEmptyLogName = 1;
+                *log = '\0';
+            }
             else if ((lex_text(l)[0] != '/') && (conf->logDirName))
                 snprintf(log, sizeof(log), "%s/%s",
                     conf->logDirName, lex_text(l));
             else
-                strlcpy(log, lex_text(l), MAX_LINE);
+                strlcpy(log, lex_text(l), sizeof(log));
             break;
 
         case SERVER_CONF_LOGOPTS:
@@ -554,8 +562,15 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
             conf->confFileName, line, name, err);
     }
 
-    if (console && *log) {
+    if (!*log && !gotEmptyLogName && conf->globalLogName) {
+        if ((conf->globalLogName[0] != '/') && (conf->logDirName))
+            snprintf(log, sizeof(log), "%s/%s",
+                conf->logDirName, conf->globalLogName);
+        else
+            strlcpy(log, conf->globalLogName, sizeof(log));
+    }
 
+    if (console && *log) {
         if (substitute_string(name, sizeof(name), log,
           DEFAULT_CONFIG_ESCAPE, console->name) < 0) {
             log_msg(LOG_ERR, "CONFIG[%s:%d]: console [%s] cannot log to "
@@ -589,6 +604,32 @@ static void parse_global_directive(Lex l, server_conf_t *conf)
         tok = lex_next(l);
         switch(tok) {
 
+        case SERVER_CONF_LOG:
+            if (lex_next(l) != '=')
+                snprintf(err, sizeof(err), "expected '=' after %s keyword",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            else if (lex_next(l) != LEX_STR)
+                snprintf(err, sizeof(err), "expected STRING for %s value",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            else if (is_empty_string(lex_text(l))) {
+                /*
+                 *  Unset global log name if string is empty.
+                 */
+                if (conf->globalLogName) {
+                    free(conf->globalLogName);
+                    conf->globalLogName = NULL;
+                }
+            }
+            else if (!strchr(lex_text(l), '&'))
+                snprintf(err, sizeof(err), "expected '&' within %s value",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            else {
+                if (conf->globalLogName)
+                    free(conf->globalLogName);
+                conf->globalLogName = create_string(lex_text(l));
+            }
+            break;
+
         case SERVER_CONF_LOGOPTS:
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
@@ -597,7 +638,7 @@ static void parse_global_directive(Lex l, server_conf_t *conf)
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else
-                parse_logfile_opts(&conf->logopts, lex_text(l),
+                parse_logfile_opts(&conf->globalLogopts, lex_text(l),
                     err, sizeof(err));
             break;
 
@@ -609,7 +650,7 @@ static void parse_global_directive(Lex l, server_conf_t *conf)
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else
-                parse_serial_opts(&conf->seropts, lex_text(l),
+                parse_serial_opts(&conf->globalSeropts, lex_text(l),
                     err, sizeof(err));
             break;
 
@@ -670,9 +711,14 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if ((lex_next(l) != LEX_STR) || is_empty_string(lex_text(l)))
+            else if ((lex_next(l) != LEX_STR))
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
+            else if (is_empty_string(lex_text(l))) {
+                if (conf->logDirName)
+                    free(conf->logDirName);
+                conf->logDirName = create_string(conf->cwd);
+            }
             else {
                 if (conf->logDirName)
                     free(conf->logDirName);

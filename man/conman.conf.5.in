@@ -1,4 +1,4 @@
-.\" $Id: conman.conf.5.in,v 1.4 2002/05/20 02:47:32 dun Exp $
+.\" $Id: conman.conf.5.in,v 1.5 2002/05/20 06:51:45 dun Exp $
 
 .TH CONMAN.CONF 5 "@DATE@" "@PROJECT@-@VERSION@" "LLNL"
 
@@ -79,6 +79,13 @@ for hours, or '\fBd\fR' for days.  The default is 0 (ie, no timestamps).
 These directives begin with the \fBGLOBAL\fR keyword followed by one of the
 following key/value pairs:
 .TP
+\fBlog\fR \fB=\fR "\fIfile\fR"
+Specifies the default log file to use for each \fBconsole\fR directive.
+This filename must contain at least one '\fB&\fR' character, each
+occurrence of which will be replaced with the name of the console.  If an
+absolute pathname is not specified, the file's location will be relative to
+\fBlogdir\fR (assuming it has been previously defined).
+.TP
 \fBlogopts\fR \fB=\fR "(\fBsanitize\fR|\fBnosanitize\fR)"
 Specifies global options for the console log files.  These options can be
 overridden on an individual basis by specifying the \fBCONSOLE\fR
@@ -128,10 +135,9 @@ connection is specified with the "\fIhost\fR:\fIport\fR" format (where
 \fBlog\fR \fB=\fR "\fIfile\fR"
 Specifies the file where console output is logged.  If an absolute pathname
 is not specified, the file's location is relative to \fBlogdir\fR (assuming
-it has been previously defined).  All occurrences of the '&' character are
-replaced with the console name.  Output from the console will not be logged
-unless this keyword is specified.  Also note that the client's "log-replay"
-escape requires the console to be logged.
+it has been previously defined).  Each occurrence of the '\fB&\fR'
+character is replaced with the name of the console.  An empty log string
+(ie, log="") disables logging, overriding the global log name.
 .TP
 \fBlogopts\fR \fB=\fR "\fIstring\fR"
 This keyword is optional (cf, \fBGLOBAL DIRECTIVES\fR).
