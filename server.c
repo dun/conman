@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.14 2001/06/19 20:49:23 dun Exp $
+ *  $Id: server.c,v 1.15 2001/08/06 22:12:02 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -196,7 +196,8 @@ static void mux_io(server_conf_t *conf)
                 FD_SET(obj->fd, &rset);
                 maxfd = MAX(maxfd, obj->fd);
             }
-            if ((obj->bufInPtr != obj->bufOutPtr) && (!obj->gotSuspended)) {
+            if (((obj->bufInPtr != obj->bufOutPtr) || (obj->gotEOF))
+              && (!obj->gotSuspended)) {
                 FD_SET(obj->fd, &wset);
                 maxfd = MAX(maxfd, obj->fd);
             }
