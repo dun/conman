@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-esc.c,v 1.34 2002/08/13 23:47:50 dun Exp $
+ *  $Id: server-esc.c,v 1.35 2002/09/18 20:32:17 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -42,7 +42,7 @@
 #include "list.h"
 #include "log.h"
 #include "server.h"
-#include "util-str.h"
+#include "str.h"
 #include "util.h"
 #include "wrapper.h"
 
@@ -351,7 +351,7 @@ static void perform_quiet_toggle(obj_t *client)
         op = "Enabled", action = "suppressed";
     else
         op = "Disabled", action = "displayed";
-    str = create_format_string("%s%s quiet-mode -- info msgs will be %s%s",
+    str = str_create_fmt("%s%s quiet-mode -- info msgs will be %s%s",
         CONMAN_MSG_PREFIX, op, action, CONMAN_MSG_SUFFIX);
     /*
      *  Technically, this is an informational message.  But, it is marked as
@@ -382,7 +382,7 @@ static void perform_reset(obj_t *client)
     assert(is_client_obj(client));
 
     tty = client->aux.client.req->tty;
-    now = create_short_time_string(0);
+    now = str_get_time_long(0);
     i = list_iterator_create(client->readers);
     while ((console = list_next(i))) {
         assert(is_console_obj(console));
@@ -400,7 +400,6 @@ static void perform_reset(obj_t *client)
         notify_console_objs(console, buf);
     }
     list_iterator_destroy(i);
-    free(now);
     return;
 }
 

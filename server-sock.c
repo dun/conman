@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-sock.c,v 1.51 2002/09/18 00:27:23 dun Exp $
+ *  $Id: server-sock.c,v 1.52 2002/09/18 20:32:17 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -46,8 +46,8 @@
 #include "lex.h"
 #include "log.h"
 #include "server.h"
+#include "str.h"
 #include "util-net.h"
-#include "util-str.h"
 #include "wrapper.h"
 
 
@@ -177,7 +177,7 @@ static int resolve_addr(server_conf_t *conf, req_t *req, int sd)
     if (!inet_ntop(AF_INET, &addr.sin_addr, buf, sizeof(buf)))
         log_err(errno, "Unable to convert network address into string");
     req->port = ntohs(addr.sin_port);
-    req->ip = create_string(buf);
+    req->ip = str_create(buf);
     /*
      *  Attempt to resolve IP address.  If it succeeds, buf contains
      *    host string; if it fails, buf is unchanged with IP addr string.
@@ -186,14 +186,14 @@ static int resolve_addr(server_conf_t *conf, req_t *req, int sd)
      */
     if ((host_addr4_to_name(&addr.sin_addr, buf, sizeof(buf)))) {
         gotHostName = 1;
-        req->fqdn = create_string(buf);
+        req->fqdn = str_create(buf);
         if ((p = strchr(buf, '.')))
             *p = '\0';
-        req->host = create_string(buf);
+        req->host = str_create(buf);
     }
     else {
-        req->fqdn = create_string(buf);
-        req->host = create_string(buf);
+        req->fqdn = str_create(buf);
+        req->host = str_create(buf);
     }
 
 #ifdef WITH_TCP_WRAPPERS
@@ -263,7 +263,7 @@ static int recv_greeting(req_t *req)
     /*  Validate greeting.
      */
     if (!req->user) {
-        req->user = create_string("unknown");
+        req->user = str_create("unknown");
         send_rsp(req, CONMAN_ERR_BAD_REQUEST, 
             "Invalid greeting: no user specified");
         return(-1);
@@ -291,7 +291,7 @@ static void parse_greeting(Lex l, req_t *req)
               && (*lex_text(l) != '\0')) {
                 if (req->user)
                     free(req->user);
-                req->user = lex_decode(create_string(lex_text(l)));
+                req->user = lex_decode(str_create(lex_text(l)));
             }
             break;
         case CONMAN_TOK_TTY:
@@ -299,7 +299,7 @@ static void parse_greeting(Lex l, req_t *req)
               && (*lex_text(l) != '\0')) {
                 if (req->tty)
                     free(req->tty);
-                req->tty = lex_decode(create_string(lex_text(l)));
+                req->tty = lex_decode(str_create(lex_text(l)));
             }
             break;
         case LEX_EOF:
@@ -384,7 +384,7 @@ static void parse_cmd_opts(Lex l, req_t *req)
         case CONMAN_TOK_CONSOLE:
             if ((lex_next(l) == '=') && (lex_next(l) == LEX_STR)
               && (*lex_text(l) != '\0')) {
-                str = lex_decode(create_string(lex_text(l)));
+                str = lex_decode(str_create(lex_text(l)));
                 list_append(req->consoles, str);
             }
             break;
@@ -472,7 +472,7 @@ static int query_consoles_via_globbing(
     /*  An empty list for the QUERY command matches all consoles.
      */
     if (list_is_empty(req->consoles)) {
-        p = create_string("*");
+        p = str_create("*");
         list_append(req->consoles, p);
     }
 
@@ -512,7 +512,7 @@ static int query_consoles_via_regex(
     /*  An empty list for the QUERY command matches all consoles.
      */
     if (list_is_empty(req->consoles)) {
-        p = create_string(".*");
+        p = str_create(".*");
         list_append(req->consoles, p);
     }
 
@@ -674,18 +674,15 @@ static int check_busy_consoles(req_t *req)
             gotBcast = list_is_empty(writer->writers);
             tty = writer->aux.client.req->tty;
             x_pthread_mutex_unlock(&writer->bufLock);
-            delta = create_time_delta_string(t);
+            delta = str_get_time_delta(t);
 
             snprintf(buf, sizeof(buf),
                 "Console [%s] open %s by <%s@%s>%s%s (idle %s).\n",
                 console->name, (gotBcast ? "B/C" : "R/W"),
                 writer->aux.client.req->user, writer->aux.client.req->host,
-                (tty ? " on " : ""), (tty ? tty : ""),
-                (delta ? delta : "???"));
+                (tty ? " on " : ""), (tty ? tty : ""), delta);
             buf[sizeof(buf) - 2] = '\n';
             buf[sizeof(buf) - 1] = '\0';
-            if (delta)
-                free(delta);
             if (fd_write_n(req->sd, buf, strlen(buf)) < 0) {
                 log_msg(LOG_NOTICE, "Unable to write to <%s:%d>: %s",
                     req->fqdn, req->port, strerror(errno));
@@ -719,7 +716,7 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
 
     if (errnum == CONMAN_ERR_NONE) {
 
-        n = append_format_string(buf, sizeof(buf), "%s",
+        n = str_cat_fmt(buf, sizeof(buf), "%s",
             proto_strs[LEX_UNTOK(CONMAN_TOK_OK)]);
 
         /*  If consoles have been defined by this point, the "response"
@@ -729,21 +726,21 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
         if (list_count(req->consoles) > 0) {
 
             if (req->enableReset) {
-                n = append_format_string(buf, sizeof(buf), " %s=%s",
+                n = str_cat_fmt(buf, sizeof(buf), " %s=%s",
                     proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
                     proto_strs[LEX_UNTOK(CONMAN_TOK_RESET)]);
             }
             i = list_iterator_create(req->consoles);
             while ((console = list_next(i))) {
                 n = strlcpy(tmp, console->name, sizeof(tmp));
-                n = append_format_string(buf, sizeof(buf), " %s='%s'",
+                n = str_cat_fmt(buf, sizeof(buf), " %s='%s'",
                     proto_strs[LEX_UNTOK(CONMAN_TOK_CONSOLE)],
                     lex_encode(tmp));
             }
             list_iterator_destroy(i);
         }
 
-        n = append_format_string(buf, sizeof(buf), "\n");
+        n = str_cat_fmt(buf, sizeof(buf), "\n");
     }
     else {
         n = strlcpy(tmp, (errmsg ? errmsg : "unspecified error"), sizeof(tmp));

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-obj.c,v 1.72 2002/09/18 00:27:23 dun Exp $
+ *  $Id: server-obj.c,v 1.73 2002/09/18 20:32:17 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -46,9 +46,9 @@
 #include "list.h"
 #include "log.h"
 #include "server.h"
+#include "str.h"
 #include "tselect.h"
 #include "util-net.h"
-#include "util-str.h"
 #include "util.h"
 #include "wrapper.h"
 
@@ -79,7 +79,7 @@ static obj_t * create_obj(
 
     if (!(obj = malloc(sizeof(obj_t))))
         out_of_memory();
-    obj->name = create_string(name);
+    obj->name = str_create(name);
     obj->fd = fd;
     obj->bufInPtr = obj->bufOutPtr = obj->buf;
     x_pthread_mutex_init(&obj->bufLock, NULL);
@@ -171,7 +171,7 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name,
         return(NULL);
 
     logfile = create_obj(conf, name, -1, CONMAN_OBJ_LOGFILE);
-    logfile->aux.logfile.consoleName = create_string(console->name);
+    logfile->aux.logfile.consoleName = str_create(console->name);
     logfile->aux.logfile.sanitizeState = CONMAN_LOG_SANE_INIT;
     logfile->aux.logfile.opts = *opts;
     if (is_serial_obj(console))
@@ -257,7 +257,7 @@ obj_t * create_serial_obj(server_conf_t *conf, char *name,
      *    in order to support true server reconfiguration.  But not today.
      */
     serial = create_obj(conf, name, fd, CONMAN_OBJ_SERIAL);
-    serial->aux.serial.dev = create_string(dev);
+    serial->aux.serial.dev = str_create(dev);
     serial->aux.serial.logfile = NULL;
     get_tty_mode(&serial->aux.serial.tty, fd);
     get_tty_raw(&tty, fd);
@@ -334,7 +334,7 @@ obj_t * create_telnet_obj(server_conf_t *conf, char *name,
     }
 
     telnet = create_obj(conf, name, -1, CONMAN_OBJ_TELNET);
-    telnet->aux.telnet.host = create_string(host);
+    telnet->aux.telnet.host = str_create(host);
     telnet->aux.telnet.port = port;
     telnet->aux.telnet.saddr = saddr;
     telnet->aux.telnet.logfile = NULL;
@@ -454,11 +454,10 @@ int connect_telnet_obj(obj_t *telnet)
 
     /*  Notify linked objs when transitioning into an UP state.
      */
-    now = create_short_time_string(0);
+    now = str_get_time_short(0);
     snprintf(buf, sizeof(buf), "%sConsole [%s] connected to <%s:%d> at %s%s",
         CONMAN_MSG_PREFIX, telnet->name, telnet->aux.telnet.host,
         telnet->aux.telnet.port, now, CONMAN_MSG_SUFFIX);
-    free(now);
     strcpy(&buf[sizeof(buf) - 3], "\r\n");
     notify_console_objs(telnet, buf);
     telnet->aux.telnet.conState = CONMAN_TELCON_UP;
@@ -512,12 +511,11 @@ void disconnect_telnet_obj(obj_t *telnet)
     if (telnet->aux.telnet.conState == CONMAN_TELCON_UP) {
         log_msg(LOG_NOTICE, "Console [%s] disconnected from <%s:%d>",
             telnet->name, telnet->aux.telnet.host, telnet->aux.telnet.port);
-        now = create_short_time_string(0);
+        now = str_get_time_short(0);
         snprintf(buf, sizeof(buf),
             "%sConsole [%s] disconnected from <%s:%d> at %s%s",
             CONMAN_MSG_PREFIX, telnet->name, telnet->aux.telnet.host,
             telnet->aux.telnet.port, now, CONMAN_MSG_SUFFIX);
-        free(now);
         strcpy(&buf[sizeof(buf) - 3], "\r\n");
         notify_console_objs(telnet, buf);
     }
@@ -743,7 +741,7 @@ void link_objs(obj_t *src, obj_t *dst)
         gotBcast = src->aux.client.req->enableBroadcast;
         gotStolen = src->aux.client.req->enableForce
             && !list_is_empty(dst->writers);
-        now = create_short_time_string(0);
+        now = str_get_time_short(0);
 
         /*  Notify existing console readers and writers
          *    regarding the "writable" client's arrival.
@@ -787,7 +785,6 @@ void link_objs(obj_t *src, obj_t *dst)
             list_iterator_destroy(i);
         }
 
-        free(now);
     }
 
     /*  Create link from src reads to dst writes.
@@ -828,14 +825,13 @@ void unlink_objs(obj_t *src, obj_t *dst)
         /*  Notify existing console readers and writers
          *    regarding the "writable" client's departure.
          */
-        now = create_short_time_string(0);
+        now = str_get_time_short(0);
         tty = src->aux.client.req->tty;
         snprintf(buf, sizeof(buf),
             "%sConsole [%s] departed by <%s@%s>%s%s at %s%s",
             CONMAN_MSG_PREFIX, dst->name,
             src->aux.client.req->user, src->aux.client.req->host,
             (tty ? " on " : ""), (tty ? tty : ""), now, CONMAN_MSG_SUFFIX);
-        free(now);
         strcpy(&buf[sizeof(buf) - 3], "\r\n");
         notify_console_objs(dst, buf);
     }

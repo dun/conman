@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-conf.c,v 1.57 2002/09/18 00:27:23 dun Exp $
+ *  $Id: client-conf.c,v 1.58 2002/09/18 20:32:17 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -45,7 +45,7 @@
 #include "fd.h"
 #include "list.h"
 #include "log.h"
-#include "util-str.h"
+#include "str.h"
 
 
 static void read_consoles_from_file(List consoles, char *file);
@@ -74,7 +74,7 @@ client_conf_t * create_client_conf(void)
         if (!(passp = getpwuid(uid)))
             log_err(errno, "Unable to lookup user name for UID=%d", uid);
     if (passp->pw_name && *passp->pw_name)
-        conf->req->user = create_string(passp->pw_name);
+        conf->req->user = str_create(passp->pw_name);
 
     /*  Where am I?
      */
@@ -82,11 +82,11 @@ client_conf_t * create_client_conf(void)
     if (p && (strstr(p, "/dev/") == p))
         p += 5;
     if (p && *p)
-        conf->req->tty = create_string(p);
+        conf->req->tty = str_create(p);
 
     /*  Must copy host string constant since it will eventually be free()'d.
      */
-    conf->req->host = create_string(CONMAN_HOST);
+    conf->req->host = str_create(CONMAN_HOST);
     conf->req->port = atoi(CONMAN_PORT);
     conf->req->command = CONMAN_CMD_CONNECT;
 
@@ -139,7 +139,7 @@ void process_client_env_vars(client_conf_t *conf)
         if (*p) {
             if (conf->req->host)
                 free(conf->req->host);
-            conf->req->host = create_string(p);
+            conf->req->host = str_create(p);
         }
     }
     if ((p = getenv("CONMAN_PORT")) && (*p)) {
@@ -161,7 +161,7 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
     int gotHelp = 0;
 
     if (conf->prog == NULL)
-        conf->prog = create_string(argv[0]);
+        conf->prog = str_create(argv[0]);
 
     opterr = 0;
     while ((c = getopt(argc, argv, "bd:e:fF:hjl:LmqQrvV")) != -1) {
@@ -178,7 +178,7 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
             if (*optarg) {
                 if (conf->req->host)
                     free(conf->req->host);
-                conf->req->host = create_string(optarg);
+                conf->req->host = str_create(optarg);
             }
             break;
         case 'e':
@@ -201,7 +201,7 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
         case 'l':
             if (conf->log)
                 free(conf->log);
-            conf->log = create_string(optarg);
+            conf->log = str_create(optarg);
             break;
         case 'L':
             printf("%s", conman_license);
@@ -252,7 +252,7 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
             if ((q = strchr(p, ',')))
                 *q++ = '\0';
             if (*p)
-                list_append(conf->req->consoles, create_string(p));
+                list_append(conf->req->consoles, str_create(p));
             p = q;
         }
     }
@@ -304,7 +304,7 @@ static void read_consoles_from_file(List consoles, char *file)
         if ((*p == '#') || (*p == '\0'))
             continue;
 
-        list_append(consoles, create_string(p));
+        list_append(consoles, str_create(p));
     }
 
     if (fclose(fp) == EOF)
@@ -360,12 +360,11 @@ void open_client_log(client_conf_t *conf)
     if ((conf->logd = open(conf->log, flags, S_IRUSR | S_IWUSR)) < 0)
         log_err(errno, "Unable to open \"%s\"", conf->log);
 
-    now = create_long_time_string(0);
-    str = create_format_string("%sLog started at %s%s",
+    now = str_get_time_long(0);
+    str = str_create_fmt("%sLog started at %s%s",
         CONMAN_MSG_PREFIX, now, CONMAN_MSG_SUFFIX);
     if (fd_write_n(conf->logd, str, strlen(str)) < 0)
         log_err(errno, "Unable to write to \"%s\"", conf->log);
-    free(now);
     free(str);
 
     return;
@@ -380,12 +379,11 @@ void close_client_log(client_conf_t *conf)
         return;
     assert(conf->logd >= 0);
 
-    now = create_long_time_string(0);
-    str = create_format_string("%sLog finished at %s%s",
+    now = str_get_time_long(0);
+    str = str_create_fmt("%sLog finished at %s%s",
         CONMAN_MSG_PREFIX, now, CONMAN_MSG_SUFFIX);
     if (fd_write_n(conf->logd, str, strlen(str)) < 0)
         log_err(errno, "Unable to write to \"%s\"", conf->log);
-    free(now);
     free(str);
 
     if (close(conf->logd) < 0)

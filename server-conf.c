@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-conf.c,v 1.56 2002/09/18 00:27:23 dun Exp $
+ *  $Id: server-conf.c,v 1.57 2002/09/18 20:32:17 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -48,7 +48,7 @@
 #include "list.h"
 #include "log.h"
 #include "server.h"
-#include "util-str.h"
+#include "str.h"
 
 
 enum server_conf_toks {
@@ -162,7 +162,6 @@ static void parse_console_directive(Lex l, server_conf_t *conf);
 static void parse_global_directive(Lex l, server_conf_t *conf);
 static void parse_server_directive(Lex l, server_conf_t *conf);
 static int create_pidfile(const char *pidfile);
-static int is_empty_string(const char *s);
 static int lookup_syslog_priority(const char *priority);
 static int lookup_syslog_facility(const char *facility);
 
@@ -176,7 +175,7 @@ server_conf_t * create_server_conf(void)
         out_of_memory();
 
     conf->cwd = NULL;
-    conf->confFileName = create_string(CONMAN_CONF);
+    conf->confFileName = str_create(CONMAN_CONF);
     conf->logDirName = NULL;
     conf->logFileName = NULL;
     conf->logFilePtr = NULL;
@@ -232,8 +231,8 @@ server_conf_t * create_server_conf(void)
         log_msg(LOG_WARNING, "Unable to determine working directory");
     }
     else {
-        conf->cwd = create_string(buf);
-        conf->logDirName = create_string(buf);
+        conf->cwd = str_create(buf);
+        conf->logDirName = str_create(buf);
     }
     return(conf);
 }
@@ -293,7 +292,7 @@ void process_server_cmd_line(int argc, char *argv[], server_conf_t *conf)
         case 'c':
             if (conf->confFileName)
                 free(conf->confFileName);
-            conf->confFileName = create_string(optarg);
+            conf->confFileName = str_create(optarg);
             break;
         case 'h':
             display_server_help(argv[0]);
@@ -513,7 +512,7 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if ((lex_next(l) != LEX_STR) || is_empty_string(lex_text(l)))
+            else if ((lex_next(l) != LEX_STR) || str_is_empty(lex_text(l)))
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else
@@ -524,7 +523,7 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if ((lex_next(l) != LEX_STR) || is_empty_string(lex_text(l)))
+            else if ((lex_next(l) != LEX_STR) || str_is_empty(lex_text(l)))
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else
@@ -538,7 +537,7 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
             else if (lex_next(l) != LEX_STR)
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if (is_empty_string(lex_text(l))) {
+            else if (str_is_empty(lex_text(l))) {
                 gotEmptyLogName = 1;
                 *log = '\0';
             }
@@ -553,7 +552,7 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if ((lex_next(l) != LEX_STR) || is_empty_string(lex_text(l)))
+            else if ((lex_next(l) != LEX_STR) || str_is_empty(lex_text(l)))
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else
@@ -564,7 +563,7 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if ((lex_next(l) != LEX_STR) || is_empty_string(lex_text(l)))
+            else if ((lex_next(l) != LEX_STR) || str_is_empty(lex_text(l)))
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else
@@ -620,7 +619,7 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
     }
 
     if (console && *log) {
-        if (substitute_string(name, sizeof(name), log,
+        if (str_sub(name, sizeof(name), log,
           DEFAULT_CONFIG_ESCAPE, console->name) < 0) {
             log_msg(LOG_ERR, "CONFIG[%s:%d]: console [%s] cannot log to "
                 "\"%s\": %c-expansion failed", conf->confFileName, line,
@@ -660,7 +659,7 @@ static void parse_global_directive(Lex l, server_conf_t *conf)
             else if (lex_next(l) != LEX_STR)
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if (is_empty_string(lex_text(l))) {
+            else if (str_is_empty(lex_text(l))) {
                 /*
                  *  Unset global log name if string is empty.
                  */
@@ -675,7 +674,7 @@ static void parse_global_directive(Lex l, server_conf_t *conf)
             else {
                 if (conf->globalLogName)
                     free(conf->globalLogName);
-                conf->globalLogName = create_string(lex_text(l));
+                conf->globalLogName = str_create(lex_text(l));
             }
             break;
 
@@ -683,7 +682,7 @@ static void parse_global_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if ((lex_next(l) != LEX_STR) || is_empty_string(lex_text(l)))
+            else if ((lex_next(l) != LEX_STR) || str_is_empty(lex_text(l)))
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else
@@ -695,7 +694,7 @@ static void parse_global_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if ((lex_next(l) != LEX_STR) || is_empty_string(lex_text(l)))
+            else if ((lex_next(l) != LEX_STR) || str_is_empty(lex_text(l)))
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else
@@ -763,19 +762,19 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
             else if ((lex_next(l) != LEX_STR))
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if (is_empty_string(lex_text(l))) {
+            else if (str_is_empty(lex_text(l))) {
                 if (conf->logDirName)
                     free(conf->logDirName);
-                conf->logDirName = create_string(conf->cwd);
+                conf->logDirName = str_create(conf->cwd);
             }
             else {
                 if (conf->logDirName)
                     free(conf->logDirName);
                 if ((lex_text(l)[0] != '/') && (conf->cwd))
-                    conf->logDirName = create_format_string("%s/%s",
+                    conf->logDirName = str_create_fmt("%s/%s",
                         conf->cwd, lex_text(l));
                 else
-                    conf->logDirName = create_string(lex_text(l));
+                    conf->logDirName = str_create(lex_text(l));
                 p = conf->logDirName + strlen(conf->logDirName) - 1;
                 while ((p >= conf->logDirName) && (*p == '/'))
                     *p-- = '\0';
@@ -786,17 +785,17 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if ((lex_next(l) != LEX_STR) || is_empty_string(lex_text(l)))
+            else if ((lex_next(l) != LEX_STR) || str_is_empty(lex_text(l)))
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else {
                 if (conf->logFileName)
                     free(conf->logFileName);
                 if ((lex_text(l)[0] != '/') && (conf->logDirName))
-                    conf->logFileName = create_format_string("%s/%s",
+                    conf->logFileName = str_create_fmt("%s/%s",
                         conf->logDirName, lex_text(l));
                 else
-                    conf->logFileName = create_string(lex_text(l));
+                    conf->logFileName = str_create(lex_text(l));
                 if ((p = strrchr(conf->logFileName, ','))) {
                     *p++ = '\0';
                     if ((n = lookup_syslog_priority(p)) < 0)
@@ -826,17 +825,17 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if ((lex_next(l) != LEX_STR) || is_empty_string(lex_text(l)))
+            else if ((lex_next(l) != LEX_STR) || str_is_empty(lex_text(l)))
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else {
                 if (conf->pidFileName)
                     free(conf->pidFileName);
                 if ((lex_text(l)[0] != '/') && (conf->cwd))
-                    conf->pidFileName = create_format_string("%s/%s",
+                    conf->pidFileName = str_create_fmt("%s/%s",
                         conf->cwd, lex_text(l));
                 else
-                    conf->pidFileName = create_string(lex_text(l));
+                    conf->pidFileName = str_create(lex_text(l));
             }
             break;
 
@@ -858,13 +857,13 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if ((lex_next(l) != LEX_STR) || is_empty_string(lex_text(l)))
+            else if ((lex_next(l) != LEX_STR) || str_is_empty(lex_text(l)))
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else {
                 if (conf->resetCmd)
                     free(conf->resetCmd);
-                conf->resetCmd = create_string(lex_text(l));
+                conf->resetCmd = str_create(lex_text(l));
             }
             break;
 
@@ -872,7 +871,7 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if ((lex_next(l) != LEX_STR) || is_empty_string(lex_text(l)))
+            else if ((lex_next(l) != LEX_STR) || str_is_empty(lex_text(l)))
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else if ((n = lookup_syslog_facility(lex_text(l))) < 0)
@@ -1001,21 +1000,6 @@ static int create_pidfile(const char *pidfile)
         return(-1);
     }
     return(0);
-}
-
-
-static int is_empty_string(const char *s)
-{
-/*  Returns non-zero if the string is empty (ie, contains only white-space).
- */
-    const char *p;
-
-    assert(s != NULL);
-
-    for (p=s; *p; p++)
-        if (!isspace((int) *p))
-            return(0);
-    return(1);
 }
 
 

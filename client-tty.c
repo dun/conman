@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-tty.c,v 1.47 2002/09/18 00:27:23 dun Exp $
+ *  $Id: client-tty.c,v 1.48 2002/09/18 20:32:17 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -42,7 +42,7 @@
 #include "common.h"
 #include "fd.h"
 #include "log.h"
-#include "util-str.h"
+#include "str.h"
 #include "util.h"
 
 
@@ -376,23 +376,23 @@ static int perform_help_esc(client_conf_t *conf, char c)
     int n;
 
     write_esc_char(conf->escapeChar, esc);
-    n = append_format_string(buf, sizeof(buf),
+    n = str_cat_fmt(buf, sizeof(buf),
         "\r\nSupported ConMan Escape Sequences:\r\n");
 
     write_esc_char(ESC_CHAR_HELP, tmp);
-    n = append_format_string(buf, sizeof(buf),
+    n = str_cat_fmt(buf, sizeof(buf),
         "  %2s%-2s -  Display this help message.\r\n", esc, tmp);
 
     write_esc_char(ESC_CHAR_CLOSE, tmp);
-    n = append_format_string(buf, sizeof(buf),
+    n = str_cat_fmt(buf, sizeof(buf),
         "  %2s%-2s -  Terminate the connection.\r\n", esc, tmp);
 
-    n = append_format_string(buf, sizeof(buf),
+    n = str_cat_fmt(buf, sizeof(buf),
         "  %2s%-2s -  Send the escape character.\r\n", esc, esc);
 
     if (conf->req->command == CONMAN_CMD_CONNECT) {
         write_esc_char(ESC_CHAR_BREAK, tmp);
-        n = append_format_string(buf, sizeof(buf),
+        n = str_cat_fmt(buf, sizeof(buf),
             "  %2s%-2s -  Transmit a serial-break.\r\n", esc, tmp);
     }
 
@@ -400,31 +400,31 @@ static int perform_help_esc(client_conf_t *conf, char c)
      */
     if (conf->req->command == CONMAN_CMD_CONNECT) {
         write_esc_char(ESC_CHAR_DEL, tmp);
-        n = append_format_string(buf, sizeof(buf),
+        n = str_cat_fmt(buf, sizeof(buf),
             "  %2s%-2s -  Transmit a DEL character.\r\n", esc, tmp);
     }
 
     if (conf->req->command == CONMAN_CMD_MONITOR) {
         write_esc_char(ESC_CHAR_FORCE, tmp);
-        n = append_format_string(buf, sizeof(buf),
+        n = str_cat_fmt(buf, sizeof(buf),
             "  %2s%-2s -  Force write-privileges (console-stealing).\r\n",
             esc, tmp);
     }
 
     write_esc_char(ESC_CHAR_INFO, tmp);
-    n = append_format_string(buf, sizeof(buf),
+    n = str_cat_fmt(buf, sizeof(buf),
         "  %2s%-2s -  Display connection information.\r\n", esc, tmp);
 
     if (conf->req->command == CONMAN_CMD_MONITOR) {
         write_esc_char(ESC_CHAR_JOIN, tmp);
-        n = append_format_string(buf, sizeof(buf),
+        n = str_cat_fmt(buf, sizeof(buf),
             "  %2s%-2s -  Join write-privileges (console-sharing).\r\n",
             esc, tmp);
     }
 
     if (!conf->req->enableBroadcast) {
         write_esc_char(ESC_CHAR_LOG, tmp);
-        n = append_format_string(buf, sizeof(buf),
+        n = str_cat_fmt(buf, sizeof(buf),
             "  %2s%-2s -  Replay up to the last %d bytes of the log.\r\n",
             esc, tmp, CONMAN_REPLAY_LEN);
     }
@@ -432,29 +432,29 @@ static int perform_help_esc(client_conf_t *conf, char c)
     if ((conf->req->command == CONMAN_CMD_CONNECT)
       && (!conf->req->enableBroadcast)) {
         write_esc_char(ESC_CHAR_MONITOR, tmp);
-        n = append_format_string(buf, sizeof(buf),
+        n = str_cat_fmt(buf, sizeof(buf),
             "  %2s%-2s -  Monitor without write-privileges (read-only).\r\n",
             esc, tmp);
     }
 
     write_esc_char(ESC_CHAR_QUIET, tmp);
     if (conf->req->enableQuiet)
-        n = append_format_string(buf, sizeof(buf), "  %2s%-2s -  "
+        n = str_cat_fmt(buf, sizeof(buf), "  %2s%-2s -  "
             "Disable quiet-mode (display info msgs).\r\n", esc, tmp);
     else
-        n = append_format_string(buf, sizeof(buf), "  %2s%-2s -  "
+        n = str_cat_fmt(buf, sizeof(buf), "  %2s%-2s -  "
             "Enable quiet-mode (suppress info msgs).\r\n", esc, tmp);
 
     if ((conf->req->command == CONMAN_CMD_CONNECT)
       && (conf->req->enableReset)) {
         write_esc_char(ESC_CHAR_RESET, tmp);
-        n = append_format_string(buf, sizeof(buf), "  %2s%-2s -  "
+        n = str_cat_fmt(buf, sizeof(buf), "  %2s%-2s -  "
             "Reset node%s associated with this console.\r\n", esc, tmp,
             (list_count(conf->req->consoles) == 1 ? "" : "s"));
     }
 
     write_esc_char(ESC_CHAR_SUSPEND, tmp);
-    n = append_format_string(buf, sizeof(buf),
+    n = str_cat_fmt(buf, sizeof(buf),
         "  %2s%-2s -  Suspend the client.\r\n", esc, tmp);
 
     if (n < 0)                          /* append CR/LF if buf was truncated */
@@ -473,15 +473,14 @@ static int perform_info_esc(client_conf_t *conf, char c)
     char *str;
 
     if (list_count(conf->req->consoles) == 1) {
-        str = create_format_string(
-            "%sConnected %s to console [%s] on <%s:%d>%s", CONMAN_MSG_PREFIX,
+        str = str_create_fmt("%sConnected %s to console [%s] on <%s:%d>%s",
+            CONMAN_MSG_PREFIX,
             (conf->req->command == CONMAN_CMD_MONITOR ? "R/O" : "R/W"),
             (char *) list_peek(conf->req->consoles),
             conf->req->host, conf->req->port, CONMAN_MSG_SUFFIX);
     }
     else {
-        str = create_format_string(
-            "%sBroadcasting to %d consoles on <%s:%d>%s",
+        str = str_create_fmt("%sBroadcasting to %d consoles on <%s:%d>%s",
             CONMAN_MSG_PREFIX, list_count(conf->req->consoles),
             conf->req->host, conf->req->port, CONMAN_MSG_SUFFIX);
     }

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: util-str.c,v 1.16 2002/09/17 22:40:25 dun Exp $
+ *  $Id: str.c,v 1.1 2002/09/18 20:32:17 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -23,7 +23,7 @@
  *  with ConMan; if not, write to the Free Software Foundation, Inc.,
  *  59 Temple Place, Suite 330, Boston, MA  02111-1307  USA.
  *****************************************************************************
- *  Refer to "util-str.h" for documentation on public functions.
+ *  Refer to "str.h" for documentation on public functions.
 \*****************************************************************************/
 
 
@@ -34,33 +34,53 @@
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
-#include <pthread.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include "log.h"
-#include "util-str.h"
-#include "wrapper.h"
+#include "str.h"
 
+
+/*******************
+ *  Out of Memory  *
+ *******************/
+
+#ifdef WITH_OOMF
+#  undef out_of_memory
+   extern void * out_of_memory(void);
+#else /* !WITH_OOMF */
+#  ifndef out_of_memory
+#    define out_of_memory() (NULL)
+#  endif /* !out_of_memory */
+#endif /* !WITH_OOMF */
+
+
+/***************
+ *  Constants  *
+ ***************/
 
 #define MAX_STR_SIZE 1024
 
 
-char * create_string(const char *str)
+/***************
+ *  Functions  *
+ ***************/
+
+char * str_create(const char *str)
 {
     char *p;
 
     if (!str)
         return(NULL);
     if (!(p = strdup(str)))
-        out_of_memory();
+        return(out_of_memory());
     return(p);
 }
 
 
-char * create_format_string(const char *fmt, ...)
+char * str_create_fmt(const char *fmt, ...)
 {
     char buf[MAX_STR_SIZE];
     va_list vargs;
@@ -76,12 +96,12 @@ char * create_format_string(const char *fmt, ...)
     buf[sizeof(buf) - 1] = '\0';        /* ensure buf is NUL-terminated */
 
     if (!(p = strdup(buf)))
-        out_of_memory();
+        return(out_of_memory());
     return(p);
 }
 
 
-void destroy_string(char *str)
+void str_destroy(char *str)
 {
     if (str)
         free(str);
@@ -89,7 +109,20 @@ void destroy_string(char *str)
 }
 
 
-size_t append_format_string(char *dst, size_t size, const char *fmt, ...)
+int str_is_empty(const char *s)
+{
+    const char *p;
+
+    assert(s != NULL);
+
+    for (p=s; *p; p++)
+        if (!isspace((int) *p))
+            return(0);
+    return(1);
+}
+
+
+size_t str_cat_fmt(char *dst, size_t size, const char *fmt, ...)
 {
     char *p;
     int nAvail;
@@ -125,8 +158,7 @@ size_t append_format_string(char *dst, size_t size, const char *fmt, ...)
 }
 
 
-int substitute_string(char *dst, size_t dstlen, const char *src,
-    char c, char *sub)
+int str_sub(char *dst, size_t dstlen, const char *src, char c, char *sub)
 {
     const char *p;
     char *q;
@@ -147,7 +179,6 @@ int substitute_string(char *dst, size_t dstlen, const char *src,
             n -= m;
         }
     }
-
     if (n > 0) {
         *q = '\0';
         return(dstlen - n);
@@ -159,48 +190,50 @@ int substitute_string(char *dst, size_t dstlen, const char *src,
 }
 
 
-char * create_long_time_string(time_t t)
+char * str_get_time_short(time_t t)
 {
-    char *p;
-    struct tm tm;
-    const int len = 25;                 /* YYYY-MM-DD HH:MM:SS ZONE + NUL */
+    struct tm *tmptr;
+    static char buf[12];                /* MM-DD HH:MM + NUL */
 
-    if (!(p = malloc(len)))
-        out_of_memory();
+    if (t == 0) {
+        if (time(&t) == (time_t) -1)
+            log_err(errno, "time() failed");
+    }
+    if (!(tmptr = localtime(&t)))
+        log_err(errno, "localtime() failed");
 
-    get_localtime(&t, &tm);
-
-    if (strftime(p, len, "%Y-%m-%d %H:%M:%S %Z", &tm) == 0)
+    if (strftime(buf, sizeof(buf), "%m-%d %H:%M", tmptr) == 0)
         log_err(0, "strftime() failed");
 
-    return(p);
+    return(buf);
 }
 
 
-char * create_short_time_string(time_t t)
+char * str_get_time_long(time_t t)
 {
-    char *p;
-    struct tm tm;
-    const int len = 12;                 /* MM-DD HH:MM + NUL */
+    struct tm *tmptr;
+    static char buf[25];                /* YYYY-MM-DD HH:MM:SS ZONE + NUL */
 
-    if (!(p = malloc(len)))
-        out_of_memory();
+    if (t == 0) {
+        if (time(&t) == (time_t) -1)
+            log_err(errno, "time() failed");
+    }
+    if (!(tmptr = localtime(&t)))
+        log_err(errno, "localtime() failed");
 
-    get_localtime(&t, &tm);
-
-    if (strftime(p, len, "%m-%d %H:%M", &tm) == 0)
+    if (strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S %Z", tmptr) == 0)
         log_err(0, "strftime() failed");
 
-    return(p);
+    return(buf);
 }
 
 
-char * create_time_delta_string(time_t t)
+char * str_get_time_delta(time_t t)
 {
     time_t now;
     long n;
     int years, weeks, days, hours, minutes, seconds;
-    char buf[25];
+    static char buf[25];
 
     if (time(&now) == (time_t) -1)
         log_err(errno, "time() failed");
@@ -229,52 +262,17 @@ char * create_time_delta_string(time_t t)
         n = snprintf(buf, sizeof(buf), "%dd%dh%dm%ds",
             days, hours, minutes, seconds);
     else if (hours > 0)
-        n = snprintf(buf, sizeof(buf), "%dh%dm%ds", hours, minutes, seconds);
+        n = snprintf(buf, sizeof(buf), "%dh%dm%ds",
+            hours, minutes, seconds);
     else if (minutes > 0)
-        n = snprintf(buf, sizeof(buf), "%dm%ds", minutes, seconds);
+        n = snprintf(buf, sizeof(buf), "%dm%ds",
+            minutes, seconds);
     else
-        n = snprintf(buf, sizeof(buf), "%ds", seconds);
+        n = snprintf(buf, sizeof(buf), "%ds",
+            seconds);
 
     assert((n >= 0) && (n < sizeof(buf)));
-    return(create_string(buf));
-}
-
-
-struct tm * get_localtime(time_t *tPtr, struct tm *tmPtr)
-{
-#ifndef HAVE_LOCALTIME_R
-
-    static pthread_mutex_t localtimeLock = PTHREAD_MUTEX_INITIALIZER;
-    struct tm *tmTmpPtr;
-
-#endif /* !HAVE_LOCALTIME_R */
-
-    assert(tPtr != NULL);
-    assert(tmPtr != NULL);
-
-    if (*tPtr == 0) {
-        if (time(tPtr) == (time_t) -1)
-            log_err(errno, "time() failed");
-    }
-
-#ifndef HAVE_LOCALTIME_R
-
-    /*  localtime() is not thread-safe, so it is protected by a mutex.
-     */
-    x_pthread_mutex_lock(&localtimeLock);
-    if (!(tmTmpPtr = localtime(tPtr)))
-        log_err(errno, "localtime() failed");
-    *tmPtr = *tmTmpPtr;
-    x_pthread_mutex_unlock(&localtimeLock);
-
-#else /* HAVE_LOCALTIME_R */
-
-    if (!localtime_r(tPtr, tmPtr))
-        log_err(errno, "localtime_r() failed");
-
-#endif /* HAVE_LOCALTIME_R */
-
-    return(tmPtr);
+    return(buf);
 }
 
 

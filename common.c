@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: common.c,v 1.30 2002/05/18 06:57:09 dun Exp $
+ *  $Id: common.c,v 1.31 2002/09/18 20:32:17 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -36,7 +36,7 @@
 #include <unistd.h>
 #include "common.h"
 #include "log.h"
-#include "util-str.h"
+#include "str.h"
 
 
 const char *conman_license = \
@@ -92,7 +92,7 @@ req_t * create_req(void)
     req->host = NULL;
     req->ip = NULL;
     req->port = 0;
-    req->consoles = list_create((ListDelF) destroy_string);
+    req->consoles = list_create((ListDelF) str_destroy);
     req->command = CONMAN_CMD_NONE;
     req->enableBroadcast = 0;
     req->enableForce = 0;

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.c,v 1.64 2002/09/18 00:27:23 dun Exp $
+ *  $Id: server.c,v 1.65 2002/09/18 20:32:17 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -50,8 +50,8 @@
 #include "list.h"
 #include "log.h"
 #include "server.h"
+#include "str.h"
 #include "tselect.h"
-#include "util-str.h"
 #include "util.h"
 #include "wrapper.h"
 
@@ -336,30 +336,36 @@ static void schedule_timestamp(server_conf_t *conf)
 /*  Schedules a timer for writing timestamps to the console logfiles.
  */
     time_t t;
-    struct tm tm;
+    struct tm *tmptr;
     struct timeval tv;
     int numCompleted;
 
     assert(conf->tStampMinutes > 0);
 
     t = conf->tStampNext;
-    get_localtime(&t, &tm);
+    if (t == 0) {
+        if (time(&t) == (time_t) -1)
+            log_err(errno, "time() failed");
+    }
+    if (!(tmptr = localtime(&t)))
+        log_err(errno, "localtime() failed");
     /*
      *  If this is the first scheduled timestamp, compute the expiration time
      *    assuming timestamps have been scheduled regularly since midnight.
      *  Otherwise, base it off of the previous timestamp.
      */
     if (!conf->tStampNext) {
-        numCompleted = ((tm.tm_hour * 60) + tm.tm_min) / conf->tStampMinutes;
-        tm.tm_min = (numCompleted + 1) * conf->tStampMinutes;
-        tm.tm_hour = 0;
+        numCompleted = ((tmptr->tm_hour * 60) + tmptr->tm_min)
+            / conf->tStampMinutes;
+        tmptr->tm_min = (numCompleted + 1) * conf->tStampMinutes;
+        tmptr->tm_hour = 0;
     }
     else {
-        tm.tm_min += conf->tStampMinutes;
+        tmptr->tm_min += conf->tStampMinutes;
     }
-    tm.tm_sec = 0;
+    tmptr->tm_sec = 0;
 
-    if ((t = mktime(&tm)) == ((time_t) -1))
+    if ((t = mktime(tmptr)) == ((time_t) -1))
         log_err(errno, "Unable to determine time of next logfile timestamp");
     tv.tv_sec = t;
     tv.tv_usec = 0;
@@ -383,7 +389,7 @@ static void timestamp_logfiles(server_conf_t *conf)
     char buf[MAX_LINE];
     int gotLogs = 0;
 
-    now = create_long_time_string(0);
+    now = str_get_time_long(0);
     i = list_iterator_create(conf->objs);
     while ((logfile = list_next(i))) {
         if (!is_logfile_obj(logfile))
@@ -396,7 +402,6 @@ static void timestamp_logfiles(server_conf_t *conf)
         gotLogs = 1;
     }
     list_iterator_destroy(i);
-    free(now);
 
     /*  If any logfile objs exist, schedule a timer for the next timestamp.
      */
@@ -724,7 +729,7 @@ static void reset_console(obj_t *console, const char *cmd)
     DPRINTF((5, "Resetting console [%s].\n", console->name));
     console->gotReset = 0;
 
-    if (substitute_string(cmdbuf, sizeof(cmdbuf), cmd,
+    if (str_sub(cmdbuf, sizeof(cmdbuf), cmd,
       DEFAULT_CONFIG_ESCAPE, console->name) < 0) {
         log_msg(LOG_NOTICE, "Unable to reset console [%s]: command too long",
             console->name);

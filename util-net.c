@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: util-net.c,v 1.19 2002/05/12 19:20:29 dun Exp $
+ *  $Id: util-net.c,v 1.20 2002/09/18 20:32:17 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -40,8 +40,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
+#include "str.h"
 #include "util-net.h"
-#include "util-str.h"
 #include "wrapper.h"
 
 

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-logfile.c,v 1.12 2002/09/18 00:27:23 dun Exp $
+ *  $Id: server-logfile.c,v 1.13 2002/09/18 20:32:17 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -39,7 +39,7 @@
 #include "fd.h"
 #include "log.h"
 #include "server.h"
-#include "util-str.h"
+#include "str.h"
 
 
 int parse_logfile_opts(
@@ -122,12 +122,11 @@ int open_logfile_obj(obj_t *logfile, int gotTrunc)
     fd_set_nonblocking(logfile->fd);    /* redundant, just playing it safe */
     fd_set_close_on_exec(logfile->fd);
 
-    now = create_long_time_string(0);
-    msg = create_format_string("%sConsole [%s] log opened at %s%s",
+    now = str_get_time_long(0);
+    msg = str_create_fmt("%sConsole [%s] log opened at %s%s",
         CONMAN_MSG_PREFIX, logfile->aux.logfile.consoleName, now,
         CONMAN_MSG_SUFFIX);
     write_obj_data(logfile, msg, strlen(msg), 0);
-    free(now);
     free(msg);
 
     DPRINTF((10, "Opened %slogfile \"%s\" for console [%s].\n",

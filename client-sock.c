@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-sock.c,v 1.37 2002/09/18 00:27:23 dun Exp $
+ *  $Id: client-sock.c,v 1.38 2002/09/18 20:32:17 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -43,8 +43,8 @@
 #include "fd.h"
 #include "lex.h"
 #include "log.h"
+#include "str.h"
 #include "util-net.h"
-#include "util-str.h"
 
 
 static void parse_rsp_ok(Lex l, client_conf_t *conf);
@@ -69,26 +69,25 @@ int connect_to_server(client_conf_t *conf)
     saddr.sin_port = htons(conf->req->port);
     if (host_name_to_addr4(conf->req->host, &saddr.sin_addr) < 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
-        conf->errmsg = create_format_string(
-            "Unable to resolve host <%s>", conf->req->host);
+        conf->errmsg = str_create_fmt("Unable to resolve host <%s>",
+            conf->req->host);
         return(-1);
     }
 
     if (host_name_to_cname(conf->req->host, buf, sizeof(buf)) == NULL) {
-        conf->req->fqdn = create_string(conf->req->host);
+        conf->req->fqdn = str_create(conf->req->host);
     }
     else {
-        conf->req->fqdn = create_string(buf);
+        conf->req->fqdn = str_create(buf);
         free(conf->req->host);
         if ((p = strchr(buf, '.')))
             *p = '\0';
-        conf->req->host = create_string(buf);
+        conf->req->host = str_create(buf);
     }
 
     if (connect(sd, (struct sockaddr *) &saddr, sizeof(saddr)) < 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
-        conf->errmsg = create_format_string(
-            "Unable to connect to <%s:%d>: %s",
+        conf->errmsg = str_create_fmt("Unable to connect to <%s:%d>: %s",
             conf->req->fqdn, conf->req->port, strerror(errno));
         return(-1);
     }
@@ -105,27 +104,27 @@ int send_greeting(client_conf_t *conf)
     assert(conf->req->sd >= 0);
     assert(conf->req->user != NULL);
 
-    n = append_format_string(buf, sizeof(buf), "%s %s='%s'",
+    n = str_cat_fmt(buf, sizeof(buf), "%s %s='%s'",
         proto_strs[LEX_UNTOK(CONMAN_TOK_HELLO)],
         proto_strs[LEX_UNTOK(CONMAN_TOK_USER)], lex_encode(conf->req->user));
 
     if (conf->req->tty) {
-        n = append_format_string(buf, sizeof(buf), " %s='%s'",
+        n = str_cat_fmt(buf, sizeof(buf), " %s='%s'",
             proto_strs[LEX_UNTOK(CONMAN_TOK_TTY)], lex_encode(conf->req->tty));
     }
 
-    n = append_format_string(buf, sizeof(buf), "\n");
+    n = str_cat_fmt(buf, sizeof(buf), "\n");
 
     if (n < 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
-        conf->errmsg = create_string(
+        conf->errmsg = str_create(
             "Overran request buffer for sending greeting");
         return(-1);
     }
 
     if (fd_write_n(conf->req->sd, buf, strlen(buf)) < 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
-        conf->errmsg = create_format_string(
+        conf->errmsg = str_create_fmt(
             "Unable to send greeting to <%s:%d>: %s",
             conf->req->host, conf->req->port, strerror(errno));
         return(-1);
@@ -171,31 +170,31 @@ int send_req(client_conf_t *conf)
         break;
     }
 
-    n = append_format_string(buf, sizeof(buf), "%s", cmd);
+    n = str_cat_fmt(buf, sizeof(buf), "%s", cmd);
 
     if (conf->req->enableQuiet) {
-        n = append_format_string(buf, sizeof(buf), " %s=%s",
+        n = str_cat_fmt(buf, sizeof(buf), " %s=%s",
             proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
             proto_strs[LEX_UNTOK(CONMAN_TOK_QUIET)]);
     }
     if (conf->req->enableRegex) {
-        n = append_format_string(buf, sizeof(buf), " %s=%s",
+        n = str_cat_fmt(buf, sizeof(buf), " %s=%s",
             proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
             proto_strs[LEX_UNTOK(CONMAN_TOK_REGEX)]);
     }
     if (conf->req->command == CONMAN_CMD_CONNECT) {
         if (conf->req->enableForce) {
-            n = append_format_string(buf, sizeof(buf), " %s=%s",
+            n = str_cat_fmt(buf, sizeof(buf), " %s=%s",
                 proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
                 proto_strs[LEX_UNTOK(CONMAN_TOK_FORCE)]);
         }
         if (conf->req->enableJoin) {
-            n = append_format_string(buf, sizeof(buf), " %s=%s",
+            n = str_cat_fmt(buf, sizeof(buf), " %s=%s",
                 proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
                 proto_strs[LEX_UNTOK(CONMAN_TOK_JOIN)]);
         }
         if (conf->req->enableBroadcast) {
-            n = append_format_string(buf, sizeof(buf), " %s=%s",
+            n = str_cat_fmt(buf, sizeof(buf), " %s=%s",
                 proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
                 proto_strs[LEX_UNTOK(CONMAN_TOK_BROADCAST)]);
         }
@@ -205,22 +204,22 @@ int send_req(client_conf_t *conf)
      *    with the actual console names in recv_rsp().
      */
     while ((str = list_pop(conf->req->consoles))) {
-        n = append_format_string(buf, sizeof(buf), " %s='%s'",
+        n = str_cat_fmt(buf, sizeof(buf), " %s='%s'",
             proto_strs[LEX_UNTOK(CONMAN_TOK_CONSOLE)], lex_encode(str));
         free(str);
     }
 
-    n = append_format_string(buf, sizeof(buf), "\n");
+    n = str_cat_fmt(buf, sizeof(buf), "\n");
 
     if (n < 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
-        conf->errmsg = create_string("Overran request buffer");
+        conf->errmsg = str_create("Overran request buffer");
         return(-1);
     }
 
     if (fd_write_n(conf->req->sd, buf, strlen(buf)) < 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
-        conf->errmsg = create_format_string(
+        conf->errmsg = str_create_fmt(
             "Unable to send greeting to <%s:%d>: %s",
             conf->req->host, conf->req->port, strerror(errno));
         return(-1);
@@ -232,7 +231,7 @@ int send_req(client_conf_t *conf)
     if (conf->req->command == CONMAN_CMD_QUERY) {
         if (shutdown(conf->req->sd, SHUT_WR) < 0) {
             conf->errnum = CONMAN_ERR_LOCAL;
-            conf->errmsg = create_format_string(
+            conf->errmsg = str_create_fmt(
                 "Unable to close write-half of connection to <%s:%d>: %s",
                 conf->req->host, conf->req->port, strerror(errno));
             return(-1);
@@ -254,14 +253,14 @@ int recv_rsp(client_conf_t *conf)
 
     if ((n = fd_read_line(conf->req->sd, buf, sizeof(buf))) < 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
-        conf->errmsg = create_format_string("Unable to read response"
+        conf->errmsg = str_create_fmt("Unable to read response"
             " from <%s:%d>:\n  %s (blocked by TCP-Wrappers?)",
             conf->req->host, conf->req->port, strerror(errno));
         return(-1);
     }
     else if (n == 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
-        conf->errmsg = create_format_string("Connection terminated by <%s:%d>",
+        conf->errmsg = str_create_fmt("Connection terminated by <%s:%d>",
             conf->req->host, conf->req->port);
         return(-1);
     }
@@ -292,7 +291,7 @@ int recv_rsp(client_conf_t *conf)
         return(0);
     if (conf->errnum == CONMAN_ERR_NONE) {
         conf->errnum = CONMAN_ERR_LOCAL;
-        conf->errmsg = create_format_string("Received invalid reponse from"
+        conf->errmsg = str_create_fmt("Received invalid reponse from"
             " <%s:%d>", conf->req->host, conf->req->port);
     }
     return(-1);
@@ -310,7 +309,7 @@ static void parse_rsp_ok(Lex l, client_conf_t *conf)
         switch (tok) {
         case CONMAN_TOK_CONSOLE:
             if ((lex_next(l) == '=') && (lex_next(l) == LEX_STR)) {
-                if ((str = lex_decode(create_string(lex_text(l)))))
+                if ((str = lex_decode(str_create(lex_text(l)))))
                     list_append(conf->req->consoles, str);
             }
             break;
@@ -360,7 +359,7 @@ static void parse_rsp_err(Lex l, client_conf_t *conf)
     }
     conf->errnum = err;
     if (*buf)
-        conf->errmsg = lex_decode(create_string(buf));
+        conf->errmsg = lex_decode(str_create(buf));
     return;
 }
 
@@ -371,7 +370,7 @@ void display_error(client_conf_t *conf)
 
     assert(conf->errnum > 0);
 
-    p = create_format_string("ERROR: %s.\n\n",
+    p = str_create_fmt("ERROR: %s.\n\n",
         (conf->errmsg ? conf->errmsg : "Unspecified"));
     if (fd_write_n(STDERR_FILENO, p, strlen(p)) < 0)
         log_err(errno, "Unable to write to stderr");

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: util-str.h,v 1.8 2002/05/12 19:20:29 dun Exp $
+ *  $Id: str.h,v 1.1 2002/09/18 20:32:17 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -25,8 +25,8 @@
 \*****************************************************************************/
 
 
-#ifndef _UTIL_STR_H
-#define _UTIL_STR_H
+#ifndef _STR_H
+#define _STR_H
 
 
 #ifdef HAVE_CONFIG_H
@@ -37,26 +37,31 @@
 #include <unistd.h>
 
 
-char * create_string(const char *str);
+char * str_create(const char *str);
 /*
  *  Duplicates string (str) and returns a new string
  *    (or throws a fatal error if insufficient memory is available).
  *  Note that the caller is responsible for freeing this string.
  */
 
-char * create_format_string(const char *fmt, ...);
+char * str_create_fmt(const char *fmt, ...);
 /*
  *  Creates and returns a new string specified by the format-string (fmt)
  *    (or throws a fatal error if insufficient memory is available).
  *  Note that the caller is responsible for freeing this string.
  */
 
-void destroy_string(char *str);
+void str_destroy(char *str);
 /*
  *  Destroys the string (str).
  */
 
-size_t append_format_string(char *dst, size_t size, const char *fmt, ...);
+int str_is_empty(const char *s);
+/*
+ *  Returns non-zero if the string is empty (ie, contains only white-space).
+ */
+
+size_t str_cat_fmt(char *dst, size_t size, const char *fmt, ...);
 /*
  *  Appends the string specified by the format-string (fmt) to a
  *    NUL-terminated string (dst) within a buffer of size (size).
@@ -65,8 +70,7 @@ size_t append_format_string(char *dst, size_t size, const char *fmt, ...);
  *    or -1 if truncation occurred.
  */
 
-int substitute_string(char *dst, size_t dstlen, const char *src,
-    char c, char *sub);
+int str_sub(char *dst, size_t dstlen, const char *src, char c, char *sub);
 /*
  *  Copies the (src) string into the (dst) buffer of size (dstlen),
  *    substituting all occurrences of char (c) with the string (sub).
@@ -75,39 +79,27 @@ int substitute_string(char *dst, size_t dstlen, const char *src,
  *  Always NUL terminates the dst string (unless dstlen == 0).
  */
 
-char * create_long_time_string(time_t t);
+char * str_get_time_short(time_t t);
 /*
- *  Creates and returns a new string with the specified date & time
- *    in the format "MM/DD/YYYY HH:MM:SS ZONE" in a thread-safe manner
- *    (or throws a fatal error if something strange happens).
- *  If no time is given (t=0), the current date & time is used.
- *  Note that the caller is responsible for freeing this string.
- */
-
-char * create_short_time_string(time_t t);
-/*
- *  Creates and returns a new string with the specified
- *    time in the format "HH:MM" in a thread-safe manner
- *    (or throws a fatal error if something strange happens).
+ *  Returns a static string with the specified time in the format "HH:MM".
  *  If no time is given (t=0), the current time is used.
- *  Note that the caller is responsible for freeing this string.
+ *  Note that this function is not thread-safe.
  */
 
-char * create_time_delta_string(time_t t);
+char * str_get_time_long(time_t t);
 /*
- *  Creates and returns a new string indicating the time delta
- *    between time (t) and the current time.
- *  The difference is broken-down into years, weeks, days, hours,
- *    minutes, and seconds.
- *  Note that the caller is responsible for freeing this string.
+ *  Returns a static string with the specified date & time in the format
+ *    "MM/DD/YYYY HH:MM:SS ZONE".
+ *  If no time is given (t=0), the current date & time is used.
+ *  Note that this function is not thread-safe.
  */
 
-struct tm * get_localtime(time_t *tPtr, struct tm *tmPtr);
+char * str_get_time_delta(time_t t);
 /*
- *  Gets the local time in a thread-safe manner.
- *  The time struct (*tmPtr) is filled-in with the local time based on (*tPtr);
- *    if (*tPtr == 0), it is set with the current time.
- *  Returns the ptr to the time struct arg (tmPtr).
+ *  Returns a static string indicating the time delta between time (t)
+ *    and the current time.  The difference is broken-down into
+ *    years, weeks, days, hours, minutes, and seconds.
+ *  Note that this function is not thread-safe.
  */
 
 #ifndef HAVE_STRCASECMP
@@ -124,8 +116,9 @@ size_t strlcat(char *dst, const char *src, size_t siz);
 /*
  *  Appends src to string dst of size siz (unlike strncat, siz is the
  *    full size of dst, not space left).  At most siz-1 characters
- *    will be copied.  Always NUL terminates (unless siz == 0).
- *  Returns strlen(src); if retval >= siz, truncation occurred.
+ *    will be copied.  Always NUL terminates (unless siz <= strlen(dst)).
+ *  Returns strlen(src) + MIN(siz, strlen(initial dst)).
+ *  If retval >= siz, truncation occurred.
  */
 #endif /* !HAVE_STRLCAT */
 
@@ -139,4 +132,4 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 #endif /* !HAVE_STRLCPY */
 
 
-#endif /* !_UTIL_STR_H */
+#endif /* !_STR_H */
