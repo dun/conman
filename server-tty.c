@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-tty.c,v 1.1 2001/08/28 22:16:17 dun Exp $
+ *  $Id: server-tty.c,v 1.2 2001/08/28 23:12:17 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -10,6 +10,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <termios.h>
 #include "errors.h"
@@ -170,7 +171,6 @@ static void parse_serial_opts(serial_opts_t *opts, char *console, char *str)
         else
             opts->bps = i;
     }
-
     if (n >= 2) {
         if ((databits < 5) || (databits > 8))
             fprintf(stderr, "ERROR: expected INTEGER 5-8 for [%s]"
@@ -178,7 +178,6 @@ static void parse_serial_opts(serial_opts_t *opts, char *console, char *str)
         else
             opts->databits = databits;
     }
-
     if (n >= 3) {
         switch(parity) {
         case 'N':
@@ -199,7 +198,6 @@ static void parse_serial_opts(serial_opts_t *opts, char *console, char *str)
             break;
         }
     }
-
     if (n >= 4) {
         if ((stopbits < 1) || (stopbits > 2))
             fprintf(stderr, "ERROR: expected INTEGER 1-2 for [%s]"
@@ -207,7 +205,6 @@ static void parse_serial_opts(serial_opts_t *opts, char *console, char *str)
         else
             opts->stopbits = stopbits;
     }
-
     return;
 }
 
