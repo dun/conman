@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-esc.c,v 1.31 2002/05/18 23:11:30 dun Exp $
+ *  $Id: server-esc.c,v 1.32 2002/07/15 23:02:59 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -547,24 +547,28 @@ static int process_telnet_cmd(obj_t *telnet, int cmd, int opt)
         telcmds[cmd - TELCMD_FIRST], (TELOPT_OK(opt) ? " " : ""),
         (TELOPT_OK(opt) ? telopts[opt - TELOPT_FIRST] : ""), telnet->name));
 
+    if (!TELOPT_OK(opt)) {
+        log_msg(LOG_WARNING,
+            "Received invalid telnet opt %#.2x from console [%s]",
+            opt, telnet->name);
+        return(-1);
+    }
+    /*  Perform telnet option negotiation via the Q-Method.
+     *
+     *  NOT_IMPLEMENTED_YET
+     */
     switch(cmd) {
     case DONT:
-        /* fall-thru */
+        break;
     case DO:
-        /* fall-thru */
+        if ((opt != TELOPT_ECHO) && (opt != TELOPT_SGA))
+            send_telnet_cmd(telnet, WONT, opt);
+        break;
     case WONT:
-        /* fall-thru */
+        break;
     case WILL:
-        if (!TELOPT_OK(opt)) {
-            log_msg(LOG_WARNING,
-                "Received invalid telnet opt %#.2x from console [%s]",
-                opt, telnet->name);
-            return(-1);
-        }
-        /*  Perform telnet option negotiation via the Q-Method.
-         *
-         *  NOT_IMPLEMENTED_YET
-         */
+        if ((opt != TELOPT_ECHO) && (opt != TELOPT_SGA))
+            send_telnet_cmd(telnet, DONT, opt);
         break;
     default:
         log_msg(LOG_INFO, "Ignoring telnet cmd %s%s%s from console [%s]",
