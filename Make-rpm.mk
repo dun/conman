@@ -2,7 +2,7 @@
 # Makefile Include for RPM Construction
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Make-rpm.mk,v 1.3 2001/12/04 02:31:21 dun Exp $
+# $Id: Make-rpm.mk,v 1.4 2001/12/05 00:37:56 dun Exp $
 ##
 # NOTES:
 # - requires PACKAGE and VERSION macro definitions to be defined
@@ -36,60 +36,62 @@
 rpm tar:
 	@if test -z "$(PACKAGE)"; then \
 	  echo "ERROR: Undefined PACKAGE macro definition" 1>&2; exit 0; fi; \
+	pkg=$(PACKAGE); \
 	if test -z "$(VERSION)"; then \
 	  echo "ERROR: Undefined VERSION macro definition" 1>&2; exit 0; fi; \
+	ver=$(VERSION); \
 	test -f CVS/Root && cvs="cvs -d `cat CVS/Root`" || cvs="cvs"; \
 	test -n "$(mkinstalldirs)" && mkdir="$(mkinstalldirs)" \
 	  || mkdir="mkdir -p"; \
-	test -z "$$tag" && tag=`echo $(PACKAGE)-$(VERSION) | tr '.' '-'`; \
-	ver=`$$cvs -Q co -r $$tag -p $(PACKAGE)/VERSION | \
+	test -z "$$tag" && tag=`echo $$pkg-$$ver | tr '.' '-'`; \
+	ver=`$$cvs -Q co -r $$tag -p $$pkg/VERSION | \
 	  sed -ne 's/.*-\(.*\)/\1/p'`; \
 	if test -z "$$ver"; then \
 	  echo "ERROR: Cannot determine VERSION (tag=$$tag)" 1>&2; exit 0; fi; \
 	test "$$tag" = "HEAD" -o "$$tag" = "BASE" && ver="$$ver+"; \
 	test -z "$$rel" && rel=1; \
 	$(MAKE) -s $@-internal cvs="$$cvs" mkdir="$$mkdir" \
-	  tag="$$tag" ver="$$ver" rel="$$rel"
+	  tag="$$tag" pkg="$$pkg" ver="$$ver" rel="$$rel"
 
 rpm-internal: tar-internal
 	@test -z "$$cvs" -o -z "$$mkdir" && exit 1; \
 	test -z "$$tag" -o -z "$$ver" -o -z "$$rel" && exit 1; \
-	tmp=$${TMPDIR-/tmp}/tmp-$(PACKAGE)-$$$$; \
-	tar=$(PACKAGE)-$$ver.tgz; \
+	tmp=$${TMPDIR-/tmp}/tmp-$$pkg-$$$$; \
+	tar=$$pkg-$$ver.tgz; \
 	for d in BUILD RPMS SOURCES SPECS SRPMS TMP; do \
 	  if ! $$mkdir $$tmp/$$d >/dev/null; then \
 	    echo "ERROR: Cannot create \"$$tmp/$$d\" dir." 1>&2; exit 1; fi; \
 	done; \
 	cp -p $$tar $$tmp/SOURCES; \
-	($$cvs -Q co -r $$tag -p $(PACKAGE)/$(PACKAGE).spec.in || \
-	  $$cvs -Q co -r $$tag -p $(PACKAGE)/$(PACKAGE).spec) | \
-	  sed -e "s/^\([ 	]*Name:\).*/\1 $(PACKAGE)/i" \
+	($$cvs -Q co -r $$tag -p $$pkg/$$pkg.spec.in || \
+	  $$cvs -Q co -r $$tag -p $$pkg/$$pkg.spec) | \
+	  sed -e "s/^\([ 	]*Name:\).*/\1 $$pkg/i" \
 	    -e "s/^\([ 	]*Version:\).*/\1 $$ver/i" \
 	    -e "s/^\([ 	]*Release:\).*/\1 $$rel/i" \
-	    >$$tmp/SPECS/$(PACKAGE).spec; \
-	if ! test -s $$tmp/SPECS/$(PACKAGE).spec; then \
-	  echo "ERROR: No $(PACKAGE).spec file (tag=$$tag)" 1>&2; \
+	    >$$tmp/SPECS/$$pkg.spec; \
+	if ! test -s $$tmp/SPECS/$$pkg.spec; then \
+	  echo "ERROR: No $$pkg.spec file (tag=$$tag)" 1>&2; \
 	  rm -rf $$tmp; exit 0; fi; \
-	echo "creating $(PACKAGE)-$$ver*rpm (tag=$$tag)"; \
+	echo "creating $$pkg-$$ver*rpm (tag=$$tag)"; \
 	rpm --showrc | egrep "_(gpg|pgp)_name" >/dev/null && sign="--sign"; \
 	rpm -ba --define "_tmppath $$tmp/TMP" --define "_topdir $$tmp" \
-	  $$sign --quiet $$tmp/SPECS/$(PACKAGE).spec >/dev/null 2>&1 && \
-	    cp -p $$tmp/RPMS/*/$(PACKAGE)-$$ver*.*.rpm \
-	      $$tmp/SRPMS/$(PACKAGE)-$$ver*.src.rpm .; \
+	  $$sign --quiet $$tmp/SPECS/$$pkg.spec >/dev/null 2>&1 && \
+	    cp -p $$tmp/RPMS/*/$$pkg-$$ver*.*.rpm \
+	      $$tmp/SRPMS/$$pkg-$$ver*.src.rpm .; \
 	rm -rf $$tmp
 
 tar-internal:
 	@test -z "$$cvs" -o -z "$$mkdir" && exit 1; \
 	test -z "$$tag" -o -z "$$ver" && exit 1; \
-	tmp=$${TMPDIR-/tmp}/tmp-$(PACKAGE)-$$$$; \
-	name=$(PACKAGE)-$$ver; \
+	tmp=$${TMPDIR-/tmp}/tmp-$$pkg-$$$$; \
+	name=$$pkg-$$ver; \
 	dir=$$tmp/$$name; \
 	tar=$$name.tgz; \
 	rm -f $$tar; \
 	echo "creating $$tar (tag=$$tag)"; \
 	if ! $$mkdir $$tmp >/dev/null; then \
 	  echo "ERROR: Cannot create \"$$tmp\" dir." 1>&2; exit 1; fi; \
-	(cd $$tmp; $$cvs -Q export -r $$tag -d $$name $(PACKAGE)) && \
+	(cd $$tmp; $$cvs -Q export -r $$tag -d $$name $$pkg) && \
 	  (cd $$tmp; tar cf - $$name) | gzip -c9 >$$tar; \
 	rm -rf $$tmp; \
 	if ! test -f $$tar; then \
