@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.c,v 1.53 2002/05/12 19:20:29 dun Exp $
+ *  $Id: server.c,v 1.54 2002/05/15 03:49:21 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -84,6 +84,7 @@ int main(int argc, char *argv[])
     server_conf_t *conf;
 
 #ifdef NDEBUG
+    log_set_file(stderr, LOG_ERR);
     log_set_syslog(argv[0]);
     fd = begin_daemonize();
 #else /* NDEBUG */
@@ -110,6 +111,7 @@ int main(int argc, char *argv[])
 
 #ifdef NDEBUG
     end_daemonize(fd);
+    log_set_file(NULL, -1);
 #endif /* NDEBUG */
 
     log_msg(LOG_NOTICE, "Starting ConMan daemon %s (pid %d)",

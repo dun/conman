@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: log.c,v 1.2 2002/05/12 19:20:29 dun Exp $
+ *  $Id: log.c,v 1.3 2002/05/15 03:49:21 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -46,7 +46,7 @@
 
 
 static FILE * log_file = NULL;
-static int    log_file_priority = 0;
+static int    log_file_priority = -1;
 static int    log_syslog = 0;
 
 
