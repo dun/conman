@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-tty.c,v 1.46 2002/08/13 23:47:50 dun Exp $
+ *  $Id: client-tty.c,v 1.47 2002/09/18 00:27:23 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -40,8 +40,8 @@
 #include <unistd.h>
 #include "client.h"
 #include "common.h"
+#include "fd.h"
 #include "log.h"
-#include "util-file.h"
 #include "util-str.h"
 #include "util.h"
 
@@ -241,7 +241,7 @@ static int read_from_stdin(client_conf_t *conf)
                     *(r+1) = *r;
             }
         }
-        if (write_n(conf->req->sd, buf, p - buf) < 0) {
+        if (fd_write_n(conf->req->sd, buf, p - buf) < 0) {
             if (errno == EPIPE)
                 return(0);
             log_err(errno, "Unable to write to <%s:%d>",
@@ -272,10 +272,10 @@ static int write_to_stdout(client_conf_t *conf)
                 conf->req->host, conf->req->port);
     }
     if (n > 0) {
-        if (write_n(STDOUT_FILENO, buf, n) < 0)
+        if (fd_write_n(STDOUT_FILENO, buf, n) < 0)
             log_err(errno, "Unable to write to stdout");
         if (conf->logd >= 0)
-            if (write_n(conf->logd, buf, n) < 0)
+            if (fd_write_n(conf->logd, buf, n) < 0)
                 log_err(errno, "Unable to write to \"%s\"", conf->log);
     }
     return(n);
@@ -292,7 +292,7 @@ static int send_esc_seq(client_conf_t *conf, char c)
     buf[0] = ESC_CHAR;
     buf[1] = c;
 
-    if (write_n(conf->req->sd, buf, sizeof(buf)) < 0) {
+    if (fd_write_n(conf->req->sd, buf, sizeof(buf)) < 0) {
         if (errno == EPIPE)
             return(0);
         log_err(errno, "Unable to write to <%s:%d>",
@@ -459,7 +459,7 @@ static int perform_help_esc(client_conf_t *conf, char c)
 
     if (n < 0)                          /* append CR/LF if buf was truncated */
         strcpy(&buf[sizeof(buf) - 3], "\r\n");
-    if (write_n(STDOUT_FILENO, buf, strlen(buf)) < 0)
+    if (fd_write_n(STDOUT_FILENO, buf, strlen(buf)) < 0)
         log_err(errno, "Unable to write to stdout");
     return(1);
 }
@@ -485,7 +485,7 @@ static int perform_info_esc(client_conf_t *conf, char c)
             CONMAN_MSG_PREFIX, list_count(conf->req->consoles),
             conf->req->host, conf->req->port, CONMAN_MSG_SUFFIX);
     }
-    if (write_n(STDOUT_FILENO, str, strlen(str)) < 0)
+    if (fd_write_n(STDOUT_FILENO, str, strlen(str)) < 0)
         log_err(errno, "Unable to write to stdout");
     free(str);
     return(1);
@@ -605,7 +605,7 @@ static void locally_echo_esc(char e, char c)
 
     assert((p - buf) <= sizeof(buf));
 
-    if (write_n(STDOUT_FILENO, buf, p - buf) < 0)
+    if (fd_write_n(STDOUT_FILENO, buf, p - buf) < 0)
         log_err(errno, "Unable to write to stdout");
     return;
 }
@@ -663,7 +663,7 @@ static void locally_display_status(client_conf_t *conf, char *msg)
 
     if ((n < 0) || (n >= sizeof(buf)))  /* append CR/LF if buf was truncated */
         strcpy(&buf[sizeof(buf) - 3], "\r\n");
-    if (write_n(STDOUT_FILENO, buf, strlen(buf)) < 0)
+    if (fd_write_n(STDOUT_FILENO, buf, strlen(buf)) < 0)
         log_err(errno, "Unable to write to stdout");
     return;
 }

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-conf.c,v 1.56 2002/05/19 22:24:57 dun Exp $
+ *  $Id: client-conf.c,v 1.57 2002/09/18 00:27:23 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -42,9 +42,9 @@
 #include <unistd.h>
 #include "client.h"
 #include "common.h"
+#include "fd.h"
 #include "list.h"
 #include "log.h"
-#include "util-file.h"
 #include "util-str.h"
 
 
@@ -363,7 +363,7 @@ void open_client_log(client_conf_t *conf)
     now = create_long_time_string(0);
     str = create_format_string("%sLog started at %s%s",
         CONMAN_MSG_PREFIX, now, CONMAN_MSG_SUFFIX);
-    if (write_n(conf->logd, str, strlen(str)) < 0)
+    if (fd_write_n(conf->logd, str, strlen(str)) < 0)
         log_err(errno, "Unable to write to \"%s\"", conf->log);
     free(now);
     free(str);
@@ -383,7 +383,7 @@ void close_client_log(client_conf_t *conf)
     now = create_long_time_string(0);
     str = create_format_string("%sLog finished at %s%s",
         CONMAN_MSG_PREFIX, now, CONMAN_MSG_SUFFIX);
-    if (write_n(conf->logd, str, strlen(str)) < 0)
+    if (fd_write_n(conf->logd, str, strlen(str)) < 0)
         log_err(errno, "Unable to write to \"%s\"", conf->log);
     free(now);
     free(str);

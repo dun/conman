@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-obj.c,v 1.71 2002/09/09 22:49:51 dun Exp $
+ *  $Id: server-obj.c,v 1.72 2002/09/18 00:27:23 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -42,11 +42,11 @@
 #include <time.h>
 #include <unistd.h>
 #include "common.h"
+#include "fd.h"
 #include "list.h"
 #include "log.h"
 #include "server.h"
 #include "tselect.h"
-#include "util-file.h"
 #include "util-net.h"
 #include "util-str.h"
 #include "util.h"
@@ -119,8 +119,8 @@ obj_t * create_client_obj(server_conf_t *conf, req_t *req)
     assert((req->user != NULL) && (req->user[0] != '\0'));
     assert((req->host != NULL) && (req->host[0] != '\0'));
 
-    set_fd_nonblocking(req->sd);
-    set_fd_closed_on_exec(req->sd);
+    fd_set_nonblocking(req->sd);
+    fd_set_close_on_exec(req->sd);
 
     snprintf(name, sizeof(name), "%s@%s:%d", req->user, req->host, req->port);
     name[sizeof(name) - 1] = '\0';
@@ -231,7 +231,7 @@ obj_t * create_serial_obj(server_conf_t *conf, char *name,
             "unable to open \"%s\": %s", dev, strerror(errno));
         goto err;
     }
-    if (get_write_lock(fd) < 0) {
+    if (fd_get_write_lock(fd) < 0) {
         snprintf(errbuf, errlen, "unable to lock \"%s\"", dev);
         goto err;
     }
@@ -246,8 +246,8 @@ obj_t * create_serial_obj(server_conf_t *conf, char *name,
      *    open on a tty will affect subsequent read()s.
      *    Play it safe and be explicit!
      */
-    set_fd_nonblocking(fd);
-    set_fd_closed_on_exec(fd);
+    fd_set_nonblocking(fd);
+    fd_set_close_on_exec(fd);
 
     /*  Note that while the initial state of the console dev's termios
      *    are saved, the 'opts' settings are not.  This is because the
@@ -387,8 +387,8 @@ int connect_telnet_obj(obj_t *telnet)
               (const void *) &on, sizeof(on)) < 0)
                 log_err(errno, "Unable to set KEEPALIVE socket option");
         }
-        set_fd_nonblocking(telnet->fd);
-        set_fd_closed_on_exec(telnet->fd);
+        fd_set_nonblocking(telnet->fd);
+        fd_set_close_on_exec(telnet->fd);
 
         DPRINTF((10, "Connecting to <%s:%d> for [%s].\n",
             telnet->aux.telnet.host, telnet->aux.telnet.port, telnet->name));

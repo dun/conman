@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-logfile.c,v 1.11 2002/05/19 23:08:55 dun Exp $
+ *  $Id: server-logfile.c,v 1.12 2002/09/18 00:27:23 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -36,9 +36,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include "fd.h"
 #include "log.h"
 #include "server.h"
-#include "util-file.h"
 #include "util-str.h"
 
 
@@ -113,14 +113,14 @@ int open_logfile_obj(obj_t *logfile, int gotTrunc)
             logfile->name, strerror(errno));
         return(-1);
     }
-    if (get_write_lock(logfile->fd) < 0) {
+    if (fd_get_write_lock(logfile->fd) < 0) {
         log_msg(LOG_WARNING, "Unable to lock \"%s\"", logfile->name);
         close(logfile->fd);             /* ignore err on close() */
         logfile->fd = -1;
         return(-1);
     }
-    set_fd_nonblocking(logfile->fd);    /* redundant, just playing it safe */
-    set_fd_closed_on_exec(logfile->fd);
+    fd_set_nonblocking(logfile->fd);    /* redundant, just playing it safe */
+    fd_set_close_on_exec(logfile->fd);
 
     now = create_long_time_string(0);
     msg = create_format_string("%sConsole [%s] log opened at %s%s",

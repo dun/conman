@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-sock.c,v 1.50 2002/05/16 18:54:20 dun Exp $
+ *  $Id: server-sock.c,v 1.51 2002/09/18 00:27:23 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -42,10 +42,10 @@
 #include <time.h>
 #include <unistd.h>
 #include "common.h"
+#include "fd.h"
 #include "lex.h"
 #include "log.h"
 #include "server.h"
-#include "util-file.h"
 #include "util-net.h"
 #include "util-str.h"
 #include "wrapper.h"
@@ -230,7 +230,7 @@ static int recv_greeting(req_t *req)
 
     assert(req->sd >= 0);
 
-    if ((n = read_line(req->sd, buf, sizeof(buf))) < 0) {
+    if ((n = fd_read_line(req->sd, buf, sizeof(buf))) < 0) {
         log_msg(LOG_NOTICE, "Unable to read greeting from <%s:%d>: %s",
             req->fqdn, req->port, strerror(errno));
         return(-1);
@@ -327,7 +327,7 @@ static int recv_req(req_t *req)
 
     assert(req->sd >= 0);
 
-    if ((n = read_line(req->sd, buf, sizeof(buf))) < 0) {
+    if ((n = fd_read_line(req->sd, buf, sizeof(buf))) < 0) {
         log_msg(LOG_NOTICE, "Unable to read request from <%s:%d>: %s",
             req->fqdn, req->port, strerror(errno));
         return(-1);
@@ -596,13 +596,13 @@ static int check_too_many_consoles(req_t *req)
         list_count(req->consoles));
     send_rsp(req, CONMAN_ERR_TOO_MANY_CONSOLES, buf);
 
-    /*  FIXME? Replace with single write_n()?
+    /*  FIXME? Replace with single fd_write_n()?
      */
     i = list_iterator_create(req->consoles);
     while ((obj = list_next(i))) {
         strlcpy(buf, obj->name, sizeof(buf));
         strlcat(buf, "\n", sizeof(buf));
-        if (write_n(req->sd, buf, strlen(buf)) < 0) {
+        if (fd_write_n(req->sd, buf, strlen(buf)) < 0) {
             log_msg(LOG_NOTICE, "Unable to write to <%s:%d>: %s",
                 req->fqdn, req->port, strerror(errno));
             break;
@@ -686,7 +686,7 @@ static int check_busy_consoles(req_t *req)
             buf[sizeof(buf) - 1] = '\0';
             if (delta)
                 free(delta);
-            if (write_n(req->sd, buf, strlen(buf)) < 0) {
+            if (fd_write_n(req->sd, buf, strlen(buf)) < 0) {
                 log_msg(LOG_NOTICE, "Unable to write to <%s:%d>: %s",
                     req->fqdn, req->port, strerror(errno));
                 break;
@@ -766,7 +766,7 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
 
     /*  Write response to client.
      */
-    if (write_n(req->sd, buf, strlen(buf)) < 0) {
+    if (fd_write_n(req->sd, buf, strlen(buf)) < 0) {
         log_msg(LOG_NOTICE, "Unable to write to <%s:%d>: %s",
             req->fqdn, req->port, strerror(errno));
         return(-1);

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-sock.c,v 1.36 2002/09/09 22:49:51 dun Exp $
+ *  $Id: client-sock.c,v 1.37 2002/09/18 00:27:23 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -40,9 +40,9 @@
 #include <unistd.h>
 #include "client.h"
 #include "common.h"
+#include "fd.h"
 #include "lex.h"
 #include "log.h"
-#include "util-file.h"
 #include "util-net.h"
 #include "util-str.h"
 
@@ -123,7 +123,7 @@ int send_greeting(client_conf_t *conf)
         return(-1);
     }
 
-    if (write_n(conf->req->sd, buf, strlen(buf)) < 0) {
+    if (fd_write_n(conf->req->sd, buf, strlen(buf)) < 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
         conf->errmsg = create_format_string(
             "Unable to send greeting to <%s:%d>: %s",
@@ -218,7 +218,7 @@ int send_req(client_conf_t *conf)
         return(-1);
     }
 
-    if (write_n(conf->req->sd, buf, strlen(buf)) < 0) {
+    if (fd_write_n(conf->req->sd, buf, strlen(buf)) < 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
         conf->errmsg = create_format_string(
             "Unable to send greeting to <%s:%d>: %s",
@@ -252,7 +252,7 @@ int recv_rsp(client_conf_t *conf)
 
     assert(conf->req->sd >= 0);
 
-    if ((n = read_line(conf->req->sd, buf, sizeof(buf))) < 0) {
+    if ((n = fd_read_line(conf->req->sd, buf, sizeof(buf))) < 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
         conf->errmsg = create_format_string("Unable to read response"
             " from <%s:%d>:\n  %s (blocked by TCP-Wrappers?)",
@@ -373,10 +373,10 @@ void display_error(client_conf_t *conf)
 
     p = create_format_string("ERROR: %s.\n\n",
         (conf->errmsg ? conf->errmsg : "Unspecified"));
-    if (write_n(STDERR_FILENO, p, strlen(p)) < 0)
+    if (fd_write_n(STDERR_FILENO, p, strlen(p)) < 0)
         log_err(errno, "Unable to write to stderr");
     if (conf->logd >= 0)
-        if (write_n(conf->logd, p, strlen(p)) < 0)
+        if (fd_write_n(conf->logd, p, strlen(p)) < 0)
             log_err(errno, "Unable to write to \"%s\"", conf->log);
     free(p);
 
@@ -393,10 +393,10 @@ void display_error(client_conf_t *conf)
         p = NULL;
 
     if (p) {
-        if (write_n(STDERR_FILENO, p, strlen(p)) < 0)
+        if (fd_write_n(STDERR_FILENO, p, strlen(p)) < 0)
             log_err(errno, "Unable to write to stderr");
         if (conf->logd >= 0)
-            if (write_n(conf->logd, p, strlen(p)) < 0)
+            if (fd_write_n(conf->logd, p, strlen(p)) < 0)
                 log_err(errno, "Unable to write to \"%s\"", conf->log);
     }
 
@@ -421,10 +421,10 @@ void display_data(client_conf_t *conf, int fd)
                 conf->req->host, conf->req->port);
         if (n == 0)
             break;
-        if (write_n(fd, buf, n) < 0)
+        if (fd_write_n(fd, buf, n) < 0)
             log_err(errno, "Unable to write to fd=%d", fd);
         if (conf->logd >= 0)
-            if (write_n(conf->logd, buf, n) < 0)
+            if (fd_write_n(conf->logd, buf, n) < 0)
                 log_err(errno, "Unable to write to \"%s\"", conf->log);
     }
     return;
@@ -443,10 +443,10 @@ void display_consoles(client_conf_t *conf, int fd)
         n = snprintf(buf, sizeof(buf), "%s\n", p);
         if (n < 0 || n >= sizeof(buf))
             log_err(0, "Got console list buffer overrun");
-        if (write_n(fd, buf, n) < 0)
+        if (fd_write_n(fd, buf, n) < 0)
             log_err(errno, "Unable to write to fd=%d", fd);
         if (conf->logd >= 0)
-            if (write_n(conf->logd, buf, n) < 0)
+            if (fd_write_n(conf->logd, buf, n) < 0)
                 log_err(errno, "Unable to write to \"%s\"", conf->log);
     }
     list_iterator_destroy(i);

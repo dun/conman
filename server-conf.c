@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-conf.c,v 1.55 2002/09/14 04:16:44 dun Exp $
+ *  $Id: server-conf.c,v 1.56 2002/09/18 00:27:23 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -43,11 +43,11 @@
 #include <syslog.h>
 #include <unistd.h>
 #include "common.h"
+#include "fd.h"
 #include "lex.h"
 #include "list.h"
 #include "log.h"
 #include "server.h"
-#include "util-file.h"
 #include "util-str.h"
 
 
@@ -356,10 +356,10 @@ void process_server_conf_file(server_conf_t *conf)
     if ((conf->fd = open(conf->confFileName, O_RDONLY)) < 0)
         log_err(errno, "Unable to open \"%s\"", conf->confFileName);
 
-    if ((pid = is_write_lock_blocked(conf->fd)) > 0)
+    if ((pid = fd_is_write_lock_blocked(conf->fd)) > 0)
         log_err(0, "Configuration \"%s\" in use by pid %d",
             conf->confFileName, pid);
-    if (get_read_lock(conf->fd) < 0)
+    if (fd_get_read_lock(conf->fd) < 0)
         log_err(0, "Unable to lock configuration \"%s\"",
             conf->confFileName);
 
@@ -368,7 +368,7 @@ void process_server_conf_file(server_conf_t *conf)
     len = fdStat.st_size;
     if (!(buf = malloc(len + 1)))
         out_of_memory();
-    if ((n = read_n(conf->fd, buf, len)) < 0)
+    if ((n = fd_read_n(conf->fd, buf, len)) < 0)
         log_err(errno, "Unable to read \"%s\"", conf->confFileName);
     assert(n == len);
     buf[len] = '\0';
@@ -454,7 +454,7 @@ static void signal_daemon(server_conf_t *conf, int signum)
     if ((conf->fd = open(conf->confFileName, O_RDONLY)) < 0) {
         log_err(errno, "Unable to open \"%s\"", conf->confFileName);
     }
-    if (!(pid = is_write_lock_blocked(conf->fd))) {
+    if (!(pid = fd_is_write_lock_blocked(conf->fd))) {
         log_err(0, "Configuration \"%s\" is not active", conf->confFileName);
     }
     if (kill(pid, signum) < 0) {

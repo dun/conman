@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.c,v 1.63 2002/09/17 22:40:25 dun Exp $
+ *  $Id: server.c,v 1.64 2002/09/18 00:27:23 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -46,11 +46,11 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include "common.h"
+#include "fd.h"
 #include "list.h"
 #include "log.h"
 #include "server.h"
 #include "tselect.h"
-#include "util-file.h"
 #include "util-str.h"
 #include "util.h"
 #include "wrapper.h"
@@ -418,8 +418,8 @@ static void create_listen_socket(server_conf_t *conf)
     if ((ld = socket(PF_INET, SOCK_STREAM, 0)) < 0)
         log_err(errno, "Unable to create listening socket");
 
-    set_fd_nonblocking(ld);
-    set_fd_closed_on_exec(ld);
+    fd_set_nonblocking(ld);
+    fd_set_close_on_exec(ld);
 
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
@@ -603,7 +603,7 @@ static void open_daemon_logfile(server_conf_t *conf)
             conf->logFileName, strerror(errno));
         goto err;
     }
-    if (get_write_lock(fd) < 0) {
+    if (fd_get_write_lock(fd) < 0) {
         log_msg(LOG_WARNING, "Unable to lock logfile \"%s\"",
             conf->logFileName);
         if (fclose(fp) == EOF)
@@ -611,7 +611,7 @@ static void open_daemon_logfile(server_conf_t *conf)
                 conf->logFileName);
         goto err;
     }
-    set_fd_closed_on_exec(fd);
+    fd_set_close_on_exec(fd);
 
     /*  Transition to new log file.
      */

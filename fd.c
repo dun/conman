@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: util-file.c,v 1.7 2002/05/12 19:20:29 dun Exp $
+ *  $Id: fd.c,v 1.1 2002/09/18 00:27:23 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -23,7 +23,7 @@
  *  with ConMan; if not, write to the Free Software Foundation, Inc.,
  *  59 Temple Place, Suite 330, Boston, MA  02111-1307  USA.
  *****************************************************************************
- *  Refer to "util-file.h" for documentation on public functions.
+ *  Refer to "fd.h" for documentation on public functions.
 \*****************************************************************************/
 
 
@@ -35,15 +35,15 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include "fd.h"
 #include "log.h"
-#include "util-file.h"
 
 
-static int get_file_lock(int fd, int cmd, int type);
-static pid_t test_file_lock(int fd, int type);
+static int fd_get_lock(int fd, int cmd, int type);
+static pid_t fd_test_lock(int fd, int type);
 
 
-void set_fd_closed_on_exec(int fd)
+void fd_set_close_on_exec(int fd)
 {
     assert(fd >= 0);
 
@@ -53,7 +53,7 @@ void set_fd_closed_on_exec(int fd)
 }
 
 
-void set_fd_nonblocking(int fd)
+void fd_set_nonblocking(int fd)
 {
     int fval;
 
@@ -67,49 +67,49 @@ void set_fd_nonblocking(int fd)
 }
 
 
-int get_read_lock(int fd)
+int fd_get_read_lock(int fd)
 {
-    return(get_file_lock(fd, F_SETLK, F_RDLCK));
+    return(fd_get_lock(fd, F_SETLK, F_RDLCK));
 }
 
 
-int get_readw_lock(int fd)
+int fd_get_readw_lock(int fd)
 {
-    return(get_file_lock(fd, F_SETLKW, F_RDLCK));
+    return(fd_get_lock(fd, F_SETLKW, F_RDLCK));
 }
 
 
-int get_write_lock(int fd)
+int fd_get_write_lock(int fd)
 {
-    return(get_file_lock(fd, F_SETLK, F_WRLCK));
+    return(fd_get_lock(fd, F_SETLK, F_WRLCK));
 }
 
 
-int get_writew_lock(int fd)
+int fd_get_writew_lock(int fd)
 {
-    return(get_file_lock(fd, F_SETLKW, F_WRLCK));
+    return(fd_get_lock(fd, F_SETLKW, F_WRLCK));
 }
 
 
-int release_lock(int fd)
+int fd_release_lock(int fd)
 {
-    return(get_file_lock(fd, F_SETLK, F_UNLCK));
+    return(fd_get_lock(fd, F_SETLK, F_UNLCK));
 }
 
 
-pid_t is_read_lock_blocked(int fd)
+pid_t fd_is_read_lock_blocked(int fd)
 {
-    return(test_file_lock(fd, F_RDLCK));
+    return(fd_test_lock(fd, F_RDLCK));
 }
 
 
-pid_t is_write_lock_blocked(int fd)
+pid_t fd_is_write_lock_blocked(int fd)
 {
-    return(test_file_lock(fd, F_WRLCK));
+    return(fd_test_lock(fd, F_WRLCK));
 }
 
 
-static int get_file_lock(int fd, int cmd, int type)
+static int fd_get_lock(int fd, int cmd, int type)
 {
     struct flock lock;
 
@@ -124,7 +124,7 @@ static int get_file_lock(int fd, int cmd, int type)
 }
 
 
-static pid_t test_file_lock(int fd, int type)
+static pid_t fd_test_lock(int fd, int type)
 {
     struct flock lock;
 
@@ -143,7 +143,7 @@ static pid_t test_file_lock(int fd, int type)
 }
 
 
-ssize_t read_n(int fd, void *buf, size_t n)
+ssize_t fd_read_n(int fd, void *buf, size_t n)
 {
     size_t nleft;
     ssize_t nread;
@@ -168,7 +168,7 @@ ssize_t read_n(int fd, void *buf, size_t n)
 }
 
 
-ssize_t write_n(int fd, void *buf, size_t n)
+ssize_t fd_write_n(int fd, void *buf, size_t n)
 {
     size_t nleft;
     ssize_t nwritten;
@@ -190,7 +190,7 @@ ssize_t write_n(int fd, void *buf, size_t n)
 }
 
 
-ssize_t read_line(int fd, void *buf, size_t maxlen)
+ssize_t fd_read_line(int fd, void *buf, size_t maxlen)
 {
     ssize_t n, rc;
     unsigned char c, *p;
