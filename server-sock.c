@@ -2,7 +2,7 @@
  *  server-sock.c  
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server-sock.c,v 1.2 2001/05/09 22:21:02 dun Exp $
+ *  $Id: server-sock.c,v 1.3 2001/05/11 22:49:00 dun Exp $
 \******************************************************************************/
 
 
@@ -49,9 +49,9 @@ static int query_consoles(server_conf_t *conf, req_t *req);
 static int validate_req(req_t *req);
 static int send_rsp(req_t *req, int errnum, char *errmsg);
 static void perform_query_cmd(req_t *req);
-static void perform_monitor_cmd(req_t *req);
-static void perform_connect_cmd(req_t *req);
-static void perform_execute_cmd(req_t *req);
+static void perform_monitor_cmd(req_t *req, server_conf_t *conf);
+static void perform_connect_cmd(req_t *req, server_conf_t *conf);
+static void perform_execute_cmd(req_t *req, server_conf_t *conf);
 
 
 void process_client(server_conf_t *conf)
@@ -120,13 +120,13 @@ void process_client(server_conf_t *conf)
 
     switch(req->command) {
     case CONNECT:
-        perform_connect_cmd(req);
+        perform_connect_cmd(req, conf);
         break;
     case EXECUTE:
-        perform_execute_cmd(req);
+        perform_execute_cmd(req, conf);
         break;
     case MONITOR:
-        perform_monitor_cmd(req);
+        perform_monitor_cmd(req, conf);
         break;
     case QUERY:
         perform_query_cmd(req);
@@ -140,6 +140,8 @@ void process_client(server_conf_t *conf)
         break;
     }
 
+    /*  FIX_ME: Is a pthread_exit() needed here?  Check the weird ps behavior.
+     */
 end:
     destroy_req(req);
     return;
@@ -183,14 +185,12 @@ static req_t * create_req(int sd)
 
 static void destroy_req(req_t *req)
 {
-/*  Destroys a request struct, closing the socket connection if needed.
+/*  Destroys a request struct.
+ *  The client's socket connection is not shutdown here
+ *    since it may be further handled by mux_io().
  */
     DPRINTF("Destroyed request from %s.\n", (req->host ? req->host : req->ip));
-    if (req->sd >= 0) {
-        if (shutdown(req->sd, SHUT_RDWR) < 0)
-            err_msg(errno, "shutdown(%d) failed", req->sd);
-        req->sd = -1;
-    }
+
     if (req->ip)
         free(req->ip);
     if (req->host)
@@ -605,10 +605,15 @@ static void perform_query_cmd(req_t *req)
 {
 /*  Performs the QUERY command, returning a list of consoles that
  *    matches the console patterns given in the client's request.
+ *  Since this cmd is processed entirely by this thread,
+ *    the client socket connection is closed once it is finished.
  */
     ListIterator i;
     obj_t *obj;
     char buf[MAX_BUF_SIZE];
+
+    assert(req->sd >= 0);
+    assert(req->command == QUERY);
 
     list_sort(req->consoles, (ListCmpF) compare_objs);
 
@@ -629,29 +634,55 @@ static void perform_query_cmd(req_t *req)
     }
 
     list_iterator_destroy(i);
+
+    if (shutdown(req->sd, SHUT_RDWR) < 0)
+        err_msg(errno, "shutdown(%d) failed", req->sd);
+    req->sd = -1;
+
     return;
 }
 
 
-static void perform_monitor_cmd(req_t *req)
+static void perform_monitor_cmd(req_t *req, server_conf_t *conf)
 {
-    /*  FIX_ME: NOT_IMPLEMENTED_YET
-     */
+    assert(req->sd >= 0);
+    assert(req->command == MONITOR);
+
     return;
 }
 
 
-static void perform_connect_cmd(req_t *req)
+static void perform_connect_cmd(req_t *req, server_conf_t *conf)
 {
-    /*  FIX_ME: NOT_IMPLEMENTED_YET
-     */
+    obj_t *socket;
+    obj_t *console;
+
+    assert(req->sd >= 0);
+    assert(req->command == CONNECT);
+
+    send_rsp(req, CONMAN_ERR_NONE, NULL);
+
+    set_descriptor_nonblocking(req->sd);
+    console = list_pop(req->consoles);
+    if (!(socket = create_socket_obj(req->user, req->host, req->sd)))
+        return;
+    if ((link_objs(socket, console) < 0) || (link_objs(console, socket) < 0)) {
+        destroy_obj(socket);
+        return;
+    }
+    if (!list_append(conf->objs, socket))
+        err_msg(0, "Out of memory");
     return;
 }
 
 
-static void perform_execute_cmd(req_t *req)
+static void perform_execute_cmd(req_t *req, server_conf_t *conf)
 {
     /*  FIX_ME: NOT_IMPLEMENTED_YET
      */
+
+    assert(req->sd >= 0);
+    assert(req->command == EXECUTE);
+
     return;
 }

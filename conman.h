@@ -2,7 +2,7 @@
  *  conman.h
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: conman.h,v 1.2 2001/05/09 22:21:02 dun Exp $
+ *  $Id: conman.h,v 1.3 2001/05/11 22:49:00 dun Exp $
 \******************************************************************************/
 
 
@@ -12,6 +12,7 @@
 #include "lex.h"
 
 
+#define DEFAULT_CONMAN_HOST	"127.0.0.1"
 #define DEFAULT_CONMAN_PORT	7890
 #define DEFAULT_CLIENT_ESCAPE	'&'
 #define DEFAULT_SERVER_CONF	"/etc/conman.conf"

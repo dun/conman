@@ -2,7 +2,7 @@
  *  server.h
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server.h,v 1.2 2001/05/09 22:21:02 dun Exp $
+ *  $Id: server.h,v 1.3 2001/05/11 22:49:00 dun Exp $
 \******************************************************************************/
 
 
@@ -101,7 +101,7 @@ void close_obj(obj_t *obj);
 
 int compare_objs(obj_t *obj1, obj_t *obj2);
 
-void link_objs(obj_t *src, obj_t *dst);
+int link_objs(obj_t *src, obj_t *dst);
 
 void write_to_obj(obj_t *obj);
 

@@ -2,7 +2,7 @@
  *  client-conf.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: client-conf.c,v 1.2 2001/05/09 22:21:01 dun Exp $
+ *  $Id: client-conf.c,v 1.3 2001/05/11 22:49:00 dun Exp $
 \******************************************************************************/
 
 
@@ -26,6 +26,13 @@
 #include "util.h"
 
 
+#ifndef NDEBUG
+#define DEBUG_STRING " (debug)"
+#else
+#define DEBUG_STRING ""
+#endif /* !NDEBUG */
+
+
 static void display_client_help(char *prog);
 
 
@@ -45,9 +52,9 @@ client_conf_t * create_client_conf(void)
         err_msg(errno, "Unable to lookup UID %d", uid);
     conf->user = create_string(passp->pw_name);
 
-    /* Remote access not yet enabled, so connect to loopback.
+    /*  Must copy host string constant since it will eventually be free()'d.
      */
-    conf->dhost = create_string("127.0.0.1");
+    conf->dhost = create_string(DEFAULT_CONMAN_HOST);
     conf->dport = DEFAULT_CONMAN_PORT;
 
     conf->command = CONNECT;
@@ -100,7 +107,7 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
     char *str;
 
     opterr = 1;
-    while ((c = getopt(argc, argv, "be:Efhl:qrx:vV")) != -1) {
+    while ((c = getopt(argc, argv, "bd:e:Efhl:qrx:vV")) != -1) {
         switch(c) {
         case '?':			/* invalid option */
             exit(1);
@@ -108,10 +115,19 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
             display_client_help(argv[0]);
             exit(0);
         case 'V':
-            printf("%s-%s\n", PACKAGE, VERSION);
+            printf("%s-%s%s\n", PACKAGE, VERSION, DEBUG_STRING);
             exit(0);
         case 'b':
             conf->enableBroadcast = 1;
+            break;
+        case 'd':
+            if (conf->dhost)
+                free(conf->dhost);
+            if ((str = strchr(optarg, ':'))) {
+                *str++ = '\0';
+                conf->dport = atoi(str);
+            }
+            conf->dhost = create_string(optarg);
             break;
         case 'e':
             conf->escapeChar = optarg[0];
@@ -159,12 +175,17 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
 
 static void display_client_help(char *prog)
 {
+    char esc[3];
+
+    write_esc_char(DEFAULT_CLIENT_ESCAPE, esc);
+
     printf("Usage: %s [OPTIONS] <console(s)>\n", prog);
     printf("\n");
     printf("  -h        Display this help.\n");
     printf("  -b        Broadcast (write-only) to multiple consoles.\n");
-    printf("  -e CHAR   Set escape character (default: '%c').\n",
-        DEFAULT_CLIENT_ESCAPE);
+    printf("  -d HOST   Specify location of server"
+        " (default: '%s:%d').\n", DEFAULT_CONMAN_HOST, DEFAULT_CONMAN_PORT);
+    printf("  -e CHAR   Set escape character (default: '%s').\n", esc);
     printf("  -E        Disable escape character.\n");
     printf("  -f        Force open connection.\n");
     printf("  -l FILE   Log connection to file.\n");
@@ -191,7 +212,7 @@ void open_client_log(client_conf_t *conf)
         err_msg(errno, "Unable to open logfile [%s]", conf->log);
 
     now = create_time_string(0);
-    str = create_fmt_string("* Log started on %s.\n\n", now);
+    str = create_fmt_string("* Log started %s.\n\n", now);
     if (write_n(conf->ld, str, strlen(str)) < 0)
         err_msg(errno, "write(%d) failed", conf->ld);
     free(now);
@@ -210,7 +231,7 @@ void close_client_log(client_conf_t *conf)
     assert(conf->ld >= 0);
 
     now = create_time_string(0);
-    str = create_fmt_string("\n* Log finished on %s.\n\n", now);
+    str = create_fmt_string("\n* Log finished %s.\n\n", now);
     if (write_n(conf->ld, str, strlen(str)) < 0)
         err_msg(errno, "write(%d) failed", conf->ld);
     free(now);

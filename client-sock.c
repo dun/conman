@@ -2,7 +2,7 @@
  *  client-sock.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: client-sock.c,v 1.2 2001/05/09 22:21:01 dun Exp $
+ *  $Id: client-sock.c,v 1.3 2001/05/11 22:49:00 dun Exp $
 \******************************************************************************/
 
 
@@ -34,6 +34,8 @@ static void parse_rsp_err(Lex l, client_conf_t *conf);
 
 void connect_to_server(client_conf_t *conf)
 {
+/*  FIX_ME: Disable Nagle algorithm.
+ */
     int sd;
     struct sockaddr_in addr;
     struct hostent *hostp;
@@ -90,7 +92,12 @@ int send_greeting(client_conf_t *conf)
 
     if (recv_rsp(conf) < 0) {
         if (conf->errnum == CONMAN_ERR_AUTHENTICATE) {
-            ;				/* FIX_ME: NOT_IMPLEMENTED_YET */
+            /*
+             *  FIX_ME: NOT_IMPLEMENTED_YET
+             */
+            if (shutdown(conf->sd, SHUT_RDWR) < 0)
+                err_msg(errno, "shutdown(%d) failed", conf->sd);
+            conf->sd = -1;
         }
         return(-1);
     }
@@ -340,13 +347,15 @@ void display_data(client_conf_t *conf, int fd)
     int n;
 
     assert(fd >= 0);
-    assert(conf->sd >= 0);
+
+    if (conf->sd < 0)
+        return;
 
     for (;;) {
         n = read(conf->sd, buf, sizeof(buf));
         if (n < 0)
             err_msg(errno, "Unable to read data from socket");
-        else if (n == 0)
+        if (n == 0)
             break;
         if (write_n(fd, buf, n) < 0)
             err_msg(errno, "write(%d) failed", fd);

@@ -2,7 +2,7 @@
  *  client.h
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: client.h,v 1.2 2001/05/09 22:21:02 dun Exp $
+ *  $Id: client.h,v 1.3 2001/05/11 22:49:00 dun Exp $
 \******************************************************************************/
 
 
@@ -70,6 +70,8 @@ void display_data(client_conf_t *conf, int fd);
 \******************/
 
 void connect_console(client_conf_t *conf);
+
+char * write_esc_char(char c, char *p);
 
 
 #endif /* !_CLIENT_H */

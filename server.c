@@ -2,7 +2,7 @@
  *  server.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server.c,v 1.2 2001/05/09 22:21:02 dun Exp $
+ *  $Id: server.c,v 1.3 2001/05/11 22:49:00 dun Exp $
 \******************************************************************************/
 
 
@@ -10,8 +10,11 @@
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
+#include <assert.h>
 #include <errno.h>
 #include <signal.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -132,6 +135,7 @@ static void enable_console_logging(server_conf_t *conf)
     ListIterator i;
     obj_t *obj;
     obj_t *log;
+    char *now, *str;
 
     if (!(i = list_iterator_create(conf->objs)))
         err_msg(0, "Out of memory");
@@ -140,9 +144,20 @@ static void enable_console_logging(server_conf_t *conf)
             continue;
         if (!(log = create_logfile_obj(obj->aux.console.log)))
             continue;
+        if (link_objs(obj, log) < 0) {
+            destroy_obj(log);
+            continue;
+        }
         if (!list_append(conf->objs, log))
             err_msg(0, "Out of memory");
-        link_objs(obj, log);
+
+        assert(log->writer->type == CONSOLE);
+        now = create_time_string(0);
+        str = create_fmt_string("* Console [%s] log started %s.\n\n",
+            log->writer->name, now);
+        write_obj_data(log, str, strlen(str));
+        free(now);
+        free(str);
     }
     list_iterator_destroy(i);
     return;
@@ -160,12 +175,10 @@ static void create_listen_socket(server_conf_t *conf)
 
     set_descriptor_nonblocking(ld);
 
-    /*  Restrict listening socket to loopback until connection is secure.
-     */
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_port = htons(DEFAULT_CONMAN_PORT);
-    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     if (setsockopt(ld, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0)
         err_msg(errno, "setsockopt() failed");
@@ -185,6 +198,7 @@ static void mux_io(server_conf_t *conf)
 {
     ListIterator i;
     fd_set rset, wset;
+    struct timeval tval;
     int maxfd;
     int n;
     int rc;
@@ -221,7 +235,20 @@ static void mux_io(server_conf_t *conf)
             }
         }
 
-        while ((n = select(maxfd+1, &rset, &wset, NULL, NULL)) < 0) {
+        /*  Specify a timeout to select() to prevent the following scenario:
+         *    Suppose select() blocks after spawning a new thread to handle
+         *    a CONNECT request.  This thread adds a socket obj to the
+         *    conf->objs list to be handled by mux_io().  But read-activity
+         *    on this socket (or its associated console) will not unblock
+         *    select() because it is not yet listed in select()'s read-set.
+         *  Although select() is to treat the timeval struct as a constant,
+         *    Linux systems reportedly modify it (cf. Stevens UNPv1 p151).
+         *    As such, initialize it before each call to select().
+         */
+        tval.tv_sec = 1;
+        tval.tv_usec = 0;
+
+        while ((n = select(maxfd+1, &rset, &wset, NULL, &tval)) < 0) {
             if (errno != EINTR)
                 err_msg(errno, "select() failed");
             else if (done)

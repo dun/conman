@@ -2,7 +2,7 @@
  *  server-obj.c  
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server-obj.c,v 1.2 2001/05/09 22:21:02 dun Exp $
+ *  $Id: server-obj.c,v 1.3 2001/05/11 22:49:00 dun Exp $
 \******************************************************************************/
 
 
@@ -28,7 +28,7 @@
 static obj_t * create_obj(char *name, enum obj_type type);
 static void set_raw_console_mode(obj_t *obj);
 static void restore_console_mode(obj_t *obj);
-static void parse_buf_for_control(obj_t *obj, void *src, size_t *pLen);
+static void parse_buf_for_control(obj_t *obj, void *src, int *pLen);
 
 
 obj_t * create_console_obj(char *name, char *dev, char *log, char *rst, int bps)
@@ -75,7 +75,7 @@ obj_t * create_socket_obj(char *user, char *host, int sd)
     assert(host);
     assert(sd >= 0);
 
-    /*  FIX_ME: user@host is not unique -- doppleganger danger.
+    /*  FIX_ME: user@host is not unique -- doppleganger danger?
      */
     name = create_fmt_string("%s@%s", user, host);
     obj = create_obj(name, SOCKET);
@@ -174,11 +174,10 @@ void destroy_obj(obj_t *obj)
 
 int open_obj(obj_t *obj)
 {
-/*  Note that SOCKET objs are created in the "open" state.
+/*  Returns 1 if obj was successfully opened, 0 if obj was already open,
+ *    and -1 if an error occurred.
+ *  Note that SOCKET objs are created in the "open" state.
  */
-    char *now, *str;
-
-    assert(obj->fd < 0);
     if (obj->fd >= 0)			/* obj already open */
         return(0);
 
@@ -192,22 +191,15 @@ int open_obj(obj_t *obj)
     }
     else if (obj->type == LOGFILE) {
         int flags = O_WRONLY | O_CREAT | O_APPEND | O_NONBLOCK;
-        assert(obj->writer->type == CONSOLE);
         if ((obj->fd = open(obj->name, flags, S_IRUSR | S_IWUSR)) < 0) {
             log_msg(0, "Unable to open logfile [%s]: %s", obj->name,
                 strerror(errno));
             return(-1);
         }
-        now = create_time_string(0);
-        str = create_fmt_string("* Console [%s] log started on %s.\n\n",
-            obj->writer->name, now);
-        write_obj_data(obj, str, strlen(str));
-        free(now);
-        free(str);
     }
 
     DPRINTF("Opened object [%s].\n", obj->name);
-    return(0);
+    return(1);
 }
 
 
@@ -264,6 +256,8 @@ void close_obj(obj_t *obj)
 
     /*  FIX_ME: Write msg to console logfile when object is closed. */
 
+    DPRINTF("Closed object [%s].\n", obj->name);
+
     /*  Remove object link between my writer and me.
      */
     if (obj->writer != NULL) {
@@ -309,7 +303,6 @@ void close_obj(obj_t *obj)
         if (obj->type == SOCKET)
             destroy_obj(obj);
     }
-    DPRINTF("Closed object [%s].\n", obj->name);
     return;
 }
 
@@ -343,9 +336,24 @@ int compare_objs(obj_t *obj1, obj_t *obj2)
 }
 
 
-void link_objs(obj_t *src, obj_t *dst)
+int link_objs(obj_t *src, obj_t *dst)
 {
+    int rcSrc, rcDst;
     char *now, *str;
+
+    /*  Ensure both objs are "active".
+     */
+    if (src->fd < 0) {
+        if ((rcSrc = open_obj(src)) < 0)
+            return(-1);
+    }
+    if (dst->fd < 0) {
+        if ((rcDst = open_obj(dst)) < 0) {
+            if (rcSrc == 1)
+                close_obj(src);
+            return(-1);
+        }
+    }
 
     /*  If the dst console is already in R/W use by another client, steal it!
      */
@@ -368,14 +376,8 @@ void link_objs(obj_t *src, obj_t *dst)
     if (!list_append(src->readers, dst))
         err_msg(0, "Out of memory");
 
-    /*  Ensure both objs are "active".
-     */
-    if (src->fd < 0)
-        open_obj(src);
-    if (dst->fd < 0)
-        open_obj(dst);
-
-    return;
+    DPRINTF("Linked object [%s] to [%s].\n", src->name, dst->name);
+    return(0);
 }
 
 
@@ -504,7 +506,7 @@ again:
 }
 
 
-static void parse_buf_for_control(obj_t *obj, void *src, size_t *pLen)
+static void parse_buf_for_control(obj_t *obj, void *src, int *pLen)
 {
     if (!src || *pLen <= 0)
         return;

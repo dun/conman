@@ -2,7 +2,7 @@
  *  server-conf.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server-conf.c,v 1.1 2001/05/04 15:26:41 dun Exp $
+ *  $Id: server-conf.c,v 1.2 2001/05/11 22:49:00 dun Exp $
 \******************************************************************************/
 
 
@@ -26,6 +26,13 @@
 #include "list.h"
 #include "server.h"
 #include "util.h"
+
+
+#ifndef NDEBUG
+#define DEBUG_STRING " (debug)"
+#else
+#define DEBUG_STRING ""
+#endif /* !NDEBUG */
 
 
 enum server_conf_toks {
@@ -107,7 +114,7 @@ void process_server_cmd_line(int argc, char *argv[], server_conf_t *conf)
             display_server_help(argv[0]);
             exit(0);
         case 'V':
-            printf("%s-%s\n", PACKAGE, VERSION);
+            printf("%s-%s%s\n", PACKAGE, VERSION, DEBUG_STRING);
             exit(0);
         case 'c':
             if (conf->filename)
