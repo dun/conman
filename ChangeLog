@@ -1,12 +1,14 @@
 2003-10-07  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* : Released 0.1.8.8.
+
 	* etc/conman.conf, man/conman.conf.5.in: Tweaked timestamp logopt docs.
 
 2003-10-03  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server-logfile.c, server-obj.c, server.h: Fixed newline timestamping
-	so that the timestamp is associated with the first character output on
-	the line instead of the preceding newline transition character.
+	so that the timestamp is generated when the first character following
+	the line break is output (instead of when the line break occurs).
 
 2003-10-01  Chris Dunlap  <cdunlap@llnl.gov>
 
