@@ -2,7 +2,7 @@
 # Makefile Include for RPM Construction
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Make-rpm.mk,v 1.4 2001/12/05 00:37:56 dun Exp $
+# $Id: Make-rpm.mk,v 1.5 2001/12/05 00:48:42 dun Exp $
 ##
 # NOTES:
 # - requires PACKAGE and VERSION macro definitions to be defined
@@ -49,6 +49,7 @@ rpm tar:
 	if test -z "$$ver"; then \
 	  echo "ERROR: Cannot determine VERSION (tag=$$tag)" 1>&2; exit 0; fi; \
 	test "$$tag" = "HEAD" -o "$$tag" = "BASE" && ver="$$ver+"; \
+	test -z "$$rel" && rel=$(RELEASE); \
 	test -z "$$rel" && rel=1; \
 	$(MAKE) -s $@-internal cvs="$$cvs" mkdir="$$mkdir" \
 	  tag="$$tag" pkg="$$pkg" ver="$$ver" rel="$$rel"
