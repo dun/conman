@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-obj.c,v 1.74 2002/09/27 03:23:19 dun Exp $
+ *  $Id: server-obj.c,v 1.75 2002/10/01 17:38:25 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -30,7 +30,6 @@
 #endif /* HAVE_CONFIG_H */
 
 #include <assert.h>
-#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <netinet/in.h>
@@ -57,7 +56,6 @@
 static obj_t * create_obj(
     server_conf_t *conf, char *name, int fd, enum obj_type type);
 static void reset_telnet_delay(obj_t *telnet);
-static char * find_trailing_int_str(char *str);
 #ifndef NDEBUG
 static int validate_obj_links(obj_t *obj);
 #endif /* !NDEBUG */
@@ -653,8 +651,8 @@ int compare_objs(obj_t *obj1, obj_t *obj2)
 
     str1 = obj1->name;
     str2 = obj2->name;
-    int1 = find_trailing_int_str(str1);
-    int2 = find_trailing_int_str(str2);
+    int1 = str_find_trailing_int(str1);
+    int2 = str_find_trailing_int(str2);
 
     while (*str1) {
         if ((str1 == int1) && (str2 == int2))
@@ -665,23 +663,6 @@ int compare_objs(obj_t *obj1, obj_t *obj2)
             break;
     }
     return(*str1 - *str2);
-}
-
-
-static char * find_trailing_int_str(char *str)
-{
-/*  Searches string 'str' for a trailing integer.
- *  Returns a ptr to the start of the integer; o/w, returns NULL.
- */
-    char *p, *q;
-
-    for (p=str, q=NULL; p && *p; p++) {
-        if (!isdigit((int) *p))
-            q = NULL;
-        else if (!q)
-            q = p;
-    }
-    return(q);
 }
 
 

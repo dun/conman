@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: str.c,v 1.1 2002/09/18 20:32:17 dun Exp $
+ *  $Id: str.c,v 1.2 2002/10/01 17:38:25 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -187,6 +187,23 @@ int str_sub(char *dst, size_t dstlen, const char *src, char c, char *sub)
         dst[dstlen - 1] = '\0';
         return(-1);
     }
+}
+
+
+char * str_find_trailing_int(char *str)
+{
+/*  Searches string 'str' for a trailing integer.
+ *  Returns a ptr to the start of the integer; o/w, returns NULL.
+ */
+    char *p, *q;
+
+    for (p=str, q=NULL; p && *p; p++) {
+        if (!isdigit((int) *p))
+            q = NULL;
+        else if (!q)
+            q = p;
+    }
+    return(q);
 }
 
 

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: str.h,v 1.1 2002/09/18 20:32:17 dun Exp $
+ *  $Id: str.h,v 1.2 2002/10/01 17:38:25 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -77,6 +77,12 @@ int str_sub(char *dst, size_t dstlen, const char *src, char c, char *sub);
  *  Returns the length of the resulting string in (dst),
  *    or -1 if truncation occurred.
  *  Always NUL terminates the dst string (unless dstlen == 0).
+ */
+
+char * str_find_trailing_int(char *str);
+/*
+ *  Searches string 'str' for a trailing integer.
+ *  Returns a ptr to the start of the integer; o/w, returns NULL.
  */
 
 char * str_get_time_short(time_t t);
