@@ -2,7 +2,7 @@
  *  client.h
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: client.h,v 1.3 2001/05/11 22:49:00 dun Exp $
+ *  $Id: client.h,v 1.4 2001/05/14 22:02:29 dun Exp $
 \******************************************************************************/
 
 
@@ -28,6 +28,7 @@ typedef struct client_conf {
     char  *log;				/* connection logfile name            */
     int    ld;				/* connection logfile descriptor      */
     List   consoles;			/* list of consoles affected by cmd   */
+    int    closedByClient;		/* true if client closed console conn */
     int    errnum;			/* error number from issuing command  */
     char  *errmsg;			/* error message from issuing command */
 } client_conf_t;

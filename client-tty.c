@@ -2,7 +2,7 @@
  *  client-tty.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: client-tty.c,v 1.4 2001/05/14 16:22:09 dun Exp $
+ *  $Id: client-tty.c,v 1.5 2001/05/14 22:01:59 dun Exp $
 \******************************************************************************/
 
 
@@ -46,6 +46,7 @@ void connect_console(client_conf_t *conf)
     struct termios bak;
     fd_set rset, rsetBak;
     int n;
+    char *str;
 
     assert(conf->sd >= 0);
 
@@ -83,9 +84,20 @@ void connect_console(client_conf_t *conf)
         }
     }
 
-    if (shutdown(conf->sd, SHUT_RDWR) < 0)
-        err_msg(errno, "shutdown(%d) failed", conf->sd);
+    if (close(conf->sd) < 0)
+        err_msg(errno, "close(%d) failed", conf->sd);
     conf->sd = -1;
+
+    if (!conf->closedByClient) {
+        /*
+         *  Append a CR/LF since tty is in raw mode.
+         */
+        str = create_fmt_string("\r\nConnection to ConMan [%s:%d]"
+            " terminated by peer.\r\n", conf->dhost, conf->dport);
+        if (write_n(STDOUT_FILENO, str, strlen(str)) < 0)
+            err_msg(errno, "write(%d) failed", STDOUT_FILENO);
+        free(str);
+    }
 
     restore_tty_mode(STDIN_FILENO, &bak);
     return;
@@ -175,7 +187,7 @@ static int read_from_stdin(client_conf_t *conf)
         if (c == ESC_CHAR_CLOSE) {
             perform_close_esc(conf, c);
             mode = EOL;
-            return(0);			/* fake an EOF to close connection */
+            return(1);
         }
         if (c != esc) {
             /*
@@ -271,10 +283,6 @@ static void perform_help_esc(client_conf_t *conf, char c)
 static void perform_close_esc(client_conf_t *conf, char c)
 {
 /*  Perform a client-initiated close.
- *  Note that this routine does not actually shutdown the socket connection.
- *    Instead, read_from_stdin() returns 0, thereby faking an EOF from read().
- *    This causes the connect_console() while-loop to terminate, after which
- *    the socket connection is shutdown.
  */
     char *str;
 
@@ -287,6 +295,11 @@ static void perform_close_esc(client_conf_t *conf, char c)
     if (write_n(STDOUT_FILENO, str, strlen(str)) < 0)
         err_msg(errno, "write(%d) failed", STDOUT_FILENO);
     free(str);
+
+    if (shutdown(conf->sd, SHUT_WR) < 0)
+        err_msg(errno, "shutdown(%d) failed", conf->sd);
+
+    conf->closedByClient = 1;
     return;
 }
 

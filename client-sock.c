@@ -2,7 +2,7 @@
  *  client-sock.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: client-sock.c,v 1.3 2001/05/11 22:49:00 dun Exp $
+ *  $Id: client-sock.c,v 1.4 2001/05/14 22:01:59 dun Exp $
 \******************************************************************************/
 
 
@@ -95,8 +95,8 @@ int send_greeting(client_conf_t *conf)
             /*
              *  FIX_ME: NOT_IMPLEMENTED_YET
              */
-            if (shutdown(conf->sd, SHUT_RDWR) < 0)
-                err_msg(errno, "shutdown(%d) failed", conf->sd);
+            if (close(conf->sd) < 0)
+                err_msg(errno, "close(%d) failed", conf->sd);
             conf->sd = -1;
         }
         return(-1);
@@ -201,6 +201,19 @@ int send_req(client_conf_t *conf)
             "Unable to send greeting to [%s:%d]: %s",
             conf->dhost, conf->dport, strerror(errno));
         return(-1);
+    }
+
+    /*  For both QUERY and EXECUTE commands, the write-half of the
+     *    socket connection can be closed once the request is sent.
+     */
+    if ((conf->command == QUERY) || (conf->command == EXECUTE)) {
+        if (shutdown(conf->sd, SHUT_WR) < 0) {
+            conf->errnum = CONMAN_ERR_LOCAL;
+            conf->errmsg = create_fmt_string(
+                "Unable to close write-half of connection to [%s:%d]: %s",
+                conf->dhost, conf->dport, strerror(errno));
+            return(-1);
+        }
     }
 
     return(0);
