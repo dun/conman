@@ -1,4 +1,4 @@
-# $Id: conman.spec.in,v 1.10 2001/12/12 20:08:46 dun Exp $
+# $Id: conman.spec.in,v 1.11 2001/12/12 20:10:33 dun Exp $
 
 Name:    @PACKAGE@
 Version: @VERSION@
@@ -63,7 +63,7 @@ fi
 %defattr(-,root,root,0755)
 %config(noreplace) /etc/conman.conf
 %config(noreplace) /etc/logrotate.d/conman
-%config(roreplace) /etc/rc.d/init.d/conman
+%config(noreplace) /etc/rc.d/init.d/conman
 /usr/bin/conman
 /usr/bin/conmen
 /usr/sbin/conmand
