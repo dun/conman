@@ -1,4 +1,4 @@
-# $Id: conman.spec.in,v 1.15 2002/03/29 05:38:48 dun Exp $
+# $Id: conman.spec.in,v 1.16 2002/05/09 16:59:58 dun Exp $
 
 Name:    @PROJECT@
 Version: @VERSION@
@@ -21,6 +21,7 @@ manners of magic.
 %setup
 
 %build
+unset DEBUG
 test -n "$RPM_ENABLE_DEBUG" && DEBUG="--enable-debug --with-dmalloc"
 CFLAGS="$RPM_OPT_FLAGS" LDFLAGS="-s" ./configure --prefix=/usr $DEBUG \
   --with-tcp-wrappers
