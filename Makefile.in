@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 #
-# $Id: Makefile.in,v 1.12 2001/08/21 18:44:43 dun Exp $
+# $Id: Makefile.in,v 1.13 2001/08/21 19:10:27 dun Exp $
 ##
 
 PACKAGE=	@PACKAGE@
@@ -100,7 +100,7 @@ $(PACKAGE)-$(VERSION).tgz: VERSION
 	echo "creating $$name.tgz"; \
 	$(mkinstalldirs) $$tmp >/dev/null; \
 	cvs export -r $$tag -d $$dir $(PACKAGE) >/dev/null && \
-	  (cd $$tmp; tar cf - $$name) | gzip -c --best > $$name.tgz; \
+	  (cd $$tmp; tar cf - $$name) | gzip -c9 > $$name.tgz; \
 	rm -rf $$tmp
 
 rpm: $(PACKAGE)-$(VERSION).tgz
