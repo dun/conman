@@ -2,7 +2,7 @@
  *  lex.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: lex.c,v 1.5 2001/05/11 17:39:17 dun Exp $
+ *  $Id: lex.c,v 1.6 2001/05/14 15:30:28 dun Exp $
  ******************************************************************************
  *  Refer to "lex.h" for documentation on public functions.
 \******************************************************************************/
@@ -28,13 +28,13 @@
 
 
 struct lexer_state {
-    char           *pos;		/* current ptr in buffer */
-    char          **toks;		/* array of recognized strings */
-    char            text[LEX_MAX_STR];	/* tmp buffer for lexed strings */
-    int	            prev;		/* prev token returned by lex_next() */
-    int	            line;		/* current line number in buffer */
-    int	            gotEOL;		/* true if next token is on new line */
-    unsigned char   magic;		/* sentinel for asserting validity */
+    char           *pos;		/* current ptr in buffer              */
+    char          **toks;		/* array of recognized strings        */
+    char            text[LEX_MAX_STR];	/* tmp buffer for lexed strings       */
+    int	            prev;		/* prev token returned by lex_next()  */
+    int	            line;		/* current line number in buffer      */
+    int	            gotEOL;		/* true if next token is on new line  */
+    unsigned char   magic;		/* sentinel for asserting validity    */
 };
 
 

@@ -2,7 +2,7 @@
  *  lex.h
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: lex.h,v 1.2 2001/05/09 20:36:30 dun Exp $
+ *  $Id: lex.h,v 1.3 2001/05/14 15:30:28 dun Exp $
 \******************************************************************************/
 
 
@@ -31,15 +31,15 @@
 **  Constants  **
 \***************/
 
-#define LEX_MAX_STR 1024		/* max length of lexer string */
+#define LEX_MAX_STR 1024		/* max length of lexer string         */
 
 enum common_tokens {
-    LEX_ERR = -1,			/* lex error token */
-    LEX_EOF = 0,			/* end-of-file/buffer token */
-    LEX_EOL = 256,			/* end-of-line token */
-    LEX_INT,				/* integer token: ([+-]?[0-9]+) */
-    LEX_STR,				/* string token */
-    LEX_TOK_OFFSET			/* (cf. LEX_UNTOK macro) */
+    LEX_ERR = -1,			/* lex error token                    */
+    LEX_EOF = 0,			/* end-of-file/buffer token           */
+    LEX_EOL = 256,			/* end-of-line token                  */
+    LEX_INT,				/* integer token: ([+-]?[0-9]+)       */
+    LEX_STR,				/* string token                       */
+    LEX_TOK_OFFSET			/* (cf. LEX_UNTOK macro)              */
 };
 
 
