@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.21 2001/09/17 22:57:21 dun Exp $
+ *  $Id: server-conf.c,v 1.22 2001/09/20 23:36:54 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -447,7 +447,7 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
                 console->name, log, DEFAULT_CONFIG_ESCAPE);
         else if (!(logfile = create_logfile_obj(conf, name, console)))
             log_msg(0, "%s:%d: Console [%s] cannot log to \"%s\".",
-                conf->confFileName, line, console->name, log);
+                conf->confFileName, line, console->name, name);
         else
             link_objs(console, logfile);
     }
