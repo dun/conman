@@ -2,7 +2,7 @@
  *  client-tty.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: client-tty.c,v 1.5 2001/05/14 22:01:59 dun Exp $
+ *  $Id: client-tty.c,v 1.6 2001/05/16 17:34:06 dun Exp $
 \******************************************************************************/
 
 
@@ -43,12 +43,15 @@ static int done = 0;
 
 void connect_console(client_conf_t *conf)
 {
+/*  Connect client to the remote console(s).
+ */
     struct termios bak;
     fd_set rset, rsetBak;
     int n;
     char *str;
 
     assert(conf->sd >= 0);
+    assert((conf->command == CONNECT) || (conf->command == MONITOR));
 
     Signal(SIGHUP, SIG_IGN);
     Signal(SIGINT, SIG_IGN);
@@ -106,6 +109,8 @@ void connect_console(client_conf_t *conf)
 
 static void exit_handler(int signum)
 {
+/*  Exit-handler to break out of while-loop in connect_console().
+ */
     done = 1;
     return;
 }
@@ -162,17 +167,21 @@ static int read_from_stdin(client_conf_t *conf)
 /*  Read from stdin and write to socket connection.
  *  Returns 1 if the read was successful,
  *    or 0 if the connection has been closed.
- *  Note that this routine can block in the write() to the socket.
+ *  Note that this routine can conceivably block in the write() to the socket.
  */
     static enum { CHR, EOL, ESC } mode = EOL;
     char esc = conf->escapeChar;
     char c;
     int n;
+    char buf[2];
+    char *p = buf;
 
     while ((n = read(STDIN_FILENO, &c, 1)) < 0) {
         if (errno != EINTR)
             err_msg(errno, "read(%d) failed", conf->sd);
     }
+    if (n == 0)
+        return(0);
 
     if ((mode == EOL) && (c == esc)) {
         mode = ESC;
@@ -194,28 +203,29 @@ static int read_from_stdin(client_conf_t *conf)
              *  If the input was escape-someothercharacter, write both the
              *    escape character and the other character to the socket.
              */
-            if (write_n(conf->sd, &esc, 1) < 0) {
-                if (errno == EPIPE)
-                    return(0);
-                err_msg(errno, "write(%d) failed", conf->sd);
-            }
+            *p++ = esc;
         }
-    }
-
-    /*  FIX_ME: Verify EPIPE behavior.  Output "conn term'd by peer"?
-     */
-
-    if (write_n(conf->sd, &c, 1) < 0) {
-        if (errno == EPIPE)
-            return(0);
-        err_msg(errno, "write(%d) failed", conf->sd);
     }
     if ((c == '\r') || (c == '\n'))
         mode = EOL;
     else
         mode = CHR;
 
-    return(n);
+    *p++ = c;
+    assert((p > buf) && ((p - buf) <= sizeof(buf)));
+
+    /*  Do not send chars across the socket if we are in MONITOR mode.
+     *    The server would discard them anyways, but why waste resources.
+     *  Besides, we're now practicing conservation here in California. ;)
+     */
+    if (conf->command == CONNECT) {
+        if (write_n(conf->sd, buf, p - buf) < 0) {
+            if (errno == EPIPE)
+                return(0);
+            err_msg(errno, "write(%d) failed", conf->sd);
+        }
+    }
+    return(1);
 }
 
 
@@ -250,15 +260,15 @@ static void perform_help_esc(client_conf_t *conf, char c)
 {
 /*  Display the "escape sequence" help.
  */
-    char esc[3];
+    char escChar[3];
     char escClose[3];
     char escHelp[3];
     char *str;
 
     locally_echo_esc(conf->escapeChar, c);
 
-    str = write_esc_char(conf->escapeChar, esc);
-    assert((str - esc) <= sizeof(esc));
+    str = write_esc_char(conf->escapeChar, escChar);
+    assert((str - escChar) <= sizeof(escChar));
     str = write_esc_char(ESC_CHAR_HELP, escHelp);
     assert((str - escHelp) <= sizeof(escHelp));
     str = write_esc_char(ESC_CHAR_CLOSE, escClose);
@@ -272,7 +282,7 @@ static void perform_help_esc(client_conf_t *conf, char c)
         "  %2s%-2s -  Terminate the connection.\r\n"
         "  %2s%-2s -  Send the escape character by typing it twice.\r\n"
         "(Note that escapes are only recognized immediately after newline)\r\n",
-        esc, escHelp, esc, escClose, esc, esc);
+        escChar, escHelp, escChar, escClose, escChar, escChar);
     if (write_n(STDOUT_FILENO, str, strlen(str)) < 0)
         err_msg(errno, "write(%d) failed", STDOUT_FILENO);
     free(str);
