@@ -3,7 +3,7 @@ dnl
 dnl ConMan AutoConf Config Jazz
 dnl   by Chris Dunlap <cdunlap@llnl.gov>
 dnl
-dnl $Id: configure.ac,v 1.13 2001/12/28 22:34:33 dun Exp $
+dnl $Id: configure.ac,v 1.14 2002/02/04 17:52:38 dun Exp $
 
 
 dnl Prologue.
@@ -150,8 +150,13 @@ if test "$dmalloc" = yes; then
     ], [dmalloc=no]
   )
 fi
+dnl
+dnl Note that <stdlib.h> must be included before <dmalloc.h>.
+dnl Since it's ok to include it more than once, we do so here.
+dnl
 AH_BOTTOM(
 [#ifdef WITH_DMALLOC
+#  include <stdlib.h>
 #  include <dmalloc.h>
 #endif /* WITH_DMALLOC */]
 )

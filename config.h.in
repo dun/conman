@@ -71,6 +71,7 @@
 #undef WORDS_BIGENDIAN
 
 #ifdef WITH_DMALLOC
+#  include <stdlib.h>
 #  include <dmalloc.h>
 #endif /* WITH_DMALLOC */
 
