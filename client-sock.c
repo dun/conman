@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-sock.c,v 1.26 2001/12/19 23:31:27 dun Exp $
+ *  $Id: client-sock.c,v 1.27 2001/12/19 23:38:01 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -29,7 +29,7 @@ static void parse_rsp_ok(Lex l, client_conf_t *conf);
 static void parse_rsp_err(Lex l, client_conf_t *conf);
 
 
-void connect_to_server(client_conf_t *conf)
+int connect_to_server(client_conf_t *conf)
 {
     int sd;
     struct sockaddr_in saddr;
@@ -60,11 +60,14 @@ void connect_to_server(client_conf_t *conf)
     }
 
     if (connect(sd, (struct sockaddr *) &saddr, sizeof(saddr)) < 0) {
-        err_msg(errno, "Unable to connect to [%s:%d]",
-            conf->req->fqdn, conf->req->port);
+        conf->errnum = CONMAN_ERR_LOCAL;
+        conf->errmsg = create_format_string(
+            "Unable to connect to [%s:%d]: %s",
+            conf->req->fqdn, conf->req->port, strerror(errno));
+        return(-1);
     }
     conf->req->sd = sd;
-    return;
+    return(0);
 }
 
 

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client.h,v 1.12 2001/08/17 02:45:06 dun Exp $
+ *  $Id: client.h,v 1.13 2001/12/19 23:38:01 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -44,7 +44,7 @@ void close_client_log(client_conf_t *conf);
 **  client-sock.c  **
 \*******************/
 
-void connect_to_server(client_conf_t *conf);
+int connect_to_server(client_conf_t *conf);
 
 int send_greeting(client_conf_t *conf);
 

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client.c,v 1.11 2001/12/04 02:23:08 dun Exp $
+ *  $Id: client.c,v 1.12 2001/12/19 23:38:01 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -22,8 +22,8 @@ int main(int argc, char *argv[])
     process_client_cmd_line(argc, argv, conf);
     open_client_log(conf);
 
-    connect_to_server(conf);
-
+    if (connect_to_server(conf) < 0)
+        display_error(conf);
     if (send_greeting(conf) < 0)
         display_error(conf);
     else if (send_req(conf) < 0)
