@@ -2,6 +2,9 @@
 
 	* : Released 0.1.8.7.
 
+	* etc/conman.init: Fixed bug where INITLOG_ARGS setting was lost
+	once /etc/rc.d/init.d/functions was sourced.
+
 	* client-tty.c, common.h, server-esc.c, server-logfile.c,
 	server-obj.c, server.h, util-str.c, util-str.h, man/conman.1.in:
 	Added '&T' escape to toggle newline timestamping of logs {gnats:284}.
