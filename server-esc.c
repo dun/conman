@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-esc.c,v 1.1 2001/06/12 16:17:37 dun Exp $
+ *  $Id: server-esc.c,v 1.2 2001/06/12 19:55:27 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -48,6 +48,9 @@ int process_escape_chars(obj_t *client, void *src, int len)
                 break;
             case ESC_CHAR_LOG:
                 perform_log_replay(client);
+                break;
+            case ESC_CHAR_SUSPEND:
+                perform_suspend(client);
                 break;
             default:
                 log_msg(10, "Received invalid escape '%c' from %s.",
@@ -193,5 +196,33 @@ void perform_log_replay(obj_t *client)
 
     DPRINTF("Performing log replay on console [%s].\n", console->name);
     write_obj_data(client, buf, strlen(buf));
+    return;
+}
+
+
+void perform_suspend(obj_t *client)
+{
+/*  Toggles whether output to the client is suspended/resumed.
+ *  Note that while a client is suspended, data may still be written
+ *    into its circular-buffer; if the client does not resume before
+ *    the buffer wraps around, data will be lost.
+ */
+    int rc;
+    int gotSuspended;
+
+    assert(client->type == CLIENT);
+
+    if ((rc = pthread_mutex_lock(&client->bufLock)) != 0)
+        err_msg(rc, "pthread_mutex_lock() failed for [%s]", client->name);
+
+    gotSuspended = client->gotSuspended ^= 1;
+
+    if ((rc = pthread_mutex_unlock(&client->bufLock)) != 0)
+        err_msg(rc, "pthread_mutex_unlock() failed for [%s]", client->name);
+
+    if (gotSuspended)
+        DPRINTF("Suspending output to client [%s].\n", client->name);
+    else
+        DPRINTF("Resuming output to client [%s].\n", client->name);
     return;
 }

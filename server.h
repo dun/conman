@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.15 2001/06/12 16:17:48 dun Exp $
+ *  $Id: server.h,v 1.16 2001/06/12 19:55:27 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -50,6 +50,7 @@ typedef struct base_obj {		/* BASE OBJ:                          */
     char            *name;		/*  obj name                          */
     int              fd;		/*  file descriptor                   */
     int              gotEOF;		/*  true if obj rcvd EOF on last read */
+    int              gotSuspended;	/*  true if obj's output is suspended */
     int              gotWrapped;	/*  true if circular-buf has wrapped  */
     unsigned char    buf[MAX_BUF_SIZE];	/*  circular-buf to be written to fd  */
     unsigned char   *bufInPtr;		/*  ptr for data written in to buf    */
@@ -96,6 +97,8 @@ int process_escape_chars(obj_t *client, void *src, int len);
 void perform_serial_break(obj_t *client);
 
 void perform_log_replay(obj_t *client);
+
+void perform_suspend(obj_t *client);
 
 
 /******************\

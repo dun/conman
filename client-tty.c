@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-tty.c,v 1.18 2001/06/12 16:17:47 dun Exp $
+ *  $Id: client-tty.c,v 1.19 2001/06/12 19:55:27 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -344,6 +344,7 @@ static void perform_suspend_esc(client_conf_t *conf, char c)
  */
     locally_echo_esc(conf->escapeChar, c);
 
+    send_esc_seq(conf, c);
     display_connection_msg(conf, "suspended");
     restore_tty_mode(STDIN_FILENO, &conf->term);
 
@@ -352,6 +353,7 @@ static void perform_suspend_esc(client_conf_t *conf, char c)
 
     set_raw_tty_mode(STDIN_FILENO, &conf->term);
     display_connection_msg(conf, "resumed");
+    send_esc_seq(conf, c);
 
     return;
 }

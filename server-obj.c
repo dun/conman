@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.15 2001/06/12 16:17:48 dun Exp $
+ *  $Id: server-obj.c,v 1.16 2001/06/12 19:55:27 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -161,6 +161,7 @@ static obj_t * create_obj(enum obj_type type, List objs, char *name, int fd)
     obj->name = create_string(name);
     obj->fd = fd;
     obj->gotEOF = 0;
+    obj->gotSuspended = 0;
     obj->gotWrapped = 0;
     obj->bufInPtr = obj->bufOutPtr = obj->buf;
     if ((rc = pthread_mutex_init(&obj->bufLock, NULL)) != 0)
@@ -194,7 +195,10 @@ void destroy_obj(obj_t *obj)
     DPRINTF("Destroyed object [%s].\n", obj->name);
 
     assert(obj->fd >= 0);
-    assert(obj->bufInPtr == obj->bufOutPtr);
+/*
+ *  FIX_ME? Ensure obj buf is flushed (if not suspended) before destruction.
+ */
+/*  assert(obj->bufInPtr == obj->bufOutPtr); */
 
     if (obj->type == CONSOLE) {
         restore_console_mode(obj);
@@ -597,16 +601,18 @@ int write_obj_data(obj_t *obj, void *src, int len)
     /*  Calculate the number of bytes available before data is overwritten.
      *  Data in the circular-buffer will be overwritten if needed since
      *    this routine must not block.
+     *  Since an obj's circular-buffer is empty when (bufInPtr == bufOutPtr),
+     *    subtract one byte from 'avail' to account for this sentinel.
      */
     if (obj->bufOutPtr == obj->bufInPtr) {
         avail = MAX_BUF_SIZE - 1;
     }
     else if (obj->bufOutPtr > obj->bufInPtr) {
-        avail = obj->bufOutPtr - obj->bufInPtr;
+        avail = obj->bufOutPtr - obj->bufInPtr - 1;
     }
     else {
         avail = (&obj->buf[MAX_BUF_SIZE] - obj->bufInPtr) +
-            (obj->bufOutPtr - obj->buf);
+            (obj->bufOutPtr - obj->buf) - 1;
     }
 
     /*  Copy first chunk of data (ie, up to the end of the buffer).
@@ -636,8 +642,9 @@ int write_obj_data(obj_t *obj, void *src, int len)
     /*  Check to see if any data in circular-buffer was overwritten.
      */
     if (len > avail) {
-        log_msg(10, "Overwrote %d bytes in buffer for %s",
-            len-avail, obj->name);
+        if (!obj->gotSuspended)
+            log_msg(10, "Overwrote %d bytes in buffer for %s",
+                len-avail, obj->name);
         obj->bufOutPtr = obj->bufInPtr + 1;
         if (obj->bufOutPtr == &obj->buf[MAX_BUF_SIZE])
             obj->bufOutPtr = obj->buf;
@@ -666,7 +673,7 @@ int write_to_obj(obj_t *obj)
     int rc;
     int avail;
     int n;
-    int flushed = 0;
+    int isFlushed = 0;
 
     assert(obj->fd >= 0);
 
@@ -684,9 +691,13 @@ int write_to_obj(obj_t *obj)
      *    does not take into account data that has wrapped-around in the
      *    circular-buffer.  This remaining data will be written on the
      *    next invocation of this routine.  It's just simpler that way.
+     *  If the object is suspended, no data is written out to its fd.
      *  Note that if (bufInPtr == bufOutPtr), the obj's buffer is empty.
      */
-    if (obj->bufInPtr >= obj->bufOutPtr) {
+    if (obj->gotSuspended) {
+        avail = 0;
+    }
+    else if (obj->bufInPtr >= obj->bufOutPtr) {
         avail = obj->bufInPtr - obj->bufOutPtr;
     }
     else {
@@ -727,7 +738,7 @@ again:
      *    notify mux_io() that the obj can be deleted from the objs list.
      */
     if (obj->gotEOF && (obj->bufInPtr == obj->bufOutPtr))
-        flushed = 1;
+        isFlushed = 1;
 
     /*  Assert the buffer's input and output ptrs are valid upon exit.
      */
@@ -739,5 +750,5 @@ again:
     if ((rc = pthread_mutex_unlock(&obj->bufLock)) != 0)
         err_msg(rc, "pthread_mutex_unlock() failed for [%s]", obj->name);
 
-    return(flushed ? -1 : 0);
+    return(isFlushed ? -1 : 0);
 }
