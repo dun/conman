@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-net.c,v 1.3 2001/09/06 23:04:41 dun Exp $
+ *  $Id: util-net.c,v 1.4 2001/09/07 14:10:54 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util-net.h" for documentation on public functions.
@@ -28,6 +28,9 @@
 #endif /* !INET_ADDRSTRLEN */
 
 
+static pthread_mutex_t hostent_lock = PTHREAD_MUTEX_INITIALIZER;
+
+
 static int copy_hostent(const struct hostent *src, char *dst, int len);
 static int verify_hostent(const struct hostent *src, const struct hostent *dst);
 
@@ -39,14 +42,13 @@ struct hostent * get_host_by_name(const char *name,
  *    for gethostbyname_r() -- the arg list varies from system to system!
  */
     int rc;
-    static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
     struct hostent *hptr;
     int n = 0;
 
     assert(name);
     assert(buf);
 
-    if ((rc = pthread_mutex_lock(&lock)) != 0)
+    if ((rc = pthread_mutex_lock(&hostent_lock)) != 0)
         err_msg(rc, "pthread_mutex_lock() failed");
 
     if ((hptr = gethostbyname(name)))
@@ -54,7 +56,7 @@ struct hostent * get_host_by_name(const char *name,
     if (h_err)
         *h_err = h_errno;
 
-    if ((rc = pthread_mutex_unlock(&lock)) != 0)
+    if ((rc = pthread_mutex_unlock(&hostent_lock)) != 0)
         err_msg(rc, "pthread_mutex_unlock() failed");
 
     if (n < 0) {
@@ -72,14 +74,13 @@ struct hostent * get_host_by_addr(const char *addr, int len, int type,
  *    for gethostbyaddr_r() -- the arg list varies from system to system!
  */
     int rc;
-    static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
     struct hostent *hptr;
     int n = 0;
 
     assert(addr);
     assert(buf);
 
-    if ((rc = pthread_mutex_lock(&lock)) != 0)
+    if ((rc = pthread_mutex_lock(&hostent_lock)) != 0)
         err_msg(rc, "pthread_mutex_lock() failed");
 
     if ((hptr = gethostbyaddr(addr, len, type)))
@@ -87,7 +88,7 @@ struct hostent * get_host_by_addr(const char *addr, int len, int type,
     if (h_err)
         *h_err = h_errno;
 
-    if ((rc = pthread_mutex_unlock(&lock)) != 0)
+    if ((rc = pthread_mutex_unlock(&hostent_lock)) != 0)
         err_msg(rc, "pthread_mutex_unlock() failed");
 
     if (n < 0) {
