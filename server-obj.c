@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.17 2001/06/15 15:46:44 dun Exp $
+ *  $Id: server-obj.c,v 1.18 2001/06/15 23:22:37 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -514,11 +514,17 @@ void read_from_obj(obj_t *obj, fd_set *pWriteSet)
 
 again:
     if ((n = read(obj->fd, buf, sizeof(buf))) < 0) {
-        if (errno == EINTR)
+        if (errno == EINTR) {
             goto again;
-        else if ((errno != EAGAIN) && (errno != EWOULDBLOCK))
+        }
+        else if (errno == EPIPE) {
+            obj->bufInPtr = obj->bufOutPtr = obj->buf;	/* flush buf */
+            shutdown_obj(obj);
+        }
+        else if ((errno != EAGAIN) && (errno != EWOULDBLOCK)) {
             err_msg(errno, "read error on fd=%d (%s)",
                 obj->fd, obj->name);
+        }
     }
     else if (n == 0) {
         shutdown_obj(obj);
