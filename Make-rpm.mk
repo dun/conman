@@ -2,7 +2,7 @@
 # Makefile Include for RPM Construction
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Make-rpm.mk,v 1.10 2001/12/05 19:25:22 dun Exp $
+# $Id: Make-rpm.mk,v 1.11 2001/12/05 20:49:29 dun Exp $
 ##
 # REQUIREMENTS:
 # - requires project to be under CVS version control
@@ -85,8 +85,7 @@ rpm-internal: tar-internal
 	rpm --showrc | egrep "_(gpg|pgp)_name" >/dev/null && sign="--sign"; \
 	rpm -ba --define "_tmppath $$tmp/TMP" --define "_topdir $$tmp" \
 	  $$sign --quiet $$tmp/SPECS/$$pkg.spec >$$log 2>&1 \
-	    && cp -p $$tmp/RPMS/*/$$pkg-$$ver*.*.rpm \
-	      $$tmp/SRPMS/$$pkg-$$ver*.src.rpm . \
+	    && cp -p $$tmp/RPMS/*/$$pkg-*.rpm $$tmp/SRPMS/$$pkg-*.src.rpm . \
 	    || cat $$log; \
 	rm -rf $$tmp
 
