@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-conf.c,v 1.27 2001/08/17 01:52:16 dun Exp $
+ *  $Id: client-conf.c,v 1.28 2001/08/27 21:01:15 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -21,9 +21,12 @@
 #include "common.h"
 #include "client.h"
 #include "errors.h"
+#include "lex.h"
+#include "list.h"
 #include "util.h"
 
 
+static void read_consoles_from_file(List consoles, char *file);
 static void display_client_help(char *prog);
 
 
@@ -104,7 +107,7 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
     char *str;
 
     opterr = 0;
-    while ((c = getopt(argc, argv, "bd:e:fhjl:mqQrvV")) != -1) {
+    while ((c = getopt(argc, argv, "bd:e:fF:hjl:mqQrvV")) != -1) {
         switch(c) {
         case 'b':
             conf->req->enableBroadcast = 1;
@@ -124,6 +127,9 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
         case 'f':
             conf->req->enableForce = 1;
             conf->req->enableJoin = 0;
+            break;
+        case 'F':
+            read_consoles_from_file(conf->req->consoles, optarg);
             break;
         case 'h':
             display_client_help(argv[0]);
@@ -175,13 +181,62 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
             if ((q = strchr(p, ',')))
                 *q++ = '\0';
             if (*p) {
-                str = create_string(p);
-                if (!list_append(conf->req->consoles, str))
+                if (!list_append(conf->req->consoles, create_string(p)))
                     err_msg(0, "Out of memory");
             }
             p = q;
         }
     }
+    return;
+}
+
+
+static void read_consoles_from_file(List consoles, char *file)
+{
+    int fd;
+    struct stat fdStat;
+    int len;
+    char *buf;
+    int n;
+    Lex l;
+    int tok;
+
+    if ((fd = open(file, O_RDONLY)) < 0)
+        err_msg(errno, "Unable to open \"%s\"", file);
+    if (fstat(fd, &fdStat) < 0)
+        err_msg(errno, "Unable to stat \"%s\"", file);
+    len = fdStat.st_size;
+    if (!(buf = malloc(len + 1)))
+        err_msg(errno, "Unable to allocate memory for parsing \"%s\"", file);
+    if ((n = read_n(fd, buf, len)) < 0)
+        err_msg(errno, "Unable to read \"%s\"", file);
+    assert(n == len);
+    if (close(fd) < 0)
+        err_msg(errno, "Unable to close \"%s\"", file);
+    buf[len] = '\0';
+
+    if (!(l = lex_create(buf, NULL)))
+        err_msg(0, "Unable to create lexer");
+    while ((tok = lex_next(l)) != LEX_EOF) {
+        switch(tok) {
+        case LEX_INT:
+            /* fall-thru... whee! */
+        case LEX_STR:
+            if (!list_append(consoles, create_string(lex_text(l))))
+                err_msg(0, "Out of memory");
+            break;
+        case LEX_EOL:
+            break;
+        case LEX_ERR:
+            fprintf(stderr, "ERROR: %s:%d: unmatched quote.\n",
+                file, lex_line(l));
+            break;
+        default:
+            break;
+        }
+    }
+    lex_destroy(l);
+    free(buf);
     return;
 }
 
@@ -199,6 +254,7 @@ static void display_client_help(char *prog)
         " (default: %s:%d).\n", DEFAULT_CONMAN_HOST, atoi(DEFAULT_CONMAN_PORT));
     printf("  -e CHAR   Set escape character (default: '%s').\n", esc);
     printf("  -f        Force connection (console stealing).\n");
+    printf("  -F FILE   Read console names from file.\n");
     printf("  -h        Display this help.\n");
     printf("  -j        Join connection (console sharing).\n");
     printf("  -l FILE   Log connection output to file.\n");
