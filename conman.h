@@ -2,7 +2,7 @@
  *  conman.h
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: conman.h,v 1.4 2001/05/21 22:52:39 dun Exp $
+ *  $Id: conman.h,v 1.5 2001/05/22 19:39:27 dun Exp $
 \******************************************************************************/
 
 
@@ -17,9 +17,9 @@
 #define DEFAULT_CLIENT_ESCAPE	'&'
 #define DEFAULT_SERVER_CONF	"/etc/conman.conf"
 #define DEFAULT_CONSOLE_BAUD	9600
-#define MAX_SOCK_LINE		8192
-#define MAX_BUF_SIZE		4096
+#define MAX_BUF_SIZE		8192
 #define MAX_LINE		1024
+#define MAX_SOCK_LINE		8192
 
 
 typedef enum cmd_type {
