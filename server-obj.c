@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.55 2001/12/27 20:10:50 dun Exp $
+ *  $Id: server-obj.c,v 1.56 2001/12/27 22:10:43 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -795,44 +795,45 @@ void unlink_obj(obj_t *obj)
 
     i = list_iterator_create(obj->readers);
     while ((x = list_next(i))) {
-        if (list_delete_all(x->writers, (ListFindF) find_obj, obj) > 0) {
-            DPRINTF("Unlinked [%s] from [%s] writers.\n", obj->name, x->name);
-            /*
-             *  If a "writable" client is being unlinked from a console ...
+
+        if (list_delete_all(x->writers, (ListFindF) find_obj, obj) == 0)
+            continue;
+
+        DPRINTF("Unlinked [%s] from [%s] writers.\n", obj->name, x->name);
+        /*
+         *  If a "writable" client is being unlinked from a console ...
+         */
+        if (is_client_obj(obj) && is_console_obj(x)) {
+
+            console = x;
+
+            /*  Create msg for console logfile and its existing writer(s)
+             *    regarding the "writable" client's departure.
              */
-            if (is_client_obj(obj) && is_console_obj(x)) {
+            now = create_short_time_string(0);
+            tty = obj->aux.client.req->tty;
+            snprintf(buf, sizeof(buf),
+                "%sConsole [%s] departed by <%s@%s>%s%s at %s%s",
+                CONMAN_MSG_PREFIX, console->name,
+                obj->aux.client.req->user, obj->aux.client.req->host,
+                (tty ? " on " : ""), (tty ? tty : ""), now, CONMAN_MSG_SUFFIX);
+            free(now);
+            strcpy(&buf[sizeof(buf) - 3], "\r\n");
 
-                console = x;
+            /*  If console session is being logged,
+             *    write msg recording departure of a console writer.
+             */
+            if ((x = get_console_logfile_obj(console)))
+                write_obj_data(x, buf, strlen(buf), 1);
 
-                /*  Create msg for console logfile and its existing writer(s)
-                 *    regarding the "writable" client's departure.
-                 */
-                now = create_short_time_string(0);
-                tty = obj->aux.client.req->tty;
-                snprintf(buf, sizeof(buf),
-                    "%sConsole [%s] departed by <%s@%s>%s%s at %s%s",
-                    CONMAN_MSG_PREFIX, console->name,
-                    obj->aux.client.req->user, obj->aux.client.req->host,
-                    (tty ? " on " : ""), (tty ? tty : ""), now,
-                    CONMAN_MSG_SUFFIX);
-                free(now);
-                strcpy(&buf[sizeof(buf) - 3], "\r\n");
-
-                /*  If console session is being logged,
-                 *    write msg recording departure of a console writer.
-                 */
-                if ((x = get_console_logfile_obj(console)))
-                    write_obj_data(x, buf, strlen(buf), 1);
-
-                /*  Write msg to existing console writer(s).
-                 */
-                j = list_iterator_create(console->writers);
-                while ((x = list_next(j))) {
-                    assert(is_client_obj(x));
-                    write_obj_data(x, buf, strlen(buf), 1);
-                }
-                list_iterator_destroy(j);
+            /*  Write msg to existing console writer(s).
+             */
+            j = list_iterator_create(console->writers);
+            while ((x = list_next(j))) {
+                assert(is_client_obj(x));
+                write_obj_data(x, buf, strlen(buf), 1);
             }
+            list_iterator_destroy(j);
         }
     }
     list_iterator_destroy(i);
