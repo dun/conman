@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client.c,v 1.18 2002/05/12 19:20:29 dun Exp $
+ *  $Id: client.c,v 1.19 2002/05/16 16:54:06 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -38,6 +38,12 @@
 int main(int argc, char *argv[])
 {
     client_conf_t *conf;
+
+#ifdef NDEBUG
+    log_set_file(stderr, LOG_WARNING);
+#else /* NDEBUG */
+    log_set_file(stderr, LOG_DEBUG);
+#endif /* NDEBUG */
 
     conf = create_client_conf();
     process_client_env_vars(conf);
