@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.c,v 1.65 2002/09/18 20:32:17 dun Exp $
+ *  $Id: server.c,v 1.66 2003/08/02 00:02:18 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -67,6 +67,7 @@ static void sig_hup_handler(int signum);
 static void schedule_timestamp(server_conf_t *conf);
 static void timestamp_logfiles(server_conf_t *conf);
 static void create_listen_socket(server_conf_t *conf);
+static void open_objs(server_conf_t *conf);
 static void mux_io(server_conf_t *conf);
 static void open_daemon_logfile(server_conf_t *conf);
 static void reopen_logfiles(server_conf_t *conf);
@@ -98,9 +99,7 @@ int main(int argc, char *argv[])
     posix_signal(SIGPIPE, SIG_IGN);
     posix_signal(SIGTERM, exit_handler);
 
-    conf = create_server_conf();
-    process_server_cmd_line(argc, argv, conf);
-    process_server_conf_file(conf);
+    conf = create_server_conf(argc, argv);
 
     if (conf->enableVerbose)
         display_configuration(conf);
@@ -123,6 +122,7 @@ int main(int argc, char *argv[])
     log_msg(LOG_NOTICE, "Starting ConMan daemon %s (pid %d)",
         VERSION, (int) getpid());
 
+    open_objs(conf);
     mux_io(conf);
     destroy_server_conf(conf);
 
@@ -395,7 +395,7 @@ static void timestamp_logfiles(server_conf_t *conf)
         if (!is_logfile_obj(logfile))
             continue;
         snprintf(buf, sizeof(buf), "%sConsole [%s] log at %s%s",
-            CONMAN_MSG_PREFIX, logfile->aux.logfile.consoleName,
+            CONMAN_MSG_PREFIX, logfile->aux.logfile.console->name,
             now, CONMAN_MSG_SUFFIX);
         strcpy(&buf[sizeof(buf) - 3], "\r\n");
         write_obj_data(logfile, buf, strlen(buf), 1);
@@ -450,6 +450,30 @@ static void create_listen_socket(server_conf_t *conf)
 }
 
 
+static void open_objs(server_conf_t *conf)
+{
+/*  Initially opens everything in the 'objs' list.
+ */
+    ListIterator i;
+    obj_t *obj;
+
+    i = list_iterator_create(conf->objs);
+    while ((obj = list_next(i))) {
+        if (is_serial_obj(obj))
+            open_serial_obj(obj);
+        else if (is_telnet_obj(obj))
+            connect_telnet_obj(obj);
+        else if (is_logfile_obj(obj))
+            open_logfile_obj(obj, conf->enableZeroLogs);
+        else
+            log_err(0, "INTERNAL: Unrecognized object [%s] type=%d",
+                obj->name, obj->type);
+    }
+    list_iterator_destroy(i);
+    return;
+}
+
+
 static void mux_io(server_conf_t *conf)
 {
 /*  Multiplexes I/O between all of the objs in the configuration.
@@ -472,6 +496,10 @@ static void mux_io(server_conf_t *conf)
     while (!done) {
 
         if (reconfig) {
+            /*
+             *  FIXME: A reconfig should pro'ly resurrect "downed" serial objs
+             *         and reset reconnect timers of "downed" telnet objs.
+             */
             reopen_logfiles(conf);
             reconfig = 0;
         }
@@ -584,6 +612,7 @@ static void open_daemon_logfile(server_conf_t *conf)
  */
     static int once = 1;
     const char *mode = "a";
+    mode_t mask;
     FILE *fp;
     int fd;
 
@@ -597,33 +626,58 @@ static void open_daemon_logfile(server_conf_t *conf)
             mode = "w";
         once = 0;
     }
-    if (!(fp = fopen(conf->logFileName, mode))) {
-        log_msg(LOG_WARNING, "Unable to open logfile \"%s\": %s",
+    /*  Perform conversion specifier expansion if needed.
+     */
+    if (conf->logFmtName) {
+
+        char buf[MAX_LINE];
+
+        if (format_obj_string(buf, sizeof(buf), NULL, conf->logFmtName) < 0) {
+            log_msg(LOG_WARNING,
+                "Unable to open daemon logfile: filename too long");
+            goto err;
+        }
+        free(conf->logFileName);
+        conf->logFileName = str_create(buf);
+    }
+    /*  Protect logfile against unauthorized writes by removing
+     *    group+other write-access from current mask.
+     */
+    mask = umask(0);
+    umask(mask | 022);
+    /*
+     *  Open the logfile.
+     */
+    fp = fopen(conf->logFileName, mode);
+    umask(mask);
+
+    if (!fp) {
+        log_msg(LOG_WARNING, "Unable to open daemon logfile \"%s\": %s",
             conf->logFileName, strerror(errno));
         goto err;
     }
     if ((fd = fileno(fp)) < 0) {
         log_msg(LOG_WARNING,
-            "Unable to obtain descriptor for logfile \"%s\": %s",
+            "Unable to obtain descriptor for daemon logfile \"%s\": %s",
             conf->logFileName, strerror(errno));
         goto err;
     }
     if (fd_get_write_lock(fd) < 0) {
-        log_msg(LOG_WARNING, "Unable to lock logfile \"%s\"",
+        log_msg(LOG_WARNING, "Unable to lock daemon logfile \"%s\"",
             conf->logFileName);
         if (fclose(fp) == EOF)
-            log_msg(LOG_WARNING, "Unable to close logfile \"%s\"",
+            log_msg(LOG_WARNING, "Unable to close daemon logfile \"%s\"",
                 conf->logFileName);
         goto err;
     }
     fd_set_close_on_exec(fd);
-
-    /*  Transition to new log file.
+    /*
+     *  Transition to new log file.
      */
     log_set_file(fp, conf->logFileLevel, 1);
     if (conf->logFilePtr)
         if (fclose(conf->logFilePtr) == EOF)
-            log_msg(LOG_WARNING, "Unable to close logfile \"%s\"",
+            log_msg(LOG_WARNING, "Unable to close daemon logfile \"%s\"",
                 conf->logFileName);
     conf->logFilePtr = fp;
     return;
@@ -634,7 +688,7 @@ err:
     log_set_file(NULL, 0, 0);
     if (conf->logFilePtr)
         if (fclose(conf->logFilePtr) == EOF)
-            log_msg(LOG_WARNING, "Unable to close logfile \"%s\"",
+            log_msg(LOG_WARNING, "Unable to close daemon logfile \"%s\"",
                 conf->logFileName);
     conf->logFilePtr = NULL;
     return;
@@ -729,8 +783,7 @@ static void reset_console(obj_t *console, const char *cmd)
     DPRINTF((5, "Resetting console [%s].\n", console->name));
     console->gotReset = 0;
 
-    if (str_sub(cmdbuf, sizeof(cmdbuf), cmd,
-      DEFAULT_CONFIG_ESCAPE, console->name) < 0) {
+    if (format_obj_string(cmdbuf, sizeof(cmdbuf), console, cmd) < 0) {
         log_msg(LOG_NOTICE, "Unable to reset console [%s]: command too long",
             console->name);
         return;

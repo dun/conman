@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: common.h,v 1.42 2002/09/27 03:23:19 dun Exp $
+ *  $Id: common.h,v 1.43 2003/08/02 00:02:18 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -36,9 +36,10 @@
  */
 #define DEFAULT_CLIENT_ESCAPE   '&'
 
-/*  Escape char for the server's configuration file.
+/*  Ye old deprecated escape char for the server's configuration file.
  */
-#define DEFAULT_CONFIG_ESCAPE   '&'
+#define DEPRECATED_CONF_ESCAPE  '&'
+#define DO_CONF_ESCAPE_ERROR    1
 
 /*  Name of daemon for TCP-Wrappers.
  */

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-esc.c,v 1.35 2002/09/18 20:32:17 dun Exp $
+ *  $Id: server-esc.c,v 1.36 2003/08/02 00:02:18 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -567,7 +567,8 @@ static int process_telnet_cmd(obj_t *telnet, int cmd, int opt)
     assert(telnet->aux.telnet.conState == CONMAN_TELCON_UP);
 
     if (!TELCMD_OK(cmd)) {
-        log_msg(LOG_WARNING,
+        /*  FIXME: Changed from LOG_WARNING to LOG_DEBUG. 20030403 */
+        log_msg(LOG_DEBUG,
             "Received invalid telnet cmd %#.2x from console [%s]",
             cmd, telnet->name);
         return(-1);
@@ -577,7 +578,8 @@ static int process_telnet_cmd(obj_t *telnet, int cmd, int opt)
         (TELOPT_OK(opt) ? telopts[opt - TELOPT_FIRST] : ""), telnet->name));
 
     if (!TELOPT_OK(opt)) {
-        log_msg(LOG_WARNING,
+        /*  FIXME: Changed from LOG_WARNING to LOG_DEBUG. 20030403 */
+        log_msg(LOG_DEBUG,
             "Received invalid telnet opt %#.2x from console [%s]",
             opt, telnet->name);
         return(-1);

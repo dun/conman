@@ -1,4 +1,4 @@
-.\" $Id: conman.conf.5.in,v 1.7 2002/09/14 04:16:55 dun Exp $
+.\" $Id: conman.conf.5.in,v 1.8 2003/08/02 00:02:18 dun Exp $
 
 .TH CONMAN.CONF 5 "@DATE@" "@PROJECT@-@VERSION@" "LLNL"
 
@@ -29,13 +29,14 @@ Specifies a directory prefix for log files that are not defined via an
 absolute pathname.
 .TP
 \fBlogfile\fR \fB=\fR "\fIfile\fR[,\fIpriority\fR]"
-Specifies the file to which log messages are appended.  If an absolute
-pathname is not specified, the file's location is relative to \fBlogdir\fR
-(assuming it has been previously defined).  This file will be created if it
-does not already exist.  The filename may optionally be followed by a comma
-and a minimum priority at which messages will be logged.  Refer to
-\fBsyslog.conf\fR(5) for a list of priorities.  The default priority is
-\fBnotice\fR.  If this keyword is used in conjunction with the \fBsyslog\fR
+Specifies the file to which log messages are appended.  This string undergoes
+conversion specifier expansion (cf, \fBCONVERSION SPECIFICATIONS\fR).
+If an absolute pathname is not specified, the file's location is relative
+to \fBlogdir\fR (assuming it has been previously defined).  This file will
+be created if it does not already exist.  The filename may optionally be
+followed by a comma and a minimum priority at which messages will be logged.
+Refer to \fBsyslog.conf\fR(5) for a list of priorities.  The default priority
+is \fBnotice\fR.  If this keyword is used in conjunction with the \fBsyslog\fR
 keyword, messages will be sent to both locations.
 .TP
 \fBloopback\fR \fB=\fR (\fBon\fR|\fBoff\fR)
@@ -45,17 +46,18 @@ thereby only accepting local client connections directed to that address
 .TP
 \fBpidfile\fR \fB=\fR "\fIfile\fR"
 Specifies the file to which the daemon's PID is written.
+The use of a pidfile is recommended if you want to use the
+daemon's '\fB-k\fR', '\fB-q\fR', or '\fB-r\fR' options.
 .TP
 \fBport\fR \fB=\fR \fIinteger\fR
 Specifies the port on which the daemon will listen for client connections.
 .TP
 \fBresetcmd\fR \fB=\fR "\fIstring\fR"
-Specifies a command string to be invoked by a subshell upon receipt of the
-client's "reset" escape.  Multiple commands within a string may be
-separated with semicolons.  All occurrences of the '&' character will be
-replaced with the name of the console to which the client is connected.
-This command string will be invoked multiple times if the client is
-connected to multiple consoles.
+Specifies a command string to be invoked by a subshell upon receipt
+of the client's "reset" escape.  Multiple commands within a string
+may be separated with semicolons.  This string undergoes conversion
+specifier expansion (cf, \fBCONVERSION SPECIFICATIONS\fR) and will be
+invoked multiple times if the client is connected to multiple consoles.
 .TP
 \fBsyslog\fR \fB=\fR "\fIfacility\fR"
 Specifies that log messages are to be sent to the system logger
@@ -81,9 +83,9 @@ following key/value pairs:
 .TP
 \fBlog\fR \fB=\fR "\fIfile\fR"
 Specifies the default log file to use for each \fBconsole\fR directive.
-This filename must contain at least one '\fB&\fR' character, each
-occurrence of which will be replaced with the name of the console.  If an
-absolute pathname is not specified, the file's location will be relative to
+This string undergoes conversion specifier expansion (cf, \fBCONVERSION
+SPECIFICATIONS\fR) and must contain either '\fB%N\fR' or '\fB%D\fR'.
+If an absolute pathname is not given, the file's location is relative to
 \fBlogdir\fR (assuming it has been previously defined).
 .TP
 \fBlogopts\fR \fB=\fR "(\fBsanitize\fR|\fBnosanitize\fR)"
@@ -133,10 +135,10 @@ connection is specified with the "\fIhost\fR:\fIport\fR" format (where
 \fIhost\fR is either a hostname or IP address).  This keyword is required.
 .TP
 \fBlog\fR \fB=\fR "\fIfile\fR"
-Specifies the file where console output is logged.  If an absolute pathname
-is not specified, the file's location is relative to \fBlogdir\fR (assuming
-it has been previously defined).  Each occurrence of the '\fB&\fR'
-character is replaced with the name of the console.  An empty log string
+Specifies the file where console output is logged.  This string undergoes
+conversion specifier expansion (cf, \fBCONVERSION SPECIFICATIONS\fR).
+If an absolute pathname is not given, the file's location is relative to
+\fBlogdir\fR (assuming it has been previously defined).  An empty log string
 (ie, log="") disables logging, overriding the global log name.
 .TP
 \fBlogopts\fR \fB=\fR "\fIstring\fR"
@@ -144,6 +146,52 @@ This keyword is optional (cf, \fBGLOBAL DIRECTIVES\fR).
 .TP
 \fBseropts\fR \fB=\fR "\fIstring\fR"
 This keyword is optional (cf, \fBGLOBAL DIRECTIVES\fR).
+
+.SH CONVERSION SPECIFICATIONS
+A conversion specifier is a two-character sequence beginning with
+a '\fB%\fR' character.  The second character in the sequence specifies the
+type of conversion to be applied.  The following specifiers are supported:
+.TP
+\fB%N\fR
+The console name (from the \fBname\fR string).
+.TP
+\fB%D\fR
+The console device basename (from the \fBdev\fR string),
+with leading directory components removed.
+.TP
+\fB%P\fR
+The daemon's process identifier.
+.TP
+\fB%Y\fR
+The year as a 4-digit number with the century.
+.TP
+\fB%y\fR
+The year as a 2-digit number without the century.
+.TP
+\fB%m\fR
+The month as a 2-digit number (01-12).
+.TP
+\fB%d\fR
+The day of the month as a 2-digit number (01-31).
+.TP
+\fB%H\fR
+The hour as a 2-digit number using a 24-hour clock (00-23).
+.TP
+\fB%M\fR
+The minute as a 2-digit number (00-59).
+.TP
+\fB%S\fR
+The seconds as a 2-digit number (00-61).
+.TP
+\fB%s\fR
+The number of seconds since the Epoch.
+.TP
+\fB%%\fR
+A literal '%' character.
+.PP
+The console name (\fB%N\fR) and device (\fB%D\fR) specifiers are "sanitized"
+in that non-printable characters and the forward-slash (/) character are
+replaced with underscores.
 
 .SH FILES
 .I @CONMAN_CONF@

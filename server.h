@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.h,v 1.56 2002/09/17 22:40:25 dun Exp $
+ *  $Id: server.h,v 1.57 2003/08/02 00:02:18 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -87,7 +87,8 @@ typedef enum logfile_sanitize_state {   /* log CR/LF insanity state (2 bits) */
 } log_sane_state_t;
 
 typedef struct logfile_obj {            /* LOGFILE AUX OBJ DATA:             */
-    char            *consoleName;       /*  name of console being logged     */
+    struct base_obj *console;           /*  con obj ref for name expansion   */
+    char            *fmtName;           /*  name with conversion specifiers  */
     logopt_t         opts;              /*  local options                    */
     unsigned         sanitizeState:2;   /*  log_sane_state_t CR/LF insanity  */
 } logfile_obj_t;
@@ -101,6 +102,7 @@ typedef struct serial_opt {             /* SERIAL OBJ OPTIONS:               */
 
 typedef struct serial_obj {             /* SERIAL AUX OBJ DATA:              */
     char            *dev;               /*  local serial device name         */
+    seropt_t         opts;              /*  serial options                   */
     struct base_obj *logfile;           /*  log obj ref for console replay   */
     struct termios   tty;               /*  saved cooked tty mode            */
 } serial_obj_t;
@@ -164,11 +166,13 @@ typedef struct server_conf {
     char            *confFileName;      /* configuration file name           */
     char            *logDirName;        /* dir prefix for relative logfiles  */
     char            *logFileName;       /* file to which logmsgs are written */
+    char            *logFmtName;        /* name with conversion specifiers   */
     FILE            *logFilePtr;        /* msg log file ptr, !closed at exit */
     int              logFileLevel;      /* level at which to log msg to file */
     char            *pidFileName;       /* file to which pid is written      */
     char            *resetCmd;          /* cmd to invoke for reset esc-seq   */
     int              syslogFacility;    /* syslog facility or -1 if disabled */
+    int              throwSignal;       /* signal num to send running daemon */
     int              tStampMinutes;     /* minutes 'tween logfile timestamps */
     time_t           tStampNext;        /* time next stamp written to logs   */
     int              fd;                /* configuration file descriptor     */
@@ -244,13 +248,9 @@ typedef struct client_args {
 **  server-conf.c  **
 \*******************/
 
-server_conf_t * create_server_conf(void);
+server_conf_t * create_server_conf(int argc, char *argv[]);
 
 void destroy_server_conf(server_conf_t *conf);
-
-void process_server_cmd_line(int argc, char *argv[], server_conf_t *conf);
-
-void process_server_conf_file(server_conf_t *conf);
 
 
 /******************\
@@ -290,6 +290,8 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name,
 obj_t * create_serial_obj(server_conf_t *conf, char *name,
     char *dev, seropt_t *opts, char *errbuf, int errlen);
 
+int open_serial_obj(obj_t *serial);
+
 obj_t * create_telnet_obj(server_conf_t *conf, char *name,
     char *host, int port, char *errbuf, int errlen);
 
@@ -298,6 +300,8 @@ int connect_telnet_obj(obj_t *telnet);
 void disconnect_telnet_obj(obj_t *telnet);
 
 void destroy_obj(obj_t *obj);
+
+int format_obj_string(char *buf, int buflen, obj_t *obj, const char *fmt);
 
 int compare_objs(obj_t *obj1, obj_t *obj2);
 

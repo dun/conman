@@ -1,4 +1,4 @@
-.\" $Id: conmand.8.in,v 1.8 2002/05/19 03:13:52 dun Exp $
+.\" $Id: conmand.8.in,v 1.9 2003/08/02 00:02:18 dun Exp $
 
 .TH CONMAND 8 "@DATE@" "@PROJECT@-@VERSION@" "LLNL"
 
@@ -22,8 +22,9 @@ Specify a configuration file, overriding the default location [@CONMAN_CONF@].
 Display a summary of the command-line options.
 .TP
 .B \-k
-Kill the \fBconmand\fR process that is associated with the specified
-configuration.
+Send a SIGTERM to the \fBconmand\fR process associated with the specified
+configuration, thereby killing the daemon.  Returns 0 if the daemon was
+successfully signaled; otherwise, returns 1.
 .TP
 .B \-L
 Display license information.
@@ -33,9 +34,16 @@ Specify the port on which \fBconmand\fR will listen for clients, overriding
 both the default port [@CONMAN_PORT@] and the port specified in the
 configuration file.
 .TP
+.B \-q
+Displays the PID of the \fBconmand\fR process associated with the specified
+configuration if it appears active.  Returns 0 if the configuration appears
+active; otherwise, returns 1.
+.TP
 .B \-r
-Reopen both the daemon's log file and individual console log files.
-This is useful for \fBlogrotate\fR configurations.
+Send a SIGHUP to the \fBconmand\fR process associated with the specified
+configuration, thereby re-opening both that daemon's log file and individual
+console log files.  Returns 0 if the daemon was successfully signaled;
+otherwise, returns 1.
 .TP
 .B \-v
 Enable verbose mode.
@@ -50,8 +58,10 @@ at start-up.
 .SH SIGNALS
 .TP 12
 .B SIGHUP
-Close and reopen the console log files.
-.TP 12
+Close and re-open both the daemon's log file and the individual console
+log files.  Conversion specifiers within filenames will be re-evaluated.
+This is useful for \fBlogrotate\fR configurations.
+.TP
 .B SIGTERM
 Terminate the daemon.
 
@@ -64,10 +74,10 @@ has been read, at which time future messages are discarded unless either
 the \fBlogfile\fR or \fBsyslog\fR keyword has been specified (cf,
 \fBconman.conf\fR(5)).
 .PP
-If the configuration file is modified while the daemon is running,
-the '\fB-k\fR' and '\fB-r\fR' options may be unable to identify the daemon
-process.  Consequently, the appropriate signal may need to be sent to the
-daemon manually.
+If the configuration file is modified while the daemon is running and a
+\fBpidfile\fR was not originally specified, the '\fB-k\fR' and '\fB-r\fR'
+options may be unable to identify the daemon process; consequently, the
+appropriate signal may need to be sent to the daemon manually.
 
 .SH AUTHOR
 Chris Dunlap <cdunlap@llnl.gov>

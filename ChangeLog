@@ -1,6 +1,47 @@
+2003-08-01  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* : Merged 0.1.8.5 & 0.1.8.6 into mainline.
+
+2003-07-24  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* : Released 0.1.8.6.
+
+	* etc/conman.init:
+	Rewrote init script to be platform independent {gnats:72}.
+
+	* server-conf.c, man/conman.conf.5.in, man/conmand.8.in:
+	Added '-q' cmdline option to daemon for pid query {gnats:72}.
+
+	* Makefile.in: Added tests for platform-dependent locations of the
+	init script {gnats:72}.
+
+	* server-conf.c, server-obj.c, server.c, server.h, etc/conman.conf,
+	man/conman.conf.5.in, man/conmand.8.in: Added fallback for determining
+	daemon's pid via use of the pid file.  Ensured pid file's perms are set
+	appropriately.  Separated config processing from parsing {gnats:72}.
+
+2003-07-13  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* : Released 0.1.8.5.
+
+	* etc/conman.conf, man/conman.conf.5.in: Tweaked docs {gnats:208}.
+
+2003-07-11  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* common.h, server-conf.c, server-logfile.c, server-obj.c, server.c,
+	server.h, etc/conman.conf, man/conman.conf.5.in, man/conmand.8.in:
+	Added support for conversion specifiers {gnats:208}.
+	The '&' specifier for the console name has been deprecated.
+
 2003-04-03  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* : Released 0.1.8.4.
+
+	* server-esc.c (process_telnet_cmd):
+	Lowered priority of invalid telnet cmd msgs to LOG_DEBUG.
+
+	* server-obj.c (destroy_obj): For tcflush() of serial obj, ensured
+	fd is valid and changed fatal err to nonfatal msg {gnats:93}.
 
 	* etc/conman.init: Fixed bug where active terminal server connections
 	were not closed when conmand's host was rebooted/halted {gnats:160}.
