@@ -2,7 +2,7 @@
  *  util.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: util.c,v 1.2 2001/05/09 22:21:02 dun Exp $
+ *  $Id: util.c,v 1.3 2001/05/11 22:48:18 dun Exp $
  ******************************************************************************
  *  Refer to "util.h" for documentation on public functions.
 \******************************************************************************/
@@ -262,7 +262,7 @@ SigFunc * Signal(int signum, SigFunc *f)
 #ifndef HAVE_INET_PTON
 int inet_pton(int family, const char *str, void *addr)
 {
-/*  cf. Stevens UNPv1, section 3.7, p72.
+/*  cf. Stevens UNPv1 p72.
  */
     struct in_addr tmpaddr;
 
@@ -282,7 +282,7 @@ int inet_pton(int family, const char *str, void *addr)
 #ifndef HAVE_INET_NTOP
 const char * inet_ntop(int family, const void *addr, char *str, size_t len)
 {
-/*  cf. Stevens UNPv1, section 3.7, p72.
+/*  cf. Stevens UNPv1 p72.
  */
     const unsigned char *p = (const unsigned char *) addr;
     char tmpstr[INET_ADDRSTRLEN];
