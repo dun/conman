@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.22 2001/08/01 21:45:19 dun Exp $
+ *  $Id: server-obj.c,v 1.23 2001/08/03 21:11:46 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -102,7 +102,7 @@ obj_t * create_logfile_obj(List objs, char *name, obj_t *console, int zeroLog)
     now = create_long_time_string(0);
     msg = create_fmt_string("%sConsole [%s] log started at %s%s",
         CONMAN_MSG_PREFIX, console->name, now, CONMAN_MSG_SUFFIX);
-    write_obj_data(logfile, msg, strlen(msg));
+    write_obj_data(logfile, msg, strlen(msg), 0);
     free(now);
     free(msg);
 
@@ -375,13 +375,13 @@ void link_objs(obj_t *src, obj_t *dst)
         free(now);
         buf[sizeof(buf) - 2] = '\n';
         buf[sizeof(buf) - 1] = '\0';
-        write_obj_data(src, buf, strlen(buf));
+        write_obj_data(src, buf, strlen(buf), 1);
 
         if (!(i = list_iterator_create(dst->writers)))
             err_msg(0, "Out of memory");
         while ((writer = list_next(i))) {
             assert(writer->type == CLIENT);
-            write_obj_data(writer, buf, strlen(buf));
+            write_obj_data(writer, buf, strlen(buf), 1);
             if (gotForce)
                 unlink_objs(dst, writer);
         }
@@ -450,7 +450,7 @@ static void unlink_objs_helper(obj_t *src, obj_t *dst)
             err_msg(0, "Out of memory");
         while ((writer = list_next(i))) {
             assert(writer->type == CLIENT);
-            write_obj_data(writer, buf, strlen(buf));
+            write_obj_data(writer, buf, strlen(buf), 1);
         }
         list_iterator_destroy(i);
     }
@@ -556,7 +556,7 @@ again:
              *    no more data can be written into its buffer.
              */
             if (!reader->gotEOF) {
-                write_obj_data(reader, buf, n);
+                write_obj_data(reader, buf, n, 0);
                 FD_SET(reader->fd, pWriteSet);
             }
         }
@@ -566,10 +566,12 @@ again:
 }
 
 
-int write_obj_data(obj_t *obj, void *src, int len)
+int write_obj_data(obj_t *obj, void *src, int len, int isInfo)
 {
 /*  Writes the buffer (src) of length (len) into the object's (obj)
- *    circular-buffer.  Returns the number of bytes written.
+ *    circular-buffer.  If (isInfo) is true, the data is considered
+ *    an informational message which a client may suppress.
+ *  Returns the number of bytes written.
  *  Note that this routine can write at most (MAX_BUF_SIZE - 1) bytes
  *    of data into the object's circular-buffer.
  */
@@ -596,6 +598,12 @@ int write_obj_data(obj_t *obj, void *src, int len)
 
     if ((rc = pthread_mutex_lock(&obj->bufLock)) != 0)
         err_msg(rc, "pthread_mutex_lock() failed for [%s]", obj->name);
+
+    /*  Do nothing if this is an informational message
+     *    and the client has requested not to be bothered.
+     */
+    if (isInfo && (obj->type == CLIENT) && (obj->aux.client.req->enableQuiet))
+        goto end;
 
     /*  Assert the buffer's input and output ptrs are valid upon entry.
      */
@@ -665,6 +673,7 @@ int write_obj_data(obj_t *obj, void *src, int len)
     assert(obj->bufOutPtr >= obj->buf);
     assert(obj->bufOutPtr < &obj->buf[MAX_BUF_SIZE]);
 
+end:
     if ((rc = pthread_mutex_unlock(&obj->bufLock)) != 0)
         err_msg(rc, "pthread_mutex_unlock() failed for [%s]", obj->name);
 

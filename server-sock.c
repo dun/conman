@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.23 2001/08/02 19:39:37 dun Exp $
+ *  $Id: server-sock.c,v 1.24 2001/08/03 21:11:46 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -361,6 +361,8 @@ static int parse_cmd_opts(Lex l, req_t *req)
                     req->enableForce = 1;
                 else if (lex_prev(l) == CONMAN_TOK_JOIN)
                     req->enableJoin = 1;
+                else if (lex_prev(l) == CONMAN_TOK_QUIET)
+                    req->enableQuiet = 1;
                 else if (lex_prev(l) == CONMAN_TOK_REGEX)
                     req->enableRegex = 1;
             }

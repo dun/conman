@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.h,v 1.11 2001/08/02 23:37:23 dun Exp $
+ *  $Id: common.h,v 1.12 2001/08/03 21:11:46 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -38,6 +38,7 @@
 #define ESC_CHAR_HELP		'?'
 #define ESC_CHAR_INFO		'I'
 #define ESC_CHAR_LOG		'L'
+#define ESC_CHAR_QUIET		'Q'
 #define ESC_CHAR_SUSPEND	'Z'
 
 #ifndef NDEBUG
@@ -66,6 +67,7 @@ typedef struct request {
     int    enableBroadcast;		/* true if b-casting to many consoles */
     int    enableForce;			/* true if forcing console connection */
     int    enableJoin;			/* true if joining console connection */
+    int    enableQuiet;			/* true if suppressing info messages  */
     int    enableRegex;			/* true if console matching via regex */
     List   consoles;			/* list of consoles affected by cmd   */
 } req_t;
@@ -103,6 +105,7 @@ enum proto_toks {
     CONMAN_TOK_OPTION,
     CONMAN_TOK_PROGRAM,
     CONMAN_TOK_QUERY,
+    CONMAN_TOK_QUIET,
     CONMAN_TOK_REGEX,
     CONMAN_TOK_TTY,
     CONMAN_TOK_USER,

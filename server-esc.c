@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-esc.c,v 1.5 2001/07/31 20:11:21 dun Exp $
+ *  $Id: server-esc.c,v 1.6 2001/08/03 21:11:46 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -16,6 +16,12 @@
 #include "list.h"
 #include "server.h"
 #include "util.h"
+
+
+static void perform_serial_break(obj_t *client);
+static void perform_log_replay(obj_t *client);
+static void perform_quiet_toggle(obj_t *client);
+static void perform_suspend(obj_t *client);
 
 
 int process_escape_chars(obj_t *client, void *src, int len)
@@ -49,6 +55,9 @@ int process_escape_chars(obj_t *client, void *src, int len)
             case ESC_CHAR_LOG:
                 perform_log_replay(client);
                 break;
+            case ESC_CHAR_QUIET:
+                perform_quiet_toggle(client);
+                break;
             case ESC_CHAR_SUSPEND:
                 perform_suspend(client);
                 break;
@@ -71,7 +80,7 @@ int process_escape_chars(obj_t *client, void *src, int len)
 }
 
 
-void perform_serial_break(obj_t *client)
+static void perform_serial_break(obj_t *client)
 {
 /*  Transmits a serial-break to each of the consoles written to by the client.
  */
@@ -93,7 +102,7 @@ void perform_serial_break(obj_t *client)
 }
 
 
-void perform_log_replay(obj_t *client)
+static void perform_log_replay(obj_t *client)
 {
 /*  Kinda like TiVo's Instant Replay.  :)
  *  Replays the last bytes from the console logfile (if present) associated
@@ -196,12 +205,32 @@ void perform_log_replay(obj_t *client)
     }
 
     DPRINTF("Performing log replay on console [%s].\n", console->name);
-    write_obj_data(client, buf, strlen(buf));
+    write_obj_data(client, buf, strlen(buf), 0);
     return;
 }
 
 
-void perform_suspend(obj_t *client)
+static void perform_quiet_toggle(obj_t *client)
+{
+/*  Toggles whether informational messages are suppressed by the client.
+ */
+    int rc;
+
+    assert(client->type == CLIENT);
+
+    if ((rc = pthread_mutex_lock(&client->bufLock)) != 0)
+        err_msg(rc, "pthread_mutex_lock() failed for [%s]", client->name);
+
+    client->aux.client.req->enableQuiet ^= 1;
+    DPRINTF("Toggled quiet-mode for client [%s].\n", client->name);
+
+    if ((rc = pthread_mutex_unlock(&client->bufLock)) != 0)
+        err_msg(rc, "pthread_mutex_unlock() failed for [%s]", client->name);
+    return;
+}
+
+
+static void perform_suspend(obj_t *client)
 {
 /*  Toggles whether output to the client is suspended/resumed.
  *  Note that while a client is suspended, data may still be written

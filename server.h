@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.19 2001/08/01 21:45:19 dun Exp $
+ *  $Id: server.h,v 1.20 2001/08/03 21:11:46 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -95,12 +95,6 @@ void process_server_conf_file(server_conf_t *conf);
 
 int process_escape_chars(obj_t *client, void *src, int len);
 
-void perform_serial_break(obj_t *client);
-
-void perform_log_replay(obj_t *client);
-
-void perform_suspend(obj_t *client);
-
 
 /******************\
 **  server-obj.c  **
@@ -127,7 +121,7 @@ void shutdown_obj(obj_t *obj);
 
 int read_from_obj(obj_t *obj, fd_set *pWriteSet);
 
-int write_obj_data(obj_t *obj, void *src, int len);
+int write_obj_data(obj_t *obj, void *src, int len, int isInfo);
 
 int write_to_obj(obj_t *obj);
 

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-tty.c,v 1.26 2001/08/02 23:37:23 dun Exp $
+ *  $Id: client-tty.c,v 1.27 2001/08/03 21:11:46 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -200,6 +200,9 @@ static int read_from_stdin(client_conf_t *conf)
             return(perform_help_esc(conf, c));
         case ESC_CHAR_LOG:
             return(send_esc_seq(conf, c));
+        case ESC_CHAR_QUIET:
+            conf->req->enableQuiet ^= 1;
+            return(send_esc_seq(conf, c));
         case ESC_CHAR_SUSPEND:
             return(perform_suspend_esc(conf, c));
         }
@@ -339,6 +342,8 @@ static int perform_help_esc(client_conf_t *conf, char c)
 {
 /*  Display the "escape sequence" help.
  *  Returns 1 on success.
+ *
+ *  FIX_ME: This routine is a total kludge.
  */
     char escChar[3];
     char escBreak[3];
@@ -346,6 +351,7 @@ static int perform_help_esc(client_conf_t *conf, char c)
     char escHelp[3];
     char escInfo[3];
     char escLog[3];
+    char escQuiet[3];
     char escSuspend[3];
     char *str;
 
@@ -357,6 +363,7 @@ static int perform_help_esc(client_conf_t *conf, char c)
     write_esc_char(ESC_CHAR_HELP, escHelp);
     write_esc_char(ESC_CHAR_INFO, escInfo);
     write_esc_char(ESC_CHAR_LOG, escLog);
+    write_esc_char(ESC_CHAR_QUIET, escQuiet);
     write_esc_char(ESC_CHAR_SUSPEND, escSuspend);
 
     str = create_fmt_string(
@@ -367,10 +374,11 @@ static int perform_help_esc(client_conf_t *conf, char c)
         "  %2s%-2s -  Transmit a serial-break.\r\n"
         "  %2s%-2s -  Display connection information.\r\n"
         "  %2s%-2s -  Replay up to the last %d bytes of the log.\r\n"
+        "  %2s%-2s -  Toggle whether info messages are suppressed.\r\n"
         "  %2s%-2s -  Suspend the client.\r\n",
         escChar, escHelp, escChar, escClose, escChar, escChar,
         escChar, escBreak, escChar, escInfo, escChar, escLog,
-        CONMAN_REPLAY_LEN, escChar, escSuspend);
+        CONMAN_REPLAY_LEN, escChar, escQuiet, escChar, escSuspend);
     if (write_n(STDOUT_FILENO, str, strlen(str)) < 0)
         err_msg(errno, "write() failed on fd=%d", STDOUT_FILENO);
     free(str);

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-sock.c,v 1.15 2001/07/31 17:13:21 dun Exp $
+ *  $Id: client-sock.c,v 1.16 2001/08/03 21:11:46 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -148,6 +148,16 @@ int send_req(client_conf_t *conf)
         goto overflow;
     ptr += n;
     len -= n;
+
+    if (conf->req->enableQuiet) {
+        n = snprintf(ptr, len, " %s=%s",
+            proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
+            proto_strs[LEX_UNTOK(CONMAN_TOK_QUIET)]);
+        if (n < 0 || n >= len)
+            goto overflow;
+        ptr += n;
+        len -= n;
+    }
 
     if (conf->req->enableRegex) {
         n = snprintf(ptr, len, " %s=%s",

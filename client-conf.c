@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-conf.c,v 1.22 2001/08/02 18:12:32 dun Exp $
+ *  $Id: client-conf.c,v 1.23 2001/08/03 21:11:46 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -104,7 +104,7 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
     char *str;
 
     opterr = 0;
-    while ((c = getopt(argc, argv, "bd:e:fhjl:mqrvV")) != -1) {
+    while ((c = getopt(argc, argv, "bd:e:fhjl:mqQrvV")) != -1) {
         switch(c) {
         case 'h':
             display_client_help(argv[0]);
@@ -146,6 +146,9 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
         case 'q':
             conf->req->command = QUERY;
             break;
+        case 'Q':
+            conf->req->enableQuiet = 1;
+            break;
         case 'r':
             conf->req->enableRegex = 1;
             break;
@@ -180,7 +183,7 @@ static void display_client_help(char *prog)
     printf("\n");
     printf("  -h        Display this help.\n");
     printf("  -b        Broadcast (write-only) to multiple consoles.\n");
-    printf("  -d HOST   Specify location of server"
+    printf("  -d HOST   Specify server destination."
         " (default: %s:%d).\n", DEFAULT_CONMAN_HOST, DEFAULT_CONMAN_PORT);
     printf("  -e CHAR   Set escape character (default: '%s').\n", esc);
     printf("  -f        Force connection (console stealing).\n");
@@ -188,6 +191,7 @@ static void display_client_help(char *prog)
     printf("  -l FILE   Log connection output to file.\n");
     printf("  -m        Monitor connection (read-only).\n");
     printf("  -q        Query server about specified console(s).\n");
+    printf("  -Q        Be quiet and suppress informational messages.\n");
     printf("  -r        Match console names via regex instead of globbing.\n");
     printf("  -v        Be verbose.\n");
     printf("  -V        Display version information.\n");
