@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-conf.c,v 1.46 2002/05/18 04:29:28 dun Exp $
+ *  $Id: server-conf.c,v 1.47 2002/05/18 23:09:00 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -347,7 +347,7 @@ static void display_server_help(char *prog)
     printf("  -c FILE   Specify configuration. [%s]\n", CONMAN_CONF);
     printf("  -h        Display this help.\n");
     printf("  -k        Kill daemon.\n");
-    printf("  -L        Display software license.\n");
+    printf("  -L        Display license information.\n");
     printf("  -p PORT   Specify port number. [%d]\n", atoi(CONMAN_PORT));
     printf("  -r        Re-open logs on daemon.\n");
     printf("  -v        Be verbose.\n");

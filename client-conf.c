@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-conf.c,v 1.53 2002/05/18 04:29:28 dun Exp $
+ *  $Id: client-conf.c,v 1.54 2002/05/18 23:09:00 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -331,7 +331,7 @@ static void display_client_help(client_conf_t *conf)
     printf("  -h        Display this help.\n");
     printf("  -j        Join connection (console-sharing).\n");
     printf("  -l FILE   Log connection output to file.\n");
-    printf("  -L        Display software license.\n");
+    printf("  -L        Display license information.\n");
     printf("  -m        Monitor connection (read-only).\n");
     printf("  -q        Query server about specified console(s).\n");
     printf("  -Q        Be quiet and suppress informational messages.\n");

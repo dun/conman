@@ -1,4 +1,4 @@
-.\" $Id: conmand.8.in,v 1.6 2002/05/18 04:29:28 dun Exp $
+.\" $Id: conmand.8.in,v 1.7 2002/05/18 23:09:00 dun Exp $
 
 .TH CONMAND 8 "@DATE@" "@PROJECT@-@VERSION@" "LLNL"
 
@@ -26,7 +26,7 @@ Kill the \fBconmand\fR process that is associated with the specified
 configuration.
 .TP
 .B \-L
-Display software license.
+Display license information.
 .TP
 .B \-p \fIport\fR
 Specify the port on which \fBconmand\fR will listen for clients, overriding
