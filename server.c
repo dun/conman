@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.9 2001/05/29 23:45:25 dun Exp $
+ *  $Id: server.c,v 1.10 2001/06/07 17:01:31 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -192,7 +192,7 @@ static void mux_io(server_conf_t *conf)
             if (obj->fd < 0) {
                 continue;
             }
-            if ((obj->type == CONSOLE) || (obj->type == SOCKET)) {
+            if ((obj->type == CONSOLE) || (obj->type == CLIENT)) {
                 FD_SET(obj->fd, &rset);
                 maxfd = MAX(maxfd, obj->fd);
             }
@@ -204,7 +204,7 @@ static void mux_io(server_conf_t *conf)
 
         /*  Specify a timeout to select() to prevent the following scenario:
          *    Suppose select() blocks after spawning a new thread to handle
-         *    a CONNECT request.  This thread adds a socket obj to the
+         *    a CONNECT request.  This thread adds a client obj to the
          *    conf->objs list to be handled by mux_io().  But read-activity
          *    on this socket (or its associated console) will not unblock
          *    select() because it is not yet listed in select()'s read-set.

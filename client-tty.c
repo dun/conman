@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-tty.c,v 1.13 2001/05/31 18:22:24 dun Exp $
+ *  $Id: client-tty.c,v 1.14 2001/06/07 17:01:30 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -22,16 +22,12 @@
 #include "util.h"
 
 
-#define ESC_CHAR_CLOSE		'.'
-#define ESC_CHAR_HELP		'?'
-#define ESC_CHAR_SUSPEND	'Z'
-
-
 static void exit_handler(int signum);
 static void set_raw_tty_mode(int fd, struct termios *old);
 static void restore_tty_mode(int fd, struct termios *new);
 static int read_from_stdin(client_conf_t *conf);
 static int write_to_stdout(client_conf_t *conf);
+static void send_esc_seq(client_conf_t *conf, char c);
 static void perform_close_esc(client_conf_t *conf, char c);
 static void perform_help_esc(client_conf_t *conf, char c);
 static void perform_suspend_esc(client_conf_t *conf, char c);
@@ -163,11 +159,12 @@ static int read_from_stdin(client_conf_t *conf)
  *  Note that this routine can conceivably block in the write() to the socket.
  */
     static enum { CHR, EOL, ESC } mode = EOL;
-    char esc = conf->escapeChar;
-    char c;
     int n;
-    char buf[2];
-    char *p = buf;
+    u_char c;
+    char esc = conf->escapeChar;
+    u_char buf[4];
+    u_char *p = buf;
+    u_char *q, *r;
 
     while ((n = read(STDIN_FILENO, &c, 1)) < 0) {
         if (errno != EINTR)
@@ -181,25 +178,27 @@ static int read_from_stdin(client_conf_t *conf)
         return(1);
     }
     if (mode == ESC) {
-        if (c == ESC_CHAR_CLOSE) {
+        mode = EOL;
+        switch(c) {
+        case ESC_CHAR_BREAK:
+            send_esc_seq(conf, c);
+            return(1);
+        case ESC_CHAR_CLOSE:
             perform_close_esc(conf, c);
-            mode = EOL;
             return(1);
-        }
-        if (c == ESC_CHAR_HELP) {
+        case ESC_CHAR_HELP:
             perform_help_esc(conf, c);
-            mode = EOL;
             return(1);
-        }
-        if (c == ESC_CHAR_SUSPEND) {
+        case ESC_CHAR_SUSPEND:
             perform_suspend_esc(conf, c);
-            mode = EOL;
             return(1);
         }
         if (c != esc) {
             /*
              *  If the input was escape-someothercharacter, write both the
              *    escape character and the other character to the socket.
+             *  Just write the escape character here, since the default case
+             *    for writing the other character is a few lines further down.
              */
             *p++ = esc;
         }
@@ -217,6 +216,16 @@ static int read_from_stdin(client_conf_t *conf)
      *  Besides, we're now practicing conservation here in California. ;)
      */
     if (conf->req->command == CONNECT) {
+        /*
+         *  Perform character-stuffing of the escape-sequence character
+         *    by doubling all occurrences of the "escape" character.
+         */
+        for (q=p-1; q>=buf; q--) {
+            if (*q == CONMAN_ESC_CHAR) {
+                for (r=p-1, p++; r>=q; r--)
+                    *(r+1) = *r;
+            }
+        }
         if (write_n(conf->req->sd, buf, p - buf) < 0) {
             if (errno == EPIPE)
                 return(0);
@@ -254,6 +263,20 @@ static int write_to_stdout(client_conf_t *conf)
 }
 
 
+static void send_esc_seq(client_conf_t *conf, char c)
+{
+/*  Transmit an escape sequence to the server.
+ */
+    char buf[2];
+
+    buf[0] = CONMAN_ESC_CHAR;
+    buf[1] = c;
+    if (write_n(conf->req->sd, buf, sizeof(buf)) < 0)
+        err_msg(errno, "write(%d) failed", STDOUT_FILENO);
+    return;
+}
+
+
 static void perform_close_esc(client_conf_t *conf, char c)
 {
 /*  Perform a client-initiated close.
@@ -275,6 +298,7 @@ static void perform_help_esc(client_conf_t *conf, char c)
 /*  Display the "escape sequence" help.
  */
     char escChar[3];
+    char escBreak[3];
     char escClose[3];
     char escHelp[3];
     char escSuspend[3];
@@ -284,6 +308,8 @@ static void perform_help_esc(client_conf_t *conf, char c)
 
     str = write_esc_char(conf->escapeChar, escChar);
     assert((str - escChar) <= sizeof(escChar));
+    str = write_esc_char(ESC_CHAR_BREAK, escBreak);
+    assert((str - escBreak) <= sizeof(escBreak));
     str = write_esc_char(ESC_CHAR_CLOSE, escClose);
     assert((str - escClose) <= sizeof(escClose));
     str = write_esc_char(ESC_CHAR_HELP, escHelp);
@@ -294,12 +320,13 @@ static void perform_help_esc(client_conf_t *conf, char c)
     str = create_fmt_string(
         "Supported ConMan Escape Sequences:\r\n"
         "  %2s%-2s -  Display this help message.\r\n"
+        "  %2s%-2s -  Transmit a serial-break.\r\n"
         "  %2s%-2s -  Terminate the connection.\r\n"
         "  %2s%-2s -  Send the escape character by typing it twice.\r\n"
         "  %2s%-2s -  Suspend the client.\r\n"
         "(Note that escapes are only recognized immediately after newline)\r\n",
-        escChar, escHelp, escChar, escClose, escChar, escChar,
-        escChar, escSuspend);
+        escChar, escHelp, escChar, escBreak, escChar, escClose,
+        escChar, escChar, escChar, escSuspend);
     if (write_n(STDOUT_FILENO, str, strlen(str)) < 0)
         err_msg(errno, "write(%d) failed", STDOUT_FILENO);
     free(str);

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.h,v 1.2 2001/05/31 18:20:19 dun Exp $
+ *  $Id: common.h,v 1.3 2001/06/07 17:01:31 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -11,6 +11,7 @@
 #include "list.h"
 
 
+#define CONMAN_ESC_CHAR		0xFF
 #define CONMAN_MSG_PREFIX	"<ConMan>"
 #define DEFAULT_CONMAN_HOST	"127.0.0.1"
 #define DEFAULT_CONMAN_PORT	7890
@@ -20,6 +21,12 @@
 #define MAX_BUF_SIZE		8192
 #define MAX_LINE		1024
 #define MAX_SOCK_LINE		8192
+
+
+#define ESC_CHAR_BREAK		'B'
+#define ESC_CHAR_CLOSE		'.'
+#define ESC_CHAR_HELP		'?'
+#define ESC_CHAR_SUSPEND	'Z'
 
 
 typedef enum cmd_type {

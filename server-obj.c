@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.11 2001/05/31 18:24:13 dun Exp $
+ *  $Id: server-obj.c,v 1.12 2001/06/07 17:01:31 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <termios.h>
 #include <time.h>
 #include <unistd.h>
 #include "common.h"
@@ -28,7 +29,8 @@ static obj_t * create_obj(enum obj_type type, List objs, char *name, int fd);
 static void set_raw_console_mode(obj_t *obj);
 static void restore_console_mode(obj_t *obj);
 static void unlink_objs_helper(obj_t *src, obj_t *dst);
-static void parse_buf_for_control(obj_t *obj, void *src, int *pLen);
+static int process_escape_chars(obj_t *client, void *src, int len);
+static void perform_serial_break(obj_t *client);
 
 
 obj_t * create_console_obj(List objs, char *name, char *dev,
@@ -51,7 +53,7 @@ obj_t * create_console_obj(List objs, char *name, char *dev,
     /* FIX_ME: check bps for valid baud rate (cf APUE p343-344) */
 
     if ((fd = open(dev, O_RDWR | O_NONBLOCK)) < 0) {
-        log_msg(0, "Unable to open console [%s]: %s", name, strerror(errno));
+        log_msg(0, "Unable to open console %s: %s", name, strerror(errno));
         return(NULL);
     }
     if (!isatty(fd)) {
@@ -90,7 +92,7 @@ obj_t * create_logfile_obj(List objs, char *logfile, char *console)
 
     flags = O_WRONLY | O_CREAT | O_APPEND | O_NONBLOCK;
     if ((fd = open(logfile, flags, S_IRUSR | S_IWUSR)) < 0) {
-        log_msg(0, "Unable to open logfile [%s]: %s", logfile, strerror(errno));
+        log_msg(0, "Unable to open logfile %s: %s", logfile, strerror(errno));
         return(NULL);
     }
 
@@ -108,9 +110,9 @@ obj_t * create_logfile_obj(List objs, char *logfile, char *console)
 }
 
 
-obj_t * create_socket_obj(List objs, req_t *req)
+obj_t * create_client_obj(List objs, req_t *req)
 {
-/*  Creates a new socket object and adds it to the master (objs) list.
+/*  Creates a new client object and adds it to the master (objs) list.
  *    Note: the socket is open and set for non-blocking I/O.
  *  Returns the new object.
  */
@@ -127,12 +129,12 @@ obj_t * create_socket_obj(List objs, req_t *req)
 
     snprintf(name, sizeof(name), "%s@%s:%d", req->user, req->host, req->port);
     name[sizeof(name) - 1] = '\0';
-    obj = create_obj(SOCKET, objs, name, req->sd);
+    obj = create_obj(CLIENT, objs, name, req->sd);
 
-    obj->aux.socket.req = req;
-    obj->aux.socket.gotIAC = 0;
-    time(&obj->aux.socket.timeLastRead);
-    if (obj->aux.socket.timeLastRead == ((time_t) -1))
+    obj->aux.client.req = req;
+    obj->aux.client.gotEscape = 0;
+    time(&obj->aux.client.timeLastRead);
+    if (obj->aux.client.timeLastRead == ((time_t) -1))
         err_msg(errno, "time() failed -- What time is it?");
 
     return(obj);
@@ -147,7 +149,7 @@ static obj_t * create_obj(enum obj_type type, List objs, char *name, int fd)
     obj_t *obj;
     int rc;
 
-    assert(type == CONSOLE || type == LOGFILE || type == SOCKET);
+    assert(type == CONSOLE || type == LOGFILE || type == CLIENT);
     assert(objs);
     assert(name);
     assert(fd >= 0);
@@ -223,13 +225,13 @@ void destroy_obj(obj_t *obj)
         if (obj->aux.logfile.console)
             free(obj->aux.logfile.console);
         break;
-    case SOCKET:
-        if (obj->aux.socket.req) {
+    case CLIENT:
+        if (obj->aux.client.req) {
         /*
          *  Prevent destroy_req() from closing 'sd' a second time.
          */
-            obj->aux.socket.req->sd = -1;
-            destroy_req(obj->aux.socket.req);
+            obj->aux.client.req->sd = -1;
+            destroy_req(obj->aux.client.req);
         }
         break;
     default:
@@ -338,6 +340,7 @@ void link_objs(obj_t *src, obj_t *dst)
  */
     ListIterator i;
     char *now;
+    char *tty;
     obj_t *writer;
     int gotBcast, gotForce, gotJoin;
     char buf[MAX_LINE];
@@ -351,20 +354,20 @@ void link_objs(obj_t *src, obj_t *dst)
      */
     if ((dst->type == CONSOLE) && (!list_is_empty(dst->writers))) {
 
-        assert(src->type == SOCKET);
-        gotBcast = list_count(src->aux.socket.req->consoles) > 1;
-        gotForce = src->aux.socket.req->enableForce;
-        gotJoin = src->aux.socket.req->enableJoin;
+        assert(src->type == CLIENT);
+        gotBcast = list_count(src->aux.client.req->consoles) > 1;
+        gotForce = src->aux.client.req->enableForce;
+        gotJoin = src->aux.client.req->enableJoin;
         assert(gotForce ^ gotJoin);
 
         now = create_time_string(0);
+        tty = src->aux.client.req->tty;
         snprintf(buf, sizeof(buf),
             "\r\n%s Console %s %s%s by %s@%s%s%s at %s.\r\n",
             CONMAN_MSG_PREFIX, dst->name,
             (gotJoin ? "joined" : "stolen"), (gotBcast ? " for B/C" : ""),
-            src->aux.socket.req->user, src->aux.socket.req->host,
-            (src->aux.socket.req->tty ? " on " : ""),
-            (src->aux.socket.req->tty ? src->aux.socket.req->tty : ""), now);
+            src->aux.client.req->user, src->aux.client.req->host,
+            (tty ? " on " : ""), (tty ? tty : ""), now);
         free(now);
         buf[sizeof(buf) - 2] = '\n';
         buf[sizeof(buf) - 1] = '\0';
@@ -373,7 +376,7 @@ void link_objs(obj_t *src, obj_t *dst)
         if (!(i = list_iterator_create(dst->writers)))
             err_msg(0, "Out of memory");
         while ((writer = list_next(i))) {
-            assert(writer->type == SOCKET);
+            assert(writer->type == CLIENT);
             write_obj_data(writer, buf, strlen(buf));
             if (gotForce)
                 unlink_objs(dst, writer);
@@ -415,6 +418,7 @@ static void unlink_objs_helper(obj_t *src, obj_t *dst)
     ListIterator i;
     obj_t *writer;
     char *now;
+    char *tty;
     char buf[MAX_LINE];
 
     if (list_find_first(src->readers, (ListFindF) find_obj, dst))
@@ -425,14 +429,14 @@ static void unlink_objs_helper(obj_t *src, obj_t *dst)
     n = list_delete_all(src->writers, (ListFindF) find_obj, dst);
     if ((n > 0) && (src->type == CONSOLE) && (!list_is_empty(src->writers))) {
 
-        assert(dst->type == SOCKET);
+        assert(dst->type == CLIENT);
         now = create_time_string(0);
+        tty = dst->aux.client.req->tty;
         snprintf(buf, sizeof(buf),
             "\r\n%s Console %s departed by %s@%s%s%s at %s.\r\n",
             CONMAN_MSG_PREFIX, src->name,
-            dst->aux.socket.req->user, dst->aux.socket.req->host,
-            (dst->aux.socket.req->tty ? " on " : ""),
-            (dst->aux.socket.req->tty ? dst->aux.socket.req->tty : ""), now);
+            dst->aux.client.req->user, dst->aux.client.req->host,
+            (tty ? " on " : ""), (tty ? tty : ""), now);
         free(now);
         buf[sizeof(buf) - 2] = '\n';
         buf[sizeof(buf) - 1] = '\0';
@@ -440,16 +444,16 @@ static void unlink_objs_helper(obj_t *src, obj_t *dst)
         if (!(i = list_iterator_create(src->writers)))
             err_msg(0, "Out of memory");
         while ((writer = list_next(i))) {
-            assert(writer->type == SOCKET);
+            assert(writer->type == CLIENT);
             write_obj_data(writer, buf, strlen(buf));
         }
         list_iterator_destroy(i);
     }
 
-    /*  If socket has been unlinked from all readers and writers,
+    /*  If client has been unlinked from all readers and writers,
      *    set flag to ensure no additional data is written into the buffer.
      */
-    if ((src->type == SOCKET)
+    if ((src->type == CLIENT)
       && list_is_empty(src->readers) && list_is_empty(src->writers))
         src->gotEOF = 1;
 
@@ -517,17 +521,17 @@ again:
     }
     else {
         DPRINTF("Read %d bytes from [%s].\n", n, obj->name); /* xyzzy */
-        if (obj->type == SOCKET) {
+        if (obj->type == CLIENT) {
 
             if ((rc = pthread_mutex_lock(&obj->bufLock)) != 0)
                 err_msg(rc, "pthread_mutex_lock() failed for [%s]", obj->name);
-            if (time(&obj->aux.socket.timeLastRead) == ((time_t) -1))
+            if (time(&obj->aux.client.timeLastRead) == ((time_t) -1))
                 err_msg(errno, "time() failed -- What time is it?");
             if ((rc = pthread_mutex_unlock(&obj->bufLock)) != 0)
                 err_msg(rc, "pthread_mutex_unlock() failed for [%s]",
                     obj->name);
 
-            parse_buf_for_control(obj, buf, &n);
+            n = process_escape_chars(obj, buf, n);
         }
 
         if (!(i = list_iterator_create(obj->readers)))
@@ -548,21 +552,77 @@ again:
 }
 
 
-static void parse_buf_for_control(obj_t *obj, void *src, int *pLen)
+static int process_escape_chars(obj_t *client, void *src, int len)
 {
-/*
- *  FIX_ME: NOT_IMPLEMENTED_YET
+/*  Processes the buffer (src) of length (len) received from
+ *    the client for escape char sequences.
+ *  Escape characters are removed from the buffer and processed.
+ *  Returns the new length of the buffer.
  */
-    if (!src || *pLen <= 0)
-        return;
+    u_char *last = (u_char *) src + len;
+    u_char *p, *q;
 
+    assert(client->type == CLIENT);
+    assert(client->fd >= 0);
+
+    if (!src || len <= 0)
+        return(0);
+
+    for (p=q=src; p<last; p++) {
+
+        if (client->aux.client.gotEscape) {
+            client->aux.client.gotEscape = 0;
+            switch (*p) {
+            case ESC_CHAR_BREAK:
+                perform_serial_break(client);
+                break;
+            case CONMAN_ESC_CHAR:
+                *q++ = *p;
+                break;
+            default:
+                log_msg(10, "Received invalid escape char '%c' from %s.\n",
+                    *p, client->name);
+                break;
+            }
+        }
+        else if (*p == CONMAN_ESC_CHAR) {
+            client->aux.client.gotEscape = 1;
+        }
+        else {
+            *q++ = *p;
+        }
+    }
+    assert((q >= (u_char *) src) && (q <= p));
+    len = q - (u_char *) src;
+    return(len);
+}
+
+
+static void perform_serial_break(obj_t *client)
+{
+/*  Transmits a serial-break to each of the consoles written to by the client.
+ */
+    ListIterator i;
+    obj_t *console;
+
+    assert(client->type == CLIENT);
+    if (!(i = list_iterator_create(client->readers)))
+        err_msg(0, "Out of memory");
+    while ((console = list_next(i))) {
+        assert(console->type == CONSOLE);
+        DPRINTF("Performing serial-break on console [%s].\n", console->name);
+        if (tcsendbreak(console->fd, 0) < 0)
+            err_msg(errno, "tcsendbreak() failed for console [%s]",
+                console->name);
+    }
+    list_iterator_destroy(i);
     return;
 }
 
 
 int write_obj_data(obj_t *obj, void *src, int len)
 {
-/*  Writes the buffer (src) of length (len) into the object's
+/*  Writes the buffer (src) of length (len) into the object's (obj)
  *    circular-buffer.  Returns the number of bytes written.
  */
     int rc;
@@ -638,7 +698,7 @@ int write_obj_data(obj_t *obj, void *src, int len)
     /*  Check to see if any data in circular-buffer was overwritten.
      */
     if (len > avail) {
-        log_msg(10, "[%s] overwrote %d bytes", obj->name, len-avail);
+        log_msg(10, "Buffer for %s overwrote %d bytes", obj->name, len-avail);
         obj->bufOutPtr = obj->bufInPtr + 1;
         if (obj->bufOutPtr == &obj->buf[MAX_BUF_SIZE])
             obj->bufOutPtr = obj->buf;

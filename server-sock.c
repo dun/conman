@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.15 2001/05/31 18:24:13 dun Exp $
+ *  $Id: server-sock.c,v 1.16 2001/06/07 17:01:31 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -603,14 +603,14 @@ static int check_busy_consoles(req_t *req)
             err_msg(0, "Out of memory");
         while ((writer = list_next(i))) {
 
-            assert(writer->type == SOCKET);
+            assert(writer->type == CLIENT);
 
             if ((rc = pthread_mutex_lock(&writer->bufLock)) != 0)
                 err_msg(rc, "pthread_mutex_lock() failed for [%s]",
                     writer->name);
-            t = writer->aux.socket.timeLastRead;
+            t = writer->aux.client.timeLastRead;
             gotBcast = list_is_empty(writer->writers);
-            tty = writer->aux.socket.req->tty;
+            tty = writer->aux.client.req->tty;
             if ((rc = pthread_mutex_unlock(&writer->bufLock)) != 0)
                 err_msg(rc, "pthread_mutex_unlock() failed for [%s]",
                     writer->name);
@@ -619,7 +619,7 @@ static int check_busy_consoles(req_t *req)
             snprintf(buf, sizeof(buf),
                 "Console %s open %s by %s@%s%s%s (idle %s).\n",
                 console->name, (gotBcast ? "B/C" : "R/W"),
-                writer->aux.socket.req->user, writer->aux.socket.req->host,
+                writer->aux.client.req->user, writer->aux.client.req->host,
                 (tty ? " on " : ""), (tty ? tty : ""), (delta ? delta : "???"));
             buf[sizeof(buf) - 2] = '\n';
             buf[sizeof(buf) - 1] = '\0';
@@ -700,7 +700,7 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
         assert(n >= 0 && n < sizeof(buf));
     }
 
-    /*  Write response to socket.
+    /*  Write response to client.
      */
     if (write_n(req->sd, buf, strlen(buf)) < 0) {
         log_msg(0, "Error writing to %s: %s", req->ip, strerror(errno));
@@ -734,7 +734,7 @@ static void perform_monitor_cmd(req_t *req, server_conf_t *conf)
 /*  Performs the MONITOR command, placing the client in a
  *    "read-only" session with a single console.
  */
-    obj_t *socket;
+    obj_t *client;
     obj_t *console;
 
     assert(req->sd >= 0);
@@ -742,9 +742,9 @@ static void perform_monitor_cmd(req_t *req, server_conf_t *conf)
     assert(list_count(req->consoles) == 1);
 
     send_rsp(req, CONMAN_ERR_NONE, NULL);
-    socket = create_socket_obj(conf->objs, req);
+    client = create_client_obj(conf->objs, req);
     console = list_peek(req->consoles);
-    link_objs(console, socket);
+    link_objs(console, client);
     return;
 }
 
@@ -756,7 +756,7 @@ static void perform_connect_cmd(req_t *req, server_conf_t *conf)
  *    Otherwise, the client is placed in a "write-only" broadcast session
  *    affecting multiple consoles.
  */
-    obj_t *socket;
+    obj_t *client;
     obj_t *console;
     ListIterator i;
 
@@ -764,7 +764,7 @@ static void perform_connect_cmd(req_t *req, server_conf_t *conf)
     assert(req->command == CONNECT);
 
     send_rsp(req, CONMAN_ERR_NONE, NULL);
-    socket = create_socket_obj(conf->objs, req);
+    client = create_client_obj(conf->objs, req);
 
     if (list_count(req->consoles) == 1) {
         /*
@@ -772,8 +772,8 @@ static void perform_connect_cmd(req_t *req, server_conf_t *conf)
          */
         console = list_peek(req->consoles);
         assert(console->type == CONSOLE);
-        link_objs(socket, console);
-        link_objs(console, socket);
+        link_objs(client, console);
+        link_objs(console, client);
     }
     else {
         /*
@@ -783,7 +783,7 @@ static void perform_connect_cmd(req_t *req, server_conf_t *conf)
             err_msg(0, "Out of memory");
         while ((console = list_next(i))) {
             assert(console->type == CONSOLE);
-            link_objs(socket, console);
+            link_objs(client, console);
         }
         list_iterator_destroy(i);
     }

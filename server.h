@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.12 2001/05/31 18:24:13 dun Exp $
+ *  $Id: server.h,v 1.13 2001/06/07 17:01:31 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -19,7 +19,7 @@
 enum obj_type {
     CONSOLE,
     LOGFILE,
-    SOCKET,
+    CLIENT,
 };
 
 typedef struct console_obj {		/* CONSOLE AUX OBJ DATA:              */
@@ -34,16 +34,16 @@ typedef struct logfile_obj {		/* LOGFILE AUX OBJ DATA:              */
     char            *console;		/*  name of console being logged      */
 } logfile_obj_t;
 
-typedef struct socket_obj {		/* SOCKET AUX OBJ DATA:               */
+typedef struct client_obj {		/* CLIENT AUX OBJ DATA:               */
     req_t           *req;		/*  client request info               */
-    int              gotIAC;		/*  true if rcvd IAC escape on fd     */
+    int              gotEscape;		/*  true if last char rcvd was an esc */
     time_t           timeLastRead;	/*  time last data was read from fd   */
-} socket_obj_t;
+} client_obj_t;
 
 typedef union aux_obj {
     console_obj_t    console;
     logfile_obj_t    logfile;
-    socket_obj_t     socket;
+    client_obj_t     client;
 } aux_obj_t;
 
 typedef struct base_obj {		/* BASE OBJ:                          */
@@ -95,7 +95,7 @@ obj_t * create_console_obj(List objs, char *name, char *dev,
 
 obj_t * create_logfile_obj(List objs, char *logfile, char *console);
 
-obj_t * create_socket_obj(List objs, req_t *req);
+obj_t * create_client_obj(List objs, req_t *req);
 
 void destroy_obj(obj_t *obj);
 
