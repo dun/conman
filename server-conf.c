@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-conf.c,v 1.54.2.2 2003/07/24 20:13:17 dun Exp $
+ *  $Id: server-conf.c,v 1.54.2.3 2003/07/24 22:43:34 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -333,7 +333,7 @@ static void parse_server_cmd_line(server_conf_t *conf, int argc, char *argv[])
     int c;
 
     opterr = 0;
-    while ((c = getopt(argc, argv, "c:hkLp:rvVz")) != -1) {
+    while ((c = getopt(argc, argv, "c:hkLp:qrvVz")) != -1) {
         switch(c) {
         case 'c':
             if (conf->confFileName)
@@ -352,6 +352,9 @@ static void parse_server_cmd_line(server_conf_t *conf, int argc, char *argv[])
         case 'p':
             if ((conf->port = atoi(optarg)) <= 0)
                 log_err(0, "CMDLINE: invalid port \"%d\"", conf->port);
+            break;
+        case 'q':
+            conf->throwSignal = 0;      /* null signal for error checking */
             break;
         case 'r':
             conf->throwSignal = SIGHUP;
@@ -466,6 +469,7 @@ static void display_server_help(char *prog)
     printf("  -k        Kill daemon.\n");
     printf("  -L        Display license information.\n");
     printf("  -p PORT   Specify port number. [%d]\n", atoi(CONMAN_PORT));
+    printf("  -q        Query daemon's pid.\n");
     printf("  -r        Re-open log files.\n");
     printf("  -v        Be verbose.\n");
     printf("  -V        Display version information.\n");
@@ -510,12 +514,22 @@ static void signal_daemon(server_conf_t *conf)
     /*  "Now go do that voodoo that you do so well."
      */
     if (kill(pid, conf->throwSignal) < 0) {
-        log_err(errno, "Unable to send signal=%d to pid %d",
-            conf->throwSignal, (int) pid);
+        if ((conf->throwSignal == 0) && (errno == EPERM))
+            ; /* ignore permission error for pid query */
+        else if (errno == ESRCH)
+            log_err(0, "Configuration \"%s\" does not appear to be active",
+                conf->confFileName);
+        else
+            log_err(errno,
+                "Configuration \"%s\" (pid %d) cannot be sent signal=%d",
+                conf->confFileName, (int) pid, conf->throwSignal);
     }
     /*  "We don't need no stinkin' badges."
      */
-    if (conf->enableVerbose) {
+    if (conf->throwSignal == 0) {
+        printf("%d\n", (int) pid);
+    }
+    else if (conf->enableVerbose) {
         if (conf->throwSignal == SIGHUP)
             msg = "reconfigured on";
         else if (conf->throwSignal == SIGTERM)
@@ -1038,7 +1052,7 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
 static int read_pidfile(const char *pidfile)
 {
 /*  Reads the PID from the specified pidfile.
- *  Returns the PID on success, 0 if no pidfile is defined, or dies trying.
+ *  Returns the PID on success, or 0 if no pidfile is found.
  */
     FILE *fp;
     int n;
@@ -1049,21 +1063,22 @@ static int read_pidfile(const char *pidfile)
     }
     assert(pidfile[0] == '/');
 
-    /*  FIXME: Ensure pathname is secure before trusting pid from file.
+    /*  FIXME: Ensure pathname is secure before trusting pid from pidfile.
      */
     if (!(fp = fopen(pidfile, "r"))) {
-        log_err(errno, "Unable to open pidfile \"%s\"", pidfile);
+        return(0);
     }
     if ((n = fscanf(fp, "%d", &pid)) == EOF) {
-        log_err(errno, "Unable to read from pidfile \"%s\"", pidfile);
+        log_msg(LOG_WARNING, "Unable to read from pidfile \"%s\"", pidfile);
     }
-    else if (n == 0) {
-        log_err(0, "Unable to obtain pid from pidfile \"%s\"", pidfile);
+    else if (n != 1) {
+        log_msg(LOG_WARNING, "Unable to obtain pid from pidfile \"%s\"",
+            pidfile);
     }
     if (fclose(fp) == EOF) {
-        log_err(errno, "Unable to close pidfile \"%s\"", pidfile);
+        log_msg(LOG_WARNING, "Unable to close pidfile \"%s\"", pidfile);
     }
-    return((pid > 1) ? pid : 0);
+    return(((n == 1) && (pid > 1)) ? pid : 0);
 }
 
 

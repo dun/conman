@@ -1,4 +1,4 @@
-.\" $Id: conmand.8.in,v 1.8.2.2 2003/07/24 20:13:18 dun Exp $
+.\" $Id: conmand.8.in,v 1.8.2.3 2003/07/24 22:43:34 dun Exp $
 
 .TH CONMAND 8 "@DATE@" "@PROJECT@-@VERSION@" "LLNL"
 
@@ -23,7 +23,8 @@ Display a summary of the command-line options.
 .TP
 .B \-k
 Send a SIGTERM to the \fBconmand\fR process associated with the specified
-configuration, thereby killing the daemon.
+configuration, thereby killing the daemon.  Returns 0 if the daemon was
+successfully signaled; otherwise, returns 1.
 .TP
 .B \-L
 Display license information.
@@ -33,10 +34,16 @@ Specify the port on which \fBconmand\fR will listen for clients, overriding
 both the default port [@CONMAN_PORT@] and the port specified in the
 configuration file.
 .TP
+.B \-q
+Displays the PID of the \fBconmand\fR process associated with the specified
+configuration if it appears active.  Returns 0 if the configuration appears
+active; otherwise, returns 1.
+.TP
 .B \-r
 Send a SIGHUP to the \fBconmand\fR process associated with the specified
 configuration, thereby re-opening both that daemon's log file and individual
-console log files.
+console log files.  Returns 0 if the daemon was successfully signaled;
+otherwise, returns 1.
 .TP
 .B \-v
 Enable verbose mode.
