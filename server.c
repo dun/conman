@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.c,v 1.57 2002/05/19 03:13:51 dun Exp $
+ *  $Id: server.c,v 1.58 2002/05/19 18:12:13 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -636,6 +636,9 @@ err:
 static void reopen_logfiles(server_conf_t *conf)
 {
 /*  Reopens the daemon logfile and all of the logfiles in the 'objs' list.
+ *
+ *  Since logfiles can be re-opened after the daemon has chdir()'d,
+ *    they must be specified as absolute pathnames.
  */
     ListIterator i;
     obj_t *logfile;

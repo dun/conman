@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-conf.c,v 1.48 2002/05/19 03:13:51 dun Exp $
+ *  $Id: server-conf.c,v 1.49 2002/05/19 18:12:13 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -117,9 +117,12 @@ static int lookup_syslog_facility(const char *facility);
 server_conf_t * create_server_conf(void)
 {
     server_conf_t *conf;
+    char buf[PATH_MAX];
 
     if (!(conf = malloc(sizeof(server_conf_t))))
         out_of_memory();
+
+    conf->cwd = NULL;
     conf->confFileName = create_string(CONMAN_CONF);
     conf->logDirName = NULL;
     conf->logFileName = NULL;
@@ -165,6 +168,18 @@ server_conf_t * create_server_conf(void)
     conf->enableTCPWrap = 0;
     conf->enableVerbose = 0;
     conf->enableZeroLogs = 0;
+    /*
+     *  Copy the current working directory before we chdir() away.
+     *  Since logfiles can be re-opened after the daemon has chdir()'d,
+     *    we need to prepend relative paths with the cwd.
+     */
+    if (!getcwd(buf, sizeof(buf))) {
+        log_msg(LOG_WARNING, "Unable to determine working directory");
+    }
+    else {
+        conf->cwd = create_string(buf);
+        conf->logDirName = create_string(buf);
+    }
     return(conf);
 }
 
@@ -174,6 +189,8 @@ void destroy_server_conf(server_conf_t *conf)
     if (!conf)
         return;
 
+    if (conf->cwd)
+        free(conf->cwd);
     if (conf->logDirName)
         free(conf->logDirName);
     if (conf->logFileName)
@@ -660,7 +677,11 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
             else {
                 if (conf->logDirName)
                     free(conf->logDirName);
-                conf->logDirName = create_string(lex_text(l));
+                if ((lex_text(l)[0] != '/') && (conf->cwd))
+                    conf->logDirName = create_format_string("%s/%s",
+                        conf->cwd, lex_text(l));
+                else
+                    conf->logDirName = create_string(lex_text(l));
                 p = conf->logDirName + strlen(conf->logDirName) - 1;
                 while ((p >= conf->logDirName) && (*p == '/'))
                     *p-- = '\0';

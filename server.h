@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.h,v 1.52 2002/05/19 03:13:51 dun Exp $
+ *  $Id: server.h,v 1.53 2002/05/19 18:12:13 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -160,6 +160,7 @@ typedef struct base_obj {               /* BASE OBJ:                         */
 } obj_t;
 
 typedef struct server_conf {
+    char            *cwd;               /* cwd when daemon was started       */
     char            *confFileName;      /* configuration file name           */
     char            *logDirName;        /* dir prefix for relative logfiles  */
     char            *logFileName;       /* file to which logmsgs are written */
