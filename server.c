@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.18 2001/08/15 13:25:57 dun Exp $
+ *  $Id: server.c,v 1.19 2001/08/15 14:06:04 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -54,8 +54,8 @@ int main(int argc, char *argv[])
     process_server_cmd_line(argc, argv, conf);
     process_server_conf_file(conf);
 
-    if (conf->logname)
-        open_msg_log(conf->logname);
+    if (conf->logFileName)
+        open_msg_log(conf->logFileName);
 
     if (conf->enableVerbose)
         display_configuration(conf);

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.21 2001/08/14 23:19:09 dun Exp $
+ *  $Id: server.h,v 1.22 2001/08/15 14:06:04 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -62,10 +62,11 @@ typedef struct base_obj {		/* BASE OBJ:                          */
 } obj_t;
 
 typedef struct server_conf {
-    char            *filename;		/* configuration file name            */
+    char            *confFileName;	/* configuration file name            */
+    char            *logFileName;	/* file to which events are logged    */
+    char            *pidFileName;	/* file to which pid is written       */
     int              fd;		/* configuration file descriptor      */
     int              port;		/* port number on which to listen     */
-    char            *logname;		/* file to which events are logged    */
     int              ld;		/* listening socket descriptor        */
     List             objs;		/* list of all server obj_t's         */
     unsigned         enableKeepAlive:1;	/* true if using TCP keep-alive       */

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.14 2001/08/15 00:48:19 dun Exp $
+ *  $Id: server-conf.c,v 1.15 2001/08/15 14:06:04 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -74,7 +74,9 @@ server_conf_t * create_server_conf(void)
 
     if (!(conf = malloc(sizeof(server_conf_t))))
         err_msg(0, "Out of memory");
-    conf->filename = create_string(DEFAULT_SERVER_CONF);
+    conf->confFileName = create_string(DEFAULT_SERVER_CONF);
+    conf->logFileName = NULL;
+    conf->pidFileName = NULL;
     /*
      *  The conf file's fd must be saved and kept open in order to hold an
      *    fcntl-style lock.  This lock is used to ensure only one instance
@@ -98,14 +100,13 @@ server_conf_t * create_server_conf(void)
      *    to set the default value if one has not already been specified.
      */
     conf->port = 0;
-    conf->logname = NULL;
     conf->ld = -1;
     if (!(conf->objs = list_create((ListDelF) destroy_obj)))
         err_msg(0, "Out of memory");
     conf->enableKeepAlive = 1;
-    conf->enableZeroLogs = 0;
     conf->enableLoopBack = 0;
     conf->enableVerbose = 0;
+    conf->enableZeroLogs = 0;
     return(conf);
 }
 
@@ -115,15 +116,20 @@ void destroy_server_conf(server_conf_t *conf)
     if (!conf)
         return;
 
-    if (conf->filename)
-        free(conf->filename);
+    if (conf->confFileName)
+        free(conf->confFileName);
+    if (conf->logFileName)
+        free(conf->logFileName);
+    if (conf->pidFileName) {
+        if (unlink(conf->pidFileName) < 0)
+            err_msg(errno, "Unable to delete \"%s\"", conf->pidFileName);
+        free(conf->pidFileName);
+    }
     if (conf->fd >= 0) {
         if (close(conf->fd) < 0)
             err_msg(errno, "close() failed on fd=%d", conf->fd);
         conf->fd = -1;
     }
-    if (conf->logname)
-        free(conf->logname);
     if (conf->ld >= 0) {
         if (close(conf->ld) < 0)
             err_msg(errno, "close() failed on fd=%d", conf->ld);
@@ -147,9 +153,9 @@ void process_server_cmd_line(int argc, char *argv[], server_conf_t *conf)
     while ((c = getopt(argc, argv, "c:hkp:vVz")) != -1) {
         switch(c) {
         case 'c':
-            if (conf->filename)
-                free(conf->filename);
-            conf->filename = create_string(optarg);
+            if (conf->confFileName)
+                free(conf->confFileName);
+            conf->confFileName = create_string(optarg);
             break;
         case 'h':
             display_server_help(argv[0]);
@@ -205,24 +211,24 @@ void process_server_conf_file(server_conf_t *conf)
      */
     port = conf->port;
 
-    if ((conf->fd = open(conf->filename, O_RDONLY)) < 0)
-        err_msg(errno, "Unable to open \"%s\"", conf->filename);
+    if ((conf->fd = open(conf->confFileName, O_RDONLY)) < 0)
+        err_msg(errno, "Unable to open \"%s\"", conf->confFileName);
 
     if ((pid = is_write_lock_blocked(conf->fd)) > 0)
         err_msg(0, "Configuration \"%s\" in use by pid %d.",
-            conf->filename, pid);
+            conf->confFileName, pid);
     if (get_read_lock(conf->fd) < 0)
         err_msg(0, "Unable to lock configuration \"%s\".",
-            conf->filename);
+            conf->confFileName);
 
     if (fstat(conf->fd, &fdStat) < 0)
-        err_msg(errno, "Unable to stat \"%s\"", conf->filename);
+        err_msg(errno, "Unable to stat \"%s\"", conf->confFileName);
     len = fdStat.st_size;
     if (!(buf = malloc(len + 1)))
         err_msg(errno, "Unable to allocate memory for parsing \"%s\"",
-            conf->filename);
+            conf->confFileName);
     if ((n = read_n(conf->fd, buf, len)) < 0)
-        err_msg(errno, "Unable to read \"%s\"", conf->filename);
+        err_msg(errno, "Unable to read \"%s\"", conf->confFileName);
     assert(n == len);
     buf[len] = '\0';
 
@@ -240,11 +246,11 @@ void process_server_conf_file(server_conf_t *conf)
             break;
         case LEX_ERR:
             printf("ERROR: %s:%d: unmatched quote.\n",
-                conf->filename, lex_line(l));
+                conf->confFileName, lex_line(l));
             break;
         default:
             printf("ERROR: %s:%d: unrecognized token '%s'.\n",
-                conf->filename, lex_line(l), lex_text(l));
+                conf->confFileName, lex_line(l), lex_text(l));
             while (tok != LEX_EOL && tok != LEX_EOF)
                 tok = lex_next(l);
             break;
@@ -259,6 +265,19 @@ void process_server_conf_file(server_conf_t *conf)
         conf->port = port;
     else if (conf->port <= 0)		/* port not set so use default */
         conf->port = DEFAULT_CONMAN_PORT;
+
+    /*  The pidfile must be created after daemonize() has finished forking.
+     */
+    if (conf->pidFileName) {
+
+        FILE *fp;
+
+        if (!(fp = fopen(conf->pidFileName, "w")))
+            err_msg(errno, "Unable to open \"%s\"", conf->pidFileName);
+        fprintf(fp, "%d\n", getpid());
+        if (fclose(fp) == EOF)
+            err_msg(errno, "Unable to close \"%s\"", conf->pidFileName);
+    }
 
     return;
 }
@@ -286,19 +305,19 @@ static void kill_daemon(server_conf_t *conf)
 {
     pid_t pid;
 
-    if ((conf->fd = open(conf->filename, O_RDONLY)) < 0)
-        err_msg(errno, "Unable to open \"%s\"", conf->filename);
+    if ((conf->fd = open(conf->confFileName, O_RDONLY)) < 0)
+        err_msg(errno, "Unable to open \"%s\"", conf->confFileName);
 
     if (!(pid = is_write_lock_blocked(conf->fd))) {
         if (conf->enableVerbose)
-            printf("Configuration \"%s\" is not active.\n", conf->filename);
+            printf("Configuration \"%s\" is not active.\n", conf->confFileName);
     }
     else {
         if (kill(pid, SIGTERM) < 0)
             err_msg(errno, "Unable to send SIGTERM to pid %d.\n", pid);
         if (conf->enableVerbose)
             printf("Configuration \"%s\" (pid %d) terminated.\n",
-                conf->filename, pid);
+                conf->confFileName, pid);
     }
 
     destroy_server_conf(conf);
@@ -388,20 +407,20 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
     }
     if (*err) {
         fprintf(stderr, "ERROR: %s:%d: %s.\n",
-            conf->filename, lex_line(l), err);
+            conf->confFileName, lex_line(l), err);
         while (lex_prev(l) != LEX_EOL && lex_prev(l) != LEX_EOF)
             lex_next(l);
     }
     else {
         if (!(console = create_console_obj(conf->objs, name, dev, bps))) {
             log_msg(0, "%s:%d: Console [%s] removed from the configuration.",
-                conf->filename, line, name);
+                conf->confFileName, line, name);
         }
         else if (*log) {
             if (!(logfile = create_logfile_obj(
               conf->objs, log, console, conf->enableZeroLogs)))
                 log_msg(0, "%s:%d: Console [%s] cannot log to \"%s\".",
-                    conf->filename, line, name, log);
+                    conf->confFileName, line, name, log);
             else
                 link_objs(console, logfile);
         }
@@ -439,8 +458,16 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            snprintf(err, sizeof(err), "%s keyword not yet implemented",
-                server_conf_strs[LEX_UNTOK(tok)]);
+            else if (lex_next(l) != LEX_STR)
+                snprintf(err, sizeof(err), "expected STRING for %s value",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            else {
+                if (conf->logFileName)
+                    free(conf->logFileName);
+                conf->logFileName = create_string(lex_text(l));
+                snprintf(err, sizeof(err), "%s keyword not yet implemented",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            }
             break;
         case SERVER_CONF_LOOPBACK:
             if (lex_next(l) != '=')
@@ -458,8 +485,14 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            snprintf(err, sizeof(err), "%s keyword not yet implemented",
-                server_conf_strs[LEX_UNTOK(tok)]);
+            else if (lex_next(l) != LEX_STR)
+                snprintf(err, sizeof(err), "expected STRING for %s value",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            else {
+                if (conf->pidFileName)
+                    free(conf->pidFileName);
+                conf->pidFileName = create_string(lex_text(l));
+            }
             break;
         case SERVER_CONF_PORT:
             if (lex_next(l) != '=')
@@ -496,7 +529,7 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
 
     if (*err) {
         fprintf(stderr, "ERROR: %s:%d: %s.\n",
-            conf->filename, lex_line(l), err);
+            conf->confFileName, lex_line(l), err);
         while (lex_prev(l) != LEX_EOL && lex_prev(l) != LEX_EOF)
             lex_next(l);
     }
