@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 #
-# $Id: Makefile.in,v 1.24 2001/09/10 18:21:45 dun Exp $
+# $Id: Makefile.in,v 1.25 2001/09/20 20:44:26 dun Exp $
 ##
 
 PACKAGE=	@PACKAGE@
@@ -73,7 +73,7 @@ install: $(PROGS)
 	chmod 644 $(DESTDIR)$(libdir)/$(PACKAGE)/*.exp
 
 clean:
-	-rm -f *.o *.a *~ \#* core *.core
+	-rm -f *.o *.a *~ \#* core *.core cscope*.out
 
 realclean: clean
 	-rm -f $(PROGS)
