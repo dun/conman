@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 #
-# $Id: Makefile.in,v 1.23 2001/09/06 21:52:12 dun Exp $
+# $Id: Makefile.in,v 1.24 2001/09/10 18:21:45 dun Exp $
 ##
 
 PACKAGE=	@PACKAGE@
@@ -131,7 +131,7 @@ rpm-internal: tar-internal
 	echo "creating $(PACKAGE)-$$ver*rpm (tag=$$tag)"; \
 	rpm --showrc | egrep "_(gpg|pgp)_name" >/dev/null && sign="--sign"; \
 	rpm -ba --define "_tmppath $$tmp/TMP" --define "_topdir $$tmp" \
-	  $$sign --quiet $$tmp/SPECS/$(PACKAGE).spec && \
+	  $$sign --quiet $$tmp/SPECS/$(PACKAGE).spec >/dev/null 2>&1 && \
 	    cp -p $$tmp/RPMS/*/$(PACKAGE)-$$ver*.*.rpm \
 	      $$tmp/SRPMS/$(PACKAGE)-$$ver*.src.rpm $(top_srcdir)/; \
 	rm -rf $$tmp
