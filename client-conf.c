@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-conf.c,v 1.52 2002/05/16 18:54:20 dun Exp $
+ *  $Id: client-conf.c,v 1.53 2002/05/18 04:29:28 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -164,7 +164,7 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
         conf->prog = create_string(argv[0]);
 
     opterr = 0;
-    while ((c = getopt(argc, argv, "bd:e:fF:hjl:mqQrvV")) != -1) {
+    while ((c = getopt(argc, argv, "bd:e:fF:hjl:LmqQrvV")) != -1) {
         switch(c) {
         case 'b':
             conf->req->enableBroadcast = 1;
@@ -203,6 +203,9 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
                 free(conf->log);
             conf->log = create_string(optarg);
             break;
+        case 'L':
+            printf("%s", conman_license);
+            exit(0);
         case 'm':
             conf->req->command = CONMAN_CMD_MONITOR;
             break;
@@ -328,6 +331,7 @@ static void display_client_help(client_conf_t *conf)
     printf("  -h        Display this help.\n");
     printf("  -j        Join connection (console-sharing).\n");
     printf("  -l FILE   Log connection output to file.\n");
+    printf("  -L        Display software license.\n");
     printf("  -m        Monitor connection (read-only).\n");
     printf("  -q        Query server about specified console(s).\n");
     printf("  -Q        Be quiet and suppress informational messages.\n");

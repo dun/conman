@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-conf.c,v 1.45 2002/05/16 04:39:19 dun Exp $
+ *  $Id: server-conf.c,v 1.46 2002/05/18 04:29:28 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -198,7 +198,7 @@ void process_server_cmd_line(int argc, char *argv[], server_conf_t *conf)
     int signum = 0;
 
     opterr = 0;
-    while ((c = getopt(argc, argv, "c:hkp:rvVz")) != -1) {
+    while ((c = getopt(argc, argv, "c:hkLp:rvVz")) != -1) {
         switch(c) {
         case 'c':
             if (conf->confFileName)
@@ -211,6 +211,9 @@ void process_server_cmd_line(int argc, char *argv[], server_conf_t *conf)
         case 'k':
             signum = SIGTERM;
             break;
+        case 'L':
+            printf("%s", conman_license);
+            exit(0);
         case 'p':
             if ((conf->port = atoi(optarg)) <= 0)
                 log_err(0, "CMDLINE: invalid port \"%d\"", conf->port);
@@ -344,6 +347,7 @@ static void display_server_help(char *prog)
     printf("  -c FILE   Specify configuration. [%s]\n", CONMAN_CONF);
     printf("  -h        Display this help.\n");
     printf("  -k        Kill daemon.\n");
+    printf("  -L        Display software license.\n");
     printf("  -p PORT   Specify port number. [%d]\n", atoi(CONMAN_PORT));
     printf("  -r        Re-open logs on daemon.\n");
     printf("  -v        Be verbose.\n");

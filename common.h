@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: common.h,v 1.37 2002/05/16 18:54:20 dun Exp $
+ *  $Id: common.h,v 1.38 2002/05/18 04:29:28 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -166,6 +166,8 @@ enum proto_toks {
 };
 
 extern char *proto_strs[];              /* defined in common.c */
+
+extern const char *conman_license;      /* defined in common.c */
 
 
 /**************\

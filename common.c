@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: common.c,v 1.28 2002/05/16 18:54:20 dun Exp $
+ *  $Id: common.c,v 1.29 2002/05/18 04:29:28 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -37,6 +37,16 @@
 #include "common.h"
 #include "log.h"
 #include "util-str.h"
+
+
+const char *conman_license = \
+    "Copyright (C) 2001-2002 The Regents of the University of California.\n"  \
+    "Produced at Lawrence Livermore National Laboratory.\n"                   \
+    "Written by Chris Dunlap <cdunlap@llnl.gov>.\n"                           \
+    "UCRL-CODE-2002-009.\n\n"                                                 \
+    "ConMan is free software; you can redistribute it and/or modify it\n"     \
+    "under the terms of the GNU General Public License as published by\n"     \
+    "the Free Software Foundation.\n";
 
 
 char *proto_strs[] = {

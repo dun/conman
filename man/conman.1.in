@@ -1,4 +1,4 @@
-.\" $Id: conman.1.in,v 1.2 2002/05/12 19:20:29 dun Exp $
+.\" $Id: conman.1.in,v 1.3 2002/05/18 04:29:28 dun Exp $
 
 .TH CONMAN 1 "@DATE@" "@PROJECT@-@VERSION@" "LLNL"
 
@@ -58,6 +58,9 @@ been granted write privileges.
 .TP
 .B \-l \fIfile\fR
 Log console session output to file.
+.TP
+.B \-L
+Display software license.
 .TP
 .B \-m
 Monitor a console (read-only).
