@@ -1,11 +1,11 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.24 2001/08/06 18:35:39 dun Exp $
+ *  $Id: server-obj.c,v 1.25 2001/08/14 23:18:47 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
 #include <assert.h>
@@ -31,8 +31,7 @@ static void restore_console_mode(obj_t *obj);
 static void unlink_objs_helper(obj_t *src, obj_t *dst);
 
 
-obj_t * create_console_obj(List objs, char *name, char *dev,
-    char *rst, int bps)
+obj_t * create_console_obj(List objs, char *name, char *dev, int bps)
 {
 /*  Creates a new console object and adds it to the master (objs) list.
  *    Note: the console is open and set for non-blocking I/O.
@@ -46,12 +45,14 @@ obj_t * create_console_obj(List objs, char *name, char *dev,
     assert(dev && *dev);
 
     /* FIX_ME: check name, dev, & log for dopplegangers */
-    /* FIX_ME: check if rst program exists */
-    /* FIX_ME: config file needs directive to specify execute dir for rst */
     /* FIX_ME: check bps for valid baud rate (cf APUE p343-344) */
 
     if ((fd = open(dev, O_RDWR | O_NONBLOCK)) < 0) {
-        log_msg(0, "Unable to open console %s: %s", name, strerror(errno));
+        log_msg(0, "Unable to open console [%s]: %s", name, strerror(errno));
+        return(NULL);
+    }
+    if (get_write_lock(fd) < 0) {
+        log_msg(0, "Unable to lock \"%s\" for console [%s].", dev, name);
         return(NULL);
     }
     if (!isatty(fd)) {
@@ -62,8 +63,6 @@ obj_t * create_console_obj(List objs, char *name, char *dev,
     }
     console = create_obj(CONSOLE, objs, name, fd);
     console->aux.console.dev = create_string(dev);
-    if (rst && *rst)
-        console->aux.console.rst = create_string(rst);
     console->aux.console.bps = bps;
     set_raw_console_mode(console);
     console->aux.console.logfile = NULL;
@@ -91,7 +90,7 @@ obj_t * create_logfile_obj(List objs, char *name, obj_t *console, int zeroLog)
     if (zeroLog)
         flags |= O_TRUNC;
     if ((fd = open(name, flags, S_IRUSR | S_IWUSR)) < 0) {
-        log_msg(0, "Unable to open logfile %s: %s", name, strerror(errno));
+        log_msg(0, "Unable to open logfile \"%s\": %s", name, strerror(errno));
         return(NULL);
     }
 
@@ -132,10 +131,11 @@ obj_t * create_client_obj(List objs, req_t *req)
     client = create_obj(CLIENT, objs, name, req->sd);
 
     client->aux.client.req = req;
-    client->aux.client.gotEscape = 0;
     time(&client->aux.client.timeLastRead);
     if (client->aux.client.timeLastRead == ((time_t) -1))
         err_msg(errno, "time() failed -- What time is it?");
+    client->aux.client.gotEscape = 0;
+    client->aux.client.gotSuspend = 0;
 
     return(client);
 }
@@ -162,9 +162,6 @@ static obj_t * create_obj(enum obj_type type, List objs, char *name, int fd)
         err_msg(0, "Out of memory");
     obj->name = create_string(name);
     obj->fd = fd;
-    obj->gotEOF = 0;
-    obj->gotSuspended = 0;
-    obj->gotWrapped = 0;
     obj->bufInPtr = obj->bufOutPtr = obj->buf;
     if ((rc = pthread_mutex_init(&obj->bufLock, NULL)) != 0)
         err_msg(rc, "pthread_mutex_init() failed for [%s]", name);
@@ -173,6 +170,8 @@ static obj_t * create_obj(enum obj_type type, List objs, char *name, int fd)
     if (!(obj->writers = list_create(NULL)))
         err_msg(0, "Out of memory");
     obj->type = type;
+    obj->gotBufWrap = 0;
+    obj->gotEOF = 0;
 
     /*  Add obj to the master conf->objs list.
      */
@@ -221,8 +220,6 @@ void destroy_obj(obj_t *obj)
     case CONSOLE:
         if (obj->aux.console.dev)
             free(obj->aux.console.dev);
-        if (obj->aux.console.rst)
-            free(obj->aux.console.rst);
         /* Do not destroy obj->aux.console.logfile since it is only a ref. */
         break;
     case LOGFILE:
@@ -644,7 +641,7 @@ int write_obj_data(obj_t *obj, void *src, int len, int isInfo)
          */
         if (obj->bufInPtr == &obj->buf[MAX_BUF_SIZE]) {
             obj->bufInPtr = obj->buf;
-            obj->gotWrapped = 1;
+            obj->gotBufWrap = 1;
         }
     }
 
@@ -658,7 +655,7 @@ int write_obj_data(obj_t *obj, void *src, int len, int isInfo)
     /*  Check to see if any data in circular-buffer was overwritten.
      */
     if (len > avail) {
-        if (!obj->gotSuspended)
+        if ((obj->type != CLIENT) || (!obj->aux.client.gotSuspend))
             log_msg(10, "Overwrote %d bytes in buffer for %s",
                 len-avail, obj->name);
         obj->bufOutPtr = obj->bufInPtr + 1;
@@ -710,7 +707,7 @@ int write_to_obj(obj_t *obj)
      *  If the object is suspended, no data is written out to its fd.
      *  Note that if (bufInPtr == bufOutPtr), the obj's buffer is empty.
      */
-    if (obj->gotSuspended) {
+    if ((obj->type == CLIENT) && (obj->aux.client.gotSuspend)) {
         avail = 0;
     }
     else if (obj->bufInPtr >= obj->bufOutPtr) {
