@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 #
-# $Id: Makefile.in,v 1.13 2001/08/21 19:10:27 dun Exp $
+# $Id: Makefile.in,v 1.14 2001/08/22 18:15:03 dun Exp $
 ##
 
 PACKAGE=	@PACKAGE@
@@ -60,11 +60,14 @@ install: $(PROGS)
 	$(mkinstalldirs) $(DESTDIR)$(sbindir)
 	$(INSTALL) conmand $(DESTDIR)$(sbindir)/
 	$(mkinstalldirs) $(DESTDIR)/etc
-	$(INSTALL) -m 644 conman.conf $(DESTDIR)/etc
+	$(INSTALL) -m 644 etc/conman.conf $(DESTDIR)/etc
+	$(mkinstalldirs) $(DESTDIR)/etc/rc.d/init.d
+	$(INSTALL) -m 755 etc/conman.init $(DESTDIR)/etc/rc.d/init.d/conman
 	for f in `cd lib && find * -name "CVS" -prune -o -type f -print`; do \
 	  $(mkinstalldirs) `dirname $(DESTDIR)$(libdir)/$(PACKAGE)/$$f`; \
 	  $(INSTALL) -m 755 lib/$$f $(DESTDIR)$(libdir)/$(PACKAGE)/$$f; \
 	done
+	chmod 644 $(DESTDIR)$(libdir)/$(PACKAGE)/*.exp
 
 clean:
 	-rm -f *.o *.a *~ \#* core *.core
@@ -86,6 +89,9 @@ Makefile: Makefile.in config.status
 config.status: VERSION
 	./config.status --recheck
 
+$(PACKAGE).spec: $(PACKAGE).spec.in
+	./config.status $@
+
 
 # DEVELOPER TARGETS
 
@@ -103,7 +109,7 @@ $(PACKAGE)-$(VERSION).tgz: VERSION
 	  (cd $$tmp; tar cf - $$name) | gzip -c9 > $$name.tgz; \
 	rm -rf $$tmp
 
-rpm: $(PACKAGE)-$(VERSION).tgz
+rpm: $(PACKAGE).spec $(PACKAGE)-$(VERSION).tgz
 	@if test -z "$(PACKAGE)"; then echo "PACKAGE undefined"; exit 1; fi; \
 	if test -z "$(VERSION)"; then echo "VERSION undefined"; exit 1; fi; \
 	tmp=$${TMPDIR-/tmp}/tmp-$(PACKAGE)-$$$$; \
