@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: list.c,v 1.9 2001/09/21 21:14:21 dun Exp $
+ *  $Id: list.c,v 1.10 2001/09/21 21:25:17 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "list.h" for documentation on public functions.
@@ -13,10 +13,11 @@
 #ifdef USE_PTHREADS
 #  include <errno.h>
 #  include <pthread.h>
+#  include <stdio.h>
+#  include <unistd.h>
 #endif /* USE_PTHREADS */
 
 #include <assert.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "list.h"
@@ -59,25 +60,25 @@ static void * list_node_destroy(List l, ListNode *pp);
 
 #ifdef USE_PTHREADS
 
-#  define LIST_INIT(mutex)                                                     \
+#  define list_mutex_init(mutex)                                               \
      do {                                                                      \
          if ((errno = pthread_mutex_init(mutex, NULL)) != 0)                   \
              perror("ERROR: pthread_mutex_init() failed"), exit(1);            \
      } while (0)
 
-#  define LIST_LOCK(mutex)                                                     \
+#  define list_mutex_lock(mutex)                                               \
      do {                                                                      \
          if ((errno = pthread_mutex_lock(mutex)) != 0)                         \
              perror("ERROR: pthread_mutex_lock() failed"), exit(1);            \
      } while (0)
 
-#  define LIST_UNLOCK(mutex)                                                   \
+#  define list_mutex_unlock(mutex)                                             \
      do {                                                                      \
          if ((errno = pthread_mutex_unlock(mutex)) != 0)                       \
              perror("ERROR: pthread_mutex_unlock() failed"), exit(1);          \
      } while (0)
 
-#  define LIST_DESTROY(mutex)                                                  \
+#  define list_mutex_destroy(mutex)                                            \
      do {                                                                      \
          if ((errno = pthread_mutex_destroy(mutex)) != 0)                      \
              perror("ERROR: pthread_mutex_destroy() failed"), exit(1);         \
@@ -85,10 +86,10 @@ static void * list_node_destroy(List l, ListNode *pp);
 
 #else /* !USE_PTHREADS */
 
-#  define LIST_INIT(mutex)
-#  define LIST_LOCK(mutex)
-#  define LIST_UNLOCK(mutex)
-#  define LIST_DESTROY(mutex)
+#  define list_mutex_init(mutex)
+#  define list_mutex_lock(mutex)
+#  define list_mutex_unlock(mutex)
+#  define list_mutex_destroy(mutex)
 
 #endif /* USE_PTHREADS */
 
@@ -104,7 +105,7 @@ List list_create(ListDelF f)
     l->iNext = NULL;
     l->fDel = f;
     l->count = 0;
-    LIST_INIT(&l->mutex);
+    list_mutex_init(&l->mutex);
     l->magic = LIST_MAGIC;
     return(l);
 }
@@ -116,7 +117,7 @@ void list_destroy(List l)
     ListNode p, pTmp;
 
     assert(l);
-    LIST_LOCK(&l->mutex);
+    list_mutex_lock(&l->mutex);
     assert(l->magic == LIST_MAGIC);
     i = l->iNext;
     while (i) {
@@ -135,8 +136,8 @@ void list_destroy(List l)
         p = pTmp;
     }
     l->magic = 0;
-    LIST_UNLOCK(&l->mutex);
-    LIST_DESTROY(&l->mutex);
+    list_mutex_unlock(&l->mutex);
+    list_mutex_destroy(&l->mutex);
     free(l);
     return;
 }
@@ -147,10 +148,10 @@ int list_is_empty(List l)
     int n;
 
     assert(l);
-    LIST_LOCK(&l->mutex);
+    list_mutex_lock(&l->mutex);
     assert(l->magic == LIST_MAGIC);
     n = l->count;
-    LIST_UNLOCK(&l->mutex);
+    list_mutex_unlock(&l->mutex);
     return(n == 0);
 }
 
@@ -160,10 +161,10 @@ int list_count(List l)
     int n;
 
     assert(l);
-    LIST_LOCK(&l->mutex);
+    list_mutex_lock(&l->mutex);
     assert(l->magic == LIST_MAGIC);
     n = l->count;
-    LIST_UNLOCK(&l->mutex);
+    list_mutex_unlock(&l->mutex);
     return(n);
 }
 
@@ -174,10 +175,10 @@ void * list_append(List l, void *x)
 
     assert(l);
     assert(x);
-    LIST_LOCK(&l->mutex);
+    list_mutex_lock(&l->mutex);
     assert(l->magic == LIST_MAGIC);
     v = list_node_create(l, l->tail, x);
-    LIST_UNLOCK(&l->mutex);
+    list_mutex_unlock(&l->mutex);
     return(v);
 }
 
@@ -188,10 +189,10 @@ void * list_prepend(List l, void *x)
 
     assert(l);
     assert(x);
-    LIST_LOCK(&l->mutex);
+    list_mutex_lock(&l->mutex);
     assert(l->magic == LIST_MAGIC);
     v = list_node_create(l, &l->head, x);
-    LIST_UNLOCK(&l->mutex);
+    list_mutex_unlock(&l->mutex);
     return(v);
 }
 
@@ -204,7 +205,7 @@ void * list_find_first(List l, ListFindF f, void *key)
     assert(l);
     assert(f);
     assert(key);
-    LIST_LOCK(&l->mutex);
+    list_mutex_lock(&l->mutex);
     assert(l->magic == LIST_MAGIC);
     for (p=l->head; p; p=p->next) {
         if (f(p->data, key)) {
@@ -212,7 +213,7 @@ void * list_find_first(List l, ListFindF f, void *key)
             break;
         }
     }
-    LIST_UNLOCK(&l->mutex);
+    list_mutex_unlock(&l->mutex);
     return(v);
 }
 
@@ -226,7 +227,7 @@ int list_delete_all(List l, ListFindF f, void *key)
     assert(l);
     assert(f);
     assert(key);
-    LIST_LOCK(&l->mutex);
+    list_mutex_lock(&l->mutex);
     assert(l->magic == LIST_MAGIC);
     pp = &l->head;
     while (*pp) {
@@ -241,7 +242,7 @@ int list_delete_all(List l, ListFindF f, void *key)
             pp = &(*pp)->next;
         }
     }
-    LIST_UNLOCK(&l->mutex);
+    list_mutex_unlock(&l->mutex);
     return(n);
 }
 
@@ -255,7 +256,7 @@ void list_sort(List l, ListCmpF f)
 
     assert(l);
     assert(f);
-    LIST_LOCK(&l->mutex);
+    list_mutex_lock(&l->mutex);
     assert(l->magic == LIST_MAGIC);
     if (l->count > 1) {
         ppPrev = &l->head;
@@ -285,7 +286,7 @@ void list_sort(List l, ListCmpF f)
             i->prev = &i->list->head;
         }
     }
-    LIST_UNLOCK(&l->mutex);
+    list_mutex_unlock(&l->mutex);
     return;
 }
 
@@ -296,10 +297,10 @@ void * list_push(List l, void *x)
 
     assert(l);
     assert(x);
-    LIST_LOCK(&l->mutex);
+    list_mutex_lock(&l->mutex);
     assert(l->magic == LIST_MAGIC);
     v = list_node_create(l, &l->head, x);
-    LIST_UNLOCK(&l->mutex);
+    list_mutex_unlock(&l->mutex);
     return(v);
 }
 
@@ -309,10 +310,10 @@ void * list_pop(List l)
     void *v;
 
     assert(l);
-    LIST_LOCK(&l->mutex);
+    list_mutex_lock(&l->mutex);
     assert(l->magic == LIST_MAGIC);
     v = list_node_destroy(l, &l->head);
-    LIST_UNLOCK(&l->mutex);
+    list_mutex_unlock(&l->mutex);
     return(v);
 }
 
@@ -322,10 +323,10 @@ void * list_peek(List l)
     void *v;
 
     assert(l);
-    LIST_LOCK(&l->mutex);
+    list_mutex_lock(&l->mutex);
     assert(l->magic == LIST_MAGIC);
     v = (l->head) ? l->head->data : NULL;
-    LIST_UNLOCK(&l->mutex);
+    list_mutex_unlock(&l->mutex);
     return(v);
 }
 
@@ -336,10 +337,10 @@ void * list_enqueue(List l, void *x)
 
     assert(l);
     assert(x);
-    LIST_LOCK(&l->mutex);
+    list_mutex_lock(&l->mutex);
     assert(l->magic == LIST_MAGIC);
     v = list_node_create(l, l->tail, x);
-    LIST_UNLOCK(&l->mutex);
+    list_mutex_unlock(&l->mutex);
     return(v);
 }
 
@@ -349,10 +350,10 @@ void * list_dequeue(List l)
     void *v;
 
     assert(l);
-    LIST_LOCK(&l->mutex);
+    list_mutex_lock(&l->mutex);
     assert(l->magic == LIST_MAGIC);
     v = list_node_destroy(l, &l->head);
-    LIST_UNLOCK(&l->mutex);
+    list_mutex_unlock(&l->mutex);
     return(v);
 }
 
@@ -365,13 +366,13 @@ ListIterator list_iterator_create(List l)
     if (!(i = (ListIterator) malloc(sizeof(struct listIterator))))
         return(NULL);
     i->list = l;
-    LIST_LOCK(&l->mutex);
+    list_mutex_lock(&l->mutex);
     assert(l->magic == LIST_MAGIC);
     i->pos = l->head;
     i->prev = &l->head;
     i->iNext = l->iNext;
     l->iNext = i;
-    LIST_UNLOCK(&l->mutex);
+    list_mutex_unlock(&l->mutex);
     i->magic = LIST_MAGIC;
     return(i);
 }
@@ -381,11 +382,11 @@ void list_iterator_reset(ListIterator i)
 {
     assert(i);
     assert(i->magic == LIST_MAGIC);
-    LIST_LOCK(&i->list->mutex);
+    list_mutex_lock(&i->list->mutex);
     assert(i->list->magic == LIST_MAGIC);
     i->pos = i->list->head;
     i->prev = &i->list->head;
-    LIST_UNLOCK(&i->list->mutex);
+    list_mutex_unlock(&i->list->mutex);
     return;
 }
 
@@ -396,7 +397,7 @@ void list_iterator_destroy(ListIterator i)
 
     assert(i);
     assert(i->magic == LIST_MAGIC);
-    LIST_LOCK(&i->list->mutex);
+    list_mutex_lock(&i->list->mutex);
     assert(i->list->magic == LIST_MAGIC);
     for (pi=&i->list->iNext; *pi; pi=&(*pi)->iNext) {
         assert((*pi)->magic == LIST_MAGIC);
@@ -405,7 +406,7 @@ void list_iterator_destroy(ListIterator i)
             break;
         }
     }
-    LIST_UNLOCK(&i->list->mutex);
+    list_mutex_unlock(&i->list->mutex);
     i->magic = 0;
     free(i);
     return;
@@ -418,13 +419,13 @@ void * list_next(ListIterator i)
 
     assert(i);
     assert(i->magic == LIST_MAGIC);
-    LIST_LOCK(&i->list->mutex);
+    list_mutex_lock(&i->list->mutex);
     assert(i->list->magic == LIST_MAGIC);
     if ((p = i->pos))
         i->pos = p->next;
     if (*i->prev != p)
         i->prev = &(*i->prev)->next;
-    LIST_UNLOCK(&i->list->mutex);
+    list_mutex_unlock(&i->list->mutex);
     return(p ? p->data : NULL);
 }
 
@@ -434,11 +435,11 @@ void * list_insert(ListIterator i, void *x)
     assert(i);
     assert(x);
     assert(i->magic == LIST_MAGIC);
-    LIST_LOCK(&i->list->mutex);
+    list_mutex_lock(&i->list->mutex);
     assert(i->list->magic == LIST_MAGIC);
     if (!list_node_create(i->list, i->prev, x))
         x = NULL;
-    LIST_UNLOCK(&i->list->mutex);
+    list_mutex_unlock(&i->list->mutex);
     return(x);
 }
 
@@ -462,11 +463,11 @@ void * list_remove(ListIterator i)
 
     assert(i);
     assert(i->magic == LIST_MAGIC);
-    LIST_LOCK(&i->list->mutex);
+    list_mutex_lock(&i->list->mutex);
     assert(i->list->magic == LIST_MAGIC);
     if (*i->prev != i->pos)
         v = list_node_destroy(i->list, i->prev);
-    LIST_UNLOCK(&i->list->mutex);
+    list_mutex_unlock(&i->list->mutex);
     return(v);
 }
 
