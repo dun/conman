@@ -2,7 +2,7 @@
  *  server-sock.c  
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server-sock.c,v 1.7 2001/05/18 15:45:29 dun Exp $
+ *  $Id: server-sock.c,v 1.8 2001/05/18 18:19:37 dun Exp $
 \******************************************************************************/
 
 
@@ -462,6 +462,7 @@ static int query_consoles(server_conf_t *conf, req_t *req)
     char *p;
     int rc;
     regex_t rex;
+    regmatch_t match;
     List matches;
     obj_t *obj;
 
@@ -491,7 +492,7 @@ static int query_consoles(server_conf_t *conf, req_t *req)
 
     /*  Compile regex for searching server's console objs.
      */
-    rc = regcomp(&rex, buf, REG_EXTENDED | REG_ICASE | REG_NOSUB | REG_NEWLINE);
+    rc = regcomp(&rex, buf, REG_EXTENDED | REG_ICASE);
     if (rc != 0) {
         if (regerror(rc, &rex, buf, sizeof(buf)) > sizeof(buf))
             log_msg(10, "Buffer overflow during regerror()");
@@ -517,7 +518,8 @@ static int query_consoles(server_conf_t *conf, req_t *req)
     while ((obj = list_next(i))) {
         if (obj->type != CONSOLE)
             continue;
-        if (!regexec(&rex, obj->name, 0, NULL, 0)) {
+        if (!regexec(&rex, obj->name, 1, &match, 0) &&
+          (match.rm_so == 0) && (match.rm_eo == strlen(obj->name))) {
             if (!list_append(matches, obj)) {
                 list_iterator_destroy(i);
                 list_destroy(matches);
