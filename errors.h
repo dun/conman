@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: errors.h,v 1.5 2001/08/14 23:16:47 dun Exp $
+ *  $Id: errors.h,v 1.6 2001/08/31 01:12:26 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -23,10 +23,10 @@
  *      preceded with the file name and line number.
  */
 #ifndef NDEBUG
-#  define DPRINTF(fmt, args...) \
-     do { fprintf(stderr, fmt , ## args); } while (0)
-#  define LDPRINTF(fmt, args...) \
-     do { fprintf(stderr, "%s:%d: " fmt, __FILE__, __LINE__ , ## args); } while (0)
+#  define DPRINTF(fmt, args...) do \
+     { fprintf(stderr, fmt , ## args); } while (0)
+#  define LDPRINTF(fmt, args...) do \
+     { fprintf(stderr, "%s:%d: " fmt, __FILE__, __LINE__ , ## args); } while (0)
 #else /* NDEBUG */
 #  define DPRINTF(fmt, args...)
 #  define LDPRINTF(fmt, args...)
