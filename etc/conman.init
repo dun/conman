@@ -1,0 +1,54 @@
+#!/bin/sh
+#
+# $Id: conman.init,v 1.1 2001/08/22 18:06:06 dun Exp $
+#
+# chkconfig:	345 95 5
+# description:	The ConMan daemon is used for serial console management.
+# processname:	/usr/sbin/conmand
+# config:	/etc/conman.conf
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+# Source networking configuration.
+. /etc/sysconfig/network
+
+# Check that networking is up.
+[ ${NETWORKING} = "no" ] && exit 0
+
+DAEMON=conmand
+RETVAL=0
+
+[ -x "$DAEMON" ] || exit 0
+
+# See how we were called.
+case "$1" in
+  start)
+	echo -n "Starting ConMan: "
+	daemon $DAEMON
+	RETVAL=$?
+	echo
+	[ $RETVAL -eq 0 ] && touch /var/lock/subsys/$DAEMON
+	;;
+  stop)
+	echo -n "Shutting down ConMan: "
+	killproc $DAEMON
+	RETVAL=$?
+	echo
+	[ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/$DAEMON
+	;;
+  status)
+	status $DAEMON
+	RETVAL=$?
+	;;
+  restart|reload)
+	$0 stop
+	$0 start
+	RETVAL=$?
+	;;
+  *)
+	echo "Usage: $DAEMON {start|stop|status|restart|reload}"
+	exit 1
+esac
+
+exit $RETVAL
