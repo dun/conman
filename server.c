@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.26 2001/09/17 22:08:13 dun Exp $
+ *  $Id: server.c,v 1.27 2001/09/17 22:56:30 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -368,7 +368,7 @@ static void mux_io(server_conf_t *conf)
                     x_pthread_mutex_unlock(&obj->bufLock);
                     DPRINTF("Console [%s] is DOWN.\n", obj->name);
                     log_msg(0, "Unable to open console [%s]: %s.",
-                        obj->name, strerror(errno));
+                        obj->name, strerror(err));
                 }
                 else {
                     x_pthread_mutex_lock(&obj->bufLock);
