@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-conf.c,v 1.21 2001/07/31 20:11:21 dun Exp $
+ *  $Id: client-conf.c,v 1.22 2001/08/02 18:12:32 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -185,14 +185,11 @@ static void display_client_help(char *prog)
     printf("  -e CHAR   Set escape character (default: '%s').\n", esc);
     printf("  -f        Force connection (console stealing).\n");
     printf("  -j        Join connection (console sharing).\n");
-    printf("  -l FILE   Log connection to file.\n");
+    printf("  -l FILE   Log connection output to file.\n");
     printf("  -m        Monitor connection (read-only).\n");
     printf("  -q        Query server about specified console(s).\n");
     printf("  -r        Match console names via regex instead of globbing.\n");
-    printf("  -x FILE   Execute file on specified console(s).\n");
-/*
- *  printf("  -v        Be verbose.\n");
- */
+    printf("  -v        Be verbose.\n");
     printf("  -V        Display version information.\n");
     printf("\n");
     return;
