@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-tty.c,v 1.24 2001/07/06 20:50:45 dun Exp $
+ *  $Id: client-tty.c,v 1.25 2001/07/31 20:11:21 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -443,7 +443,7 @@ static void locally_display_status(client_conf_t *conf, char *msg)
     if (!overflow) {
 
         if (list_count(conf->req->consoles) == 1) {
-            n = snprintf(ptr, len, "%sConnection to console %s %s%s",
+            n = snprintf(ptr, len, "%sConnection to console [%s] %s%s",
                 CONMAN_MSG_PREFIX, (char *) list_peek(conf->req->consoles),
                 msg, CONMAN_MSG_SUFFIX);
         }

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.c,v 1.9 2001/07/31 17:13:21 dun Exp $
+ *  $Id: common.c,v 1.10 2001/07/31 20:11:21 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -54,6 +54,7 @@ req_t * create_req(void)
     req->sd = -1;
     req->user = NULL;
     req->tty = NULL;
+    req->fqdn = NULL;
     req->host = NULL;
     req->ip = NULL;
     req->port = 0;
@@ -86,6 +87,8 @@ void destroy_req(req_t *req)
         free(req->user);
     if (req->tty)
         free(req->tty);
+    if (req->fqdn)
+        free(req->fqdn);
     if (req->host)
         free(req->host);
     if (req->ip)

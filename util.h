@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util.h,v 1.6 2001/06/15 15:46:45 dun Exp $
+ *  $Id: util.h,v 1.7 2001/07/31 20:11:22 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -49,21 +49,21 @@ void destroy_string(char *str);
  *  Destroys the string (str).
  */
 
-char * create_date_time_string(time_t t);
+char * create_long_time_string(time_t t);
 /*
  *  Creates and returns a new string with the specified date & time
- *    in the format "MM/DD/YYYY HH:MM:SS" in a thread-safe manner
+ *    in the format "MM/DD/YYYY HH:MM:SS ZONE" in a thread-safe manner
  *    (or throws a fatal error if something strange happens).
  *  If no time is given (t=0), the current date & time is used.
  *  Note that the caller is responsible for freeing this string.
  */
 
-char * create_time_string(time_t t);
+char * create_short_time_string(time_t t);
 /*
  *  Creates and returns a new string with the specified
  *    time in the format "HH:MM" in a thread-safe manner
  *    (or throws a fatal error if something strange happens).
- *  If no time is given (t=0), the current date & time is used.
+ *  If no time is given (t=0), the current time is used.
  *  Note that the caller is responsible for freeing this string.
  */
 

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-conf.c,v 1.20 2001/07/31 17:13:21 dun Exp $
+ *  $Id: client-conf.c,v 1.21 2001/07/31 20:11:21 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -211,7 +211,7 @@ void open_client_log(client_conf_t *conf)
     if ((conf->logd = open(conf->log, flags, S_IRUSR | S_IWUSR)) < 0)
         err_msg(errno, "Unable to open logfile [%s]", conf->log);
 
-    now = create_date_time_string(0);
+    now = create_long_time_string(0);
     str = create_fmt_string("%sLog started at %s%s",
         CONMAN_MSG_PREFIX, now, CONMAN_MSG_SUFFIX);
     if (write_n(conf->logd, str, strlen(str)) < 0)
@@ -231,7 +231,7 @@ void close_client_log(client_conf_t *conf)
         return;
     assert(conf->logd >= 0);
 
-    now = create_date_time_string(0);
+    now = create_long_time_string(0);
     str = create_fmt_string("%sLog finished at %s%s",
         CONMAN_MSG_PREFIX, now, CONMAN_MSG_SUFFIX);
     if (write_n(conf->logd, str, strlen(str)) < 0)

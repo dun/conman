@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util.c,v 1.9 2001/06/15 15:46:45 dun Exp $
+ *  $Id: util.c,v 1.10 2001/07/31 20:11:22 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util.h" for documentation on public functions.
@@ -76,25 +76,25 @@ void destroy_string(char *str)
 }
 
 
-char * create_date_time_string(time_t t)
+char * create_long_time_string(time_t t)
 {
     char *p;
     struct tm tm;
-    const int len = 20;			/* MM/DD/YYYY HH:MM:SS + NUL */
+    const int len = 25;			/* MM/DD/YYYY HH:MM:SS ZONE + NUL */
 
     if (!(p = malloc(len)))
         err_msg(0, "Out of memory");
 
     get_localtime(&t, &tm);
 
-    if (strftime(p, len, "%m/%d/%Y %H:%M:%S", &tm) == 0)
+    if (strftime(p, len, "%m/%d/%Y %H:%M:%S %Z", &tm) == 0)
         err_msg(0, "strftime() failed");
 
     return(p);
 }
 
 
-char * create_time_string(time_t t)
+char * create_short_time_string(time_t t)
 {
     char *p;
     struct tm tm;
@@ -137,18 +137,18 @@ char * create_time_delta_string(time_t t)
     years = n;
 
     if (years > 0)
-        n = snprintf(buf, sizeof(buf), "%dy %dw %dd %dh %dm %ds",
+        n = snprintf(buf, sizeof(buf), "%dy%dw%dd%dh%dm%ds",
             years, weeks, days, hours, minutes, seconds);
     else if (weeks > 0)
-        n = snprintf(buf, sizeof(buf), "%dw %dd %dh %dm %ds",
+        n = snprintf(buf, sizeof(buf), "%dw%dd%dh%dm%ds",
             weeks, days, hours, minutes, seconds);
     else if (days > 0)
-        n = snprintf(buf, sizeof(buf), "%dd %dh %dm %ds",
+        n = snprintf(buf, sizeof(buf), "%dd%dh%dm%ds",
             days, hours, minutes, seconds);
     else if (hours > 0)
-        n = snprintf(buf, sizeof(buf), "%dh %dm %ds", hours, minutes, seconds);
+        n = snprintf(buf, sizeof(buf), "%dh%dm%ds", hours, minutes, seconds);
     else if (minutes > 0)
-        n = snprintf(buf, sizeof(buf), "%dm %ds", minutes, seconds);
+        n = snprintf(buf, sizeof(buf), "%dm%ds", minutes, seconds);
     else
         n = snprintf(buf, sizeof(buf), "%ds", seconds);
 

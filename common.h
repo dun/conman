@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.h,v 1.9 2001/07/31 17:13:21 dun Exp $
+ *  $Id: common.h,v 1.10 2001/07/31 20:11:21 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -57,7 +57,8 @@ typedef struct request {
     int    sd;				/* socket descriptor                  */
     char  *user;			/* login name of client user          */
     char  *tty;				/* device name of client terminal     */
-    char  *host;			/* remote hostname (or ip) string     */
+    char  *fqdn;			/* remote FQDN (or ip) string         */
+    char  *host;			/* remote host name (or ip) string    */
     char  *ip;				/* remote ip addr string              */
     int    port;			/* remote port number                 */
     cmd_t  command;			/* conman command to perform          */

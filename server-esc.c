@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-esc.c,v 1.4 2001/06/15 22:12:09 dun Exp $
+ *  $Id: server-esc.c,v 1.5 2001/07/31 20:11:21 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -129,7 +129,7 @@ void perform_log_replay(obj_t *client)
     logfile = console->aux.console.logfile;
 
     if (!logfile) {
-        n = snprintf(ptr, len, "%sConsole %s is not being logged%s",
+        n = snprintf(ptr, len, "%sConsole [%s] is not being logged%s",
             CONMAN_MSG_PREFIX, console->name, CONMAN_MSG_SUFFIX);
         if ((n < 0) || (n >= len)) {
             log_msg(10, "Insufficient buffer to replay console %s log for %s.",
@@ -139,7 +139,7 @@ void perform_log_replay(obj_t *client)
     }
     else {
         assert(logfile->type == LOGFILE);
-        n = snprintf(ptr, len, "%sBegin log replay of console %s%s",
+        n = snprintf(ptr, len, "%sBegin log replay of console [%s]%s",
             CONMAN_MSG_PREFIX, console->name, CONMAN_MSG_SUFFIX);
         if ((n < 0) || (n >= len) || (sizeof(buf) <= 2*n - 2)) {
             log_msg(10, "Insufficient buffer to replay console %s log for %s.",
@@ -190,7 +190,7 @@ void perform_log_replay(obj_t *client)
          *    for this string.  We could get away with just sprintf() here.
          */
         len = &buf[sizeof(buf)] - ptr;
-        n = snprintf(ptr, len, "%sEnd log replay of console %s%s",
+        n = snprintf(ptr, len, "%sEnd log replay of console [%s]%s",
             CONMAN_MSG_PREFIX, console->name, CONMAN_MSG_SUFFIX);
         assert((n >= 0) && (n < len));
     }

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.20 2001/06/19 20:49:23 dun Exp $
+ *  $Id: server-obj.c,v 1.21 2001/07/31 20:11:21 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -55,7 +55,7 @@ obj_t * create_console_obj(List objs, char *name, char *dev,
         return(NULL);
     }
     if (!isatty(fd)) {
-        log_msg(0, "Console %s is not a TTY device", name);
+        log_msg(0, "Console [%s] is not a TTY device", name);
         if (close(fd) < 0)
             err_msg(errno, "close() failed on fd=%d", fd);
         return(NULL);
@@ -97,8 +97,8 @@ obj_t * create_logfile_obj(List objs, char *name, obj_t *console)
     logfile->aux.logfile.console = create_string(console->name);
     console->aux.console.logfile = logfile;
 
-    now = create_date_time_string(0);
-    msg = create_fmt_string("%sConsole %s log started at %s%s",
+    now = create_long_time_string(0);
+    msg = create_fmt_string("%sConsole [%s] log started at %s%s",
         CONMAN_MSG_PREFIX, console->name, now, CONMAN_MSG_SUFFIX);
     write_obj_data(logfile, msg, strlen(msg));
     free(now);
@@ -362,10 +362,10 @@ void link_objs(obj_t *src, obj_t *dst)
         gotJoin = src->aux.client.req->enableJoin;
         assert(gotForce ^ gotJoin);
 
-        now = create_time_string(0);
+        now = create_short_time_string(0);
         tty = src->aux.client.req->tty;
         snprintf(buf, sizeof(buf),
-            "%sConsole %s %s%s by %s@%s%s%s at %s%s",
+            "%sConsole [%s] %s%s by %s@%s%s%s at %s%s",
             CONMAN_MSG_PREFIX, dst->name,
             (gotJoin ? "joined" : "stolen"), (gotBcast ? " for B/C" : ""),
             src->aux.client.req->user, src->aux.client.req->host,
@@ -434,10 +434,10 @@ static void unlink_objs_helper(obj_t *src, obj_t *dst)
     if ((n > 0) && (src->type == CONSOLE) && (!list_is_empty(src->writers))) {
 
         assert(dst->type == CLIENT);
-        now = create_time_string(0);
+        now = create_short_time_string(0);
         tty = dst->aux.client.req->tty;
         snprintf(buf, sizeof(buf),
-            "%sConsole %s departed by %s@%s%s%s at %s%s", CONMAN_MSG_PREFIX,
+            "%sConsole [%s] departed by %s@%s%s%s at %s%s", CONMAN_MSG_PREFIX,
             src->name, dst->aux.client.req->user, dst->aux.client.req->host,
             (tty ? " on " : ""), (tty ? tty : ""), now, CONMAN_MSG_SUFFIX);
         free(now);
@@ -520,8 +520,8 @@ again:
             goto again;
         }
         else if ((errno != EAGAIN) && (errno != EWOULDBLOCK)) {
-            log_msg(20, "Read error=%d on fd=%d (%s): %s",
-                errno, obj->fd, obj->name, strerror(errno));
+            log_msg(20, "Unable to read from %s: %s.",
+                obj->name, strerror(errno));
             shutdown_obj(obj);
             obj->bufInPtr = obj->bufOutPtr = obj->buf;
             return(-1);
@@ -716,8 +716,8 @@ again:
                 goto again;
             }
             else if ((errno != EAGAIN) && (errno != EWOULDBLOCK)) {
-                log_msg(20, "Write error=%d on fd=%d (%s): %s",
-                    errno, obj->fd, obj->name, strerror(errno));
+                log_msg(20, "Unable to write to %s: %s.",
+                    obj->name, strerror(errno));
                 obj->gotEOF = 1;
                 obj->bufInPtr = obj->bufOutPtr = obj->buf;
             }

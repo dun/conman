@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.21 2001/07/31 17:13:21 dun Exp $
+ *  $Id: server-sock.c,v 1.22 2001/07/31 20:11:22 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -26,7 +26,7 @@
 #include "util.h"
 
 
-static void resolve_req(req_t *req, int sd);
+static void resolve_req_addr(req_t *req, int sd);
 static int recv_greeting(req_t *req);
 static int parse_greeting(Lex l, req_t *req);
 static int recv_req(req_t *req);
@@ -73,7 +73,7 @@ void process_client(client_arg_t *args)
             err_msg(errno, "close() failed on fd=%d", sd);
         return;
     }
-    resolve_req(req, sd);
+    resolve_req_addr(req, sd);
 
     if (recv_greeting(req) < 0)
         goto err;
@@ -110,7 +110,7 @@ err:
 }
 
 
-static void resolve_req(req_t *req, int sd)
+static void resolve_req_addr(req_t *req, int sd)
 {
 /*  Resolves the network information associated with the
  *    peer at the other end of the socket connection.
@@ -118,6 +118,7 @@ static void resolve_req(req_t *req, int sd)
     struct sockaddr_in addr;
     socklen_t addrlen = sizeof(addr);
     char buf[MAX_LINE];
+    char *p;
 
     assert(sd >= 0);
 
@@ -134,9 +135,16 @@ static void resolve_req(req_t *req, int sd)
      *    Either way, copy buf to prevents having to code everything as
      *    (req->host ? req->host : req->ip).
      */
-    get_hostname_by_addr(&addr.sin_addr, buf, sizeof(buf));
-    req->host = create_string(buf);
-
+    if ((get_hostname_by_addr(&addr.sin_addr, buf, sizeof(buf)))) {
+        req->fqdn = create_string(buf);
+        if ((p = strchr(buf, '.')))
+            *p = '\0';
+        req->host = create_string(buf);
+    }
+    else {
+        req->fqdn = create_string(buf);
+        req->host = create_string(buf);
+    }
     return;
 }
 
@@ -645,7 +653,7 @@ static int check_busy_consoles(req_t *req)
             delta = create_time_delta_string(t);
 
             snprintf(buf, sizeof(buf),
-                "Console %s open %s by %s@%s%s%s (idle %s).\n",
+                "Console [%s] open %s by %s@%s%s%s (idle %s).\n",
                 console->name, (gotBcast ? "B/C" : "R/W"),
                 writer->aux.client.req->user, writer->aux.client.req->host,
                 (tty ? " on " : ""), (tty ? tty : ""), (delta ? delta : "???"));
