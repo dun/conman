@@ -1,5 +1,8 @@
 2003-07-24  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* Makefile.in: Added tests for platform-dependent locations of the
+	init script {gnats:72}.
+
 	* server-conf.c, server-obj.c, server.c, server.h, etc/conman.conf,
 	man/conman.conf.5.in, man/conmand.8.in: Added fallback for determining
 	daemon's pid via use of the pid file.  Ensured pid file's perms are set
