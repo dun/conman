@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 #
-# $Id: Makefile.in,v 1.17 2001/08/23 23:14:59 dun Exp $
+# $Id: Makefile.in,v 1.18 2001/08/24 16:09:49 dun Exp $
 ##
 
 PACKAGE=	@PACKAGE@
@@ -102,15 +102,15 @@ rpm tar:
 	ver=`cvs co -r $$tag -p $(PACKAGE)/VERSION 2>/dev/null | \
 	  sed -ne 's/.*-\(.*\)/\1/p'`; \
 	if test -z "$$ver"; then echo "Undefined VERSION ($$tag)"; exit 1; fi; \
-	$(MAKE) -s $@-tag tag=$$tag ver=$$ver
+	$(MAKE) -s $@-internal tag=$$tag ver=$$ver
 
-rpm-tag:
+rpm-internal:
 	@test -z "$$tag" -o -z "$$ver" && exit 1; \
 	tmp=$${TMPDIR-/tmp}/tmp-$(PACKAGE)-$$$$; \
 	for d in BUILD RPMS SOURCES SPECS SRPMS TMP; do \
 	  $(mkinstalldirs) $$tmp/$$d >/dev/null; \
 	done; \
-	$(MAKE) tar-tag || exit 0; \
+	$(MAKE) tar-internal || exit 0; \
 	cp -p $(PACKAGE)-$$ver.tgz $$tmp/SOURCES; \
 	cvs co -r $$tag -p $(PACKAGE)/$(PACKAGE).spec.in 2>/dev/null | \
 	  sed -e "s/\@PACKAGE\@/$(PACKAGE)/" -e "s/\@VERSION\@/$$ver/" \
@@ -123,7 +123,7 @@ rpm-tag:
 	      $$tmp/SRPMS/$(PACKAGE)-$$ver*.src.rpm ./; \
 	rm -rf $$tmp
 
-tar-tag:
+tar-internal:
 	@test -z "$$tag" -o -z "$$ver" && exit 1; \
 	tmp=$${TMPDIR-/tmp}/tmp-$(PACKAGE)-$$$$; \
 	name=$(PACKAGE)-$$ver; \
