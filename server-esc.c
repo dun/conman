@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-esc.c,v 1.18 2001/12/20 17:53:50 dun Exp $
+ *  $Id: server-esc.c,v 1.19 2001/12/21 05:37:17 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -216,10 +216,11 @@ static void perform_log_replay(obj_t *client)
         n = snprintf(ptr, len, "%sEnd log replay of console [%s]%s",
             CONMAN_MSG_PREFIX, console->name, CONMAN_MSG_SUFFIX);
         assert((n >= 0) && (n < len));
+        ptr += n;
     }
 
     DPRINTF("Performing log replay on console [%s].\n", console->name);
-    write_obj_data(client, buf, strlen(buf), 0);
+    write_obj_data(client, buf, ptr - buf, 0);
     return;
 }
 
