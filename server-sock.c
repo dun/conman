@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.41 2001/12/30 21:21:17 dun Exp $
+ *  $Id: server-sock.c,v 1.42 2001/12/31 04:00:48 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -535,7 +535,7 @@ static int validate_req(req_t *req)
  *  Returns 0 if the request is valid, or -1 on error.
  */
     if (list_is_empty(req->consoles)) {
-        send_rsp(req, CONMAN_ERR_NO_CONSOLES, "Found no matching consoles.");
+        send_rsp(req, CONMAN_ERR_NO_CONSOLES, "Found no matching consoles");
         return(-1);
     }
     if (check_too_many_consoles(req) < 0)
@@ -568,7 +568,7 @@ static int check_too_many_consoles(req_t *req)
     if ((req->command == CONNECT) && (req->enableBroadcast))
         return(0);
 
-    snprintf(buf, sizeof(buf), "Found %d matching consoles.",
+    snprintf(buf, sizeof(buf), "Found %d matching consoles",
         list_count(req->consoles));
     send_rsp(req, CONMAN_ERR_TOO_MANY_CONSOLES, buf);
 
@@ -627,10 +627,10 @@ static int check_busy_consoles(req_t *req)
     }
 
     if (list_count(busy) == 1) {
-        snprintf(buf, sizeof(buf), "Found console already in use.");
+        snprintf(buf, sizeof(buf), "Found console already in use");
     }
     else {
-        snprintf(buf, sizeof(buf), "Found %d consoles already in use.",
+        snprintf(buf, sizeof(buf), "Found %d consoles already in use",
             list_count(busy));
     }
     send_rsp(req, CONMAN_ERR_BUSY_CONSOLES, buf);
