@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.31 2001/12/19 23:31:27 dun Exp $
+ *  $Id: server-conf.c,v 1.32 2001/12/20 22:00:32 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -116,8 +116,8 @@ server_conf_t * create_server_conf(void)
     conf->objs = list_create((ListDelF) destroy_obj);
     conf->enableKeepAlive = 1;
     conf->enableLoopBack = 0;
+    conf->enableTCPWrap = 0;
     conf->enableVerbose = 0;
-    conf->enableWrappers = 0;
     conf->enableZeroLogs = 0;
     return(conf);
 }
@@ -297,7 +297,7 @@ void process_server_conf_file(server_conf_t *conf)
     }
 
 #ifndef WITH_TCP_WRAPPERS
-    if (conf->enableWrappers)
+    if (conf->enableTCPWrap)
         log_msg(0, "Cannot enable TCP-Wrappers without compile-time support.");
 #endif /* !WITH_TCP_WRAPPERS */
 
@@ -614,9 +614,9 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else if (lex_next(l) == SERVER_CONF_ON)
-                conf->enableWrappers = 1;
+                conf->enableTCPWrap = 1;
             else if (lex_prev(l) == SERVER_CONF_OFF)
-                conf->enableWrappers = 0;
+                conf->enableTCPWrap = 0;
             else
                 snprintf(err, sizeof(err), "expected ON or OFF for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.40 2001/12/19 23:31:27 dun Exp $
+ *  $Id: server.c,v 1.41 2001/12/20 22:00:32 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -260,7 +260,7 @@ static void display_configuration(server_conf_t *conf)
         if (conf->resetCmd)
             printf(" ResetCmd");
 #ifdef WITH_TCP_WRAPPERS
-        if (conf->enableWrappers)
+        if (conf->enableTCPWrap)
             printf(" TCP-Wrappers");
 #endif /* WITH_TCP_WRAPPERS */
         if (conf->tStampMinutes > 0)

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.39 2001/12/19 23:31:27 dun Exp $
+ *  $Id: server-sock.c,v 1.40 2001/12/20 22:00:32 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -175,7 +175,7 @@ static int resolve_addr(server_conf_t *conf, req_t *req, int sd)
     /*
      *  Check via TCP-Wrappers.
      */
-    if (conf->enableWrappers) {
+    if (conf->enableTCPWrap) {
         if (hosts_ctl(CONMAN_DAEMON_NAME,
           (gotHostName ? req->fqdn : STRING_UNKNOWN),
           req->ip, STRING_UNKNOWN) == 0) {
