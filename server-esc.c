@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-esc.c,v 1.3 2001/06/15 15:46:44 dun Exp $
+ *  $Id: server-esc.c,v 1.4 2001/06/15 22:12:09 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -141,7 +141,7 @@ void perform_log_replay(obj_t *client)
         assert(logfile->type == LOGFILE);
         n = snprintf(ptr, len, "%sBegin log replay of console %s%s",
             CONMAN_MSG_PREFIX, console->name, CONMAN_MSG_SUFFIX);
-        if ((n < 0) || (n >= len) || (sizeof(buf) <= 2*n)) {
+        if ((n < 0) || (n >= len) || (sizeof(buf) <= 2*n - 2)) {
             log_msg(10, "Insufficient buffer to replay console %s log for %s.",
                 console->name, client->name);
             return;
@@ -151,13 +151,14 @@ void perform_log_replay(obj_t *client)
          *  Since we now know the length of the "begin" message, reserve
          *    space in 'buf' for the "end" message by doubling its length.
          */
-        len -= 2*n;
+        len -= 2*n - 2;
 
         if ((rc = pthread_mutex_lock(&logfile->bufLock)) != 0)
             err_msg(rc, "pthread_mutex_lock() failed for [%s]",
                 logfile->name);
 
-        /*  If the console's circular-buffer has not yet wrapped around,
+        /*  Compute the number of bytes to replay.
+         *  If the console's circular-buffer has not yet wrapped around,
          *    don't wrap back into uncharted buffer territory.
          */
         if (!logfile->gotWrapped)
