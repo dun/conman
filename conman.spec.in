@@ -1,4 +1,4 @@
-# $Id: conman.spec.in,v 1.6 2001/08/30 18:19:23 dun Exp $
+# $Id: conman.spec.in,v 1.7 2001/09/26 21:09:11 dun Exp $
 
 %define name    @PACKAGE@
 %define version @VERSION@
@@ -7,7 +7,7 @@
 Name: %name
 Version: %version
 Release: %release
-Summary: ConMan - Remote Serial Console Management
+Summary: ConMan - Remote Console Management
 #URL: FOO
 Group: Applications/Communications
 Copyright: LLNL/Internal-Use-Only
