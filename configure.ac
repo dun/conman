@@ -3,7 +3,7 @@ dnl
 dnl ConMan AutoConf Config Jazz
 dnl   by Chris Dunlap <cdunlap@llnl.gov>
 dnl
-dnl $Id: configure.ac,v 1.4 2001/12/12 18:36:28 dun Exp $
+dnl $Id: configure.ac,v 1.5 2001/12/13 21:25:07 dun Exp $
 
 
 dnl Prologue.
@@ -169,7 +169,7 @@ AH_BOTTOM(
 [/* Override default out_of_memory() macro definition.
  */
 #include "errors.h"
-#define out_of_memory() (err_msg(0, "Out of memory"), NULL)]
+#define out_of_memory() (err_msg(0, "Out of memory"), (void *) NULL)]
 )
 
 

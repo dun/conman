@@ -63,5 +63,5 @@
 /* Override default out_of_memory() macro definition.
  */
 #include "errors.h"
-#define out_of_memory() (err_msg(0, "Out of memory"), NULL)
+#define out_of_memory() (err_msg(0, "Out of memory"), (void *) NULL)
 
