@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.c,v 1.51 2002/05/09 16:57:12 dun Exp $
+ *  $Id: server.c,v 1.52 2002/05/09 23:37:18 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -548,8 +548,6 @@ static void reopen_logfiles(List objs)
     ListIterator i;
     obj_t *logfile;
 
-    /*  FIXME: Re-Open server's logfile here as well.
-     */
     i = list_iterator_create(objs);
     while ((logfile = list_next(i))) {
         if (!is_logfile_obj(logfile))
