@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.17 2001/09/06 21:55:01 dun Exp $
+ *  $Id: server-conf.c,v 1.18 2001/09/06 22:37:38 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -280,7 +280,7 @@ void process_server_conf_file(server_conf_t *conf)
 
         if (!(fp = fopen(conf->pidFileName, "w")))
             err_msg(errno, "Unable to open \"%s\"", conf->pidFileName);
-        fprintf(fp, "%d\n", getpid());
+        fprintf(fp, "%d\n", (int) getpid());
         if (fclose(fp) == EOF)
             err_msg(errno, "Unable to close \"%s\"", conf->pidFileName);
     }
@@ -323,7 +323,7 @@ static void kill_daemon(server_conf_t *conf)
             err_msg(errno, "Unable to send SIGTERM to pid %d.\n", pid);
         if (conf->enableVerbose)
             printf("Configuration \"%s\" (pid %d) terminated.\n",
-                conf->confFileName, pid);
+                conf->confFileName, (int) pid);
     }
 
     destroy_server_conf(conf);
@@ -333,7 +333,7 @@ static void kill_daemon(server_conf_t *conf)
 
 static void parse_console_directive(Lex l, server_conf_t *conf)
 {
-/*  CONSOLE NAME="<str>" DEV="<file>" [LOG="<file>"] [opts="<str>"]
+/*  CONSOLE NAME="<str>" DEV="<file>" [LOG="<file>"] [OPTS="<str>"]
  */
     char *directive;			/* name of directive being parsed */
     int line;				/* line number where directive begins */

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.35 2001/09/06 21:55:01 dun Exp $
+ *  $Id: server-obj.c,v 1.36 2001/09/06 22:37:38 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -374,7 +374,7 @@ static char * find_trailing_int_str(char *str)
     char *p, *q;
 
     for (p=str, q=NULL; p && *p; p++) {
-        if (!isdigit(*p))
+        if (!isdigit((int) *p))
             q = NULL;
         else if (!q)
             q = p;

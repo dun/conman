@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-net.c,v 1.1 2001/09/06 21:50:52 dun Exp $
+ *  $Id: util-net.c,v 1.2 2001/09/06 22:37:38 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util-net.h" for documentation on public functions.
@@ -10,12 +10,14 @@
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
+#include <arpa/inet.h>
 #include <assert.h>
 #include <errno.h>
-#include <pthread.h>
-#include <string.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <pthread.h>
+#include <string.h>
+#include <sys/socket.h>
 #include "errors.h"
 #include "util-str.h"
 #include "util-net.h"
