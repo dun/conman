@@ -1,10 +1,10 @@
-# $Id: conman.spec.in,v 1.20 2002/05/12 19:20:29 dun Exp $
+# $Id: conman.spec.in,v 1.21 2002/05/14 04:22:07 dun Exp $
 
 Name:		@PROJECT@
 Version:	@VERSION@
 Release:	1
 
-Summary:	ConMan - Remote Console Management
+Summary:	ConMan - The Console Manager
 Group:		Applications/Communications
 License:	GPL
 URL:		http://www.llnl.gov/linux/conman/
@@ -14,7 +14,7 @@ BuildRoot:	%{_tmppath}/%{name}-%{version}
 Source0:	%{name}-%{version}.tgz
 
 %description
-ConMan is a remote console management program designed to support a large
+ConMan is a console management program designed to support a large
 number of console devices and simultaneous users.  It currently supports
 local serial devices and remote terminal servers (via the telnet protocol).
 Its features include:
