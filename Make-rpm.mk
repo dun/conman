@@ -2,7 +2,7 @@
 # Makefile Include for RPM Construction
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Make-rpm.mk,v 1.9 2001/12/05 19:02:58 dun Exp $
+# $Id: Make-rpm.mk,v 1.10 2001/12/05 19:25:22 dun Exp $
 ##
 # REQUIREMENTS:
 # - requires project to be under CVS version control
@@ -48,7 +48,7 @@ rpm tar:
 	test -n "$(mkinstalldirs)" && mkdir="$(mkinstalldirs)" \
 	  || mkdir="mkdir -p"; \
 	test -z "$$tag" && tag=`echo $$pkg-$$ver | tr '.' '-'`; \
-	info=`$$cvs -Q co -r $$tag -p $$pkg/VERSION`; \
+	info=`$$cvs -Q co -r $$tag -p $$pkg/VERSION | egrep -v '^#'`; \
 	pkg=`echo "$$info" | sed -ne 's/^\(.*\)-\(.*\)/\1/p'`; \
 	if test "$$pkg" != "$(PACKAGE)"; then \
 	  echo "ERROR: Cannot determine PACKAGE (tag=$$tag)" 1>&2; exit 0; fi; \
@@ -62,8 +62,8 @@ rpm tar:
 	  tag="$$tag" pkg="$$pkg" ver="$$ver" rel="$$rel"
 
 rpm-internal: tar-internal
-	@test -z "$$cvs" -o -z "$$mkdir" && exit 1; \
-	test -z "$$tag" -o -z "$$ver" -o -z "$$rel" && exit 1; \
+	@test -z "$$cvs" -o -z "$$mkdir" -o -z "$$tag" && exit 1; \
+	test -z "$$pkg" -o -z "$$ver" -o -z "$$rel" && exit 1; \
 	tmp=$${TMPDIR-/tmp}/tmp-$$pkg-$$$$; \
 	log=$$tmp/TMP/rpm.log; \
 	tar=$$pkg-$$ver.tgz; \
@@ -91,8 +91,8 @@ rpm-internal: tar-internal
 	rm -rf $$tmp
 
 tar-internal:
-	@test -z "$$cvs" -o -z "$$mkdir" && exit 1; \
-	test -z "$$tag" -o -z "$$ver" && exit 1; \
+	@test -z "$$cvs" -o -z "$$mkdir" -o -z "$$tag" && exit 1; \
+	test -z "$$pkg" -o -z "$$ver" && exit 1; \
 	tmp=$${TMPDIR-/tmp}/tmp-$$pkg-$$$$; \
 	name=$$pkg-$$ver; \
 	dir=$$tmp/$$name; \
