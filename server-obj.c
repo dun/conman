@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.29 2001/08/15 14:05:23 dun Exp $
+ *  $Id: server-obj.c,v 1.30 2001/08/17 01:52:49 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -25,15 +25,23 @@
 #include "util.h"
 
 
-static obj_t * create_obj(enum obj_type type, List objs, char *name, int fd);
+#define DEFAULT_SERIAL_BPS      B9600
+#define DEFAULT_SERIAL_DATABITS 8
+#define DEFAULT_SERIAL_PARITY   0
+#define DEPAULT_SERIAL_STOPBITS 1
+
+
+static obj_t * create_obj(
+    server_conf_t *conf, char *name, int fd, enum obj_type type);
 static void set_raw_console_mode(obj_t *obj);
 static void restore_console_mode(obj_t *obj);
 static void unlink_objs_helper(obj_t *src, obj_t *dst);
 
 
-obj_t * create_console_obj(List objs, char *name, char *dev, int bps)
+obj_t * create_console_obj(
+    server_conf_t *conf, char *name, char *dev, char *opts)
 {
-/*  Creates a new console object and adds it to the master (objs) list.
+/*  Creates a new console object and adds it to the master objs list.
  *    Note: the console is open and set for non-blocking I/O.
  *  Returns the new object, or NULL on error.
  */
@@ -41,7 +49,7 @@ obj_t * create_console_obj(List objs, char *name, char *dev, int bps)
     obj_t *console;
     int fd = -1;
 
-    assert(objs);
+    assert(conf);
     assert(name && *name);
     assert(dev && *dev);
 
@@ -51,7 +59,7 @@ obj_t * create_console_obj(List objs, char *name, char *dev, int bps)
      *    objects within the same daemon process using the same device.
      *    So that check is performed here.
      */
-    if (!(i = list_iterator_create(objs)))
+    if (!(i = list_iterator_create(conf->objs)))
         err_msg(0, "Out of memory");
     while ((console = list_next(i))) {
         if (console->type != CONSOLE)
@@ -69,7 +77,7 @@ obj_t * create_console_obj(List objs, char *name, char *dev, int bps)
     if (console != NULL)
         goto err;
 
-    if ((fd = open(dev, O_RDWR | O_NONBLOCK)) < 0) {
+    if ((fd = open(dev, O_RDWR | O_NONBLOCK | O_NOCTTY)) < 0) {
         log_msg(0, "Unable to open console [%s]: %s.", name, strerror(errno));
         goto err;
     }
@@ -81,9 +89,17 @@ obj_t * create_console_obj(List objs, char *name, char *dev, int bps)
         log_msg(0, "Device \"%s\" is not a terminal.", dev);
         goto err;
     }
-    console = create_obj(CONSOLE, objs, name, fd);
+    /*  According to the UNIX Programming FAQ v1.37
+     *    <http://www.faqs.org/faqs/unix-faq/programmer/faq/>
+     *    (Section 3.6: How to Handle a Serial Port or Modem),
+     *    systems seem to differ as to whether a nonblocking
+     *    open on a tty will affect subsequent read()s.
+     *    Play it safe and be explicit!
+     */
+    set_descriptor_nonblocking(fd);
+
+    console = create_obj(conf, name, fd, CONSOLE);
     console->aux.console.dev = create_string(dev);
-    console->aux.console.bps = bps;
     set_raw_console_mode(console);
     console->aux.console.logfile = NULL;
 
@@ -97,9 +113,9 @@ err:
 }
 
 
-obj_t * create_logfile_obj(List objs, char *name, obj_t *console, int zeroLog)
+obj_t * create_logfile_obj(server_conf_t *conf, char *name, obj_t *console)
 {
-/*  Creates a new logfile object and adds it to the master (objs) list.
+/*  Creates a new logfile object and adds it to the master objs list.
  *    Note: the logfile is open and set for non-blocking I/O.
  *  Returns the new object, or NULL on error.
  */
@@ -109,7 +125,7 @@ obj_t * create_logfile_obj(List objs, char *name, obj_t *console, int zeroLog)
     int fd = -1;
     char *now, *msg;
 
-    assert(objs);
+    assert(conf);
     assert(name && *name);
     assert(console);
 
@@ -119,7 +135,7 @@ obj_t * create_logfile_obj(List objs, char *name, obj_t *console, int zeroLog)
      *    objects within the same daemon process using the same filename.
      *    So that check is performed here.
      */
-    if (!(i = list_iterator_create(objs)))
+    if (!(i = list_iterator_create(conf->objs)))
         err_msg(0, "Out of memory");
     while ((logfile = list_next(i))) {
         if (logfile->type != LOGFILE)
@@ -134,7 +150,7 @@ obj_t * create_logfile_obj(List objs, char *name, obj_t *console, int zeroLog)
         goto err;
 
     flags = O_WRONLY | O_CREAT | O_APPEND | O_NONBLOCK;
-    if (zeroLog)
+    if (conf->enableZeroLogs)
         flags |= O_TRUNC;
     if ((fd = open(name, flags, S_IRUSR | S_IWUSR)) < 0) {
         log_msg(0, "Unable to open logfile \"%s\": %s.", name, strerror(errno));
@@ -145,7 +161,7 @@ obj_t * create_logfile_obj(List objs, char *name, obj_t *console, int zeroLog)
         goto err;
     }
 
-    logfile = create_obj(LOGFILE, objs, name, fd);
+    logfile = create_obj(conf, name, fd, LOGFILE);
     logfile->aux.logfile.console = create_string(console->name);
     console->aux.console.logfile = logfile;
 
@@ -166,16 +182,16 @@ err:
 }
 
 
-obj_t * create_client_obj(List objs, req_t *req)
+obj_t * create_client_obj(server_conf_t *conf, req_t *req)
 {
-/*  Creates a new client object and adds it to the master (objs) list.
+/*  Creates a new client object and adds it to the master objs list.
  *    Note: the socket is open and set for non-blocking I/O.
  *  Returns the new object.
  */
     char name[MAX_LINE];
     obj_t *client;
 
-    assert(objs);
+    assert(conf);
     assert(req);
     assert(req->sd >= 0);
     assert(req->user && *req->user);
@@ -185,7 +201,7 @@ obj_t * create_client_obj(List objs, req_t *req)
 
     snprintf(name, sizeof(name), "%s@%s:%d", req->user, req->host, req->port);
     name[sizeof(name) - 1] = '\0';
-    client = create_obj(CLIENT, objs, name, req->sd);
+    client = create_obj(conf, name, req->sd, CLIENT);
 
     client->aux.client.req = req;
     time(&client->aux.client.timeLastRead);
@@ -198,18 +214,19 @@ obj_t * create_client_obj(List objs, req_t *req)
 }
 
 
-static obj_t * create_obj(enum obj_type type, List objs, char *name, int fd)
+static obj_t * create_obj(
+    server_conf_t *conf, char *name, int fd, enum obj_type type)
 {
 /*  Creates an object of the specified (type) opened on (fd) and adds it
- *    to the master (objs) list.
+ *    to the master objs list.
  */
     obj_t *obj;
     int rc;
 
-    assert(type == CONSOLE || type == LOGFILE || type == CLIENT);
-    assert(objs);
+    assert(conf);
     assert(name);
     assert(fd >= 0);
+    assert(type == CONSOLE || type == LOGFILE || type == CLIENT);
 
     if (!(obj = malloc(sizeof(obj_t))))
         err_msg(0, "Out of memory");
@@ -228,7 +245,7 @@ static obj_t * create_obj(enum obj_type type, List objs, char *name, int fd)
 
     /*  Add obj to the master conf->objs list.
      */
-    if (!list_append(objs, obj))
+    if (!list_append(conf->objs, obj))
         err_msg(0, "Out of memory");
 
     DPRINTF("Created object [%s] on fd=%d.\n", obj->name, obj->fd);
@@ -255,6 +272,19 @@ void destroy_obj(obj_t *obj)
 /*  assert(obj->bufInPtr == obj->bufOutPtr); */
 
     if (obj->type == CONSOLE) {
+        /*
+         *  According to the UNIX Programming FAQ v1.37
+         *    <http://www.faqs.org/faqs/unix-faq/programmer/faq/>
+         *    (Section 3.6: How to Handle a Serial Port or Modem),
+         *    if there is any pending output waiting to be written
+         *    to the device (eg, if output flow is stopped by h/w
+         *    or s/w handshaking), the process can hang _unkillably_
+         *    in the close() call until the output drains.
+         *    Play it safe and discard any pending output.
+         */
+        if (tcflush(obj->fd, TCIOFLUSH) < 0)
+            err_msg(errno, "Unable to flush tty device for console [%s]",
+                obj->name);
         restore_console_mode(obj);
     }
     if (obj->fd >= 0) {
@@ -304,8 +334,6 @@ void destroy_obj(obj_t *obj)
 
 static void set_raw_console_mode(obj_t *obj)
 {
-/*  FIX_ME: Can this be combined with client's set_raw_tty_mode() in util.c?
- */
     struct termios term;
 
     assert(obj->fd >= 0);
@@ -315,26 +343,14 @@ static void set_raw_console_mode(obj_t *obj)
         err_msg(errno, "tcgetattr(%s) failed", obj->aux.console.dev);
     obj->aux.console.term = term;
 
-    /*  disable SIGINT on break, CR-to-NL, input parity checking,
-     *    stripping 8th bit off input chars, output flow ctrl
+    term.c_iflag = 0;
+    term.c_oflag = 0;
+    term.c_lflag = 0;
+    /*
+     *  Ignore modem status lines, enable receiver, set 8 bits/char.
+     *  Implicitly clear size bits (CSIZE), disable parity checking (PARENB).
      */
-    term.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
-
-    /*  disable output processing
-     */
-    term.c_oflag &= ~(OPOST);
-
-    /*  clear size bits; disable parity checking
-     */
-    term.c_cflag &= ~(CSIZE | PARENB);
-
-    /*  set 8 bits/char; ignore modem status lines
-     */
-    term.c_cflag |= (CS8 | CLOCAL);
-
-    /*  disable echo, canonical mode, extended input processing, signal chars
-     */
-    term.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
+    term.c_cflag = CLOCAL | CREAD | CS8;
 
     /*  read() does not return until data is present (may block indefinitely)
      */
@@ -342,7 +358,7 @@ static void set_raw_console_mode(obj_t *obj)
     term.c_cc[VTIME] = 0;
 
     DPRINTF("Setting raw terminal mode on [%s].\n", obj->name);
-    if (tcsetattr(obj->fd, TCSANOW, &term) < 0)
+    if (tcsetattr(obj->fd, TCSAFLUSH, &term) < 0)
         err_msg(errno, "tcsetattr(%s) failed", obj->aux.console.dev);
     return;
 }
@@ -350,12 +366,10 @@ static void set_raw_console_mode(obj_t *obj)
 
 static void restore_console_mode(obj_t *obj)
 {
-/*  FIX_ME: Can this be combined with client's restore_tty_mode() in util.c?
- */
     assert(obj->fd >= 0);
     assert(obj->type == CONSOLE);
 
-    if (tcsetattr(obj->fd, TCSANOW, &obj->aux.console.term) < 0)
+    if (tcsetattr(obj->fd, TCSAFLUSH, &obj->aux.console.term) < 0)
         err_msg(errno, "tcsetattr(%s) failed", obj->aux.console.dev);
     DPRINTF("Restored cooked terminal mode on [%s].\n", obj->name);
     return;
