@@ -2,7 +2,7 @@
  *  client-conf.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: client-conf.c,v 1.6 2001/05/18 15:25:55 dun Exp $
+ *  $Id: client-conf.c,v 1.7 2001/05/18 16:48:16 dun Exp $
 \******************************************************************************/
 
 
@@ -108,7 +108,7 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
     char *str;
 
     opterr = 1;
-    while ((c = getopt(argc, argv, "bd:e:Efhl:qrx:vV")) != -1) {
+    while ((c = getopt(argc, argv, "bd:e:fhl:qrx:vV")) != -1) {
         switch(c) {
         case '?':			/* invalid option */
             exit(1);
@@ -132,9 +132,6 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
             break;
         case 'e':
             conf->escapeChar = optarg[0];
-            break;
-        case 'E':
-            conf->escapeChar = 256;
             break;
         case 'f':
             conf->enableForce = 1;
@@ -187,7 +184,6 @@ static void display_client_help(char *prog)
     printf("  -d HOST   Specify location of server"
         " (default: %s:%d).\n", DEFAULT_CONMAN_HOST, DEFAULT_CONMAN_PORT);
     printf("  -e CHAR   Set escape character (default: '%s').\n", esc);
-    printf("  -E        Disable escape character.\n");
     printf("  -f        Force open connection.\n");
     printf("  -l FILE   Log connection to file.\n");
     printf("  -q        Query server about specified console(s).\n");
