@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Makefile.in,v 1.41 2001/12/28 20:13:06 dun Exp $
+# $Id: Makefile.in,v 1.42 2001/12/30 01:39:23 dun Exp $
 ##
 
 PROJECT=	conman
@@ -42,7 +42,7 @@ CLIENT_LIBS=	$(COMMON_LIBS)
 SERVER_LIBS=	$(COMMON_LIBS)
 
 
-all: $(PROGS)
+all: $(PROGS) tags
 
 conman: $(CLIENT_OBJS)
 	$(CC) $(COPTS) $(LDFLAGS) $(CLIENT_OBJS) -o $@ $(CLIENT_LIBS)
@@ -52,9 +52,6 @@ conmand: $(SERVER_OBJS)
 
 .c.o:
 	$(CC) $(COPTS) -c $<
-
-depend:
-	makedepend -Y -- $(COPTS) -- *.[ch] 2>/dev/null
 
 install: $(PROGS)
 	$(mkinstalldirs) $(DESTDIR)$(bindir)
@@ -85,7 +82,7 @@ install: $(PROGS)
 	chmod 644 $(DESTDIR)$(libdir)/$$proj/*.exp
 
 clean:
-	-rm -f *.o *.a *~ \#* .\#* cscope*.out core core.* *.core
+	-rm -f *.o *.a *~ \#* .\#* cscope*.out core core.* *.core tags TAGS
 
 realclean: clean
 	-rm -f $(PROGS)
@@ -94,6 +91,12 @@ realclean: clean
 distclean: realclean
 	-rm -f config.cache config.log config.status stamp-h Makefile.bak
 	-rm -f $(AC_OUTPUT)
+
+depend:
+	-makedepend -Y -- $(COPTS) -- *.[ch] 2>/dev/null
+
+tags: $(PROGS)
+	-ctags -R
 
 include Make-rpm.mk
 
