@@ -1,11 +1,11 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.16 2001/08/07 17:36:38 dun Exp $
+ *  $Id: server.c,v 1.17 2001/08/14 23:18:59 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
 #include <errno.h>
@@ -17,6 +17,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include "common.h"
 #include "errors.h"
@@ -25,7 +26,9 @@
 #include "util.h"
 
 
-static void daemonize(void);
+static void background_process(void);
+static void silence_process(void);
+static void display_configuration(server_conf_t *conf);
 static void exit_handler(int signum);
 static void create_listen_socket(server_conf_t *conf);
 static void mux_io(server_conf_t *conf);
@@ -39,8 +42,8 @@ int main(int argc, char *argv[])
 {
     server_conf_t *conf;
 
-    /* FIX_ME: Should check be performed here to ensure we are root?
-     */
+    background_process();
+
     conf = create_server_conf();
     process_server_cmd_line(argc, argv, conf);
     process_server_conf_file(conf);
@@ -48,9 +51,8 @@ int main(int argc, char *argv[])
     if (conf->logname)
         open_msg_log(conf->logname);
 
-    /* FIX_ME: Exit handlers do not seem to be effective after daemonize().
-     */
-    daemonize();
+    if (conf->enableVerbose)
+        display_configuration(conf);
 
     Signal(SIGHUP, SIG_IGN);
     Signal(SIGPIPE, SIG_IGN);
@@ -58,6 +60,8 @@ int main(int argc, char *argv[])
     Signal(SIGTERM, exit_handler);
 
     create_listen_socket(conf);
+
+    silence_process();
 
     mux_io(conf);
 
@@ -67,38 +71,41 @@ int main(int argc, char *argv[])
 }
 
 
-static void daemonize(void)
+static void background_process(void)
 {
     struct rlimit limit;
     pid_t pid;
-    int devnull;
 
 #ifndef NDEBUG
-    /*  Don't daemonize during DEBUG.
+    /*  Do not execute routine during DEBUG.
      */
     return;
 #endif /* !NDEBUG */
+
+    /*  Clear file mode creation mask.
+     */
+    umask(0);
 
     /*  Disable creation of core files.
      */
     limit.rlim_cur = 0;
     limit.rlim_max = 0;
     if (setrlimit(RLIMIT_CORE, &limit) < 0)
-        err_msg(errno, "setrlimit() failed");
+        err_msg(errno, "Unable to prevent creation of core file");
 
     /*  Automatically background the process and
      *    ensure child is not a process group leader.
      */
     if ((pid = fork()) < 0)
-        err_msg(errno, "fork() failed");
+        err_msg(errno, "Unable to create child process");
     else if (pid > 0)
         exit(0);
 
     /*  Become a session leader and process group leader
      *    with no controlling tty.
      */
-    if (setsid() == -1)
-        err_msg(errno, "setsid() failed");
+    if (setsid() < 0)
+        err_msg(errno, "Unable to disassociate controlling tty");
 
     /*  Abdicate session leader position in order to guarantee
      *    daemon cannot automatically re-acquire a controlling tty.
@@ -107,26 +114,36 @@ static void daemonize(void)
      */
     Signal(SIGHUP, SIG_IGN);
     if ((pid = fork()) < 0)
-        err_msg(errno, "fork() failed");
+        err_msg(errno, "Unable to create grandchild process");
     else if (pid > 0)
         exit(0);
+
+    return;
+}
+
+
+static void silence_process(void)
+{
+    int devnull;
+
+#ifndef NDEBUG
+    /*  Do not execute routine during DEBUG.
+     */
+    return;
+#endif /* !NDEBUG */
 
     /*  Discard data to/from stdin, stdout, and stderr.
      */
     if ((devnull = open("/dev/null", O_RDWR)) < 0)
-        err_msg(errno, "open(/dev/null) failed");
+        err_msg(errno, "Unable to open '/dev/null'");
     if (dup2(devnull, STDIN_FILENO) < 0)
-        err_msg(errno, "dup2(stdin) failed");
+        err_msg(errno, "Unable to dup '/dev/null' onto stdin");
     if (dup2(devnull, STDOUT_FILENO) < 0)
-        err_msg(errno, "dup2(stdout) failed");
+        err_msg(errno, "Unable to dup '/dev/null' onto stdout");
     if (dup2(devnull, STDERR_FILENO) < 0)
-        err_msg(errno, "dup2(stderr) failed");
+        err_msg(errno, "Unable to dup '/dev/null' onto stderr");
     if (close(devnull) < 0)
-        err_msg(errno, "close(/dev/null) failed");
-
-    /*  Clear file mode creation mask.
-     */
-    umask(0);
+        err_msg(errno, "Unable to close '/dev/null'");
 
     return;
 }
@@ -140,6 +157,41 @@ static void exit_handler(int signum)
 }
 
 
+static void display_configuration(server_conf_t *conf)
+{
+    ListIterator i;
+    obj_t *obj;
+    int n = 0;
+
+    if (!(i = list_iterator_create(conf->objs)))
+        err_msg(0, "Out of memory");
+    while ((obj = list_next(i)))
+        if (obj->type == CONSOLE)
+            n++;
+    list_iterator_destroy(i);
+
+    printf("Starting ConMan daemon %s (pid %d).\n", VERSION, getpid());
+    printf("Listening on port %d.\n", conf->port);
+    printf("Monitoring %d console%s.\n", n, ((n==1) ? "" : "s"));
+    printf("Options:");
+    if (!conf->enableKeepAlive && !conf->enableZeroLogs
+      && !conf->enableLoopBack) {
+        printf(" None");
+    }
+    else {
+        if (conf->enableKeepAlive)
+            printf(" KeepAlive");
+        if (conf->enableLoopBack)
+            printf(" LoopBack");
+        if (conf->enableZeroLogs)
+            printf(" ZeroLogs");
+    }
+    printf("\n");
+
+    return;
+}
+
+
 static void create_listen_socket(server_conf_t *conf)
 {
     int ld;
@@ -147,26 +199,31 @@ static void create_listen_socket(server_conf_t *conf)
     const int on = 1;
 
     if ((ld = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-        err_msg(errno, "socket() failed");
+        err_msg(errno, "Unable to create listening socket");
 
     set_descriptor_nonblocking(ld);
 
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(DEFAULT_CONMAN_PORT);
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    addr.sin_port = htons(conf->port);
+
+    if (conf->enableLoopBack)
+        addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    else
+        addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     if (setsockopt(ld, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0)
-        err_msg(errno, "setsockopt(REUSEADDR) failed");
+        err_msg(errno, "Unable to set REUSEADDR socket option");
 
     if (bind(ld, (struct sockaddr *) &addr, sizeof(addr)) < 0)
-        err_msg(errno, "bind() failed");
+        err_msg(errno, "Unable to bind to port %d", conf->port);
 
     if (listen(ld, 10) < 0)
-        err_msg(errno, "listen() failed");
+        err_msg(errno, "Unable to listen on port %d", conf->port);
 
     conf->ld = ld;
-    DPRINTF("Listing for client connections on fd=%d.\n", conf->ld);
+    DPRINTF("Listening for connections on port %d (fd=%d).\n",
+        conf->port, conf->ld);
     return;
 }
 
@@ -181,7 +238,7 @@ static void mux_io(server_conf_t *conf)
     obj_t *obj;
 
     if (list_is_empty(conf->objs)) {
-        log_msg(0, "No consoles have been defined in the configuration");
+        log_msg(0, "No consoles are defined in this configuration.");
         return;
     }
 
@@ -206,7 +263,7 @@ static void mux_io(server_conf_t *conf)
                 maxfd = MAX(maxfd, obj->fd);
             }
             if (((obj->bufInPtr != obj->bufOutPtr) || (obj->gotEOF))
-              && (!obj->gotSuspended)) {
+              && ((obj->type != CLIENT) || (!obj->aux.client.gotSuspend))) {
                 FD_SET(obj->fd, &wset);
                 maxfd = MAX(maxfd, obj->fd);
             }
@@ -227,7 +284,7 @@ static void mux_io(server_conf_t *conf)
 
         while ((n = select(maxfd+1, &rset, &wset, NULL, &tval)) < 0) {
             if (errno != EINTR)
-                err_msg(errno, "select() failed");
+                err_msg(errno, "Unable to multiplex I/O");
             else if (done)
                 /* i need a */ break;
         }
@@ -291,12 +348,14 @@ static void accept_client(server_conf_t *conf)
             return;
         if (errno == ECONNABORTED)
             return;
-        err_msg(errno, "accept() failed");
+        err_msg(errno, "Unable to accept new connection");
     }
     DPRINTF("Accepted new client on fd=%d.\n", sd);
 
-    if (setsockopt(sd, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on)) < 0)
-        err_msg(errno, "setsockopt(KEEPALIVE) failed");
+    if (conf->enableKeepAlive) {
+        if (setsockopt(sd, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on)) < 0)
+            err_msg(errno, "Unable to set KEEPALIVE socket option");
+    }
 
     /*  Create a tmp struct to hold two args to pass to the thread.
      *  Note that the thread is responsible for freeing this memory.
@@ -308,7 +367,7 @@ static void accept_client(server_conf_t *conf)
 
     if ((rc = pthread_create(&tid, NULL,
       (PthreadFunc) process_client, args)) != 0)
-        err_msg(rc, "pthread_create() failed");
+        err_msg(rc, "Unable to create new thread");
 
     return;
 }
