@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util.h,v 1.3 2001/05/24 20:56:08 dun Exp $
+ *  $Id: util.h,v 1.4 2001/05/31 18:18:40 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -43,10 +43,19 @@ char * create_fmt_string(const char *fmt, ...);
  *  Note that the caller is responsible for freeing this string.
  */
 
+char * create_date_time_string(time_t t);
+/*
+ *  Creates and returns a new string with the specified date & time
+ *    in the format "MM/DD/YYYY HH/MM/SS" in a thread-safe manner
+ *    (or throws a fatal error if something strange happens).
+ *  If no time is given (t=0), the current date & time is used.
+ *  Note that the caller is responsible for freeing this string.
+ */
+
 char * create_time_string(time_t t);
 /*
- *  Creates and returns a new string with the specified date & time.
- *    in the format "MM/DD/YYYY HH/MM/SS" in a thread-safe manner
+ *  Creates and returns a new string with the specified
+ *    time in the format "HH/MM" in a thread-safe manner
  *    (or throws a fatal error if something strange happens).
  *  If no time is given (t=0), the current date & time is used.
  *  Note that the caller is responsible for freeing this string.
