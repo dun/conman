@@ -1,4 +1,4 @@
-# $Id: conman.spec.in,v 1.17 2002/05/11 23:24:51 dun Exp $
+# $Id: conman.spec.in,v 1.18 2002/05/11 23:41:05 dun Exp $
 
 Name:		@PROJECT@
 Version:	@VERSION@
@@ -29,9 +29,7 @@ Its features include:
 %setup
 
 %build
-unset DEBUG
-test -n "$RPM_ENABLE_DEBUG" && DEBUG="--enable-debug --with-dmalloc"
-CFLAGS="$RPM_OPT_FLAGS" ./configure --prefix=/usr --with-tcp-wrappers $DEBUG
+%configure --with-tcp-wrappers
 make
 
 %install
