@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-esc.c,v 1.30 2002/05/16 18:54:20 dun Exp $
+ *  $Id: server-esc.c,v 1.31 2002/05/18 23:11:30 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -25,12 +25,12 @@
 \*****************************************************************************/
 
 
+#define TELCMDS
+#define TELOPTS
+
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
-
-#define TELCMDS
-#define TELOPTS
 
 #include <arpa/telnet.h>
 #include <assert.h>
