@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.c,v 1.60 2002/05/20 02:47:31 dun Exp $
+ *  $Id: server.c,v 1.61 2002/09/09 22:48:16 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -778,7 +778,7 @@ static void kill_console_reset(pid_t *arg)
     if (kill(pid, 0) < 0)               /* process is no longer running */
         return;
     if (kill(-pid, SIGKILL) == 0)       /* kill entire process group */
-        log_msg(LOG_NOTICE, "ResetCmd process pid=%d exceeded %ds time limit",
+        log_msg(LOG_WARNING, "ResetCmd process pid=%d exceeded %ds time limit",
             (int) pid, RESET_CMD_TIMEOUT);
     return;
 }
