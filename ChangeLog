@@ -1,6 +1,10 @@
-2003-07-11  Chris Dunlap  <cdunlap@llnl.gov>
+2003-07-13  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* : Released 0.1.8.5.
+
+	* etc/conman.conf, man/conman.conf.5.in: Tweaked docs {gnats:208}.
+
+2003-07-11  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* common.h, server-conf.c, server-logfile.c, server-obj.c, server.c,
 	server.h, etc/conman.conf, man/conman.conf.5.in, man/conmand.8.in:

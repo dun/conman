@@ -1,4 +1,4 @@
-.\" $Id: conman.conf.5.in,v 1.5.2.1 2003/07/12 00:12:25 dun Exp $
+.\" $Id: conman.conf.5.in,v 1.5.2.2 2003/07/14 06:08:20 dun Exp $
 
 .TH CONMAN.CONF 5 "@DATE@" "@PROJECT@-@VERSION@" "LLNL"
 
@@ -82,10 +82,9 @@ following key/value pairs:
 \fBlog\fR \fB=\fR "\fIfile\fR"
 Specifies the default log file to use for each \fBconsole\fR directive.
 This string undergoes conversion specifier expansion (cf, \fBCONVERSION
-SPECIFICATIONS\fR) and must contain either the '\fB%N\fR' or '\fB%D\fR'
-conversion specifier.  If an absolute pathname is not given, the file's
-location is relative to \fBlogdir\fR (assuming it has been previously
-defined).
+SPECIFICATIONS\fR) and must contain either '\fB%N\fR' or '\fB%D\fR'.
+If an absolute pathname is not given, the file's location is relative to
+\fBlogdir\fR (assuming it has been previously defined).
 .TP
 \fBlogopts\fR \fB=\fR "(\fBsanitize\fR|\fBnosanitize\fR)"
 Specifies global options for the console log files.  These options can be
@@ -151,46 +150,46 @@ A conversion specifier is a two-character sequence beginning with
 a '\fB%\fR' character.  The second character in the sequence specifies the
 type of conversion to be applied.  The following specifiers are supported:
 .TP
-N
+\fB%N\fR
 The console name (from the \fBname\fR string).
 .TP
-D
+\fB%D\fR
 The console device basename (from the \fBdev\fR string),
 with leading directory components removed.
 .TP
-P
+\fB%P\fR
 The daemon's process identifier.
 .TP
-Y
+\fB%Y\fR
 The year as a 4-digit number with the century.
 .TP
-y
+\fB%y\fR
 The year as a 2-digit number without the century.
 .TP
-m
+\fB%m\fR
 The month as a 2-digit number (01-12).
 .TP
-d
+\fB%d\fR
 The day of the month as a 2-digit number (01-31).
 .TP
-H
+\fB%H\fR
 The hour as a 2-digit number using a 24-hour clock (00-23).
 .TP
-M
+\fB%M\fR
 The minute as a 2-digit number (00-59).
 .TP
-S
+\fB%S\fR
 The seconds as a 2-digit number (00-61).
 .TP
-s
+\fB%s\fR
 The number of seconds since the Epoch.
 .TP
-%
+\fB%%\fR
 A literal '%' character.
 .PP
 The console name (\fB%N\fR) and device (\fB%D\fR) specifiers are "sanitized"
-in that non-printable characters and the '\fB/\fR' character are replaced with
-underscores.
+in that non-printable characters and the forward-slash (/) character are
+replaced with underscores.
 
 .SH FILES
 .I @CONMAN_CONF@

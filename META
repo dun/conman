@@ -1,10 +1,10 @@
 ##
-# $Id: META,v 1.9.2.2 2003/07/12 00:12:24 dun Exp $
+# $Id: META,v 1.9.2.3 2003/07/14 06:08:19 dun Exp $
 ##
 # Metadata for RPM/TAR makefile targets
 ##
   Meta:         1
-  Date:         2003-07-11
+  Date:         2003-07-13
   Name:         conman
   Version:      0.1.8.5
 # Release:      1
