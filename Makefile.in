@@ -1,0 +1,58 @@
+##
+# ConMan Makefile
+#   by Chris Dunlap <cdunlap@llnl.gov>
+#
+# $Id: Makefile.in,v 1.1 2001/05/04 15:26:40 dun Exp $
+##
+
+PACKAGE=	@PACKAGE@
+VERSION=	@VERSION@
+
+CC=		@CC@
+DEFS=		@DEFS@
+CFLAGS=		@CFLAGS@
+LDFLAGS=	@LDFLAGS@
+LIBS=		@LIBS@
+INSTALL=	@INSTALL@
+RANLIB=		@RANLIB@
+@SET_MAKE@
+COPTS=		$(CFLAGS) $(CPPFLAGS) $(DEFS)
+
+AC_OUTPUT=	Makefile config.h
+
+PROGS=		conman conmand
+COMMON_OBJS=	common.o errors.o list.o lex.o util.o @LIBOBJS@
+CLIENT_OBJS=	client.o client-conf.o client-sock.o client-tty.o $(COMMON_OBJS)
+SERVER_OBJS=	server.o server-conf.o server-obj.o server-sock.o $(COMMON_OBJS)
+SERVER_LIBS=	-lpthread
+
+
+all: $(PROGS)
+
+conman: $(CLIENT_OBJS)
+	$(CC) $(COPTS) $(LDFLAGS) $(CLIENT_OBJS) -o $@
+
+conmand: $(SERVER_OBJS)
+	$(CC) $(COPTS) $(LDFLAGS) $(SERVER_OBJS) -o $@ $(SERVER_LIBS)
+
+.c.o:
+	$(CC) $(COPTS) -c $<
+
+depend:
+	makedepend -Y -- $(COPTS) -- *.[ch] 2>/dev/null
+
+clean:
+	-rm -f *.o *.a *~ \#* core *.core .depend
+
+distclean: clean
+	-rm -f config.cache config.log config.status stamp-h Makefile.bak
+	-rm -f $(AC_OUTPUT)
+	-rm -f $(PROGS)
+
+Makefile: Makefile.in config.status
+	./config.status
+
+config.status: VERSION
+	./config.status --recheck
+
+# DO NOT DELETE THIS LINE -- make depend depends on it.
