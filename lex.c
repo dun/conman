@@ -2,7 +2,7 @@
  *  lex.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: lex.c,v 1.1 2001/05/04 15:26:40 dun Exp $
+ *  $Id: lex.c,v 1.2 2001/05/09 20:36:30 dun Exp $
  ******************************************************************************
  *  Refer to "lex.h" for documentation on public functions.
 \******************************************************************************/
@@ -205,6 +205,33 @@ static int lookup_token(char *str, char *toks[])
         }
     }
     return(LEX_STR);			/* token not found; doh! */
+}
+
+
+char * lex_encode(char *str)
+{
+    char *p;
+
+    if (!str)
+        return(NULL);
+    for (p=str; *p; p++) {
+        if (*p == '\'' || *p == '"')
+            *p |= 0x80;
+    }
+    return(p);
+}
+
+
+char * lex_decode(char *str)
+{
+    char *p;
+
+    if (!str)
+        return(NULL);
+    for (p=str; *p; p++) {
+        *p &= 0x7F;
+    }
+    return(p);
 }
 
 

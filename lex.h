@@ -2,7 +2,7 @@
  *  lex.h
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: lex.h,v 1.1 2001/05/04 15:26:40 dun Exp $
+ *  $Id: lex.h,v 1.2 2001/05/09 20:36:30 dun Exp $
 \******************************************************************************/
 
 
@@ -67,9 +67,9 @@ typedef struct lexer_state *Lex;
  */
 
 
-/***************\
-**  Functions  **
-\***************/
+/**********************\
+**  Lexing Functions  **
+\**********************/
 
 Lex lex_create(void *buf, char *toks[]);
 /*
@@ -113,9 +113,29 @@ const char * lex_text(Lex l);
  */
 
 
-/***********\
-**  Tests  **
-\***********/
+/*************************\
+**  Auxiliary Functions  **
+\*************************/
+
+char * lex_encode(char *str);
+/*
+ *  Encodes the string (str) so that it may safely be used by the lexer.
+ *    This is needed if the string may contain quote characters.
+ *    The string cannot be a constant as it will be modified in place.
+ *  Returns the encoded string.
+ */
+
+char * lex_decode(char *str);
+/*
+ *  Decodes the string (str) that has been encoded with lex_encode().
+ *    The string cannot be a constant as it will be modified in place.
+ *  Returns the decoded string.
+ */
+
+
+/********************\
+**  Test Functions  **
+\********************/
 
 void lex_parse_test(char *buf, char *toks[]);
 /*
