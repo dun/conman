@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-net.h,v 1.3 2001/09/20 23:12:32 dun Exp $
+ *  $Id: util-net.h,v 1.4 2001/09/20 23:16:54 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -55,7 +55,7 @@ int host_name_to_addr4(const char *name, struct in_addr *addr);
 
 char * host_addr4_to_name(const struct in_addr *addr, char *dst, int dstlen);
 /*
- *  Converts an IPv4 address (addr) to a string residing in
+ *  Converts an IPv4 address (addr) to a host name string residing in
  *    buffer (dst) of length (dstlen).
  *  Returns a ptr to the NULL-terminated string (dst) on success,
  *    or NULL on error.
