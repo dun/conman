@@ -1,4 +1,4 @@
-# $Id: conman.spec.in,v 1.1 2001/08/17 21:24:13 dun Exp $
+# $Id: conman.spec.in,v 1.2 2001/08/28 22:47:55 dun Exp $
 
 %define name    @PACKAGE@
 %define version @VERSION@
@@ -37,12 +37,14 @@ rm -rf "$RPM_BUILD_ROOT"
 %files
 %defattr(-,root,root,0755)
 %config(noreplace) /etc/conman.conf
+/etc/rc.d/init.d/conman
 /usr/bin/conman
 /usr/bin/conmen
 /usr/sbin/conmand
 /usr/lib/conman/alpha.exp
 /usr/lib/conman/conman.exp
-/usr/lib/conman/examples/wtf.exp
+/usr/lib/conman/examples/boot_alpha.exp
 /usr/lib/conman/examples/mac.exp
 /usr/lib/conman/examples/rmc.exp
 /usr/lib/conman/examples/srm.exp
+/usr/lib/conman/examples/wtf.exp
