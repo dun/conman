@@ -1,0 +1,203 @@
+##
+#  ConMan Expect Language Library (CELL)
+##
+#  $Id: conman.exp,v 1.1 2001/07/11 17:14:48 dun Exp $
+#    by Chris Dunlap <cdunlap@llnl.gov>
+##
+
+
+proc conman_parse_opts {args_r} {
+#
+# Parses the 'args_r' var reference for ConMan command-line options.
+# Returns a list of options, while removing those options from the args_r list.
+#
+  upvar $args_r args
+  set cons {}
+  set opts {}
+
+  for {set i 0} {$i < [llength $args]} {incr i} {
+    set arg [lindex $args $i]
+    switch -regexp -- $arg {
+      "^--$" {foreach x [lrange $args [expr $i+1] end] {lappend cons $x}; break}
+      "^-d$" {lappend opts $arg; lappend opts [lindex $args [incr i]]}
+      "^-e$" {incr i ;# ignore changing esc-char seq}
+      "^-" {lappend opts $arg}
+      default {lappend cons $arg}
+    }
+  }
+  set args $cons
+  return $opts
+}
+
+
+proc conman_query {opts args {errmsg_r {}}} {
+#
+# Queries ConMan for consoles specified by the 'args' list;
+#   the 'opts' list specifies ConMan command-line options
+#   (eg, -r for matching console names via regex instead of globbing).
+# Returns a list of console names if successful; o/w, returns nothing.
+# On error, a message is written to the 'errmsg_r' var reference if present.
+#
+  upvar $errmsg_r errmsg
+  set errmsg "Undefined"
+  set consoles {}
+
+  set cmd [concat |conman -q $opts -- $args]
+  if {[catch {open $cmd r} file]} {
+    set errmsg $file
+    return
+  }
+  while {[gets $file console] >= 0} {
+    lappend consoles [string trim $console]
+  }
+  if {[catch {close $file} err]} {
+    regexp "^ERROR: *(\[^\r\n]*)" $err ignore msg
+    set errmsg [string trimright $msg "."]
+    return
+  }
+  return $consoles
+}
+
+
+proc conman_open {opts console {errmsg_r {}}} {
+#
+# Opens a ConMan session to the specified console;
+#   the 'opts' list specifies ConMan command-line options
+#   (eg, -j to join connections, -f to force open connections).
+# Returns the spawn_id if successful; o/w, returns nothing.
+# On error, a message is written to the 'errmsg_r' var reference if present.
+#
+  upvar $errmsg_r errmsg
+  set errmsg "Undefined"
+
+  if {[catch {eval spawn -noecho conman $opts -- $console} err]} {
+    set errmsg $err
+    return
+  }
+  expect -re "ERROR: *(\[^\r\n]*)" {
+    set errmsg [string trimright $expect_out(1,string) "."]
+    return
+  } -re "<ConMan> Connection to console (\[^ ]+) opened.\r\n" {
+    set concon $expect_out(1,string)
+  } eof {
+    set errmsg "Exited"
+    return
+  } timeout {
+    set errmsg "Timed-out"
+    return
+  }
+  set errmsg {}
+  return $spawn_id
+}
+
+
+proc conman_close {spawn_id} {
+#
+# Closes the ConMan session associated with 'spawn_id'.
+#
+  send -- "&."
+  expect -re "<ConMan> Connection \[^\r]+ closed.\r\n"
+  close
+  wait
+  return
+}
+
+
+proc conman_run {nproc consoles cmd args} {
+#
+# Runs the 'cmd' procedure on each console identified by the 'consoles' list.
+# The consoles list will be parsed for ConMan command-line options,
+#   and ConMan will be queried for matching console names.
+# The 'nproc' variable specifies the number of concurrent ConMan sessions
+#   on which the 'cmd' procedure is run; if nproc=1, execution is serial.
+# The first three args of the 'cmd' procedure refer to:
+#   1) the spawn_id of that particular ConMan console session,
+#   2) the spawn_id for any data being returned to the user via stdout
+#      (line buffered and prepended with the console name), and
+#   3) the name of the console associated with that particular session.
+#   These first three args are automagically set by conman_run.
+# Additional args specified by the variable-length 'args' list
+#   will be passed on to any remaining args in the 'cmd' procedure arg list.
+# Data being returned from multiple concurrent consoles can be demux'd with
+#   a stable sort such as: "sort -s -t: -k1,1".
+#
+  global conman_global_ids		;# global req'd for indirect spawn ids
+  set conman_global_ids {}
+
+  if {$nproc <= 0} {
+    return
+  }
+  set opts [conman_parse_opts consoles]
+  set consoles [conman_query $opts $consoles err]
+  if {[llength $consoles] == 0} {
+    send_error -- "ERROR: $err.\n"
+    return
+  }
+  while {[llength $consoles] && $nproc > 0} {
+    if {[conman_run_next conman_global_ids id2con consoles opts cmd args]} {
+      incr nproc -1
+    }
+  }
+  set timeout -1
+  expect -i conman_global_ids -re "(^\[^\r]*)\r\n" {
+    send_user -- "$id2con($expect_out(spawn_id)):$expect_out(1,string)\n"
+    exp_continue
+  } default {
+    if {[string length $expect_out(buffer)] > 0} {
+      send_user -- "$id2con($expect_out(spawn_id)):$expect_out(buffer)\n"
+    }
+    set index [lsearch $conman_global_ids $expect_out(spawn_id)]
+    set conman_global_ids [lreplace $conman_global_ids $index $index]
+    while {[llength $consoles]} {
+      if {[conman_run_next conman_global_ids id2con consoles opts cmd args]} {
+        break
+      }
+    }
+    if {[llength $conman_global_ids]} {
+      exp_continue
+    }
+  }
+  return
+}
+
+
+proc conman_run_next {ids_r id2con_r consoles_r opts_r cmd_r args_r} {
+#
+# This is an internal routine that is only to be called by "conman_run"!
+# Returns 1 if successful; o/w, returns 0.
+#
+  upvar $ids_r conman_global_ids
+  upvar $id2con_r id2con
+  upvar $consoles_r consoles
+  upvar $opts_r opts
+  upvar $cmd_r cmd
+  upvar $args_r args
+
+  if {[llength $consoles] == 0} {
+    return 0
+  }
+  set console [lindex $consoles 0]
+  set consoles [lreplace $consoles 0 0]
+
+  if {[catch {spawn -noecho -pty} err]} {
+    send_error -- "ERROR: $err.\n"
+    return 0
+  }
+  if {[fork] == 0} {
+    set stdout_id $spawn_id
+    set console_id [conman_open $opts $console err]
+    if {[string length $console_id] == 0} {
+      send_error -- "$console: ERROR: $err.\n"
+      exit 0
+    }
+    eval $cmd $console_id $stdout_id $console $args
+    conman_close $console_id
+    close -i $stdout_id
+    wait -i $stdout_id
+    exit 0
+  }
+  close -slave
+  lappend conman_global_ids $spawn_id
+  set id2con($spawn_id) $console
+  return 1
+}
