@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-esc.c,v 1.9 2001/09/13 20:36:44 dun Exp $
+ *  $Id: server-esc.c,v 1.10 2001/09/16 23:44:44 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -16,6 +16,7 @@
 #include "list.h"
 #include "server.h"
 #include "util.h"
+#include "wrapper.h"
 
 
 static void perform_serial_break(obj_t *client);
@@ -24,7 +25,7 @@ static void perform_quiet_toggle(obj_t *client);
 static void perform_suspend(obj_t *client);
 
 
-int process_escape_chars(obj_t *client, void *src, int len)
+int process_client_escapes(obj_t *client, void *src, int len)
 {
 /*  Processes the buffer (src) of length (len) received from the client
  *    for escape character sequences.
@@ -76,6 +77,33 @@ int process_escape_chars(obj_t *client, void *src, int len)
     }
     assert((q >= (unsigned char *) src) && (q <= p));
     len = q - (unsigned char *) src;
+    return(len);
+}
+
+
+int process_telnet_escapes(obj_t *telnet, void *src, int len)
+{
+/*  Processes the buffer (src) of length (len) received from
+ *    a terminal server for escape character sequences.
+ *  Escape characters are removed (unstuffed) from the buffer
+ *    and immediately processed.
+ *  Returns the new length of the modified buffer.
+ */
+    const unsigned char *last = (unsigned char *) src + len;
+    unsigned char *p, *q;
+
+    assert(is_telnet_obj(telnet));
+    assert(telnet->fd >= 0);
+    assert(telnet->aux.telnet.state == CONN_UP);
+
+    if (!src || len <= 0)
+        return(0);
+
+    fprintf(stderr, "* ");
+    for (p=q=src; p<last; p++) {
+        fprintf(stderr, "%02x ", *p);
+    }
+    fprintf(stderr, "\n");
     return(len);
 }
 
@@ -174,7 +202,7 @@ static void perform_log_replay(obj_t *client)
          */
         len -= 2*n - 2;
 
-        lock_mutex(&logfile->bufLock);
+        x_pthread_mutex_lock(&logfile->bufLock);
 
         /*  Compute the number of bytes to replay.
          *  If the console's circular-buffer has not yet wrapped around,
@@ -201,7 +229,7 @@ static void perform_log_replay(obj_t *client)
             ptr += n;
         }
 
-        unlock_mutex(&logfile->bufLock);
+        x_pthread_mutex_unlock(&logfile->bufLock);
 
         /*  Must recompute 'len' since we already subtracted space reserved
          *    for this string.  We could get away with just sprintf() here.
@@ -223,9 +251,9 @@ static void perform_quiet_toggle(obj_t *client)
 /*  Toggles whether informational messages are suppressed by the client.
  */
     assert(is_client_obj(client));
-    lock_mutex(&client->bufLock);
+    x_pthread_mutex_lock(&client->bufLock);
     client->aux.client.req->enableQuiet ^= 1;
-    unlock_mutex(&client->bufLock);
+    x_pthread_mutex_unlock(&client->bufLock);
 
     DPRINTF("Toggled quiet-mode for client [%s].\n", client->name);
     return;
@@ -242,9 +270,9 @@ static void perform_suspend(obj_t *client)
     int gotSuspend;
 
     assert(is_client_obj(client));
-    lock_mutex(&client->bufLock);
+    x_pthread_mutex_lock(&client->bufLock);
     gotSuspend = client->aux.client.gotSuspend ^= 1;
-    unlock_mutex(&client->bufLock);
+    x_pthread_mutex_unlock(&client->bufLock);
 
     if (gotSuspend)
         DPRINTF("Suspending output to client [%s].\n", client->name);

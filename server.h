@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.27 2001/09/13 16:15:34 dun Exp $
+ *  $Id: server.h,v 1.28 2001/09/16 23:44:44 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -123,7 +123,9 @@ void process_server_conf_file(server_conf_t *conf);
 **  server-esc.c  **
 \******************/
 
-int process_escape_chars(obj_t *client, void *src, int len);
+int process_client_escapes(obj_t *client, void *src, int len);
+
+int process_telnet_escapes(obj_t *telnet, void *src, int len);
 
 
 /******************\

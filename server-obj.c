@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.40 2001/09/13 20:40:13 dun Exp $
+ *  $Id: server-obj.c,v 1.41 2001/09/16 23:44:44 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -28,6 +28,7 @@
 #include "util-file.h"
 #include "util-net.h"
 #include "util-str.h"
+#include "wrapper.h"
 
 
 static obj_t * create_obj(
@@ -60,7 +61,7 @@ obj_t * create_client_obj(server_conf_t *conf, req_t *req)
     client->aux.client.req = req;
     time(&client->aux.client.timeLastRead);
     if (client->aux.client.timeLastRead == (time_t) -1)
-        err_msg(errno, "time() failed -- What time is it?");
+        err_msg(errno, "time() failed");
     client->aux.client.gotEscape = 0;
     client->aux.client.gotSuspend = 0;
 
@@ -336,7 +337,7 @@ static obj_t * create_obj(
     obj->name = create_string(name);
     obj->fd = fd;
     obj->bufInPtr = obj->bufOutPtr = obj->buf;
-    init_mutex(&obj->bufLock);
+    x_pthread_mutex_init(&obj->bufLock, NULL);
     if (!(obj->readers = list_create(NULL)))
         err_msg(0, "Out of memory");
     if (!(obj->writers = list_create(NULL)))
@@ -392,7 +393,7 @@ void destroy_obj(obj_t *obj)
             err_msg(errno, "close() failed on fd=%d", obj->fd);
         obj->fd = -1;
     }
-    destroy_mutex(&obj->bufLock);
+    x_pthread_mutex_destroy(&obj->bufLock);
     if (obj->readers)
         list_destroy(obj->readers);
     if (obj->writers)
@@ -670,6 +671,9 @@ int read_from_obj(obj_t *obj, fd_set *pWriteSet)
 
     assert(obj->fd >= 0);
 
+    if (is_telnet_obj(obj) && obj->aux.telnet.state != CONN_UP)
+        return(0);
+
 again:
     if ((n = read(obj->fd, buf, sizeof(buf))) < 0) {
         if (errno == EINTR) {
@@ -689,13 +693,17 @@ again:
     }
     else {
         DPRINTF("Read %d bytes from [%s].\n", n, obj->name); /* xyzzy */
+
         if (is_client_obj(obj)) {
-            lock_mutex(&obj->bufLock);
+            x_pthread_mutex_lock(&obj->bufLock);
             time(&obj->aux.client.timeLastRead);
             if (obj->aux.client.timeLastRead == (time_t) -1)
-                err_msg(errno, "time() failed -- What time is it?");
-            unlock_mutex(&obj->bufLock);
-            n = process_escape_chars(obj, buf, n);
+                err_msg(errno, "time() failed");
+            x_pthread_mutex_unlock(&obj->bufLock);
+            n = process_client_escapes(obj, buf, n);
+        }
+        else if (is_telnet_obj(obj)) {
+            n = process_telnet_escapes(obj, buf, n);
         }
 
         if (!(i = list_iterator_create(obj->readers)))
@@ -706,8 +714,8 @@ again:
              *    no more data can be written into its buffer.
              */
             if (!reader->gotEOF) {
-                write_obj_data(reader, buf, n, 0);
-                FD_SET(reader->fd, pWriteSet);
+                if (write_obj_data(reader, buf, n, 0) > 0)
+                    FD_SET(reader->fd, pWriteSet);
             }
         }
         list_iterator_destroy(i);
@@ -745,13 +753,15 @@ int write_obj_data(obj_t *obj, void *src, int len, int isInfo)
     if (len >= MAX_BUF_SIZE)
         len = MAX_BUF_SIZE - 1;
 
-    lock_mutex(&obj->bufLock);
+    x_pthread_mutex_lock(&obj->bufLock);
 
     /*  Do nothing if this is an informational message
      *    and the client has requested not to be bothered.
      */
-    if (isInfo && is_client_obj(obj) && obj->aux.client.req->enableQuiet)
+    if (isInfo && is_client_obj(obj) && obj->aux.client.req->enableQuiet) {
+        len = 0;
         goto end;
+    }
 
     /*  Assert the buffer's input and output ptrs are valid upon entry.
      */
@@ -822,7 +832,7 @@ int write_obj_data(obj_t *obj, void *src, int len, int isInfo)
     assert(obj->bufOutPtr < &obj->buf[MAX_BUF_SIZE]);
 
 end:
-    unlock_mutex(&obj->bufLock);
+    x_pthread_mutex_unlock(&obj->bufLock);
     return(len);
 }
 
@@ -837,7 +847,7 @@ int write_to_obj(obj_t *obj)
     int isDead = 0;
 
     assert(obj->fd >= 0);
-    lock_mutex(&obj->bufLock);
+    x_pthread_mutex_lock(&obj->bufLock);
 
     /*  Assert the buffer's input and output ptrs are valid upon entry.
      */
@@ -854,6 +864,9 @@ int write_to_obj(obj_t *obj)
      *  Note that if (bufInPtr == bufOutPtr), the obj's buffer is empty.
      */
     if (is_client_obj(obj) && obj->aux.client.gotSuspend) {
+        avail = 0;
+    }
+    else if (is_telnet_obj(obj) && obj->aux.telnet.state != CONN_UP) {
         avail = 0;
     }
     else if (obj->bufInPtr >= obj->bufOutPtr) {
@@ -903,6 +916,6 @@ again:
     assert(obj->bufOutPtr >= obj->buf);
     assert(obj->bufOutPtr < &obj->buf[MAX_BUF_SIZE]);
 
-    unlock_mutex(&obj->bufLock);
+    x_pthread_mutex_unlock(&obj->bufLock);
     return(isDead ? -1 : 0);
 }
