@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.20 2001/09/13 16:15:34 dun Exp $
+ *  $Id: server-conf.c,v 1.21 2001/09/17 22:57:21 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -440,9 +440,14 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
     }
 
     if (console && *log) {
-        if (!(logfile = create_logfile_obj(conf, log, console)))
+        if (substitute_string(name, sizeof(name), log,
+          DEFAULT_CONFIG_ESCAPE, console->name) < 0)
+            log_msg(0, "%s:%d: Console [%s] cannot log to \"%s\": "
+                "%c-expansion failed.", conf->confFileName, line,
+                console->name, log, DEFAULT_CONFIG_ESCAPE);
+        else if (!(logfile = create_logfile_obj(conf, name, console)))
             log_msg(0, "%s:%d: Console [%s] cannot log to \"%s\".",
-                conf->confFileName, line, name, log);
+                conf->confFileName, line, console->name, log);
         else
             link_objs(console, logfile);
     }
