@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-tty.c,v 1.23 2001/06/15 20:00:08 dun Exp $
+ *  $Id: client-tty.c,v 1.24 2001/07/06 20:50:45 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -115,8 +115,9 @@ static void set_raw_tty_mode(int fd, struct termios *old)
     struct termios term;
 
     assert(fd >= 0);
-    assert(isatty(fd));
 
+    if (!isatty(fd))
+        return;
     if (tcgetattr(fd, &term) < 0)
         err_msg(errno, "tcgetattr() failed on fd=%d", fd);
     if (old)
@@ -149,9 +150,10 @@ static void set_raw_tty_mode(int fd, struct termios *old)
 static void restore_tty_mode(int fd, struct termios *new)
 {
     assert(fd >= 0);
-    assert(isatty(fd));
     assert(new);
 
+    if (!isatty(fd))
+        return;
     if (tcsetattr(fd, TCSANOW, new) < 0)
         err_msg(errno, "tcgetattr() failed on fd=%d", fd);
     return;
