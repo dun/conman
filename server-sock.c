@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.24 2001/08/03 21:11:46 dun Exp $
+ *  $Id: server-sock.c,v 1.25 2001/08/07 22:01:13 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -40,9 +40,9 @@ static int validate_req(req_t *req);
 static int check_too_many_consoles(req_t *req);
 static int check_busy_consoles(req_t *req);
 static int send_rsp(req_t *req, int errnum, char *errmsg);
-static void perform_query_cmd(req_t *req);
-static void perform_monitor_cmd(req_t *req, server_conf_t *conf);
-static void perform_connect_cmd(req_t *req, server_conf_t *conf);
+static int perform_query_cmd(req_t *req);
+static int perform_monitor_cmd(req_t *req, server_conf_t *conf);
+static int perform_connect_cmd(req_t *req, server_conf_t *conf);
 
 
 void process_client(client_arg_t *args)
@@ -86,13 +86,16 @@ void process_client(client_arg_t *args)
 
     switch(req->command) {
     case CONNECT:
-        perform_connect_cmd(req, conf);
+        if (perform_connect_cmd(req, conf) < 0)
+            goto err;
         break;
     case MONITOR:
-        perform_monitor_cmd(req, conf);
+        if (perform_monitor_cmd(req, conf) < 0)
+            goto err;
         break;
     case QUERY:
-        perform_query_cmd(req);
+        if (perform_query_cmd(req) < 0)
+            goto err;
         break;
     default:
         /*  This should not happen, as invalid commands
@@ -685,11 +688,11 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
 /*  Sends a response to the given request (req).
  *  If the request is valid and there are no errors,
  *    errnum = CONMAN_ERR_NONE and an "OK" response is sent.
- *  Otherwise, (errnum) identifies the err_type enumeration (in conman.h)
+ *  Otherwise, (errnum) identifies the err_type enumeration (in common.h)
  *    and (errmsg) is a string describing the error in more detail.
  *  Returns 0 if the response is sent OK, or -1 on error.
  */
-    char buf[MAX_SOCK_LINE];
+    char buf[MAX_SOCK_LINE] = "";	/* init buf for appending with NUL */
     char tmp[MAX_LINE];			/* tmp buffer for lex-encoding strs */
     int n;
 
@@ -698,41 +701,26 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
 
     if (errnum == CONMAN_ERR_NONE) {
 
-        char *ptr = buf;
-        int len = sizeof(buf) - 2;	/* reserve space for trailing "\n\0" */
         ListIterator i;
         obj_t *console;
 
-        n = snprintf(buf, sizeof(buf), "%s",
+        n = append_format_string(buf, sizeof(buf), "%s",
             proto_strs[LEX_UNTOK(CONMAN_TOK_OK)]);
-        assert(n >= 0 && n < len);
-        ptr += n;
-        len -= n;
 
-        /*  Note: if buf[] is overflowed by console strings,
-         *    a valid rsp will still be sent to the client,
-         *    but some console named may be omitted.
-         */
         if ((i = list_iterator_create(req->consoles))) {
             while ((console = list_next(i))) {
                 n = strlcpy(tmp, console->name, sizeof(tmp));
                 assert(n >= 0 && n < sizeof(tmp));
-                n = snprintf(ptr, len, " %s='%s'",
+                n = append_format_string(buf, sizeof(buf), " %s='%s'",
                     proto_strs[LEX_UNTOK(CONMAN_TOK_CONSOLE)], lex_encode(tmp));
-                if (n < 0 || n >= len)
-                    break;
-                ptr += n;
-                len -= n;
             }
             list_iterator_destroy(i);
         }
-
-        *ptr++ = '\n';
-        *ptr++ = '\0';
+        n = append_format_string(buf, sizeof(buf), "\n");
     }
     else {
     /*
-     *  FIX_ME? Should all errors be logged?
+     *  FIX_ME: Should all errors be logged here?
      */
         n = strlcpy(tmp, (errmsg ? errmsg : "Doh!"), sizeof(tmp));
         assert(n >= 0 && n < sizeof(tmp));
@@ -740,7 +728,14 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
             proto_strs[LEX_UNTOK(CONMAN_TOK_ERROR)],
             proto_strs[LEX_UNTOK(CONMAN_TOK_CODE)], errnum,
             proto_strs[LEX_UNTOK(CONMAN_TOK_MESSAGE)], lex_encode(tmp));
-        assert(n >= 0 && n < sizeof(buf));
+    }
+
+    /*  FIX_ME: Gracefully handle buffer overruns.
+     */
+    if ((n < 0) || (n >= sizeof(buf))) {
+        log_msg(10, "Request from <%s@%s> terminated due to buffer overrun.",
+            req->user, req->host);
+        return(-1);
     }
 
     /*  Write response to client.
@@ -755,10 +750,11 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
 }
 
 
-static void perform_query_cmd(req_t *req)
+static int perform_query_cmd(req_t *req)
 {
 /*  Performs the QUERY command, returning a list of consoles that
  *    matches the console patterns given in the client's request.
+ *  Returns 0 if the command succeeds, or -1 on error.
  *  Since this cmd is processed entirely by this thread,
  *    the client socket connection is closed once it is finished.
  */
@@ -766,16 +762,18 @@ static void perform_query_cmd(req_t *req)
     assert(req->command == QUERY);
     assert(!list_is_empty(req->consoles));
 
-    send_rsp(req, CONMAN_ERR_NONE, NULL);
+    if (send_rsp(req, CONMAN_ERR_NONE, NULL) < 0)
+        return(-1);
     destroy_req(req);
-    return;
+    return(0);
 }
 
 
-static void perform_monitor_cmd(req_t *req, server_conf_t *conf)
+static int perform_monitor_cmd(req_t *req, server_conf_t *conf)
 {
 /*  Performs the MONITOR command, placing the client in a
  *    "read-only" session with a single console.
+ *  Returns 0 if the command succeeds, or -1 on error.
  */
     obj_t *client;
     obj_t *console;
@@ -784,21 +782,23 @@ static void perform_monitor_cmd(req_t *req, server_conf_t *conf)
     assert(req->command == MONITOR);
     assert(list_count(req->consoles) == 1);
 
-    send_rsp(req, CONMAN_ERR_NONE, NULL);
+    if (send_rsp(req, CONMAN_ERR_NONE, NULL) < 0)
+        return(-1);
     client = create_client_obj(conf->objs, req);
     console = list_peek(req->consoles);
     assert(console->type == CONSOLE);
     link_objs(console, client);
-    return;
+    return(0);
 }
 
 
-static void perform_connect_cmd(req_t *req, server_conf_t *conf)
+static int perform_connect_cmd(req_t *req, server_conf_t *conf)
 {
 /*  Performs the CONNECT command.  If a single console is specified,
  *    the client is placed in a "read-write" session with that console.
  *    Otherwise, the client is placed in a "write-only" broadcast session
  *    affecting multiple consoles.
+ *  Returns 0 if the command succeeds, or -1 on error.
  */
     obj_t *client;
     obj_t *console;
@@ -807,7 +807,8 @@ static void perform_connect_cmd(req_t *req, server_conf_t *conf)
     assert(req->sd >= 0);
     assert(req->command == CONNECT);
 
-    send_rsp(req, CONMAN_ERR_NONE, NULL);
+    if (send_rsp(req, CONMAN_ERR_NONE, NULL) < 0)
+        return(-1);
     client = create_client_obj(conf->objs, req);
 
     if (list_count(req->consoles) == 1) {
@@ -831,5 +832,5 @@ static void perform_connect_cmd(req_t *req, server_conf_t *conf)
         }
         list_iterator_destroy(i);
     }
-    return;
+    return(0);
 }

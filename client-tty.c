@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-tty.c,v 1.28 2001/08/06 18:38:37 dun Exp $
+ *  $Id: client-tty.c,v 1.29 2001/08/07 22:01:13 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -347,7 +347,7 @@ static int perform_help_esc(client_conf_t *conf, char c)
 /*  Display a dynamic "escape sequence" help message.
  *  Returns 1 on success.
  */
-    char buf[MAX_BUF_SIZE] = "\0";	/* init buf with NUL for appending */
+    char buf[MAX_BUF_SIZE] = "";	/* init buf for appending with NUL */
     char esc[3];
     char tmp[3];
     int n;
@@ -482,32 +482,23 @@ static void locally_display_status(client_conf_t *conf, char *msg)
 /*  Displays (msg) regarding the state of the console connection.
  */
     char buf[MAX_LINE];
-    char *ptr = buf;
-    int len = sizeof(buf);
     int n;
-    int overflow = 0;
 
     assert((conf->req->command == CONNECT) || (conf->req->command == MONITOR));
 
     if (list_count(conf->req->consoles) == 1) {
-        n = snprintf(ptr, len, "%sConnection to console [%s] %s%s",
+        n = snprintf(buf, sizeof(buf), "%sConnection to console [%s] %s%s",
             CONMAN_MSG_PREFIX, (char *) list_peek(conf->req->consoles),
             msg, CONMAN_MSG_SUFFIX);
     }
     else {
-        n = snprintf(ptr, len, "%sBroadcast to %d consoles %s%s",
+        n = snprintf(buf, sizeof(buf), "%sBroadcast to %d consoles %s%s",
             CONMAN_MSG_PREFIX, list_count(conf->req->consoles),
             msg, CONMAN_MSG_SUFFIX);
     }
-    if (n < 0 || n >= len)
-        overflow = 1;
-    else
-        ptr += n, len -= n;
 
-    if (overflow) {
-        ptr = buf + sizeof(buf) - 3;
-        snprintf(ptr, 3, "\r\n");
-    }
+    if ((n < 0) || (n >= sizeof(buf)))	/* if buf was truncated, append CR/LF */
+        strcpy(buf + sizeof(buf) - 3, "\r\n");
     if (write_n(STDOUT_FILENO, buf, strlen(buf)) < 0)
         err_msg(errno, "write() failed on fd=%d", STDOUT_FILENO);
     return;

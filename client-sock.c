@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-sock.c,v 1.17 2001/08/06 18:35:39 dun Exp $
+ *  $Id: client-sock.c,v 1.18 2001/08/07 22:01:13 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -61,33 +61,29 @@ void connect_to_server(client_conf_t *conf)
 
 int send_greeting(client_conf_t *conf)
 {
-    char buf[MAX_SOCK_LINE];
-    char *ptr = buf;
-    int len = sizeof(buf) - 1;		/* reserve space for terminating \n */
+    char buf[MAX_SOCK_LINE] = "";	/* init buf for appending with NUL */
     int n;
 
     assert(conf->req->sd >= 0);
     assert(conf->req->user);
 
-    n = snprintf(ptr, len, "%s %s='%s'",
+    n = append_format_string(buf, sizeof(buf), "%s %s='%s'",
         proto_strs[LEX_UNTOK(CONMAN_TOK_HELLO)],
         proto_strs[LEX_UNTOK(CONMAN_TOK_USER)], lex_encode(conf->req->user));
-    if (n < 0 || n >= len)
-        goto overflow;
-    ptr += n;
-    len -= n;
 
     if (conf->req->tty) {
-        n = snprintf(ptr, len, " %s='%s'",
+        n = append_format_string(buf, sizeof(buf), " %s='%s'",
             proto_strs[LEX_UNTOK(CONMAN_TOK_TTY)], lex_encode(conf->req->tty));
-        if (n < 0 || n >= len)
-            goto overflow;
-        ptr += n;
-        len -= n;
     }
 
-    *ptr++ = '\n';
-    *ptr++ = '\0';
+    n = append_format_string(buf, sizeof(buf), "\n");
+
+    if (n < 0) {
+        conf->errnum = CONMAN_ERR_LOCAL;
+        conf->errmsg = create_string(
+            "Overran request buffer for sending greeting");
+        return(-1);
+    }
 
     if (write_n(conf->req->sd, buf, strlen(buf)) < 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
@@ -109,19 +105,12 @@ int send_greeting(client_conf_t *conf)
         return(-1);
     }
     return(0);
-
-overflow:
-    conf->errnum = CONMAN_ERR_LOCAL;
-    conf->errmsg = create_string("Overran request buffer for sending greeting");
-    return(-1);
 }
 
 
 int send_req(client_conf_t *conf)
 {
-    char buf[MAX_SOCK_LINE];
-    char *ptr = buf;
-    int len = sizeof(buf) - 1;		/* reserve space for terminating \n */
+    char buf[MAX_SOCK_LINE] = "";	/* init buf for appending with NUL */
     int n;
     char *cmd;
     char *str;
@@ -144,59 +133,33 @@ int send_req(client_conf_t *conf)
         break;
     }
 
-    n = snprintf(ptr, len, "%s", cmd);
-    if (n < 0 || n >= len)
-        goto overflow;
-    ptr += n;
-    len -= n;
+    n = append_format_string(buf, sizeof(buf), "%s", cmd);
 
     if (conf->req->enableQuiet) {
-        n = snprintf(ptr, len, " %s=%s",
+        n = append_format_string(buf, sizeof(buf), " %s=%s",
             proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
             proto_strs[LEX_UNTOK(CONMAN_TOK_QUIET)]);
-        if (n < 0 || n >= len)
-            goto overflow;
-        ptr += n;
-        len -= n;
     }
-
     if (conf->req->enableRegex) {
-        n = snprintf(ptr, len, " %s=%s",
+        n = append_format_string(buf, sizeof(buf), " %s=%s",
             proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
             proto_strs[LEX_UNTOK(CONMAN_TOK_REGEX)]);
-        if (n < 0 || n >= len)
-            goto overflow;
-        ptr += n;
-        len -= n;
     }
-
     if (conf->req->command == CONNECT) {
         if (conf->req->enableForce) {
-            n = snprintf(ptr, len, " %s=%s",
+            n = append_format_string(buf, sizeof(buf), " %s=%s",
                 proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
                 proto_strs[LEX_UNTOK(CONMAN_TOK_FORCE)]);
-            if (n < 0 || n >= len)
-                goto overflow;
-            ptr += n;
-            len -= n;
         }
         if (conf->req->enableJoin) {
-            n = snprintf(ptr, len, " %s=%s",
+            n = append_format_string(buf, sizeof(buf), " %s=%s",
                 proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
                 proto_strs[LEX_UNTOK(CONMAN_TOK_JOIN)]);
-            if (n < 0 || n >= len)
-                goto overflow;
-            ptr += n;
-            len -= n;
         }
         if (conf->req->enableBroadcast) {
-            n = snprintf(ptr, len, " %s=%s",
+            n = append_format_string(buf, sizeof(buf), " %s=%s",
                 proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
                 proto_strs[LEX_UNTOK(CONMAN_TOK_BROADCAST)]);
-            if (n < 0 || n >= len)
-                goto overflow;
-            ptr += n;
-            len -= n;
         }
     }
 
@@ -204,21 +167,18 @@ int send_req(client_conf_t *conf)
      *    with the actual console names in recv_rsp().
      */
     while ((str = list_pop(conf->req->consoles))) {
-        n = snprintf(ptr, len, " %s='%s'",
+        n = append_format_string(buf, sizeof(buf), " %s='%s'",
             proto_strs[LEX_UNTOK(CONMAN_TOK_CONSOLE)], lex_encode(str));
         free(str);
-        if (n < 0 || n >= len) {
-            n = -1;
-            break;
-        }
-        ptr += n;
-        len -= n;
     }
-    if (n < 0)
-        goto overflow;
 
-    *ptr++ = '\n';
-    *ptr++ = '\0';
+    n = append_format_string(buf, sizeof(buf), "\n");
+
+    if (n < 0) {
+        conf->errnum = CONMAN_ERR_LOCAL;
+        conf->errmsg = create_string("Overran request buffer");
+        return(-1);
+    }
 
     if (write_n(conf->req->sd, buf, strlen(buf)) < 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
@@ -240,13 +200,7 @@ int send_req(client_conf_t *conf)
             return(-1);
         }
     }
-
     return(0);
-
-overflow:
-    conf->errnum = CONMAN_ERR_LOCAL;
-    conf->errmsg = create_string("Overran request buffer");
-    return(-1);
 }
 
 
