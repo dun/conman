@@ -2,7 +2,7 @@
 
 	* : Released 0.1.8.4.
 
-	* server-esc.c (send_telnet_cmd):
+	* server-esc.c (process_telnet_cmd):
 	Added temporary kludge lowering invalid telnet cmd msgs to LOG_DEBUG.
 
 	* server-obj.c (destroy_obj):

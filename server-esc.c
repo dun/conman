@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-esc.c,v 1.34.2.1 2003/04/04 05:34:35 dun Exp $
+ *  $Id: server-esc.c,v 1.34.2.2 2003/04/04 05:57:07 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -532,16 +532,14 @@ int send_telnet_cmd(obj_t *telnet, int cmd, int opt)
 
     *p++ = IAC;
     if (!TELCMD_OK(cmd)) {
-        /*  FIXME: Changed from LOG_WARNING to LOG_DEBUG. 20030403 */
-        log_msg(LOG_DEBUG, "Invalid telnet cmd=%#.2x for console [%s]",
+        log_msg(LOG_WARNING, "Invalid telnet cmd=%#.2x for console [%s]",
             cmd, telnet->name);
         return(-1);
     }
     *p++ = cmd;
     if ((cmd == DONT) || (cmd == DO) || (cmd == WONT) || (cmd == WILL)) {
         if (!TELOPT_OK(opt)) {
-            /*  FIXME: Changed from LOG_WARNING to LOG_DEBUG. 20030403 */
-            log_msg(LOG_DEBUG,
+            log_msg(LOG_WARNING,
                 "Invalid telnet cmd %s opt=%#.2x for console [%s]",
                 telcmds[cmd - TELCMD_FIRST], opt, telnet->name);
             return(-1);
@@ -570,7 +568,8 @@ static int process_telnet_cmd(obj_t *telnet, int cmd, int opt)
     assert(telnet->aux.telnet.conState == CONMAN_TELCON_UP);
 
     if (!TELCMD_OK(cmd)) {
-        log_msg(LOG_WARNING,
+        /*  FIXME: Changed from LOG_WARNING to LOG_DEBUG. 20030403 */
+        log_msg(LOG_DEBUG,
             "Received invalid telnet cmd %#.2x from console [%s]",
             cmd, telnet->name);
         return(-1);
@@ -580,7 +579,8 @@ static int process_telnet_cmd(obj_t *telnet, int cmd, int opt)
         (TELOPT_OK(opt) ? telopts[opt - TELOPT_FIRST] : ""), telnet->name));
 
     if (!TELOPT_OK(opt)) {
-        log_msg(LOG_WARNING,
+        /*  FIXME: Changed from LOG_WARNING to LOG_DEBUG. 20030403 */
+        log_msg(LOG_DEBUG,
             "Received invalid telnet opt %#.2x from console [%s]",
             opt, telnet->name);
         return(-1);
