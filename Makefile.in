@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Makefile.in,v 1.46 2002/05/08 00:10:54 dun Exp $
+# $Id: Makefile.in,v 1.47 2002/05/08 05:32:40 dun Exp $
 ##
 
 PROJECT=	conman
@@ -56,10 +56,10 @@ conmand: $(SERVER_OBJS)
 
 install: $(PROGS)
 	$(mkinstalldirs) -m 755 $(DESTDIR)$(bindir)
-	$(INSTALL) conman $(DESTDIR)$(bindir)/
-	$(INSTALL) conmen $(DESTDIR)$(bindir)/
+	$(INSTALL) -m 755 -s conman $(DESTDIR)$(bindir)/
+	$(INSTALL) -m 755 conmen $(DESTDIR)$(bindir)/
 	$(mkinstalldirs) -m 755 $(DESTDIR)$(sbindir)
-	$(INSTALL) conmand $(DESTDIR)$(sbindir)/
+	$(INSTALL) -m 755 -s conmand $(DESTDIR)$(sbindir)/
 	if test ! -f $(DESTDIR)$(CONF); then \
 	  $(mkinstalldirs) -m 755 $(DESTDIR)/etc; \
 	  $(INSTALL) -m 644 etc/conman.conf \
