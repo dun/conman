@@ -1,3 +1,43 @@
+2003-04-03  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* : Released 0.1.8.4.
+
+	* etc/conman.init: Fixed bug where active terminal server connections
+	were not closed when conmand's host was rebooted/halted {gnats:160}.
+
+2002-10-01  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server-obj.c, str.c, str.h:
+	Moved server-obj.c:find_trailing_int_str() to
+	str.c:str_find_trailing_int().  All callers changed.
+
+2002-09-26  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* common.c, common.h, tty.c, tty.h: Twiddled function names & parm
+	lists of get_tty_mode/get_tty_raw/set_tty_mode.  Prefixed function
+	names w/ "tty_" and moved from "common" to "tty".  All callers changed.
+
+2002-09-18  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server.h, server-conf.c, str.c, str.h:
+	Moved server-conf.c:is_empty_string() to str.c:str_is_empty().
+
+	* str.c, str.h, util-str.c, util-str.h: Renamed "util-str" to "str".
+	Twiddled function names and prefixed w/ "str_".  All callers changed.
+	str_get_time_short(), str_get_time_long(), & str_get_time_delta()
+	return char * to static data -- not thread safe anymore.
+
+2002-09-17  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* fd.c, fd.h, util-file.c, util-file.h: Renamed "util-file" to "fd".
+	Twiddled function names and prefixed w/ "fd_".	All callers changed.
+
+	* Makefile.in (clean, distclean): Tweaked.
+
+	* config.h.in, configure: Updated with autoconf-2.53.
+
+	* : Tweaked #else/#endif comments according to gnu standards.
+
 2002-09-16  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* ChangeLog : New (based on rcs2log output).
