@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.50 2001/12/14 07:43:04 dun Exp $
+ *  $Id: server-obj.c,v 1.51 2001/12/18 22:24:50 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -36,7 +36,6 @@ static obj_t * create_obj(
     server_conf_t *conf, char *name, int fd, enum obj_type type);
 static void reset_telnet_delay(obj_t *telnet);
 static char * find_trailing_int_str(char *str);
-static void unlink_objs_helper(obj_t *src, obj_t *dst);
 
 
 static obj_t * create_obj(
@@ -68,6 +67,10 @@ static obj_t * create_obj(
      *  Besides, the base obj remains the same size due to the bitfields.
      */
     obj->gotReset = 0;
+
+    /*  Add obj to the master conf->objs list.
+     */
+    list_append(conf->objs, obj);
 
     DPRINTF("Created object [%s].\n", obj->name);
     return(obj);   
@@ -102,7 +105,6 @@ obj_t * create_client_obj(server_conf_t *conf, req_t *req)
     client->aux.client.gotEscape = 0;
     client->aux.client.gotSuspend = 0;
 
-    list_append(conf->objs, client);
     return(client);
 }
 
@@ -141,20 +143,16 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name, obj_t *console)
 
     logfile = create_obj(conf, name, -1, LOGFILE);
     logfile->aux.logfile.consoleName = create_string(console->name);
-
-    if (open_logfile_obj(logfile, conf->enableZeroLogs) < 0) {
-        destroy_obj(logfile);
-        return(NULL);
-    }
-
     if (is_serial_obj(console))
         console->aux.serial.logfile = logfile;
     else if (is_telnet_obj(console))
         console->aux.telnet.logfile = logfile;
     else
-        err_msg(0, "INTERNAL: Unrecognized console [%s] type=%d at %s:%d",
-            console->name, console->type, __FILE__, __LINE__);
-    list_append(conf->objs, logfile);
+        err_msg(0, "INTERNAL: Unrecognized console [%s] type=%d",
+            console->name, console->type);
+
+    open_logfile_obj(logfile, conf->enableZeroLogs);
+
     return(logfile);
 }
 
@@ -174,12 +172,12 @@ int open_logfile_obj(obj_t *logfile, int gotTrunc)
     assert(logfile->aux.logfile.consoleName != NULL);
 
     if (logfile->fd >= 0) {
-        if (close(logfile->fd) < 0) {
+        if (close(logfile->fd) < 0)	/* log err and continue */
             log_msg(0, "Unable to close logfile \"%s\": %s.",
                 logfile->name, strerror(errno));
-            return(-1);
-        }
+        logfile->fd = -1;
     }
+
     flags = O_WRONLY | O_CREAT | O_APPEND | O_NONBLOCK;
     if (gotTrunc)
         flags |= O_TRUNC;
@@ -190,9 +188,11 @@ int open_logfile_obj(obj_t *logfile, int gotTrunc)
     }
     if (get_write_lock(logfile->fd) < 0) {
         log_msg(0, "Unable to lock \"%s\".", logfile->name);
+        close(logfile->fd);		/* ignore err on close() */
+        logfile->fd = -1;
         return(-1);
     }
-    set_fd_nonblocking(logfile->fd);	/* redundant but just playing it safe */
+    set_fd_nonblocking(logfile->fd);	/* redundant, just playing it safe */
     set_fd_closed_on_exec(logfile->fd);
 
     now = create_long_time_string(0);
@@ -203,9 +203,60 @@ int open_logfile_obj(obj_t *logfile, int gotTrunc)
     free(now);
     free(msg);
 
-    DPRINTF("Logfile \"%s\" opened for console [%s].\n",
+    DPRINTF("Opened logfile \"%s\" for console [%s].\n",
         logfile->name, logfile->aux.logfile.consoleName);
     return(0);
+}
+
+
+obj_t * get_console_logfile_obj(obj_t *console)
+{
+/*  Returns a ptr to the logfile obj associated with 'console'
+ *    if one exists and is currently active; o/w, returns NULL.
+ */
+    obj_t *logfile;
+
+    assert(console != NULL);
+    assert(is_console_obj(console));
+
+    if (is_serial_obj(console))
+        logfile = console->aux.serial.logfile;
+    else if (is_telnet_obj(console))
+        logfile = console->aux.telnet.logfile;
+    else
+        err_msg(0, "INTERNAL: Unrecognized console [%s] type=%d",
+            console->name, console->type);
+
+    if (!logfile || (logfile->fd < 0))
+        return(NULL);
+    return(logfile);
+}
+
+
+void notify_console_objs(obj_t *console, char *msg)
+{
+/*  Notifies all readers & writers of (console) with the informational (msg).
+ *  If an obj is both a reader and a writer, it will only be notified once.
+ */
+    ListIterator i;
+    obj_t *obj;
+
+    assert(is_console_obj(console));
+
+    if (!msg || !strlen(msg))
+        return;
+
+    i = list_iterator_create(console->readers);
+    while ((obj = list_next(i)))
+        write_obj_data(obj, msg, strlen(msg), 1);
+    list_iterator_destroy(i);
+
+    i = list_iterator_create(console->writers);
+    while ((obj = list_next(i)))
+        if (!list_find_first(console->readers, (ListFindF) find_obj, obj))
+            write_obj_data(obj, msg, strlen(msg), 1);
+    list_iterator_destroy(i);
+    return;
 }
 
 
@@ -281,7 +332,6 @@ obj_t * create_serial_obj(
     set_serial_opts(&tty, serial, opts);
     set_tty_mode(&tty, fd);
 
-    list_append(conf->objs, serial);
     return(serial);
 
 err:
@@ -363,7 +413,6 @@ obj_t * create_telnet_obj(
      */
     telnet->aux.telnet.enableKeepAlive = conf->enableKeepAlive;
 
-    list_append(conf->objs, telnet);
     connect_telnet_obj(telnet);
     return(telnet);
 }
@@ -462,13 +511,13 @@ int connect_telnet_obj(obj_t *telnet)
         telnet->aux.telnet.port, now, CONMAN_MSG_SUFFIX);
     free(now);
     strcpy(&buf[sizeof(buf) - 3], "\r\n");
-    notify_objs(telnet->readers, telnet->writers, buf);
+    notify_console_objs(telnet, buf);
     telnet->aux.telnet.conState = TELCON_UP;
     /*
      *  Insist that the connection must be up for a minimum length of time
      *    before resetting the reconnect delay back to zero.  This protects
      *    against the server spinning on reconnects if the connection is
-     *    being automatically terminated by something like TCPWrappers.
+     *    being automatically terminated by something like TCP-Wrappers.
      *  If the connection is terminated before the timer expires,
      *    disconnect_telnet_obj() will cancel the timer and the
      *    exponential backoff will continue.
@@ -499,10 +548,12 @@ void disconnect_telnet_obj(obj_t *telnet)
         untimeout(telnet->aux.telnet.timer);
         telnet->aux.telnet.timer = -1;
     }
-    if (close(telnet->fd) < 0)
-        err_msg(errno, "Unable to close connection to <%s:%d> for [%s]",
-            telnet->aux.telnet.host, telnet->aux.telnet.port, telnet->name);
-    telnet->fd = -1;
+    if (telnet->fd >= 0) {
+        if (close(telnet->fd) < 0)
+            err_msg(errno, "Unable to close connection to <%s:%d> for [%s]",
+                telnet->aux.telnet.host, telnet->aux.telnet.port, telnet->name);
+        telnet->fd = -1;
+    }
 
     /*  Notify linked objs when transitioning from an UP state.
      */
@@ -516,7 +567,7 @@ void disconnect_telnet_obj(obj_t *telnet)
             telnet->aux.telnet.port, now, CONMAN_MSG_SUFFIX);
         free(now);
         strcpy(&buf[sizeof(buf) - 3], "\r\n");
-        notify_objs(telnet->readers, telnet->writers, buf);
+        notify_console_objs(telnet, buf);
     }
 
     /*  Set timer for establishing new connection using exponential backoff.
@@ -538,9 +589,10 @@ static void reset_telnet_delay(obj_t *telnet)
 /*  Resets the telnet obj's delay between reconnect attempts.
  *  By resetting this delay after a minimum length of time, the server is
  *    protected against spinning on reconnects where the connection is
- *    being automatically terminated by something like TCPWrappers.
+ *    being automatically terminated by something like TCP-Wrappers.
  */
     assert(is_telnet_obj(telnet));
+
     telnet->aux.telnet.delay = 0;
     /*
      *  Also reset the timer ID since this routine is only invoked
@@ -554,12 +606,11 @@ static void reset_telnet_delay(obj_t *telnet)
 void destroy_obj(obj_t *obj)
 {
 /*  Destroys the object, closing the fd and freeing resources as needed.
- *
- *  NOTE: Be sure the destroyed obj is removed from the master objs list;
- *    this routine will normally be called via the objs list destructor.
+ *  This routine should only be called via the obj's list destructor, thereby
+ *    ensuring it will be removed from the master objs list before destruction.
  */
     assert(obj != NULL);
-    DPRINTF("Destroyed object [%s].\n", obj->name);
+    DPRINTF("Destroying object [%s].\n", obj->name);
 
 /*  FIX_ME? Ensure obj buf is flushed (if not suspended) before destruction.
  *
@@ -608,8 +659,8 @@ void destroy_obj(obj_t *obj)
          */
         break;
     default:
-        err_msg(0, "INTERNAL: Unrecognized object [%s] type=%d at %s:%d",
-            obj->name, obj->type, __FILE__, __LINE__);
+        err_msg(0, "INTERNAL: Unrecognized object [%s] type=%d",
+            obj->name, obj->type);
         break;
     }
 
@@ -634,29 +685,35 @@ void destroy_obj(obj_t *obj)
 int compare_objs(obj_t *obj1, obj_t *obj2)
 {
 /*  Used by list_sort() to compare the name of (obj1) to that of (obj2).
+ *  Objects are sorted by their name in ascending ASCII order, with the
+ *    exception that if both objects match up to the point of a trailing
+ *    integer string then they will be sorted numerically according to
+ *    this integer (eg, foo1 < foo2 < foo10).
+ *  Returns less-than-zero if (obj1 < obj2), zero if (obj1 == obj2),
+ *    and greater-than-zero if (obj1 > obj2).
  */
-    char *s1, *s2;
-    char *i1, *i2;
+    char *str1, *str2;
+    char *int1, *int2;
 
     assert(obj1 != NULL);
     assert(obj2 != NULL);
     assert(obj1->name != NULL);
     assert(obj2->name != NULL);
 
-    s1 = obj1->name;
-    s2 = obj2->name;
-    i1 = find_trailing_int_str(s1);
-    i2 = find_trailing_int_str(s2);
+    str1 = obj1->name;
+    str2 = obj2->name;
+    int1 = find_trailing_int_str(str1);
+    int2 = find_trailing_int_str(str2);
 
-    while (*s1) {
-        if ((s1 == i1) && (s2 == i2))
-            return(atoi(i1) - atoi(i2));
-        else if (*s1 == *s2)
-            s1++, s2++;
+    while (*str1) {
+        if ((str1 == int1) && (str2 == int2))
+            return(atoi(int1) - atoi(int2));
+        else if (*str1 == *str2)
+            str1++, str2++;
         else
             break;
     }
-    return(*s1 - *s2);
+    return(*str1 - *str2);
 }
 
 
@@ -681,6 +738,7 @@ int find_obj(obj_t *obj, obj_t *key)
 {
 /*  Used by list_find_first() and list_delete_all() to locate
  *    the object specified by (key) within the list.
+ *  Returns non-zero if (obj == key); o/w returns zero.
  */
     assert(obj != NULL);
     assert(key != NULL);
@@ -693,43 +751,68 @@ void link_objs(obj_t *src, obj_t *dst)
 {
 /*  Creates a link so data read from (src) is written to (dst).
  */
-    int gotBcast, gotForce, gotJoin;
+    int gotBcast;
+    int gotStolen;
     char *now;
     char *tty;
     char buf[MAX_LINE];
     ListIterator i;
     obj_t *writer;
+    obj_t *logfile;
 
-    /*  If the dst console already has writers,
-     *    display a warning if the request is to be joined
-     *    or steal the console if the request is to be forced.
-     */
-    if (is_console_obj(dst) && !list_is_empty(dst->writers)) {
+    if (is_client_obj(src) && is_console_obj(dst)) {
 
-        assert(is_client_obj(src));
         gotBcast = list_count(src->aux.client.req->consoles) > 1;
-        gotForce = src->aux.client.req->enableForce;
-        gotJoin = src->aux.client.req->enableJoin;
-        assert(gotForce ^ gotJoin);
-
+        gotStolen = src->aux.client.req->enableForce
+            && !list_is_empty(dst->writers);
         now = create_short_time_string(0);
+
+        /*  Write msg(s) to new client regarding existing console writer(s).
+         */
+        i = list_iterator_create(dst->writers);
+        while ((writer = list_next(i))) {
+            assert(is_client_obj(writer));
+            tty = writer->aux.client.req->tty;
+            snprintf(buf, sizeof(buf),
+                "%sConsole [%s] %s <%s@%s>%s%s at %s%s",
+                CONMAN_MSG_PREFIX, dst->name,
+                (gotStolen ? "stolen from" : "joined with"),
+                writer->aux.client.req->user, writer->aux.client.req->host,
+                (tty ? " on " : ""), (tty ? tty : ""), now, CONMAN_MSG_SUFFIX);
+            strcpy(&buf[sizeof(buf) - 3], "\r\n");
+            write_obj_data(src, buf, strlen(buf), 1);
+        }
+        list_iterator_destroy(i);
+
+        /*  Create msg for console logfile and its existing writer(s)
+         *    regarding the "writable" client's arrival.
+         */
         tty = src->aux.client.req->tty;
         snprintf(buf, sizeof(buf),
-            "%sConsole [%s] %s%s by %s@%s%s%s at %s%s",
+            "%sConsole [%s] %s%s by <%s@%s>%s%s at %s%s",
             CONMAN_MSG_PREFIX, dst->name,
-            (gotJoin ? "joined" : "stolen"), (gotBcast ? " for B/C" : ""),
+            (gotStolen ? "stolen" : "joined"), (gotBcast ? " for B/C" : ""),
             src->aux.client.req->user, src->aux.client.req->host,
             (tty ? " on " : ""), (tty ? tty : ""), now, CONMAN_MSG_SUFFIX);
-        free(now);
         strcpy(&buf[sizeof(buf) - 3], "\r\n");
-        write_obj_data(src, buf, strlen(buf), 1);
+        free(now);
 
+        /*  If console session is being logged,
+         *    write msg recording arrival of a console writer.
+         */
+        if ((logfile = get_console_logfile_obj(dst)))
+            write_obj_data(logfile, buf, strlen(buf), 1);
+
+        /*  Write msg to existing console writer(s).
+         *  If the new client is forcing the connection,
+         *    unlink the existing client(s) from this console.
+         */
         i = list_iterator_create(dst->writers);
         while ((writer = list_next(i))) {
             assert(is_client_obj(writer));
             write_obj_data(writer, buf, strlen(buf), 1);
-            if (gotForce)
-                unlink_objs(dst, writer);
+            if (gotStolen)
+                unlink_obj(writer);
         }
         list_iterator_destroy(i);
     }
@@ -746,129 +829,121 @@ void link_objs(obj_t *src, obj_t *dst)
 }
 
 
-void unlink_objs(obj_t *obj1, obj_t *obj2)
+void unlink_obj(obj_t *obj)
 {
-/*  Destroys all links between (obj1) and (obj2).
+/*  Destroys all links connecting other objects to (obj).
  */
-    unlink_objs_helper(obj1, obj2);
-    unlink_objs_helper(obj2, obj1);
-    DPRINTF("Unlinked objects [%s] and [%s].\n", obj1->name, obj2->name);
-    return;
-}
-
-
-static void unlink_objs_helper(obj_t *src, obj_t *dst)
-{
-/*  DOCUMENT_ME!
- */
-    int n;
     ListIterator i;
-    obj_t *writer;
+    ListIterator j;
+    obj_t *x;
+    obj_t *console;
     char *now;
     char *tty;
     char buf[MAX_LINE];
 
-    if (list_find_first(src->readers, (ListFindF) find_obj, dst))
-        DPRINTF("Removing [%s] from [%s] readers.\n", dst->name, src->name);
-    list_delete_all(src->readers, (ListFindF) find_obj, dst);
-    if (list_find_first(src->writers, (ListFindF) find_obj, dst))
-        DPRINTF("Removing [%s] from [%s] writers.\n", dst->name, src->name);
-    n = list_delete_all(src->writers, (ListFindF) find_obj, dst);
-
-    if ((n > 0) && is_console_obj(src) && !list_is_empty(src->writers)) {
-
-        assert(is_client_obj(dst));
-        now = create_short_time_string(0);
-        tty = dst->aux.client.req->tty;
-        snprintf(buf, sizeof(buf),
-            "%sConsole [%s] departed by %s@%s%s%s at %s%s", CONMAN_MSG_PREFIX,
-            src->name, dst->aux.client.req->user, dst->aux.client.req->host,
-            (tty ? " on " : ""), (tty ? tty : ""), now, CONMAN_MSG_SUFFIX);
-        free(now);
-        strcpy(&buf[sizeof(buf) - 3], "\r\n");
-
-        i = list_iterator_create(src->writers);
-        while ((writer = list_next(i))) {
-            assert(is_client_obj(writer));
-            write_obj_data(writer, buf, strlen(buf), 1);
-        }
-        list_iterator_destroy(i);
-    }
-
-    /*  If client has been unlinked from all readers and writers,
-     *    set flag to ensure no additional data is written into the buffer.
+    /*  Set flag to ensure no additional data is written into the buffer.
      */
-    if ( is_client_obj(src)
-      && list_is_empty(src->readers)
-      && list_is_empty(src->writers) )
-        src->gotEOF = 1;
+    obj->gotEOF = 1;
+
+    i = list_iterator_create(obj->writers);
+    while ((x = list_next(i)))
+        if (list_delete_all(x->readers, (ListFindF) find_obj, obj) > 0)
+            DPRINTF("Unlinked [%s] from [%s] readers.\n", obj->name, x->name);
+    list_iterator_destroy(i);
+
+    i = list_iterator_create(obj->readers);
+    while ((x = list_next(i))) {
+        if (list_delete_all(x->writers, (ListFindF) find_obj, obj) > 0) {
+            DPRINTF("Unlinked [%s] from [%s] writers.\n", obj->name, x->name);
+            /*
+             *  If a "writable" client is being unlinked from a console ...
+             */
+            if (is_client_obj(obj) && is_console_obj(x)) {
+
+                console = x;
+
+                /*  Create msg for console logfile and its existing writer(s)
+                 *    regarding the "writable" client's departure.
+                 */
+                now = create_short_time_string(0);
+                tty = obj->aux.client.req->tty;
+                snprintf(buf, sizeof(buf),
+                    "%sConsole [%s] departed by <%s@%s>%s%s at %s%s",
+                    CONMAN_MSG_PREFIX, console->name,
+                    obj->aux.client.req->user, obj->aux.client.req->host,
+                    (tty ? " on " : ""), (tty ? tty : ""), now,
+                    CONMAN_MSG_SUFFIX);
+                free(now);
+                strcpy(&buf[sizeof(buf) - 3], "\r\n");
+
+                /*  If console session is being logged,
+                 *    write msg recording departure of a console writer.
+                 */
+                if ((x = get_console_logfile_obj(console)))
+                    write_obj_data(x, buf, strlen(buf), 1);
+
+                /*  Write msg to existing console writer(s).
+                 */
+                j = list_iterator_create(console->writers);
+                while ((x = list_next(j))) {
+                    assert(is_client_obj(x));
+                    write_obj_data(x, buf, strlen(buf), 1);
+                }
+                list_iterator_destroy(j);
+            }
+        }
+    }
+    list_iterator_destroy(i);
 
     return;
 }
 
 
-void shutdown_obj(obj_t *obj)
+int shutdown_obj(obj_t *obj)
 {
-/*  DOCUMENT_ME!
+/*  Shuts down the specified obj.
+ *  Returns -1 if the obj is ready to be removed from the master objs list
+ *    and destroyed; o/w, returns 0.
  */
-    ListIterator i;
-    obj_t *reader;
-    obj_t *writer;
+    assert(obj != NULL);
 
-    assert(obj->fd >= 0);
+    /*  An inactive obj should not be destroyed.
+     */
+    if (obj->fd < 0)
+        return(0);
 
-    /*  If a telent obj is shut down, shutdown the existing connection
-     *    and attempt to establish a new connection.
+    if (close(obj->fd) < 0)
+        err_msg(errno, "Unable to close object [%s]", obj->name);
+    obj->fd = -1;
+
+    /*  Flush the obj's buffer.
+     */
+    obj->bufInPtr = obj->bufOutPtr = obj->buf;
+
+    /*  If a logfile obj is shut down, close the file but retain the obj;
+     *    an attempt to reopen it will be made if the daemon is reconfigured.
+     */
+    if (is_logfile_obj(obj))
+        return(0);
+
+    /*  If a telnet obj is shut down, close the existing connection
+     *    and attempt to establish a new one.
      */
     if (is_telnet_obj(obj)) {
         disconnect_telnet_obj(obj);
-        return;
+        return(0);
     }
 
-    i = list_iterator_create(obj->readers);
-    while ((reader = list_next(i)))
-        unlink_objs(obj, reader);
-    list_iterator_destroy(i);
+    /*  Prepare this obj for destruction by unlinking it from all others.
+     */
+    unlink_obj(obj);
 
-    i = list_iterator_create(obj->writers);
-    while ((writer = list_next(i)))
-        unlink_objs(obj, writer);
-    list_iterator_destroy(i);
-
+    /*  The obj is now ready for destruction.  It will be removed from the
+     *    master objs list by mux_io(), and the objs list destructor will
+     *    destroy the obj.
+     */
     DPRINTF("Shutdown object [%s].\n", obj->name);
-    return;
-}
-
-
-void notify_objs(List list1, List list2, char *msg)
-{
-/*  DOCUMENT_ME!
- */
-    ListIterator i;
-    obj_t *obj;
-
-    if (!list1)
-        list1 = list2;
-    if (!list1)
-        return;
-    if (!msg || !strlen(msg))
-        return;
-
-    i = list_iterator_create(list1);
-    while ((obj = list_next(i)))
-        write_obj_data(obj, msg, strlen(msg), 1);
-    list_iterator_destroy(i);
-
-    if (list2) {
-        i = list_iterator_create(list2);
-        while ((obj = list_next(i))) {
-            if (!list_find_first(list1, (ListFindF) find_obj, obj))
-                write_obj_data(obj, msg, strlen(msg), 1);
-        }
-        list_iterator_destroy(i);
-    }
-
-    return;
+    return(-1);
 }
 
 
@@ -894,27 +969,26 @@ int read_from_obj(obj_t *obj, fd_set *pWriteSet)
 
     assert(obj->fd >= 0);
 
+    /*  Do not read from an active telnet obj that is not yet in the UP state.
+     */
     if (is_telnet_obj(obj) && obj->aux.telnet.conState != TELCON_UP)
         return(0);
 
 again:
     if ((n = read(obj->fd, buf, sizeof(buf))) < 0) {
-        if (errno == EINTR) {
+        if (errno == EINTR)
             goto again;
-        }
-        else if ((errno != EAGAIN) && (errno != EWOULDBLOCK)) {
-            log_msg(20, "Unable to read from [%s]: %s.",
-                obj->name, strerror(errno));
-            shutdown_obj(obj);
-            obj->bufInPtr = obj->bufOutPtr = obj->buf;
-            return(-1);
-        }
+        if ((errno == EAGAIN) || (errno == EWOULDBLOCK))
+            return(0);
+        log_msg(20, "Unable to read from [%s]: %s.",
+            obj->name, strerror(errno));
+        return(shutdown_obj(obj));
     }
     else if (n == 0) {
-        shutdown_obj(obj);
-        if (obj->fd < 0)		/* telnet obj has been disconnected */
-            return(-1);
-        FD_SET(obj->fd, pWriteSet);	/* ensure buffer is flushed if needed */
+        int rc = shutdown_obj(obj);
+        if (obj->fd >= 0)
+            FD_SET(obj->fd, pWriteSet);	/* ensure buffer is flushed if needed */
+        return(rc);
     }
     else {
         DPRINTF("Read %d bytes from [%s].\n", n, obj->name); /* xyzzy */
@@ -923,7 +997,7 @@ again:
             x_pthread_mutex_lock(&obj->bufLock);
             time(&obj->aux.client.timeLastRead);
             if (obj->aux.client.timeLastRead == (time_t) -1)
-                err_msg(errno, "What time it is?");
+                err_msg(errno, "What time is it?");
             x_pthread_mutex_unlock(&obj->bufLock);
             n = process_client_escapes(obj, buf, n);
         }
@@ -965,14 +1039,14 @@ int write_obj_data(obj_t *obj, void *src, int len, int isInfo)
     int avail;
     int n, m;
 
-    if (!src || len <= 0)
+    if (!src || len <= 0 || obj->fd < 0)
         return(0);
 
     /*  If the obj's gotEOF flag is set,
      *    no more data can be written into its buffer.
      */
     if (obj->gotEOF) {
-        DPRINTF("Attempted to write into [%s] after EOF.\n", obj->name);
+        DPRINTF("Attempted to write to [%s] after EOF.\n", obj->name);
         return(0);
     }
 
@@ -996,8 +1070,8 @@ int write_obj_data(obj_t *obj, void *src, int len, int isInfo)
      *    and the client has requested not to be bothered.
      */
     if (isInfo && is_client_obj(obj) && obj->aux.client.req->enableQuiet) {
-        len = 0;
-        goto end;
+        x_pthread_mutex_unlock(&obj->bufLock);
+        return(0);
     }
 
     /*  Assert the buffer's input and output ptrs are valid upon entry.
@@ -1068,7 +1142,6 @@ int write_obj_data(obj_t *obj, void *src, int len, int isInfo)
     assert(obj->bufOutPtr >= obj->buf);
     assert(obj->bufOutPtr < &obj->buf[MAX_BUF_SIZE]);
 
-end:
     x_pthread_mutex_unlock(&obj->bufLock);
     return(len);
 }
@@ -1119,10 +1192,12 @@ int write_to_obj(obj_t *obj)
     if (avail > 0) {
 again:
         if ((n = write(obj->fd, obj->bufOutPtr, avail)) < 0) {
-            if (errno == EINTR) {
+            if (errno == EINTR)
                 goto again;
-            }
-            else if ((errno != EAGAIN) && (errno != EWOULDBLOCK)) {
+            /*
+             *  FIX_ME: Mirror read_from_obj() construct here when dethreaded.
+             */
+            if ((errno != EAGAIN) && (errno != EWOULDBLOCK)) {
                 log_msg(20, "Unable to write to [%s]: %s.",
                     obj->name, strerror(errno));
                 obj->gotEOF = 1;

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-esc.c,v 1.16 2001/10/11 18:59:22 dun Exp $
+ *  $Id: server-esc.c,v 1.17 2001/12/18 22:24:50 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -109,7 +109,7 @@ static void perform_serial_break(obj_t *client)
 
         if (is_serial_obj(console)) {
             if (tcsendbreak(console->fd, 0) < 0)
-                err_msg(errno, "tcsendbreak() failed for console [%s]",
+                err_msg(errno, "Unable to send serial-break to console [%s]",
                     console->name);
         }
         else if (is_telnet_obj(console)) {
@@ -153,13 +153,7 @@ static void perform_log_replay(obj_t *client)
     assert(list_count(client->writers) == 1);
     console = list_peek(client->writers);
     assert(is_console_obj(console));
-    if (is_serial_obj(console))
-        logfile = console->aux.serial.logfile;
-    else if (is_telnet_obj(console))
-        logfile = console->aux.telnet.logfile;
-    else
-        err_msg(0, "INTERNAL: Unrecognized console [%s] type=%d at %s:%d",
-            console->name, console->type, __FILE__, __LINE__);
+    logfile = get_console_logfile_obj(console);
 
     if (!logfile) {
         n = snprintf(ptr, len, "%sConsole [%s] is not being logged%s",
@@ -271,7 +265,7 @@ static void perform_reset(obj_t *client)
             CONMAN_MSG_PREFIX, console->name, client->aux.client.req->user,
             client->aux.client.req->host, now, CONMAN_MSG_SUFFIX);
         strcpy(&buf[sizeof(buf) - 3], "\r\n");
-        notify_objs(console->readers, console->writers, buf);
+        notify_console_objs(console, buf);
     }
     list_iterator_destroy(i);
     free(now);
@@ -442,7 +436,7 @@ static int process_telnet_cmd(obj_t *telnet, int cmd, int opt)
             cmd, telnet->name);
         return(-1);
     }
-    DPRINTF("Rcvd telnet cmd %s%s%s from console [%s].\n",
+    DPRINTF("Received telnet cmd %s%s%s from console [%s].\n",
         telcmds[cmd - TELCMD_FIRST], (TELOPT_OK(opt) ? " " : ""),
         (TELOPT_OK(opt) ? telopts[opt - TELOPT_FIRST] : ""), telnet->name);
 

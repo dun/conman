@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.38 2001/12/14 07:43:04 dun Exp $
+ *  $Id: server.c,v 1.39 2001/12/18 22:24:50 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -492,15 +492,18 @@ static void mux_io(server_conf_t *conf)
             }
             if (FD_ISSET(obj->fd, &rset)) {
                 if (read_from_obj(obj, &wset) < 0) {
-                    if (!is_telnet_obj(obj))
-                        list_delete(i);
+                    list_delete(i);
                     continue;
                 }
+                if (obj->fd < 0)
+                    continue;
             }
             if (FD_ISSET(obj->fd, &wset)) {
-                if (write_to_obj(obj) < 0)
-                    if (!is_telnet_obj(obj))
-                        list_delete(i);
+                if (write_to_obj(obj) < 0) {
+                    list_delete(i);
+                    continue;
+                }
+                if (obj->fd < 0)
                     continue;
             }
         }
@@ -524,8 +527,7 @@ static void reopen_logfiles(List objs)
     while ((logfile = list_next(i))) {
         if (!is_logfile_obj(logfile))
             continue;
-        if (open_logfile_obj(logfile, 0) < 0)
-            list_delete(i);
+        open_logfile_obj(logfile, 0);	/* do not truncate the logfile */
     }
     list_iterator_destroy(i);
     return;
@@ -610,7 +612,7 @@ static void reset_console(obj_t *console, const char *cmd)
     }
     else if (pid == 0) {
         setpgid(pid, 0);
-        close(STDIN_FILENO);
+        close(STDIN_FILENO);    	/* ignore errors on close() */
         close(STDOUT_FILENO);
         close(STDERR_FILENO);
         execl("/bin/sh", "sh", "-c", cmdbuf, NULL);

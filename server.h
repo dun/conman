@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.37 2001/12/14 07:40:40 dun Exp $
+ *  $Id: server.h,v 1.38 2001/12/18 22:24:50 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -136,6 +136,48 @@ typedef struct client_args {
 } client_arg_t;
 
 
+/***********\
+**  Notes  **
+\***********/
+
+/*  Concering object READERS and WRITERS:
+ *
+ *  - an object's readers are those objects that read from it
+ *    (ie, those to which it writes data read from its file descriptor)
+ *  - an object's writers are those objects that write to it
+ *    (ie, those that write data into its circular write-buffer)
+ *
+ *  Data is read from an object's file descriptor and immediately written
+ *  into the circular write-buffer of each object listed in its readers list.
+ *  Data in an object's write-buffer is written out to its file descriptor.
+ *
+ *  CONSOLE objects: (aka SERIAL/TELNET objects)
+ *  - readers list can contain at most one logfile object
+ *    and any number of R/O or R/W client objects
+ *  - writers list can contain any number of R/W or W/O client objects
+ *
+ *  LOGFILE objects:
+ *  - readers list is empty
+ *  - writers list contains exactly one console object
+ *
+ *  R/O CLIENT objects:
+ *  - readers list is empty
+ *  - writers list contains exactly one console object
+ *
+ *  R/W CLIENT objects:
+ *  - readers list contains exactly one console object
+ *  - writers list contains exactly one console object
+ *
+ *  W/O CLIENT objects: (aka B/C CLIENT objects)
+ *  - readers list contains more than one console object
+ *  - writers list is empty
+ */
+
+
+/************\
+**  Macros  **
+\************/
+
 #define is_client_obj(OBJ)   (OBJ->type == CLIENT)
 #define is_logfile_obj(OBJ)  (OBJ->type == LOGFILE)
 #define is_serial_obj(OBJ)   (OBJ->type == SERIAL)
@@ -177,6 +219,10 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name, obj_t *console);
 
 int open_logfile_obj(obj_t *logfile, int gotTrunc);
 
+obj_t * get_console_logfile_obj(obj_t *console);
+
+void notify_console_objs(obj_t *console, char *msg);
+
 obj_t * create_serial_obj(
     server_conf_t *conf, char *name, char *dev, char *opts);
 
@@ -195,11 +241,9 @@ int find_obj(obj_t *obj, obj_t *key);
 
 void link_objs(obj_t *src, obj_t *dst);
 
-void unlink_objs(obj_t *obj1, obj_t *obj2);
+void unlink_obj(obj_t *obj);
 
-void shutdown_obj(obj_t *obj);
-
-void notify_objs(List list1, List list2, char *msg);
+int shutdown_obj(obj_t *obj);
 
 int read_from_obj(obj_t *obj, fd_set *pWriteSet);
 
