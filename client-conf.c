@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-conf.c,v 1.43 2002/03/30 01:35:38 dun Exp $
+ *  $Id: client-conf.c,v 1.44 2002/04/29 21:50:34 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -127,17 +127,23 @@ void destroy_client_conf(client_conf_t *conf)
 
 void process_client_env_vars(client_conf_t *conf)
 {
-    char *p;
+    char *p, *q;
     int i;
 
-    if ((p = getenv("CONMAN_HOST")) && (*p)) {
-        if (conf->req->host)
-            free(conf->req->host);
-        conf->req->host = create_string(p);
+    if ((p = getenv("CONMAN_HOST"))) {
+        if ((q = strchr(p, ':'))) {
+            *q++ = '\0';
+            if ((i = atoi(q)) > 0)
+                conf->req->port = i;
+        }
+        if (*p) {
+            if (conf->req->host)
+                free(conf->req->host);
+            conf->req->host = create_string(p);
+        }
     }
-    if ((p = getenv("CONMAN_PORT"))) {
-        i = atoi(p);
-        if (i > 0)
+    if ((p = getenv("CONMAN_PORT")) && (*p)) {
+        if ((i = atoi(p)) > 0)
             conf->req->port = i;
     }
     if ((p = getenv("CONMAN_ESCAPE")) && (*p)) {
@@ -151,7 +157,7 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
 {
     int c;
     int i;
-    char *str;
+    char *p;
     int gotHelp = 0;
 
     if (conf->prog == NULL)
@@ -164,13 +170,16 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
             conf->req->enableBroadcast = 1;
             break;
         case 'd':
-            if (conf->req->host)
-                free(conf->req->host);
-            if ((str = strchr(optarg, ':'))) {
-                *str++ = '\0';
-                conf->req->port = atoi(str);
+            if ((p = strchr(optarg, ':'))) {
+                *p++ = '\0';
+                if ((i = atoi(p)) > 0)
+                    conf->req->port = i;
             }
-            conf->req->host = create_string(optarg);
+            if (*optarg) {
+                if (conf->req->host)
+                    free(conf->req->host);
+                conf->req->host = create_string(optarg);
+            }
             break;
         case 'e':
             conf->escapeChar = optarg[0];
