@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 #
-# $Id: Makefile.in,v 1.6 2001/08/17 21:24:13 dun Exp $
+# $Id: Makefile.in,v 1.7 2001/08/17 22:17:59 dun Exp $
 ##
 
 PACKAGE=	@PACKAGE@
@@ -60,7 +60,7 @@ install:
 	$(INSTALL) -m 644 conman.conf $(DESTDIR)/etc
 	for f in `cd lib && find * -name "CVS" -prune -o -type f -print`; do \
 	  mkdir -p `dirname $(DESTDIR)$(libdir)/$(PACKAGE)/$$f`; \
-	  $(INSTALL) -m 644 lib/$$f $(DESTDIR)$(libdir)/$(PACKAGE)/$$f; \
+	  $(INSTALL) -m 755 lib/$$f $(DESTDIR)$(libdir)/$(PACKAGE)/$$f; \
 	done
 
 clean:
