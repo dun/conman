@@ -2,7 +2,7 @@
  *  conman.h
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: conman.h,v 1.1 2001/05/04 15:26:40 dun Exp $
+ *  $Id: conman.h,v 1.2 2001/05/09 22:21:02 dun Exp $
 \******************************************************************************/
 
 
@@ -39,6 +39,7 @@ enum err_type {
     CONMAN_ERR_TOO_MANY_CONSOLES,
     CONMAN_ERR_BUSY_CONSOLES,
     CONMAN_ERR_NO_PROGRAM,
+    CONMAN_ERR_NO_RESOURCES,
 };
 
 enum proto_toks {

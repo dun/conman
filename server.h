@@ -2,7 +2,7 @@
  *  server.h
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server.h,v 1.1 2001/05/04 15:26:41 dun Exp $
+ *  $Id: server.h,v 1.2 2001/05/09 22:21:02 dun Exp $
 \******************************************************************************/
 
 
@@ -12,6 +12,7 @@
 
 #include <pthread.h>
 #include <sys/types.h>
+#include <termios.h>
 #include <time.h>
 #include "conman.h"
 #include "list.h"
@@ -28,6 +29,7 @@ typedef struct console_obj {		/* CONSOLE AUX OBJ DATA:              */
     char            *log;		/*  filename where output is logged   */
     char            *rst;		/*  filename of "console-reset" prog  */
     int              bps;		/*  console baud rate                 */
+    struct termios   term;		/*  saved cooked tty mode             */
 } console_obj_t;
 
 typedef struct logfile_obj {		/* LOGFILE AUX OBJ DATA:              */
@@ -99,7 +101,7 @@ void close_obj(obj_t *obj);
 
 int compare_objs(obj_t *obj1, obj_t *obj2);
 
-void create_obj_link(obj_t *src, obj_t *dst);
+void link_objs(obj_t *src, obj_t *dst);
 
 void write_to_obj(obj_t *obj);
 

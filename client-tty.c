@@ -2,7 +2,7 @@
  *  client-tty.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: client-tty.c,v 1.1 2001/05/04 15:26:40 dun Exp $
+ *  $Id: client-tty.c,v 1.2 2001/05/09 22:21:01 dun Exp $
 \******************************************************************************/
 
 
@@ -29,6 +29,7 @@ static int write_to_stdout(client_conf_t *conf);
 static void perform_help_esc(client_conf_t *conf, char c);
 static void perform_close_esc(client_conf_t *conf, char c);
 static void locally_echo_esc(char e, char c);
+static void rewrite_esc_char(char c, char **p);
 
 
 void connect_console(client_conf_t *conf)
@@ -92,19 +93,20 @@ static void set_raw_tty_mode(int fd, struct termios *bak)
     if (bak)
         *bak = term;
 
-    /*  disable SIGINT on break, CR-to-NL, CR ignore, NL-to-CR, flow ctrl
+    /*  disable SIGINT on break, CR-to-NL, input parity checking,
+     *    stripping 8th bit off input chars, output flow ctrl
      */
-    term.c_iflag &= ~(BRKINT | ICRNL | IGNCR | INLCR | IXOFF | IXON);
-    /*
-     *  disable output processing
+    term.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+
+    /*  disable output processing
      */
     term.c_oflag &= ~(OPOST);
-    /*
-     *  disable echo, canonical mode, extended input processing, signal chars
+
+    /*  disable echo, canonical mode, extended input processing, signal chars
      */
     term.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
-    /*
-     *  read() does not return until data is present (may block indefinitely)
+
+    /*  read() does not return until data is present (may block indefinitely)
      */
     term.c_cc[VMIN] = 1;
     term.c_cc[VTIME] = 0;
@@ -201,8 +203,9 @@ static int write_to_stdout(client_conf_t *conf)
     if (n > 0) {
         if (write_n(STDOUT_FILENO, buf, n) < 0)
             err_msg(errno, "write(%d) failed", STDOUT_FILENO);
-
-        /* FIX_ME: If logfile opt specified, write to logfile as well. */
+        if (conf->ld >= 0)
+            if (write_n(conf->ld, buf, n) < 0)
+                err_msg(errno, "write(%d) failed", conf->ld);
     }
     return(n);
 }
@@ -237,8 +240,8 @@ static void perform_close_esc(client_conf_t *conf, char c)
     if (close(conf->sd) < 0)
         err_msg(errno, "close(%d) failed", conf->sd);
     conf->sd = -1;
-    str = create_fmt_string("Connection to ConMan at %s closed.\n",
-        conf->rhost);
+    str = create_fmt_string("Connection to ConMan at %s:%d closed.\n",
+        conf->dhost, conf->dport);
     if (write_n(STDOUT_FILENO, str, strlen(str)) < 0)
         err_msg(errno, "write(%d) failed", STDOUT_FILENO);
     free(str);
@@ -248,14 +251,32 @@ static void perform_close_esc(client_conf_t *conf, char c)
 
 static void locally_echo_esc(char e, char c)
 {
-/*  Locally echo an escape character on stdout (cf. Stevens UNP p638).
+/*  Locally echo an escape character sequence on stdout (cf. Stevens UNP p638).
  */
     char buf[6];
     char *p = buf;
 
-    /*  Echo the esc-char first.
+    rewrite_esc_char(e, &p);
+    rewrite_esc_char(c, &p);
+
+    /*  Append a CR/LF since tty is in raw mode.
      */
-    *p++ = e;
+    *p++ = '\r';
+    *p++ = '\n';
+
+    assert((p - buf) <= sizeof(buf));
+
+    if (write_n(STDOUT_FILENO, buf, p - buf) < 0)
+        err_msg(errno, "write(%d) failed", STDOUT_FILENO);
+    return;
+}
+
+
+static void rewrite_esc_char(char c, char **pp)
+{
+/*  Rewrite the escape character (c) in the buffer pointed to by (*p).
+ */
+    char *p = *pp;
 
     c &= 0177;
 
@@ -273,14 +294,6 @@ static void locally_echo_esc(char e, char c)
         *p++ = c;
     }
 
-    /*  Append a CR/LF since tty is in raw mode.
-     */
-    *p++ = '\r';
-    *p++ = '\n';
-
-    assert((p - buf) <= sizeof(buf));
-
-    if (write_n(STDOUT_FILENO, buf, p - buf) < 0)
-        err_msg(errno, "write(%d) failed", STDOUT_FILENO);
+    *pp = p;
     return;
 }

@@ -2,7 +2,7 @@
  *  server-obj.c  
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server-obj.c,v 1.1 2001/05/04 15:26:41 dun Exp $
+ *  $Id: server-obj.c,v 1.2 2001/05/09 22:21:02 dun Exp $
 \******************************************************************************/
 
 
@@ -26,6 +26,8 @@
 
 
 static obj_t * create_obj(char *name, enum obj_type type);
+static void set_raw_console_mode(obj_t *obj);
+static void restore_console_mode(obj_t *obj);
 static void parse_buf_for_control(obj_t *obj, void *src, size_t *pLen);
 
 
@@ -73,6 +75,8 @@ obj_t * create_socket_obj(char *user, char *host, int sd)
     assert(host);
     assert(sd >= 0);
 
+    /*  FIX_ME: user@host is not unique -- doppleganger danger.
+     */
     name = create_fmt_string("%s@%s", user, host);
     obj = create_obj(name, SOCKET);
     free(name);
@@ -170,23 +174,30 @@ void destroy_obj(obj_t *obj)
 
 int open_obj(obj_t *obj)
 {
-    char *now;
-    char *str;
+/*  Note that SOCKET objs are created in the "open" state.
+ */
+    char *now, *str;
 
     assert(obj->fd < 0);
     if (obj->fd >= 0)			/* obj already open */
         return(0);
 
     if (obj->type == CONSOLE) {
-        /*
-         *  NOT_IMPLEMENTED_YET
-         */
+        if ((obj->fd = open(obj->aux.console.dev, O_RDWR | O_NONBLOCK)) < 0) {
+            log_msg(0, "Unable to open console [%s]: %s", obj->name,
+                strerror(errno));
+            return(-1);
+        }
+        set_raw_console_mode(obj);
     }
     else if (obj->type == LOGFILE) {
+        int flags = O_WRONLY | O_CREAT | O_APPEND | O_NONBLOCK;
         assert(obj->writer->type == CONSOLE);
-        if ((obj->fd = open(obj->name,
-          O_WRONLY | O_CREAT | O_APPEND | O_NONBLOCK, S_IRUSR | S_IWUSR)) < 0)
+        if ((obj->fd = open(obj->name, flags, S_IRUSR | S_IWUSR)) < 0) {
+            log_msg(0, "Unable to open logfile [%s]: %s", obj->name,
+                strerror(errno));
             return(-1);
+        }
         now = create_time_string(0);
         str = create_fmt_string("* Console [%s] log started on %s.\n\n",
             obj->writer->name, now);
@@ -195,7 +206,54 @@ int open_obj(obj_t *obj)
         free(str);
     }
 
+    DPRINTF("Opened object [%s].\n", obj->name);
     return(0);
+}
+
+
+static void set_raw_console_mode(obj_t *obj)
+{
+/*  FIX_ME:  Can this be combined with client's set_raw_tty_mode() in util.c?
+ */
+    struct termios term;
+
+    assert(obj->type == CONSOLE);
+    assert(obj->fd >= 0);
+
+    if (tcgetattr(obj->fd, &term) < 0)
+        err_msg(errno, "tcgetattr(%s) failed", obj->aux.console.dev);
+    obj->aux.console.term = term;
+
+    /*  disable SIGINT on break, CR-to-NL, input parity checking,
+     *    stripping 8th bit off input chars, output flow ctrl
+     */
+    term.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+
+    /*  disable output processing
+     */
+    term.c_oflag &= ~(OPOST);
+
+    /*  clear size bits; disable parity checking
+     */
+    term.c_cflag &= ~(CSIZE | PARENB);
+
+    /*  set 8 bits/char; ignore modem status lines
+     */
+    term.c_cflag |= (CS8 | CLOCAL);
+
+    /*  disable echo, canonical mode, extended input processing, signal chars
+     */
+    term.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
+
+    /*  read() does not return until data is present (may block indefinitely)
+     */
+    term.c_cc[VMIN] = 1;
+    term.c_cc[VTIME] = 0;
+
+    DPRINTF("Setting raw terminal mode on [%s].\n", obj->name);
+    if (tcsetattr(obj->fd, TCSANOW, &term) < 0)
+        err_msg(errno, "tcsetattr(%s) failed", obj->aux.console.dev);
+    return;
 }
 
 
@@ -242,6 +300,8 @@ void close_obj(obj_t *obj)
     else {
         obj->gotEOF = 0;
         if (obj->fd >= 0) {
+            if (obj->type == CONSOLE)
+                restore_console_mode(obj);
             if (close(obj->fd) < 0)
                 err_msg(errno, "close(%d) failed", obj->fd);
             obj->fd = -1;
@@ -249,6 +309,21 @@ void close_obj(obj_t *obj)
         if (obj->type == SOCKET)
             destroy_obj(obj);
     }
+    DPRINTF("Closed object [%s].\n", obj->name);
+    return;
+}
+
+
+static void restore_console_mode(obj_t *obj)
+{
+/*  FIX_ME:  Can this be combined with client's restore_tty_mode() in util.c?
+ */
+    assert(obj->type == CONSOLE);
+    assert(obj->fd >= 0);
+
+    if (tcsetattr(obj->fd, TCSANOW, &obj->aux.console.term) < 0)
+        err_msg(errno, "tcsetattr(%s) failed", obj->aux.console.dev);
+    DPRINTF("Restored cooked terminal mode on [%s].\n", obj->name);
     return;
 }
 
@@ -268,10 +343,9 @@ int compare_objs(obj_t *obj1, obj_t *obj2)
 }
 
 
-void create_obj_link(obj_t *src, obj_t *dst)
+void link_objs(obj_t *src, obj_t *dst)
 {
-    char *now;
-    char *str;
+    char *now, *str;
 
     /*  If the dst console is already in R/W use by another client, steal it!
      */
@@ -435,7 +509,7 @@ static void parse_buf_for_control(obj_t *obj, void *src, size_t *pLen)
     if (!src || *pLen <= 0)
         return;
     /*
-     *  NOT_IMPLEMENTED_YET
+     *  FIX_ME: NOT_IMPLEMENTED_YET
      */
     return;
 }

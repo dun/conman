@@ -2,7 +2,7 @@
  *  errors.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: errors.c,v 1.1 2001/05/04 15:26:40 dun Exp $
+ *  $Id: errors.c,v 1.2 2001/05/09 22:21:02 dun Exp $
  ******************************************************************************
  *  Refer to "errors.h" for documentation on public functions.
 \******************************************************************************/
@@ -26,7 +26,7 @@
 
 int open_msg_log(char *filename)
 {
-    /*  NOT_IMPLEMENTED_YET
+    /*  FIX_ME: NOT_IMPLEMENTED_YET
      */
     return(0);
 }
@@ -34,7 +34,7 @@ int open_msg_log(char *filename)
 
 void close_msg_log(void)
 {
-    /*  NOT_IMPLEMENTED_YET
+    /*  FIX_ME: NOT_IMPLEMENTED_YET
      */
     return;
 }
@@ -42,7 +42,7 @@ void close_msg_log(void)
 
 void log_msg(int level, const char *fmt, ...)
 {
-    /*  NOT_IMPLEMENTED_YET
+    /*  FIX_ME: NOT_IMPLEMENTED_YET
      */
     return;
 }

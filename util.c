@@ -2,7 +2,7 @@
  *  util.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: util.c,v 1.1 2001/05/04 15:26:41 dun Exp $
+ *  $Id: util.c,v 1.2 2001/05/09 22:21:02 dun Exp $
  ******************************************************************************
  *  Refer to "util.h" for documentation on public functions.
 \******************************************************************************/
@@ -265,7 +265,6 @@ int inet_pton(int family, const char *str, void *addr)
 /*  cf. Stevens UNPv1, section 3.7, p72.
  */
     struct in_addr tmpaddr;
-    DPRINTF("Using internal inet_pton().\n");
 
     if (family != AF_INET) {
         errno = EAFNOSUPPORT;
@@ -287,7 +286,8 @@ const char * inet_ntop(int family, const void *addr, char *str, size_t len)
  */
     const unsigned char *p = (const unsigned char *) addr;
     char tmpstr[INET_ADDRSTRLEN];
-    DPRINTF("Using internal inet_ntop().\n");
+
+    assert(str);
 
     if (family != AF_INET) {
         errno = EAFNOSUPPORT;

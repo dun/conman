@@ -2,7 +2,7 @@
  *  server.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server.c,v 1.1 2001/05/04 15:26:41 dun Exp $
+ *  $Id: server.c,v 1.2 2001/05/09 22:21:02 dun Exp $
 \******************************************************************************/
 
 
@@ -23,11 +23,11 @@
 #include "util.h"
 
 
-void daemonize(void);
-void exit_handler(int signum);
-void enable_console_logging(server_conf_t *conf);
-void create_listen_socket(server_conf_t *conf);
-void mux_io(server_conf_t *conf);
+static void daemonize(void);
+static void exit_handler(int signum);
+static void enable_console_logging(server_conf_t *conf);
+static void create_listen_socket(server_conf_t *conf);
+static void mux_io(server_conf_t *conf);
 
 
 static int done = 0;
@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
 }
 
 
-void daemonize(void)
+static void daemonize(void)
 {
     int i;
     pid_t pid;
@@ -105,7 +105,7 @@ void daemonize(void)
 
     /*  Close "all" file descriptors and ignore the return code since
      *    most of them will return EBADF.  There is no easy way to
-     *    determine "all" (cf, APUE), so we just close the first 20.
+     *    determine "all" (cf, APUE), so just close the first 20.
      */
     for (i=0; i<20; i++)
         close(i);
@@ -119,7 +119,7 @@ void daemonize(void)
 }
 
 
-void exit_handler(int signum)
+static void exit_handler(int signum)
 {
     log_msg(0, "Exiting on signal %d.", signum);
     done = 1;
@@ -127,15 +127,11 @@ void exit_handler(int signum)
 }
 
 
-void enable_console_logging(server_conf_t *conf)
+static void enable_console_logging(server_conf_t *conf)
 {
-    int rc;
     ListIterator i;
     obj_t *obj;
     obj_t *log;
-
-    if ((rc = pthread_mutex_lock(&conf->objsLock)) != 0)
-        err_msg(rc, "pthread_mutex_lock() failed for objs");
 
     if (!(i = list_iterator_create(conf->objs)))
         err_msg(0, "Out of memory");
@@ -146,17 +142,14 @@ void enable_console_logging(server_conf_t *conf)
             continue;
         if (!list_append(conf->objs, log))
             err_msg(0, "Out of memory");
-        create_obj_link(obj, log);
+        link_objs(obj, log);
     }
     list_iterator_destroy(i);
-
-    if ((rc = pthread_mutex_unlock(&conf->objsLock)) != 0)
-        err_msg(rc, "pthread_mutex_unlock() failed for objs");
     return;
 }
 
 
-void create_listen_socket(server_conf_t *conf)
+static void create_listen_socket(server_conf_t *conf)
 {
     int ld;
     struct sockaddr_in addr;
@@ -188,13 +181,14 @@ void create_listen_socket(server_conf_t *conf)
 }
 
 
-void mux_io(server_conf_t *conf)
+static void mux_io(server_conf_t *conf)
 {
     ListIterator i;
     fd_set rset, wset;
     int maxfd;
     int n;
     int rc;
+    pthread_t tid;
     obj_t *obj;
 
     if (list_is_empty(conf->objs)) {
@@ -214,13 +208,17 @@ void mux_io(server_conf_t *conf)
 
         list_iterator_reset(i);
         while ((obj = list_next(i))) {
-            if (obj->fd < 0)
+            if (obj->fd < 0) {
                 continue;
-            if (obj->type == CONSOLE || obj->type == SOCKET)
+            }
+            if ((obj->type == CONSOLE) || (obj->type == SOCKET)) {
                 FD_SET(obj->fd, &rset);
-            if (obj->writer != NULL && (obj->bufInPtr != obj->bufOutPtr))
+                maxfd = MAX(maxfd, obj->fd);
+            }
+            if ((obj->writer != NULL) && (obj->bufInPtr != obj->bufOutPtr)) {
                 FD_SET(obj->fd, &wset);
-            maxfd = MAX(maxfd, obj->fd);
+                maxfd = MAX(maxfd, obj->fd);
+            }
         }
 
         while ((n = select(maxfd+1, &rset, &wset, NULL, NULL)) < 0) {
@@ -234,7 +232,7 @@ void mux_io(server_conf_t *conf)
             /* should i */ continue;
 
         if (FD_ISSET(conf->ld, &rset)) {
-            if ((rc = pthread_create(NULL, NULL,
+            if ((rc = pthread_create(&tid, NULL,
               (PthreadFunc) process_client, (void *) conf)) != 0)
                 err_msg(rc, "pthread_create() failed");
         }

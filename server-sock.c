@@ -2,7 +2,7 @@
  *  server-sock.c  
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server-sock.c,v 1.1 2001/05/04 15:26:41 dun Exp $
+ *  $Id: server-sock.c,v 1.2 2001/05/09 22:21:02 dun Exp $
 \******************************************************************************/
 
 
@@ -21,41 +21,47 @@
 #include <unistd.h>
 #include "conman.h"
 #include "errors.h"
+#include "lex.h"
 #include "server.h"
 #include "util.h"
 
 
 typedef struct request {
-    int    sd;
-    char  *ip;
-    char  *host;
-    char  *user;
-    cmd_t  command;
-    List   consoles;
-    char  *program;
-    int    enableBroadcast;
-    int    enableForce;
+    int    sd;				/* client socket descriptor           */
+    char  *ip;				/* ip addr string of client           */
+    char  *host;			/* name of client host, or NULL       */
+    char  *user;			/* name of client user                */
+    cmd_t  command;			/* command to perform for client      */
+    int    enableBroadcast;		/* true if b-casting to many consoles */
+    int    enableForce;			/* true if forcing console connection */
+    char  *program;			/* program name for EXECUTE cmd       */
+    List   consoles;			/* list of consoles affected by cmd   */
 } req_t;
 
 
 static req_t * create_req(int sd);
 static void destroy_req(req_t *req);
 static int recv_greeting(req_t *req);
-static void parse_greeting(Lex l, req_t *req);
+static int parse_greeting(Lex l, req_t *req);
 static int recv_req(req_t *req);
-static void parse_command(Lex l, req_t *req);
+static int parse_cmd_opts(Lex l, req_t *req);
 static int query_consoles(server_conf_t *conf, req_t *req);
 static int validate_req(req_t *req);
 static int send_rsp(req_t *req, int errnum, char *errmsg);
 static void perform_query_cmd(req_t *req);
 static void perform_monitor_cmd(req_t *req);
 static void perform_connect_cmd(req_t *req);
-static void perform_broadcast_cmd(req_t *req);
+static void perform_execute_cmd(req_t *req);
 
 
 void process_client(server_conf_t *conf)
 {
-/*  cf. Stevens APUE, section 15.6.
+/*  The thread responsible for accepting a client connection
+ *    and processing the request.
+ *  The QUERY cmd is processed entirely by this thread.
+ *  The MONITOR and CONNECT cmds are setup and then placed
+ *    in the conf->objs list to be handled by mux_io().
+ *  The EXECUTE cmd still puzzles me somewhat...
  */
     int rc;
     int sd;
@@ -67,6 +73,12 @@ void process_client(server_conf_t *conf)
     if ((rc = pthread_detach(pthread_self())) != 0)
         err_msg(rc, "pthread_detach() failed");
 
+    /*  The accept() is performed within this thread instead of mux_io()
+     *    because this routine needs to have the conf ptr passed in as an
+     *    arg in order to perform query_consoles(), etc.
+     *  Sure, I could have created a struct in which to stuff both the
+     *    conf ptr and the sd of the new connection, but that seemed silly.
+     */
     while ((sd = accept(conf->ld, &addr, &addrlen)) < 0) {
         if (errno == EINTR)
             continue;
@@ -77,14 +89,25 @@ void process_client(server_conf_t *conf)
         err_msg(errno, "accept() failed");
     }
 
-    req = create_req(sd);
-
-    if (!inet_ntop(AF_INET, &addr.sin_addr, buf, sizeof(buf)))
+    if (!inet_ntop(AF_INET, &addr.sin_addr, buf, sizeof(buf))) {
         err_msg(errno, "inet_ntop() failed");
-    req->ip = create_string(buf);
-
-    if (get_hostname_via_addr(&addr.sin_addr, buf, sizeof(buf)))
-        req->host = create_string(buf);
+    }
+    if (!(req = create_req(sd))) {
+        log_msg(0, "Request from %s terminated: out of memory", buf);
+        if (close(sd) < 0)
+            err_msg(errno, "close(%d) failed", sd);
+        return;
+    }
+    if (!(req->ip = strdup(buf))) {
+        log_msg(0, "Request from %s terminated: out of memory", buf);
+        goto end;
+    }
+    if (get_hostname_via_addr(&addr.sin_addr, buf, sizeof(buf))) {
+        if (!(req->host = strdup(buf))) {
+            log_msg(0, "Request from %s terminated: out of memory", buf);
+            goto end;
+        }
+    }
 
     if (recv_greeting(req) < 0)
         goto end;
@@ -96,20 +119,23 @@ void process_client(server_conf_t *conf)
         goto end;
 
     switch(req->command) {
-    case QUERY:
-        perform_query_cmd(req);
-        break;
-    case MONITOR:
-        perform_monitor_cmd(req);
-        break;
     case CONNECT:
         perform_connect_cmd(req);
         break;
     case EXECUTE:
-        perform_broadcast_cmd(req);
+        perform_execute_cmd(req);
+        break;
+    case MONITOR:
+        perform_monitor_cmd(req);
+        break;
+    case QUERY:
+        perform_query_cmd(req);
         break;
     default:
-        err_msg(0, "Invalid command (%d) at %s:%d",
+        /*  This should not happen, as invalid commands
+         *    will be detected by validate_req().
+         */
+        log_msg(0, "INTERNAL ERROR: Received invalid command (%d) at %s:%d",
             req->command, __FILE__, __LINE__);
         break;
     }
@@ -122,40 +148,47 @@ end:
 
 static req_t * create_req(int sd)
 {
+/*  Creates a request struct.
+ *  Returns the new struct, or NULL or error.
+ */
     req_t *req;
 
     assert(sd >= 0);
 
     if (!(req = malloc(sizeof(req_t))))
-        err_msg(0, "Out of memory");
+        return(NULL);
     req->sd = sd;
     req->ip = NULL;
     req->host = NULL;
     req->user = NULL;
     req->command = NONE;
-
-    /*  The "consoles" list will initially contain strings received while
+    req->enableBroadcast = 0;
+    req->enableForce = 0;
+    req->program = NULL;
+    /*
+     *  The "consoles" list will initially contain strings received while
      *    parsing the client's request.  These strings will then be matched
      *    against the server's conf during query_consoles().
      *  The destroy_string() destructor is used here because the initial
      *    list of strings will be destroyed when query_consoles()
      *    replaces it with a list of console objects.
      */
-    if (!(req->consoles = list_create((ListDelF) destroy_string)))
-        err_msg(0, "Out of memory");
-
-    req->program = NULL;
-    req->enableBroadcast = 0;
-    req->enableForce = 0;
+    if (!(req->consoles = list_create((ListDelF) destroy_string))) {
+        free(req);
+        return(NULL);
+    }
     return(req);
 }
 
 
 static void destroy_req(req_t *req)
 {
+/*  Destroys a request struct, closing the socket connection if needed.
+ */
+    DPRINTF("Destroyed request from %s.\n", (req->host ? req->host : req->ip));
     if (req->sd >= 0) {
-        if (close(req->sd) < 0)
-            err_msg(errno, "close(%d) failed", req->sd);
+        if (shutdown(req->sd, SHUT_RDWR) < 0)
+            err_msg(errno, "shutdown(%d) failed", req->sd);
         req->sd = -1;
     }
     if (req->ip)
@@ -164,9 +197,9 @@ static void destroy_req(req_t *req)
         free(req->host);
     if (req->user)
         free(req->user);
-    list_destroy(req->consoles);
     if (req->program)
         free(req->program);
+    list_destroy(req->consoles);
     free(req);
     return;
 }
@@ -174,30 +207,41 @@ static void destroy_req(req_t *req)
 
 static int recv_greeting(req_t *req)
 {
-    char buf[MAX_SOCK_LINE];
+/*  Performs the initial handshake with the client
+ *    (SOMEDAY including authentication & encryption, if needed).
+ *  Returns 0 if the greeting is valid, or -1 on error.
+ */
     int n;
+    char buf[MAX_SOCK_LINE];
     Lex l;
     int done = 0;
-    int error = 0;
     int tok;
 
+    assert(req->sd >= 0);
+
     /*  Read greeting (ie, first line of request):
-     *    HELLO USER="<str>"
+     *    HELLO USER='<str>'
      */
-    if ((n = read_line(req->sd, buf, sizeof(buf))) <= 0) {
-        DPRINTF("Error reading greeting from fd=%d (%s): %s\n",
-            req->sd, (req->host ? req->host : req->ip), strerror(errno));
+    if ((n = read_line(req->sd, buf, sizeof(buf))) < 0) {
+        log_msg(0, "Error reading greeting from %s: %s",
+            req->ip, strerror(errno));
+        return(-1);
+    }
+    else if (n == 0) {
+        log_msg(0, "Connection terminated by %s", req->ip);
         return(-1);
     }
 
-    if (!(l = lex_create(buf, proto_strs)))
-        err_msg(0, "Out of memory");
-
+    if (!(l = lex_create(buf, proto_strs))) {
+        send_rsp(req, CONMAN_ERR_NO_RESOURCES,
+            "Insufficient resources to process request.");
+        return(-1);
+    }
     while (!done) {
         tok = lex_next(l);
         switch(tok) {
         case CONMAN_TOK_HELLO:
-            parse_greeting(l, req);
+            done = parse_greeting(l, req);
             break;
         case LEX_EOF:
         case LEX_EOL:
@@ -207,31 +251,41 @@ static int recv_greeting(req_t *req)
             break;
         }
     }
-
     lex_destroy(l);
 
-    /*  Validate greeting and prepare response.
+    /*  Validate greeting.
      */
-    if (req->user == NULL) {
-        error = 1;
+    if (done == -1) {
+        send_rsp(req, CONMAN_ERR_NO_RESOURCES,
+            "Insufficient resources to process request.");
+        return(-1);
+    }
+    if (!req->user) {
         send_rsp(req, CONMAN_ERR_BAD_REQUEST, 
             "Invalid greeting: no user specified");
+        return(-1);
     }
-    else if (strcmp(req->ip, "127.0.0.1")) {	/* if remote connection */
-        error = 1;
+    if (strcmp(req->ip, "127.0.0.1")) {
         send_rsp(req, CONMAN_ERR_AUTHENTICATE,
             "Authentication required (but not yet implemented)");
-    }
-    else {
-        error = send_rsp(req, CONMAN_ERR_NONE, NULL);
+        return(-1);
     }
 
-    return(error ? -1 : 0);
+    DPRINTF("Received request from <%s@%s>.\n",
+        req->user, (req->host ? req->host : req->ip));
+
+    /*  Send response to greeting.
+     */
+    return(send_rsp(req, CONMAN_ERR_NONE, NULL));
 }
 
 
-static void parse_greeting(Lex l, req_t *req)
+static int parse_greeting(Lex l, req_t *req)
 {
+/*  Parses the "HELLO" command from the client:
+ *    HELLO USER='<str>'
+ *  Returns 0 on success, or -1 on error (ie, out of memory).
+ */
     int done = 0;
     int tok;
 
@@ -239,10 +293,12 @@ static void parse_greeting(Lex l, req_t *req)
         tok = lex_next(l);
         switch(tok) {
         case CONMAN_TOK_USER:
-            if ((lex_next(l) == '=') && (lex_next(l) == LEX_STR)) {
+            if ((lex_next(l) == '=') && (lex_next(l) == LEX_STR)
+              && (*lex_text(l) != '\0')) {
                 if (req->user)
                     free(req->user);
-                req->user = create_string(lex_text(l));
+                if (!(req->user = lex_decode(strdup(lex_text(l)))))
+                    return(-1);
             }
             break;
         case LEX_EOF:
@@ -253,45 +309,56 @@ static void parse_greeting(Lex l, req_t *req)
             break;
         }
     }
-    return;
+    return(0);
 }
 
 
 static int recv_req(req_t *req)
 {
-    char buf[MAX_SOCK_LINE];
+/*  Receives the request from the client after the greeting has completed.
+ *  Returns 0 if the request is read OK, or -1 on error.
+ */
     int n;
+    char buf[MAX_SOCK_LINE];
     Lex l;
     int done = 0;
     int tok;
 
-    if ((n = read_line(req->sd, buf, sizeof(buf))) <= 0) {
-        DPRINTF("Error reading request from fd=%d (%s): %s\n",
-            req->sd, (req->host ? req->host : req->ip), strerror(errno));
+    assert(req->sd >= 0);
+
+    if ((n = read_line(req->sd, buf, sizeof(buf))) < 0) {
+        log_msg(0, "Error reading request from %s: %s",
+            req->ip, strerror(errno));
+        return(-1);
+    }
+    else if (n == 0) {
+        log_msg(0, "Connection terminated by %s", req->ip);
         return(-1);
     }
 
-    if (!(l = lex_create(buf, proto_strs)))
-        err_msg(0, "Out of memory");
-
+    if (!(l = lex_create(buf, proto_strs))) {
+        send_rsp(req, CONMAN_ERR_NO_RESOURCES,
+            "Insufficient resources to process request.");
+        return(-1);
+    }
     while (!done) {
         tok = lex_next(l);
         switch(tok) {
         case CONMAN_TOK_CONNECT:
             req->command = CONNECT;
-            parse_command(l, req);
+            done = parse_cmd_opts(l, req);
             break;
         case CONMAN_TOK_EXECUTE:
             req->command = EXECUTE;
-            parse_command(l, req);
+            done = parse_cmd_opts(l, req);
             break;
         case CONMAN_TOK_MONITOR:
             req->command = MONITOR;
-            parse_command(l, req);
+            done = parse_cmd_opts(l, req);
             break;
         case CONMAN_TOK_QUERY:
             req->command = QUERY;
-            parse_command(l, req);
+            done = parse_cmd_opts(l, req);
             break;
         case LEX_EOF:
         case LEX_EOL:
@@ -301,25 +368,39 @@ static int recv_req(req_t *req)
             break;
         }
     }
-
     lex_destroy(l);
 
+    if (done == -1) {
+        send_rsp(req, CONMAN_ERR_NO_RESOURCES,
+            "Insufficient resources to process request.");
+        return(-1);
+    }
     return(0);
 }
 
 
-static void parse_command(Lex l, req_t *req)
+static int parse_cmd_opts(Lex l, req_t *req)
 {
+/*  Parses the command options for the given request.
+ *  Returns 0 on success, or -1 on error (ie, out of memory).
+ */
     int done = 0;
     int tok;
+    char *str;
 
     while (!done) {
         tok = lex_next(l);
         switch(tok) {
         case CONMAN_TOK_CONSOLE:
-            if ((lex_next(l) == '=') && (lex_next(l) == LEX_STR))
-                if (!list_append(req->consoles, create_string(lex_text(l))))
-                    err_msg(0, "Out of memory");
+            if ((lex_next(l) == '=') && (lex_next(l) == LEX_STR)
+              && (*lex_text(l) != '\0')) {
+                if (!(str = lex_decode(strdup(lex_text(l)))))
+                    return(-1);
+                if (!list_append(req->consoles, str)) {
+                    free(str);
+                    return(-1);
+                }
+            }
             break;
         case CONMAN_TOK_OPTION:
             if (lex_next(l) == '=') {
@@ -330,10 +411,12 @@ static void parse_command(Lex l, req_t *req)
             }
             break;
         case CONMAN_TOK_PROGRAM:
-            if ((lex_next(l) == '=') && (lex_next(l) == LEX_STR)) {
+            if ((lex_next(l) == '=') && (lex_next(l) == LEX_STR)
+              && (*lex_text(l) != '\0')) {
                 if (req->program)
                     free(req->program);
-                req->program = create_string(lex_text(l));
+                if (!(req->program = lex_decode(strdup(lex_text(l)))))
+                    return(-1);
             }
             break;
         case LEX_EOF:
@@ -344,31 +427,47 @@ static void parse_command(Lex l, req_t *req)
             break;
         }
     }
-    return;
+    return(0);
 }
 
 
 static int query_consoles(server_conf_t *conf, req_t *req)
 {
-    char buf[MAX_BUF_SIZE];
+/*  Queries the server's conf to resolve the console names
+ *    specified in the client's request.
+ *  The req->consoles list initially contains strings constructed
+ *    while parsing the client's request in parse_command().
+ *    These strings are combined into a regex pattern and then
+ *    matched against the console objs in the conf->objs list.
+ *  Returns 0 on success, or -1 on error.
+ *    Upon a successful return, the req->consoles list is replaced
+ *    with a list of console obj_t's.
+ */
     ListIterator i;
+    char buf[MAX_BUF_SIZE];
     char *p;
     int rc;
     regex_t rex;
-    int n;
     List matches;
     obj_t *obj;
 
-
+    /*  An empty list for the QUERY command matches all consoles.
+     */
     if (list_is_empty(req->consoles)) {
-        DPRINTF("log me!\n");
-        return(-1);
+        if (req->command != QUERY)
+            return(0);
+        if (!(p = strdup(".*")))
+            goto no_mem;
+        if (!list_append(req->consoles, p)) {
+            free(p);
+            goto no_mem;
+        }
     }
 
     /*  Combine console patterns via alternation to create single regex.
      */
     if (!(i = list_iterator_create(req->consoles)))
-        err_msg(0, "Out of memory");
+        goto no_mem;
     strlcpy(buf, list_next(i), sizeof(buf));
     while ((p = list_next(i))) {
         strlcat(buf, "|", sizeof(buf));
@@ -376,53 +475,66 @@ static int query_consoles(server_conf_t *conf, req_t *req)
     }
     list_iterator_destroy(i);
 
-    /*  If error compiling regex, return ERROR and close connection.
+    /*  Compile regex for searching server's console objs.
      */
     rc = regcomp(&rex, buf, REG_EXTENDED | REG_ICASE | REG_NOSUB | REG_NEWLINE);
     if (rc != 0) {
-        n = regerror(rc, &rex, NULL, 0);
-        if (!(p = alloca(n)))
-            err_msg(0, "alloca() failed");
-        regerror(rc, &rex, p, n);
-        send_rsp(req, CONMAN_ERR_BAD_REGEX, p);
+        if (regerror(rc, &rex, buf, sizeof(buf)) > sizeof(buf))
+            log_msg(10, "Buffer overflow during regerror()");
+        regfree(&rex);
+        send_rsp(req, CONMAN_ERR_BAD_REGEX, lex_encode(buf));
         return(-1);
     }
 
     /*  Search objs for consoles matching the regex.
+     *  The NULL destructor is used here because the matches list will
+     *    only contain copies of objs contained in the conf->objs list.
+     *    These objs will be destroyed when the conf->objs list is destroyed.
      */
-    if (!(matches = list_create(NULL)))
-        err_msg(0, "Out of memory");
-    if ((rc = pthread_mutex_lock(&conf->objsLock)) != 0)
-        err_msg(rc, "pthread_mutex_lock() failed for objs");
-    if (!(i = list_iterator_create(conf->objs)))
-        err_msg(0, "Out of memory");
+    if (!(matches = list_create(NULL))) {
+        regfree(&rex);
+        goto no_mem;
+    }
+    if (!(i = list_iterator_create(conf->objs))) {
+        list_destroy(matches);
+        regfree(&rex);
+        goto no_mem;
+    }
     while ((obj = list_next(i))) {
         if (obj->type != CONSOLE)
             continue;
-        if (!regexec(&rex, obj->name, 0, NULL, 0))
-            if (!list_append(matches, obj))
-                err_msg(0, "Out of memory");
+        if (!regexec(&rex, obj->name, 0, NULL, 0)) {
+            if (!list_append(matches, obj)) {
+                list_iterator_destroy(i);
+                list_destroy(matches);
+                regfree(&rex);
+                goto no_mem;
+            }
+        }
     }
     list_iterator_destroy(i);
-    if ((rc = pthread_mutex_unlock(&conf->objsLock)) != 0)
-        err_msg(rc, "pthread_mutex_unlock() failed for objs");
     regfree(&rex);
 
-    /*  Replace original consoles-string list with regex-matched obj list.
+    /*  Replace original consoles-string list with regex-matched obj_t list.
      */
     list_destroy(req->consoles);
     req->consoles = matches;
 
     return(0);
+
+no_mem:
+    send_rsp(req, CONMAN_ERR_NO_RESOURCES,
+        "Insufficient resources to process request.");
+    return(-1);
 }
 
 
 static int validate_req(req_t *req)
 {
-    /*  NOT_IMPLEMENTED_YET
+    /*  FIX_ME: NOT_IMPLEMENTED_YET
      */
     if (list_is_empty(req->consoles)) {
-        /* send CONMAN_ERR_NO_CONSOLES */
+        send_rsp(req, CONMAN_ERR_NO_CONSOLES, "Found no matching consoles.");
         return(-1);
     }
     return(0);
@@ -431,10 +543,20 @@ static int validate_req(req_t *req)
 
 static int send_rsp(req_t *req, int errnum, char *errmsg)
 {
+/*  Sends a response to the given request (req).
+ *  If the request is valid and there are no errors,
+ *    errnum = CONMAN_ERR_NONE and an OK response is sent.
+ *  Otherwise, (errnum) identifies the err_type enumeration (in conman.h)
+ *    and errmsg is a string describing the error in more detail.
+ *  Note that errmsg may not contain single-quote chars.
+ *  Returns 0 if the response is sent OK, or -1 on error.
+ */
     char buf[MAX_SOCK_LINE];
     int n;
 
+    assert(req->sd >= 0);
     assert(errnum >= 0);
+    assert(errmsg == NULL || strchr(errmsg, '\'') == NULL);
 
     /*  Create response message.
      */
@@ -443,7 +565,13 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
             proto_strs[LEX_UNTOK(CONMAN_TOK_OK)]);
     }
     else {
-        n = snprintf(buf, sizeof(buf), "%s %s=%d %s=\"%s\"\n",
+    /*
+     *  FIX_ME? Should all errors be logged?
+     *
+     *  Note that errmsg cannot be lex_encode()'d here
+     *    because it may be a string constant.
+     */
+        n = snprintf(buf, sizeof(buf), "%s %s=%d %s='%s'\n",
             proto_strs[LEX_UNTOK(CONMAN_TOK_ERROR)],
             proto_strs[LEX_UNTOK(CONMAN_TOK_CODE)], errnum,
             proto_strs[LEX_UNTOK(CONMAN_TOK_MESSAGE)],
@@ -451,18 +579,21 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
     }
 
     /*  Ensure response is properly terminated.
+     *  If the buffer was overrun, it should be due to an insanely-long
+     *    errmsg string.  As such, we'll need to add the closing quote.
      */
     if (n < 0 || n >= sizeof(buf)) {
-        DPRINTF("Buffer overflow during send_rsp().\n");
+        log_msg(10, "Buffer overflow during send_rsp() for %s", req->ip);
+        buf[MAX_SOCK_LINE-3] = '"';
         buf[MAX_SOCK_LINE-2] = '\n';
         buf[MAX_SOCK_LINE-1] = '\0';
     }
 
+
     /*  Write response to socket.
      */
     if (write_n(req->sd, buf, strlen(buf)) < 0) {
-        DPRINTF("Error writing to fd=%d (%s): %s\n",
-            req->sd, (req->host ? req->host : req->ip), strerror(errno));
+        log_msg(0, "Error writing to %s: %s", req->ip, strerror(errno));
         return(-1);
     }
 
@@ -472,21 +603,31 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
 
 static void perform_query_cmd(req_t *req)
 {
+/*  Performs the QUERY command, returning a list of consoles that
+ *    matches the console patterns given in the client's request.
+ */
     ListIterator i;
     obj_t *obj;
     char buf[MAX_BUF_SIZE];
 
     list_sort(req->consoles, (ListCmpF) compare_objs);
-    if (!(i = list_iterator_create(req->consoles)))
-        goto end;
-    /* FIX_ME: send OK */
+
+    if (!(i = list_iterator_create(req->consoles))) {
+        send_rsp(req, CONMAN_ERR_NO_RESOURCES,
+            "Insufficient resources to process request.");
+        return;
+    }
+    send_rsp(req, CONMAN_ERR_NONE, NULL);
+
     while ((obj = list_next(i))) {
         strlcpy(buf, obj->name, sizeof(buf));
         strlcat(buf, "\n", sizeof(buf));
-        if (write_n(req->sd, buf, strlen(buf)) <  0)
-            ;				/* FIX_ME: do something here */
+        if (write_n(req->sd, buf, strlen(buf)) < 0) {
+            log_msg(0, "Error writing to %s: %s", req->ip, strerror(errno));
+            break;
+        }
     }
-end:
+
     list_iterator_destroy(i);
     return;
 }
@@ -494,7 +635,7 @@ end:
 
 static void perform_monitor_cmd(req_t *req)
 {
-    /*  NOT_IMPLEMENTED_YET
+    /*  FIX_ME: NOT_IMPLEMENTED_YET
      */
     return;
 }
@@ -502,15 +643,15 @@ static void perform_monitor_cmd(req_t *req)
 
 static void perform_connect_cmd(req_t *req)
 {
-    /*  NOT_IMPLEMENTED_YET
+    /*  FIX_ME: NOT_IMPLEMENTED_YET
      */
     return;
 }
 
 
-static void perform_broadcast_cmd(req_t *req)
+static void perform_execute_cmd(req_t *req)
 {
-    /*  NOT_IMPLEMENTED_YET
+    /*  FIX_ME: NOT_IMPLEMENTED_YET
      */
     return;
 }

@@ -2,7 +2,7 @@
  *  client.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: client.c,v 1.1 2001/05/04 15:26:40 dun Exp $
+ *  $Id: client.c,v 1.2 2001/05/09 22:21:01 dun Exp $
 \******************************************************************************/
 
 
@@ -25,6 +25,7 @@ int main(int argc, char *argv[])
 
     conf = create_client_conf();
     process_client_cmd_line(argc, argv, conf);
+    open_client_log(conf);
 
     connect_to_server(conf);
 
@@ -35,13 +36,14 @@ int main(int argc, char *argv[])
     else if (recv_rsp(conf) < 0)
         display_error(conf);
     else if ((conf->command == QUERY) || (conf->command == EXECUTE))
-        display_data(conf);
+        display_data(conf, STDOUT_FILENO);
     else if ((conf->command == CONNECT) || (conf->command == MONITOR))
         connect_console(conf);
     else
         err_msg(0, "Invalid command (%d) at %s:%d",
             conf->command, __FILE__, __LINE__);
 
+    close_client_log(conf);
     destroy_client_conf(conf);
     return(0);
 }

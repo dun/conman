@@ -2,7 +2,7 @@
  *  client-conf.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: client-conf.c,v 1.1 2001/05/04 15:26:40 dun Exp $
+ *  $Id: client-conf.c,v 1.2 2001/05/09 22:21:01 dun Exp $
 \******************************************************************************/
 
 
@@ -10,11 +10,14 @@
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
+#include <assert.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include "conman.h"
@@ -44,8 +47,8 @@ client_conf_t * create_client_conf(void)
 
     /* Remote access not yet enabled, so connect to loopback.
      */
-    conf->rhost = create_string("127.0.0.1");
-    conf->rport = DEFAULT_CONMAN_PORT;
+    conf->dhost = create_string("127.0.0.1");
+    conf->dport = DEFAULT_CONMAN_PORT;
 
     conf->command = CONNECT;
     conf->escapeChar = DEFAULT_CLIENT_ESCAPE;
@@ -54,6 +57,7 @@ client_conf_t * create_client_conf(void)
     conf->enableVerbose = 0;
     conf->program = NULL;
     conf->log = NULL;
+    conf->ld = -1;
     if (!(conf->consoles = list_create((ListDelF) destroy_string)))
         err_msg(0, "Out of memory");
     conf->errnum = CONMAN_ERR_NONE;
@@ -76,6 +80,11 @@ void destroy_client_conf(client_conf_t *conf)
         free(conf->program);
     if (conf->log)
         free(conf->log);
+    if (conf->ld >= 0) {
+        if (close(conf->ld) < 0)
+            err_msg(errno, "close(%d) failed", conf->ld);
+        conf->ld = -1;
+    }
     list_destroy(conf->consoles);
     if (conf->errmsg)
         free(conf->errmsg);
@@ -91,7 +100,7 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
     char *str;
 
     opterr = 1;
-    while ((c = getopt(argc, argv, "be:Efhil:rx:vV")) != -1) {
+    while ((c = getopt(argc, argv, "be:Efhl:qrx:vV")) != -1) {
         switch(c) {
         case '?':			/* invalid option */
             exit(1);
@@ -113,13 +122,13 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
         case 'f':
             conf->enableForce = 1;
             break;
-        case 'i':
-            conf->command = QUERY;
-            break;
         case 'l':
             if (conf->log)
                 free(conf->log);
             conf->log = create_string(optarg);
+            break;
+        case 'q':
+            conf->command = QUERY;
             break;
         case 'r':
             conf->command = MONITOR;
@@ -158,12 +167,58 @@ static void display_client_help(char *prog)
         DEFAULT_CLIENT_ESCAPE);
     printf("  -E        Disable escape character.\n");
     printf("  -f        Force open connection.\n");
-    printf("  -i        Query server about specified console(s).\n");
     printf("  -l FILE   Log connection to file.\n");
+    printf("  -q        Query server about specified console(s).\n");
     printf("  -r        Monitor (read-only) a particular console.\n");
     printf("  -x FILE   Execute file on specified console(s).\n");
     printf("  -v        Be verbose.\n");
     printf("  -V        Display version information.\n");
     printf("\n");
+    return;
+}
+
+
+void open_client_log(client_conf_t *conf)
+{
+    int flags = O_WRONLY | O_CREAT | O_APPEND;
+    char *now, *str;
+
+    if (!conf->log)
+        return;
+    assert(conf->ld < 0);
+
+    if ((conf->ld = open(conf->log, flags, S_IRUSR | S_IWUSR)) < 0)
+        err_msg(errno, "Unable to open logfile [%s]", conf->log);
+
+    now = create_time_string(0);
+    str = create_fmt_string("* Log started on %s.\n\n", now);
+    if (write_n(conf->ld, str, strlen(str)) < 0)
+        err_msg(errno, "write(%d) failed", conf->ld);
+    free(now);
+    free(str);
+
+    return;
+}
+
+
+void close_client_log(client_conf_t *conf)
+{
+    char *now, *str;
+
+    if (!conf->log)
+        return;
+    assert(conf->ld >= 0);
+
+    now = create_time_string(0);
+    str = create_fmt_string("\n* Log finished on %s.\n\n", now);
+    if (write_n(conf->ld, str, strlen(str)) < 0)
+        err_msg(errno, "write(%d) failed", conf->ld);
+    free(now);
+    free(str);
+
+    if (close(conf->ld) < 0)
+        err_msg(errno, "close(%d) failed", conf->ld);
+    conf->ld = -1;
+
     return;
 }
