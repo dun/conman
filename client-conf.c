@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-conf.c,v 1.19 2001/07/06 19:29:43 dun Exp $
+ *  $Id: client-conf.c,v 1.20 2001/07/31 17:13:21 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -104,7 +104,7 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
     char *str;
 
     opterr = 0;
-    while ((c = getopt(argc, argv, "bd:e:fhjl:mqrx:vV")) != -1) {
+    while ((c = getopt(argc, argv, "bd:e:fhjl:mqrvV")) != -1) {
         switch(c) {
         case 'h':
             display_client_help(argv[0]);
@@ -149,12 +149,6 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
         case 'r':
             conf->req->enableRegex = 1;
             break;
-        case 'x':
-            conf->req->command = EXECUTE;
-            if (conf->req->program)
-                free(conf->req->program);
-            conf->req->program = create_string(optarg);
-            break;
         case 'v':
             conf->enableVerbose = 1;
             break;
@@ -194,7 +188,7 @@ static void display_client_help(char *prog)
     printf("  -l FILE   Log connection to file.\n");
     printf("  -m        Monitor connection (read-only).\n");
     printf("  -q        Query server about specified console(s).\n");
-    printf("  -r        Match console names via regular expressions.\n");
+    printf("  -r        Match console names via regex instead of globbing.\n");
     printf("  -x FILE   Execute file on specified console(s).\n");
 /*
  *  printf("  -v        Be verbose.\n");

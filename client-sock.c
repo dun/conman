@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-sock.c,v 1.14 2001/06/18 21:32:07 dun Exp $
+ *  $Id: client-sock.c,v 1.15 2001/07/31 17:13:21 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -137,9 +137,6 @@ int send_req(client_conf_t *conf)
     case CONNECT:
         cmd = proto_strs[LEX_UNTOK(CONMAN_TOK_CONNECT)];
         break;
-    case EXECUTE:
-        cmd = proto_strs[LEX_UNTOK(CONMAN_TOK_EXECUTE)];
-        break;
     default:
         err_msg(0, "Invalid command (%d) at %s:%d",
             conf->req->command, __FILE__, __LINE__);
@@ -152,16 +149,6 @@ int send_req(client_conf_t *conf)
     ptr += n;
     len -= n;
 
-    if ((conf->req->command == EXECUTE) && (conf->req->program != NULL)) {
-        n = snprintf(ptr, len, " %s='%s'",
-            proto_strs[LEX_UNTOK(CONMAN_TOK_PROGRAM)],
-            lex_encode(conf->req->program));
-        if (n < 0 || n >= len)
-            goto overflow;
-        ptr += n;
-        len -= n;
-    }
-
     if (conf->req->enableRegex) {
         n = snprintf(ptr, len, " %s=%s",
             proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
@@ -172,7 +159,7 @@ int send_req(client_conf_t *conf)
         len -= n;
     }
 
-    if ((conf->req->command == CONNECT) || (conf->req->command == EXECUTE)) {
+    if (conf->req->command == CONNECT) {
         if (conf->req->enableForce) {
             n = snprintf(ptr, len, " %s=%s",
                 proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
@@ -230,10 +217,10 @@ int send_req(client_conf_t *conf)
         return(-1);
     }
 
-    /*  For both QUERY and EXECUTE commands, the write-half of the
-     *    socket connection can be closed once the request is sent.
+    /*  For QUERY commands, the write-half of the socket
+     *    connection can be closed once the request is sent.
      */
-    if ((conf->req->command == QUERY) || (conf->req->command == EXECUTE)) {
+    if (conf->req->command == QUERY) {
         if (shutdown(conf->req->sd, SHUT_WR) < 0) {
             conf->errnum = CONMAN_ERR_LOCAL;
             conf->errmsg = create_fmt_string(

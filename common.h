@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.h,v 1.8 2001/06/18 21:32:07 dun Exp $
+ *  $Id: common.h,v 1.9 2001/07/31 17:13:21 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -49,7 +49,6 @@
 typedef enum cmd_type {
     NONE,
     CONNECT,
-    EXECUTE,
     MONITOR,
     QUERY,
 } cmd_t;
@@ -66,7 +65,6 @@ typedef struct request {
     int    enableForce;			/* true if forcing console connection */
     int    enableJoin;			/* true if joining console connection */
     int    enableRegex;			/* true if console matching via regex */
-    char  *program;			/* program name for EXECUTE cmd       */
     List   consoles;			/* list of consoles affected by cmd   */
 } req_t;
 
@@ -95,7 +93,6 @@ enum proto_toks {
     CONMAN_TOK_CODE,
     CONMAN_TOK_CONNECT,
     CONMAN_TOK_CONSOLE,
-    CONMAN_TOK_EXECUTE,
     CONMAN_TOK_FORCE,
     CONMAN_TOK_HELLO,
     CONMAN_TOK_JOIN,

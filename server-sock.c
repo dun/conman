@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.20 2001/06/18 21:32:07 dun Exp $
+ *  $Id: server-sock.c,v 1.21 2001/07/31 17:13:21 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -43,7 +43,6 @@ static int send_rsp(req_t *req, int errnum, char *errmsg);
 static void perform_query_cmd(req_t *req);
 static void perform_monitor_cmd(req_t *req, server_conf_t *conf);
 static void perform_connect_cmd(req_t *req, server_conf_t *conf);
-static void perform_execute_cmd(req_t *req, server_conf_t *conf);
 
 
 void process_client(client_arg_t *args)
@@ -53,7 +52,6 @@ void process_client(client_arg_t *args)
  *  The QUERY cmd is processed entirely by this thread.
  *  The MONITOR and CONNECT cmds are setup and then placed
  *    in the conf->objs list to be handled by mux_io().
- *  The EXECUTE cmd still puzzles me somewhat...
  */
     int rc;
     int sd;
@@ -90,9 +88,6 @@ void process_client(client_arg_t *args)
     case CONNECT:
         perform_connect_cmd(req, conf);
         break;
-    case EXECUTE:
-        perform_execute_cmd(req, conf);
-        break;
     case MONITOR:
         perform_monitor_cmd(req, conf);
         break;
@@ -127,7 +122,7 @@ static void resolve_req(req_t *req, int sd)
     assert(sd >= 0);
 
     req->sd = sd;
-    if (getpeername(sd, &addr, &addrlen) < 0)
+    if (getpeername(sd, (struct sockaddr *) &addr, &addrlen) < 0)
         err_msg(errno, "getpeername() failed");
     if (!inet_ntop(AF_INET, &addr.sin_addr, buf, sizeof(buf)))
         err_msg(errno, "inet_ntop() failed");
@@ -300,10 +295,6 @@ static int recv_req(req_t *req)
             req->command = CONNECT;
             done = parse_cmd_opts(l, req);
             break;
-        case CONMAN_TOK_EXECUTE:
-            req->command = EXECUTE;
-            done = parse_cmd_opts(l, req);
-            break;
         case CONMAN_TOK_MONITOR:
             req->command = MONITOR;
             done = parse_cmd_opts(l, req);
@@ -364,15 +355,6 @@ static int parse_cmd_opts(Lex l, req_t *req)
                     req->enableJoin = 1;
                 else if (lex_prev(l) == CONMAN_TOK_REGEX)
                     req->enableRegex = 1;
-            }
-            break;
-        case CONMAN_TOK_PROGRAM:
-            if ((lex_next(l) == '=') && (lex_next(l) == LEX_STR)
-              && (*lex_text(l) != '\0')) {
-                if (req->program)
-                    free(req->program);
-                if (!(req->program = lex_decode(strdup(lex_text(l)))))
-                    return(-1);
             }
             break;
         case LEX_EOF:
@@ -457,7 +439,7 @@ static int query_consoles_via_globbing(
             if (obj->type != CONSOLE)
                 continue;
             if (!fnmatch(pat, obj->name, 0)
-                && !list_find_first(matches, (ListFindF) find_obj, obj)) {
+              && !list_find_first(matches, (ListFindF) find_obj, obj)) {
                 if (!list_append(matches, obj))
                     err_msg(0, "Out of memory");
             }
@@ -521,8 +503,7 @@ static int query_consoles_via_regex(
         if (obj->type != CONSOLE)
             continue;
         if (!regexec(&rex, obj->name, 1, &match, 0)
-          && (match.rm_so == 0)
-          && (match.rm_eo == strlen(obj->name))) {
+          && (match.rm_so == 0) && (match.rm_eo == strlen(obj->name))) {
             if (!list_append(matches, obj))
                 err_msg(0, "Out of memory");
         }
@@ -556,7 +537,7 @@ static int check_too_many_consoles(req_t *req)
 /*  Checks to see if the request matches too many consoles
  *    for the given command.
  *  A MONITOR command can only affect a single console, as can a
- *    CONNECT or EXECUTE command unless the broadcast option is enabled.
+ *    CONNECT command unless the broadcast option is enabled.
  *  Returns 0 if the request is valid, or -1 on error.
  */
     ListIterator i;
@@ -569,8 +550,7 @@ static int check_too_many_consoles(req_t *req)
         return(0);
     if (list_count(req->consoles) == 1)
         return(0);
-    if (((req->command == CONNECT) || (req->command == EXECUTE))
-      && (req->enableBroadcast))
+    if ((req->command == CONNECT) && (req->enableBroadcast))
         return(0);
 
     if (!(i = list_iterator_create(req->consoles))) {
@@ -836,17 +816,5 @@ static void perform_connect_cmd(req_t *req, server_conf_t *conf)
         }
         list_iterator_destroy(i);
     }
-    return;
-}
-
-
-static void perform_execute_cmd(req_t *req, server_conf_t *conf)
-{
-    assert(req->sd >= 0);
-    assert(req->command == EXECUTE);
-
-    /*  FIX_ME: NOT_IMPLEMENTED_YET
-     */
-    destroy_req(req);
     return;
 }

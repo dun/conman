@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client.c,v 1.8 2001/06/15 20:00:09 dun Exp $
+ *  $Id: client.c,v 1.9 2001/07/31 17:13:21 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -32,8 +32,6 @@ int main(int argc, char *argv[])
         display_error(conf);
     else if (conf->req->command == QUERY)
         display_consoles(conf, STDOUT_FILENO);
-    else if (conf->req->command == EXECUTE)
-        display_data(conf, STDOUT_FILENO);
     else if ((conf->req->command == CONNECT)
       || (conf->req->command == MONITOR))
         connect_console(conf);
