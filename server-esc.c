@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-esc.c,v 1.21 2001/12/30 21:21:17 dun Exp $
+ *  $Id: server-esc.c,v 1.22 2001/12/31 04:48:43 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -143,7 +143,6 @@ static void perform_console_writer_linkage(obj_t *client)
  */
     obj_t *console;
     int gotWrite;
-    char *str;
 
     assert(is_client_obj(client));
 
@@ -163,12 +162,6 @@ static void perform_console_writer_linkage(obj_t *client)
      *    while a R/W client will have only one reader.
      */
     gotWrite = list_count(client->readers);
-
-    str = create_format_string("%sConnecting %s to console [%s]%s",
-        CONMAN_MSG_PREFIX, (gotWrite ? "R/O" : "R/W"),
-        console->name, CONMAN_MSG_SUFFIX);
-    write_obj_data(client, str, strlen(str), 1);
-    free(str);
 
     if (gotWrite) {
         client->aux.client.req->command = MONITOR;

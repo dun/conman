@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.57 2001/12/30 21:21:17 dun Exp $
+ *  $Id: server-obj.c,v 1.58 2001/12/31 04:48:43 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -701,7 +701,6 @@ void link_objs(obj_t *src, obj_t *dst)
     char buf[MAX_LINE];
     ListIterator i;
     obj_t *writer;
-    obj_t *logfile;
 
     if (is_client_obj(src) && is_console_obj(dst)) {
 
@@ -709,6 +708,19 @@ void link_objs(obj_t *src, obj_t *dst)
         gotStolen = src->aux.client.req->enableForce
             && !list_is_empty(dst->writers);
         now = create_short_time_string(0);
+
+        /*  Notify existing console readers and writers
+         *    regarding the "writable" client's arrival.
+         */
+        tty = src->aux.client.req->tty;
+        snprintf(buf, sizeof(buf),
+            "%sConsole [%s] %s%s by <%s@%s>%s%s at %s%s",
+            CONMAN_MSG_PREFIX, dst->name,
+            (gotStolen ? "stolen" : "joined"), (gotBcast ? " for B/C" : ""),
+            src->aux.client.req->user, src->aux.client.req->host,
+            (tty ? " on " : ""), (tty ? tty : ""), now, CONMAN_MSG_SUFFIX);
+        strcpy(&buf[sizeof(buf) - 3], "\r\n");
+        notify_console_objs(dst, buf);
 
         /*  Write msg(s) to new client regarding existing console writer(s).
          */
@@ -727,37 +739,19 @@ void link_objs(obj_t *src, obj_t *dst)
         }
         list_iterator_destroy(i);
 
-        /*  Create msg for console logfile and its existing writer(s)
-         *    regarding the "writable" client's arrival.
+        /*  If the client is forcing the console session,
+         *    disconnect existing clients with write-privileges.
          */
-        tty = src->aux.client.req->tty;
-        snprintf(buf, sizeof(buf),
-            "%sConsole [%s] %s%s by <%s@%s>%s%s at %s%s",
-            CONMAN_MSG_PREFIX, dst->name,
-            (gotStolen ? "stolen" : "joined"), (gotBcast ? " for B/C" : ""),
-            src->aux.client.req->user, src->aux.client.req->host,
-            (tty ? " on " : ""), (tty ? tty : ""), now, CONMAN_MSG_SUFFIX);
-        strcpy(&buf[sizeof(buf) - 3], "\r\n");
-        free(now);
-
-        /*  If console session is being logged,
-         *    write msg recording arrival of a console writer.
-         */
-        if ((logfile = get_console_logfile_obj(dst)))
-            write_obj_data(logfile, buf, strlen(buf), 1);
-
-        /*  Write msg to existing console writer(s).
-         *  If the new client is forcing the connection,
-         *    unlink the existing client(s) from this console.
-         */
-        i = list_iterator_create(dst->writers);
-        while ((writer = list_next(i))) {
-            assert(is_client_obj(writer));
-            write_obj_data(writer, buf, strlen(buf), 1);
-            if (gotStolen)
+        if (gotStolen) {
+            i = list_iterator_create(dst->writers);
+            while ((writer = list_next(i))) {
+                assert(is_client_obj(writer));
                 unlink_obj(writer);
+            }
+            list_iterator_destroy(i);
         }
-        list_iterator_destroy(i);
+
+        free(now);
     }
 
     /*  Create link from src reads to dst writes.
@@ -770,7 +764,6 @@ void link_objs(obj_t *src, obj_t *dst)
     DPRINTF("Linked [%s] reads to [%s] writes.\n", src->name, dst->name);
     assert(validate_obj_links(src) >= 0);
     assert(validate_obj_links(dst) >= 0);
-
     return;
 }
 
@@ -784,8 +777,6 @@ void unlink_objs(obj_t *src, obj_t *dst)
     char *now;
     char *tty;
     char buf[MAX_LINE];
-    obj_t *obj;
-    ListIterator i;
 
     if (list_delete_all(src->readers, (ListFindF) find_obj, dst))
         DPRINTF("Removing [%s] from [%s] readers.\n", dst->name, src->name);
@@ -796,7 +787,7 @@ void unlink_objs(obj_t *src, obj_t *dst)
      */
     if ((n > 0) && is_client_obj(src) && is_console_obj(dst)) {
 
-        /*  Create msg for console logfile and its existing writer(s)
+        /*  Notify existing console readers and writers
          *    regarding the "writable" client's departure.
          */
         now = create_short_time_string(0);
@@ -808,27 +799,12 @@ void unlink_objs(obj_t *src, obj_t *dst)
             (tty ? " on " : ""), (tty ? tty : ""), now, CONMAN_MSG_SUFFIX);
         free(now);
         strcpy(&buf[sizeof(buf) - 3], "\r\n");
-
-        /*  If console session is being logged,
-         *    write msg recording departure of a console writer.
-         */
-        if ((obj = get_console_logfile_obj(dst)))
-            write_obj_data(obj, buf, strlen(buf), 1);
-
-        /*  Write msg to existing console writer(s).
-         */
-        i = list_iterator_create(dst->writers);
-        while ((obj = list_next(i))) {
-            assert(is_client_obj(obj));
-            write_obj_data(obj, buf, strlen(buf), 1);
-        }
-        list_iterator_destroy(i);
+        notify_console_objs(dst, buf);
     }
 
     DPRINTF("Unlinked [%s] reads from [%s] writes.\n", src->name, dst->name);
     assert(validate_obj_links(src) >= 0);
     assert(validate_obj_links(dst) >= 0);
-
     return;
 }
 
@@ -845,10 +821,8 @@ void unlink_obj(obj_t *obj)
 
     while ((x = list_peek(obj->readers)))
         unlink_objs(obj, x);
-
     while ((x = list_peek(obj->writers)))
         unlink_objs(x, obj);
-
     return;
 }
 
