@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.26 2001/09/07 18:27:41 dun Exp $
+ *  $Id: server.h,v 1.27 2001/09/13 16:15:34 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -41,7 +41,7 @@ typedef struct client_obj {		/* CLIENT AUX OBJ DATA:               */
 } client_obj_t;
 
 typedef struct logfile_obj {		/* LOGFILE AUX OBJ DATA:              */
-    char            *console;		/*  name of console being logged      */
+    char            *consoleName;	/*  name of console being logged      */
 } logfile_obj_t;
 
 typedef struct serial_obj {		/* SERIAL AUX OBJ DATA:               */
@@ -136,6 +136,9 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name, obj_t *console);
 
 obj_t * create_serial_obj(
     server_conf_t *conf, char *name, char *dev, char *opts);
+
+obj_t * create_telnet_obj(
+    server_conf_t *conf, char *name, char *host, int port);
 
 void destroy_obj(obj_t *obj);
 

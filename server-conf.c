@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.19 2001/09/07 18:27:40 dun Exp $
+ *  $Id: server-conf.c,v 1.20 2001/09/13 16:15:34 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -344,6 +344,7 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
     char dev[MAX_LINE] = "";
     char log[MAX_LINE] = "";
     char opts[MAX_LINE] = "";
+    char *p;
     obj_t *console;
     obj_t *logfile;
 
@@ -416,7 +417,7 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
         }
     }
 
-    if (!*err && (!*name || !*dev)) {
+    if ((!*name || !*dev) && !*err) {
         snprintf(err, sizeof(err), "incomplete %s directive", directive);
     }
     if (*err) {
@@ -424,19 +425,26 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
             conf->confFileName, lex_line(l), err);
         while (lex_prev(l) != LEX_EOL && lex_prev(l) != LEX_EOF)
             lex_next(l);
+        return;
     }
-    else {
-        if (!(console = create_serial_obj(conf, name, dev, opts))) {
+
+    if ((p = strchr(dev, ':'))) {
+        *p++ = '\0';
+        if (!(console = create_telnet_obj(conf, name, dev, atoi(p))))
             log_msg(0, "%s:%d: Console [%s] removed from the configuration.",
                 conf->confFileName, line, name);
-        }
-        else if (*log) {
-            if (!(logfile = create_logfile_obj(conf, log, console)))
-                log_msg(0, "%s:%d: Console [%s] cannot log to \"%s\".",
-                    conf->confFileName, line, name, log);
-            else
-                link_objs(console, logfile);
-        }
+    }
+    else if (!(console = create_serial_obj(conf, name, dev, opts))) {
+            log_msg(0, "%s:%d: Console [%s] removed from the configuration.",
+                conf->confFileName, line, name);
+    }
+
+    if (console && *log) {
+        if (!(logfile = create_logfile_obj(conf, log, console)))
+            log_msg(0, "%s:%d: Console [%s] cannot log to \"%s\".",
+                conf->confFileName, line, name, log);
+        else
+            link_objs(console, logfile);
     }
     return;
 }

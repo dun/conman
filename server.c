@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.22 2001/09/07 18:27:41 dun Exp $
+ *  $Id: server.c,v 1.23 2001/09/13 16:15:34 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -300,7 +300,11 @@ static void mux_io(server_conf_t *conf)
                 maxfd = MAX(maxfd, obj->fd);
             }
             if (((obj->bufInPtr != obj->bufOutPtr) || (obj->gotEOF))
-              && ((!is_client_obj(obj)) || (!obj->aux.client.gotSuspend))) {
+              && (!(is_client_obj(obj) && obj->aux.client.gotSuspend))) {
+                FD_SET(obj->fd, &wset);
+                maxfd = MAX(maxfd, obj->fd);
+            }
+            if (is_telnet_obj(obj) && obj->aux.telnet.state == CONN_PENDING) {
                 FD_SET(obj->fd, &wset);
                 maxfd = MAX(maxfd, obj->fd);
             }
@@ -338,6 +342,33 @@ static void mux_io(server_conf_t *conf)
         while ((obj = list_next(i))) {
 
             if (obj->fd < 0) {
+                continue;
+            }
+            /*  Did the non-blocking connect complete successfully?
+             *    (cf. Stevens UNPv1 15.3 p409)
+             */
+            if ((is_telnet_obj(obj) && obj->aux.telnet.state == CONN_PENDING)
+              && (FD_ISSET(obj->fd, &rset) || FD_ISSET(obj->fd, &wset))) {
+                int err = 0;
+                int len = sizeof(err);
+                int rc = getsockopt(obj->fd, SOL_SOCKET, SO_ERROR, &err, &len);
+                /*
+                 *  If an error occurred, Berkeley-derived implementations
+                 *    return 0 with the pending error in 'err'.  But Solaris
+                 *    returns -1 with the pending error in 'errno'.  Sigh...
+                 */
+                if (rc < 0)
+                    err = errno;
+                if (err) {
+                    obj->aux.telnet.state = CONN_DOWN;
+                    DPRINTF("Console [%s] is DOWN.\n", obj->name);
+                    log_msg(0, "Unable to open console [%s]: %s.",
+                        obj->name, strerror(errno));
+                }
+                else {
+                    obj->aux.telnet.state = CONN_UP;
+                    DPRINTF("Console [%s] is UP.\n", obj->name);
+                }
                 continue;
             }
             if (FD_ISSET(obj->fd, &rset)) {

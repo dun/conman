@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.37 2001/09/07 18:27:40 dun Exp $
+ *  $Id: server-obj.c,v 1.38 2001/09/13 16:15:34 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -12,9 +12,11 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <netinet/in.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <termios.h>
 #include <time.h>
@@ -25,6 +27,7 @@
 #include "server.h"
 #include "util.h"
 #include "util-file.h"
+#include "util-net.h"
 #include "util-str.h"
 
 
@@ -115,8 +118,13 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name, obj_t *console)
     }
 
     logfile = create_obj(conf, name, fd, LOGFILE);
-    logfile->aux.logfile.console = create_string(console->name);
-    console->aux.serial.logfile = logfile;
+    logfile->aux.logfile.consoleName = create_string(console->name);
+    if (is_serial_obj(console))
+        console->aux.serial.logfile = logfile;
+    else if (is_telnet_obj(console))
+        console->aux.telnet.logfile = logfile;
+    else
+        assert(is_console_obj(console));
 
     now = create_long_time_string(0);
     msg = create_format_string("%sConsole [%s] log started at %s%s",
@@ -138,7 +146,7 @@ err:
 obj_t * create_serial_obj(
     server_conf_t *conf, char *name, char *dev, char *opts)
 {
-/*  Creates a new console object and adds it to the master objs list.
+/*  Creates a new serial device object and adds it to the master objs list.
  *    Note: the console is open and set for non-blocking I/O.
  *  Returns the new object, or NULL on error.
  */
@@ -213,6 +221,100 @@ err:
     if (fd >= 0)
         if (close(fd) < 0)
             err_msg(errno, "close() failed on fd=%d", fd);
+    return(NULL);
+}
+
+
+obj_t * create_telnet_obj(
+    server_conf_t *conf, char *name, char *host, int port)
+{
+/*  Creates a new terminal server object and adds it to the master objs list.
+ *  Note: a non-blocking connect is initiated for the remote host:port
+ *    and later completed by mux_io().
+ *  Returns the new object, or NULL on error.
+ */
+    ListIterator i;
+    obj_t *console;
+    struct sockaddr_in saddr;
+    int sd = -1;
+    const int on = 1;
+    telnet_state_t state;
+
+    assert(conf);
+    assert(name && *name);
+    assert(host && *host);
+
+    if ((sd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        log_msg(0, "Unable to create socket for [%s].", name);
+        goto err;
+    }
+    memset(&saddr, 0, sizeof(saddr));
+    saddr.sin_family = AF_INET;
+    if (port <= 0) {
+        log_msg(0, "Invalid port number %d.", port);
+        goto err;
+    }
+    saddr.sin_port = htons(port);
+    if (host_name_to_addr4(host, &saddr.sin_addr) < 0) {
+        log_msg(0, "Unable to resolve host \"%s\".", host);
+        goto err;
+    }
+
+    /*  Check for duplicate console names and terminal server locations.
+     */
+    if (!(i = list_iterator_create(conf->objs)))
+        err_msg(0, "Out of memory");
+    while ((console = list_next(i))) {
+        if (is_console_obj(console) && !strcmp(console->name, name)) {
+            log_msg(0, "Ignoring duplicate console name \"%s\".", name);
+            break;
+        }
+        if (is_telnet_obj(console) && !memcmp(
+          &saddr, &console->aux.telnet.saddr, sizeof(struct sockaddr_in))) {
+            log_msg(0, "Ignoring duplicate terminal server \"%s:%d\".",
+              host, port);
+            break;
+        }
+    }
+    list_iterator_destroy(i);
+    if (console != NULL)
+        goto err;
+
+    set_descriptor_nonblocking(sd);
+    if (setsockopt(sd, SOL_SOCKET, SO_OOBINLINE, &on, sizeof(on)) < 0)
+        err_msg(errno, "Unable to set OOBINLINE socket option");
+    if (conf->enableKeepAlive) {
+        if (setsockopt(sd, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on)) < 0)
+            err_msg(errno, "Unable to set KEEPALIVE socket option");
+    }
+
+again:
+    if (connect(sd, (struct sockaddr *) &saddr, sizeof(saddr)) < 0) {
+        if (errno == EINTR)
+            goto again;
+        if (errno != EINPROGRESS) {
+            log_msg(errno, "Unable to connect to [%s:%d]", host, port);
+            goto err;
+        }
+        state = CONN_PENDING;
+        DPRINTF("Console [%s] is PENDING.\n", name);
+    }
+    else {
+        state = CONN_UP;
+        DPRINTF("Console [%s] is UP.\n", name);
+    }
+
+    console = create_obj(conf, name, sd, TELNET);
+    console->aux.telnet.saddr = saddr;
+    console->aux.telnet.logfile = NULL;
+    console->aux.telnet.state = state;
+
+    return(console);
+
+err:
+    if (sd >= 0)
+        if (close(sd) < 0)
+            err_msg(errno, "close() failed on sd=%d", sd);
     return(NULL);
 }
 
@@ -313,8 +415,8 @@ void destroy_obj(obj_t *obj)
         }
         break;
     case LOGFILE:
-        if (obj->aux.logfile.console)
-            free(obj->aux.logfile.console);
+        if (obj->aux.logfile.consoleName)
+            free(obj->aux.logfile.consoleName);
         break;
     case SERIAL:
         if (obj->aux.serial.dev)
@@ -322,9 +424,7 @@ void destroy_obj(obj_t *obj)
         /* Do not destroy obj->aux.serial.logfile since it is only a ref. */
         break;
     case TELNET:
-        /*
-         *  NOT_IMPLEMENTED_YET
-         */
+        /* Do not destroy obj->aux.telnet.logfile since it is only a ref. */
         break;
     default:
         err_msg(0, "Invalid object (%d) at %s:%d",
