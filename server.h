@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.h,v 1.53 2002/05/19 18:12:13 dun Exp $
+ *  $Id: server.h,v 1.54 2002/05/20 02:47:31 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -165,6 +165,7 @@ typedef struct server_conf {
     char            *logDirName;        /* dir prefix for relative logfiles  */
     char            *logFileName;       /* file to which logmsgs are written */
     FILE            *logFilePtr;        /* msg log file ptr, !closed at exit */
+    int              logFileLevel;      /* level at which to log msg to file */
     char            *pidFileName;       /* file to which pid is written      */
     char            *resetCmd;          /* cmd to invoke for reset esc-seq   */
     int              syslogFacility;    /* syslog facility or -1 if disabled */

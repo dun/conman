@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.c,v 1.59 2002/05/19 23:08:55 dun Exp $
+ *  $Id: server.c,v 1.60 2002/05/20 02:47:31 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -615,7 +615,7 @@ static void open_daemon_logfile(server_conf_t *conf)
 
     /*  Transition to new log file.
      */
-    log_set_file(fp, LOG_INFO, 1);
+    log_set_file(fp, conf->logFileLevel, 1);
     if (conf->logFilePtr)
         if (fclose(conf->logFilePtr) == EOF)
             log_msg(LOG_WARNING, "Unable to close logfile \"%s\"",

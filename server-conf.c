@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-conf.c,v 1.51 2002/05/20 00:00:41 dun Exp $
+ *  $Id: server-conf.c,v 1.52 2002/05/20 02:47:31 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -114,6 +114,7 @@ static void parse_global_directive(Lex l, server_conf_t *conf);
 static void parse_server_directive(Lex l, server_conf_t *conf);
 static int create_pidfile(const char *pidfile);
 static int is_empty_string(const char *s);
+static int lookup_syslog_priority(const char *priority);
 static int lookup_syslog_facility(const char *facility);
 
 
@@ -130,6 +131,7 @@ server_conf_t * create_server_conf(void)
     conf->logDirName = NULL;
     conf->logFileName = NULL;
     conf->logFilePtr = NULL;
+    conf->logFileLevel = LOG_INFO;
     conf->pidFileName = NULL;
     conf->resetCmd = NULL;
     conf->syslogFacility = -1;
@@ -700,6 +702,15 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
                         conf->logDirName, lex_text(l));
                 else
                     conf->logFileName = create_string(lex_text(l));
+                if ((p = strrchr(conf->logFileName, ','))) {
+                    *p++ = '\0';
+                    if ((n = lookup_syslog_priority(p)) < 0)
+                        snprintf(err, sizeof(err),
+                            "invalid %s priority \"%s\"",
+                            server_conf_strs[LEX_UNTOK(tok)], p);
+                    else
+                        conf->logFileLevel = n;
+                }
             }
             break;
 
@@ -913,14 +924,40 @@ static int is_empty_string(const char *s)
 }
 
 
-static int lookup_syslog_facility(const char *facility)
+static int lookup_syslog_priority(const char *priority)
 {
-/*  Returns the numeric id associated with the specified facility,
+/*  Returns the numeric id associated with the specified syslog priority,
  *    or -1 if no match is found.
  *
  *  XXX: Is this portable?
  */
     CODE *p;
+
+    assert(priority != NULL);
+
+    while (*priority && isspace(*priority))
+        priority++;
+
+    for (p=prioritynames; p->c_name; p++)
+        if (!strcasecmp(p->c_name, priority))
+            return(p->c_val);
+    return(-1);
+}
+
+
+static int lookup_syslog_facility(const char *facility)
+{
+/*  Returns the numeric id associated with the specified syslog facility,
+ *    or -1 if no match is found.
+ *
+ *  XXX: Is this portable?
+ */
+    CODE *p;
+
+    assert(facility != NULL);
+
+    while (*facility && isspace(*facility))
+        facility++;
 
     for (p=facilitynames; p->c_name; p++)
         if (!strcasecmp(p->c_name, facility))

@@ -1,4 +1,4 @@
-.\" $Id: conman.conf.5.in,v 1.3 2002/05/19 03:13:52 dun Exp $
+.\" $Id: conman.conf.5.in,v 1.4 2002/05/20 02:47:32 dun Exp $
 
 .TH CONMAN.CONF 5 "@DATE@" "@PROJECT@-@VERSION@" "LLNL"
 
@@ -28,12 +28,15 @@ connections.  The default is \fBon\fR.
 Specifies a directory prefix for log files that are not defined via an
 absolute pathname.
 .TP
-\fBlogfile\fR \fB=\fR "\fIfile\fR"
+\fBlogfile\fR \fB=\fR "\fIfile\fR[,\fIpriority\fR]"
 Specifies the file to which log messages are appended.  If an absolute
 pathname is not specified, the file's location is relative to \fBlogdir\fR
 (assuming it has been previously defined).  This file will be created if it
-does not already exist.  If this keyword is used in conjunction with the
-\fBsyslog\fR keyword, identical messages will be sent to both locations.
+does not already exist.  The filename may optionally be followed by a comma
+and a minimum priority at which messages will be logged.  Refer to
+\fBsyslog.conf\fR(5) for a list of priorities.  The default priority is
+\fBinfo\fR.  If this keyword is used in conjunction with the \fBsyslog\fR
+keyword, messages will be sent to both locations.
 .TP
 \fBloopback\fR \fB=\fR (\fBon\fR|\fBoff\fR)
 Specifies whether the daemon will bind its socket to the loopback address,
@@ -56,9 +59,9 @@ connected to multiple consoles.
 .TP
 \fBsyslog\fR \fB=\fR "\fIfacility\fR"
 Specifies that log messages are to be sent to the system logger
-(\fBsyslogd\fR) at the specified facility.  Refer to \fBsyslog\fR(3) for a
+(\fBsyslogd\fR) at the given facility.  Refer to \fBsyslog.conf\fR(5) for a
 list of facilities.  If this keyword is used in conjunction with the
-\fBlogfile\fR keyword, identical messages will be sent to both locations.
+\fBlogfile\fR keyword, messages will be sent to both locations.
 .TP
 \fBtcpwrappers\fR \fB=\fR (\fBon\fR|\fBoff\fR)
 Specifies whether the daemon will use TCP-Wrappers when accepting client
@@ -84,7 +87,7 @@ overridden on an individual basis by specifying the \fBCONSOLE\fR
 7-bit printable characters.  This also affects the output of the client's
 log-replay escape.  The default is \fBnosanitize\fR.
 .TP
-\fBseropts\fR \fB=\fR "\fIbps\fB[,\fIdatabits\fB[\fIparity\fB[\fIstopbits\fB]]]"
+\fBseropts\fR \fB=\fR "\fIbps\fR[,\fIdatabits\fR[\fIparity\fR[\fIstopbits\fR]]]"
 Specifies global options for local serial devices.  These options can be
 overridden on an individual basis by specifying the \fBCONSOLE\fR
 \fBseropts\fR keyword.
