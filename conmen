@@ -3,7 +3,7 @@
 #******************************************************************************
 # ConMen: a wrapper to aid in ConMan broadcast sessions.
 #******************************************************************************
-# $Id: conmen,v 1.13 2002/05/19 06:26:36 dun Exp $
+# $Id: conmen,v 1.14 2002/06/06 16:18:50 dun Exp $
 #******************************************************************************
 # Copyright (C) 2001-2002 The Regents of the University of California.
 # Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -41,7 +41,7 @@ $SIG{TERM} = exit_handler;
 $ENV{PATH} = "/usr/bin:/usr/local/bin:/usr/bin/X11:/usr/X11R6/bin:/usr/X/bin";
 
 $ENV{DISPLAY}
-    or die("ERROR: DISPLAY is not set.\n");
+    or die("ERROR: DISPLAY not set.\n");
 !system("which conman 1>/dev/null 2>&1")
     or die("ERROR: conman not found in PATH.\n");
 !system("which xterm 1>/dev/null 2>&1")
@@ -51,16 +51,13 @@ $help = `conman -h`;
 ($def_dst) = ($help =~ /-d .* \[([^\]]*)\]/);
 ($def_esc) = ($help =~ /-e .* \[([^\]]*)\]/);
 
-print_usage() if (!@ARGV || !getopts('d:e:fg:hjmrV') || $opt_h);
+print_usage() if (!@ARGV || !getopts('d:e:fg:hjLmqrV') || $opt_h);
+@patterns = @ARGV;
+exec("conman", "-L") or die("ERROR: Cannot exec conman: $!\n") if ($opt_L);
+exec("conman", "-V") or die("ERROR: Cannot exec conman: $!\n") if ($opt_V);
 
 ($opt_f + $opt_j + $opt_m <= 1)
     or die("ERROR: Only one mode [fjm] can be specified.\n");
-exec("conman -V") if ($opt_V);
-
-$conman = "conman";
-$conman .= " -d \'$opt_d\'" if ($opt_d);
-$conman .= " -e \'$opt_e\'" if ($opt_e);
-$conman .= " -r" if ($opt_r);
 
 if ($opt_f) {
     $mode = "-f";
@@ -72,31 +69,34 @@ if ($opt_f) {
     $mode = "-m";
 }
 
-foreach (@ARGV) { $_ = "'$_'"; }
-$patterns = join(" ", @ARGV);
-chomp(@consoles = `$conman -q $patterns`);
+@conman = ("conman", "-Q");
+push(@conman, ("-d", $opt_d)) if ($opt_d);
+push(@conman, ("-e", $opt_e)) if ($opt_e);
+push(@conman, ("-r")) if ($opt_r);
 
-exit(1) if (@consoles == 0);
-exec("$conman $mode $consoles[0]") if (@consoles == 1);
+@xterm = ("xterm");
+push(@xterm, ("-geometry", $opt_g)) if ($opt_g);
 
-$xterm = "xterm";
-$xterm .= " -geometry \'$opt_g\'" if ($opt_g);
-foreach (@consoles) {
-    $name = "\'ConMan: $_\'";
-    system("$xterm -T $name -n $name -e $conman $mode $_ &\n");
-    select(undef, undef, undef, 0.2);
-}
-select(undef, undef, undef, 1.0);
-system("$conman -bjQ $patterns");
-kill(TERM, getpid);
-
+query_consoles();
+spawn_consoles();
+exit_handler();
+kill(-9, $$);
 exit(0);
+
+
+sub exit_handler
+{
+    kill('TERM', @pids);
+    select(undef, undef, undef, 0.5);
+    kill('KILL', @pids);
+    exit(0);
+}
 
 
 sub print_usage
 {
     ($prog) = ($0 =~ m|(?:.*/)?([^/]*)|);
-    print("Usage: $prog [OPTIONS] <console(s)>\n");
+    print("Usage: $prog [OPTIONS] [CONSOLES]\n");
     print("\n");
     print("  -d HOST   Specify server destination. [$def_dst]\n");
     print("  -e CHAR   Specify escape character. [$def_esc]\n");
@@ -104,15 +104,63 @@ sub print_usage
     print("  -g SIZE   Specify xterm's geometry (eg, 80x24).\n");
     print("  -h        Display this help.\n");
     print("  -j        Join connections (console-sharing).\n");
+    print("  -L        Display license information.\n");
     print("  -m        Monitor connections (read-only).\n");
-    print("  -r        Match console names via regular expressions.\n");
+    print("  -q        Query server about specified console(s).\n");
+    print("  -r        Match console names via regex instead of globbing.\n");
     print("  -V        Display version information.\n");
     print("\n");
     exit(0);
 }
 
 
-sub exit_handler
+sub query_consoles
 {
-    exit(0);
+    die("ERROR: Cannot fork query: $!\n")
+        unless defined($pid = open(QUERY, "-|"));
+    if ($pid == 0) {
+        exec(@conman, "-q", @patterns)
+            or die("ERROR: Cannot exec query: $!\n");
+    } else {
+        chomp(@consoles = <QUERY>);
+        close(QUERY);
+    }
+    if ($opt_q) {
+        foreach (@consoles) { print("$_\n"); }
+        exit(0);
+    }
+    if (@consoles == 0) {
+        exit(1);
+    } elsif (@consoles == 1) {
+        exec(@conman, $mode, $consoles[0])
+            or die("ERROR: Cannot exec conman for console $consoles[0]: $!\n");
+    }
+}
+
+
+sub spawn_consoles
+{
+    foreach $console (@consoles) {
+        $name = "ConMan: $console";
+        if (!defined($pid = fork)) {
+            die("ERROR: Cannot fork xterm for console $console: $!\n");
+        } elsif ($pid == 0) {
+            local $SIG{TERM} = 'DEFAULT';
+            exec(@xterm, "-T", $name, "-e", @conman, $mode, $console)
+                or die("ERROR: Cannot exec xterm for console $console: $!\n");
+        } else {
+            push(@pids, $pid);
+        }
+        select(undef, undef, undef, 0.2);
+    }
+    select(undef, undef, undef, 1.0);
+
+    if (!defined($pid = fork)) {
+        die("ERROR: Cannot fork xterm for console broadcast: $!\n");
+    } elsif ($pid == 0) {
+        exec(@conman, "-b", "-j", @patterns)
+            or die("ERROR: Cannot exec xterm for console broadcast: $!\n");
+    } else {
+        waitpid($pid, 0);
+    }
 }
