@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Makefile.in,v 1.50.2.3 2003/12/04 00:03:47 dun Exp $
+# $Id$
 ##
 
 PROJECT=	conman

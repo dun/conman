@@ -2,7 +2,7 @@
 # ConMan AutoConf Configuration
 #   Process this file with autoconf to produce a configure script.
 #******************************************************************************
-# $Id: configure.ac,v 1.22.2.1 2003/12/04 00:03:47 dun Exp $
+# $Id$
 #******************************************************************************
 # Copyright (C) 2001-2002 The Regents of the University of California.
 # Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).

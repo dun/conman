@@ -1,7 +1,7 @@
 #!/usr/bin/expect --
 
 ##
-# $Id: boot_alpha.exp,v 1.7 2001/09/01 00:11:27 dun Exp $
+# $Id$
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
 

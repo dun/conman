@@ -2,7 +2,7 @@
 # Makefile Include for RPM Construction
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Make-rpm.mk,v 1.20.2.1 2003/09/26 20:54:06 dun Exp $
+# $Id$
 ##
 # REQUIREMENTS:
 # - requires project to be under CVS version control

@@ -1,4 +1,4 @@
-# $Id: conman.spec.in,v 1.21.2.3 2003/12/04 01:14:14 dun Exp $
+# $Id$
 
 Name:		@PROJECT@
 Version:	@VERSION@

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.c,v 1.60.2.2 2003/07/24 20:13:17 dun Exp $
+ *  $Id$
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).

@@ -1,4 +1,4 @@
-.\" $Id: conman.conf.5.in,v 1.5.2.7 2003/10/07 23:19:36 dun Exp $
+.\" $Id$
 
 .TH CONMAN.CONF 5 "@DATE@" "@PROJECT@-@VERSION@" "LLNL"
 
