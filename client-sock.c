@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-sock.c,v 1.25 2001/12/14 07:43:03 dun Exp $
+ *  $Id: client-sock.c,v 1.26 2001/12/19 23:31:27 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -224,8 +224,8 @@ int recv_rsp(client_conf_t *conf)
 
     if ((n = read_line(conf->req->sd, buf, sizeof(buf))) < 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
-        conf->errmsg = create_format_string(
-            "Unable to read response from [%s:%d]: %s",
+        conf->errmsg = create_format_string("Unable to read response"
+            " from [%s:%d]:\n  %s (blocked by TCP-Wrappers?)",
             conf->req->fqdn, conf->req->port, strerror(errno));
         return(-1);
     }

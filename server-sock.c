@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.38 2001/12/16 05:42:39 dun Exp $
+ *  $Id: server-sock.c,v 1.39 2001/12/19 23:31:27 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -31,7 +31,7 @@
 
 #ifdef WITH_TCP_WRAPPERS
 /*
- *  TCP Wrappers support.
+ *  TCP-Wrappers support.
  */
 #include <syslog.h>
 #include <tcpd.h>
@@ -42,7 +42,7 @@ int deny_severity = LOG_WARNING;	/* logging level for rejected reqs */
 #endif /* WITH_TCP_WRAPPERS */
 
 
-static int resolve_addr(req_t *req, int sd);
+static int resolve_addr(server_conf_t *conf, req_t *req, int sd);
 static int recv_greeting(req_t *req);
 static void parse_greeting(Lex l, req_t *req);
 static int recv_req(req_t *req);
@@ -88,7 +88,7 @@ void process_client(client_arg_t *args)
 
     req = create_req();
 
-    if (resolve_addr(req, sd) < 0)
+    if (resolve_addr(conf, req, sd) < 0)
         goto err;
     if (recv_greeting(req) < 0)
         goto err;
@@ -132,7 +132,7 @@ err:
 }
 
 
-static int resolve_addr(req_t *req, int sd)
+static int resolve_addr(server_conf_t *conf, req_t *req, int sd)
 {
 /*  Resolves the network information associated with the
  *    peer at the other end of the socket connection.
@@ -173,13 +173,16 @@ static int resolve_addr(req_t *req, int sd)
 
 #ifdef WITH_TCP_WRAPPERS
     /*
-     *  Check via TCP Wrappers.
+     *  Check via TCP-Wrappers.
      */
-    if (hosts_ctl(CONMAN_DAEMON_NAME,
-      (gotHostName ? req->fqdn : STRING_UNKNOWN),
-      req->ip, STRING_UNKNOWN) == 0) {
-        log_msg(0, "TCP Wrappers rejected connection from %s.", req->fqdn);
-        return(-1);
+    if (conf->enableWrappers) {
+        if (hosts_ctl(CONMAN_DAEMON_NAME,
+          (gotHostName ? req->fqdn : STRING_UNKNOWN),
+          req->ip, STRING_UNKNOWN) == 0) {
+            log_msg(0, "TCP-Wrappers rejected connection from [%s:%d].",
+                req->fqdn, req->port);
+            return(-1);
+        }
     }
 #endif /* WITH_TCP_WRAPPERS */
 

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.39 2001/12/18 22:24:50 dun Exp $
+ *  $Id: server.c,v 1.40 2001/12/19 23:31:27 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -259,6 +259,10 @@ static void display_configuration(server_conf_t *conf)
             printf(" LoopBack");
         if (conf->resetCmd)
             printf(" ResetCmd");
+#ifdef WITH_TCP_WRAPPERS
+        if (conf->enableWrappers)
+            printf(" TCP-Wrappers");
+#endif /* WITH_TCP_WRAPPERS */
         if (conf->tStampMinutes > 0)
             printf(" TimeStamp=%dm", conf->tStampMinutes);
         if (conf->enableZeroLogs)

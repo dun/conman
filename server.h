@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.38 2001/12/18 22:24:50 dun Exp $
+ *  $Id: server.h,v 1.39 2001/12/19 23:31:27 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -126,6 +126,7 @@ typedef struct server_conf {
     List             objs;		/* list of all server obj_t's         */
     unsigned         enableKeepAlive:1;	/* true if using TCP keep-alive       */
     unsigned         enableLoopBack:1;	/* true if only listening on loopback */
+    unsigned         enableWrappers:1;	/* true if TCP-Wrappers is enabled    */
     unsigned         enableVerbose:1;	/* true if verbose output requested   */
     unsigned         enableZeroLogs:1;	/* true if console logs are zero'd    */
 } server_conf_t;

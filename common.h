@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.h,v 1.24 2001/12/16 05:42:39 dun Exp $
+ *  $Id: common.h,v 1.25 2001/12/19 23:31:27 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -18,7 +18,7 @@
 #define DEFAULT_CLIENT_ESCAPE	'&'
 #define DEFAULT_CONFIG_ESCAPE	'&'
 
-/*  Name of daemon for TCP Wrappers.
+/*  Name of daemon for TCP-Wrappers.
  */
 #define CONMAN_DAEMON_NAME	"conmand"
 
