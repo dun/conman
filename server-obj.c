@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.39 2001/09/13 20:36:44 dun Exp $
+ *  $Id: server-obj.c,v 1.40 2001/09/13 20:40:13 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -13,7 +13,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <netinet/in.h>
-#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
