@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-esc.c,v 1.19 2001/12/21 05:37:17 dun Exp $
+ *  $Id: server-esc.c,v 1.20 2001/12/29 06:02:55 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -409,9 +409,12 @@ int send_telnet_cmd(obj_t *telnet, int cmd, int opt)
     unsigned char *p = buf;
 
     assert(is_telnet_obj(telnet));
-    assert(telnet->fd >= 0);
-    assert(telnet->aux.telnet.conState == TELCON_UP);
     assert(cmd > 0);
+
+    /*  This is a no-op if the telnet connection is not yet established.
+     */
+    if ((telnet->fd < 0) || (telnet->aux.telnet.conState != TELCON_UP))
+        return(0);
 
     *p++ = IAC;
     if (!TELCMD_OK(cmd)) {
