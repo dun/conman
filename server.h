@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.18 2001/06/19 20:49:23 dun Exp $
+ *  $Id: server.h,v 1.19 2001/08/01 21:45:19 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -67,6 +67,7 @@ typedef struct server_conf {
     char            *logname;		/* file to which events are logged    */
     int              ld;		/* listening socket descriptor        */
     List             objs;		/* list of all server objects         */
+    int              zeroLogs;		/* true if console logs are zero'd    */
 } server_conf_t;
 
 typedef struct client_args {
@@ -108,7 +109,7 @@ void perform_suspend(obj_t *client);
 obj_t * create_console_obj(List objs, char *name, char *dev,
     char *rst, int bps);
 
-obj_t * create_logfile_obj(List objs, char *name, obj_t *console);
+obj_t * create_logfile_obj(List objs, char *name, obj_t *console, int zeroLog);
 
 obj_t * create_client_obj(List objs, req_t *req);
 

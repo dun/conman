@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.21 2001/07/31 20:11:21 dun Exp $
+ *  $Id: server-obj.c,v 1.22 2001/08/01 21:45:19 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -72,7 +72,7 @@ obj_t * create_console_obj(List objs, char *name, char *dev,
 }
 
 
-obj_t * create_logfile_obj(List objs, char *name, obj_t *console)
+obj_t * create_logfile_obj(List objs, char *name, obj_t *console, int zeroLog)
 {
 /*  Creates a new logfile object and adds it to the master (objs) list.
  *    Note: the logfile is open and set for non-blocking I/O.
@@ -88,6 +88,8 @@ obj_t * create_logfile_obj(List objs, char *name, obj_t *console)
     assert(console);
 
     flags = O_WRONLY | O_CREAT | O_APPEND | O_NONBLOCK;
+    if (zeroLog)
+        flags |= O_TRUNC;
     if ((fd = open(name, flags, S_IRUSR | S_IWUSR)) < 0) {
         log_msg(0, "Unable to open logfile %s: %s", name, strerror(errno));
         return(NULL);

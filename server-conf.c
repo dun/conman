@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.11 2001/07/06 19:29:43 dun Exp $
+ *  $Id: server-conf.c,v 1.12 2001/08/01 21:45:18 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -62,6 +62,7 @@ server_conf_t * create_server_conf(void)
     conf->ld = -1;
     if (!(conf->objs = list_create((ListDelF) destroy_obj)))
         err_msg(0, "Out of memory");
+    conf->zeroLogs = 0;
     return(conf);
 }
 
@@ -93,7 +94,7 @@ void process_server_cmd_line(int argc, char *argv[], server_conf_t *conf)
     int c;
 
     opterr = 0;
-    while ((c = getopt(argc, argv, "c:hV")) != -1) {
+    while ((c = getopt(argc, argv, "c:hVz")) != -1) {
         switch(c) {
         case 'h':
             display_server_help(argv[0]);
@@ -105,6 +106,9 @@ void process_server_cmd_line(int argc, char *argv[], server_conf_t *conf)
             if (conf->filename)
                 free(conf->filename);
             conf->filename = create_string(optarg);
+            break;
+        case 'z':
+            conf->zeroLogs = 1;
             break;
         case '?':			/* invalid option */
             fprintf(stderr, "ERROR: Invalid option \"%c\".\n", optopt);
@@ -181,6 +185,7 @@ static void display_server_help(char *prog)
     printf("  -h        Display this help.\n");
     printf("  -c FILE   Specify alternate configuration (default: %s).\n",
         DEFAULT_SERVER_CONF);
+    printf("  -z        Zero console log files.\n");
     printf("  -V        Display version information.\n");
     printf("\n");
     return;
@@ -286,7 +291,8 @@ static void parse_console_cmd(Lex l, server_conf_t *conf)
         if (!(console = create_console_obj(conf->objs, name, dev, rst, bps)))
             log_msg(0, "Unable to create console object '%s'", name);
         if (*log) {
-            if (!(logfile = create_logfile_obj(conf->objs, log, console)))
+            if (!(logfile = create_logfile_obj(
+              conf->objs, log, console, conf->zeroLogs)))
                 log_msg(0, "Unable to create logfile object '%s'", log);
             else
                 link_objs(console, logfile);
