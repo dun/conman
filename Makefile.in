@@ -2,12 +2,13 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 #
-# $Id: Makefile.in,v 1.7 2001/08/17 22:17:59 dun Exp $
+# $Id: Makefile.in,v 1.8 2001/08/21 00:39:41 dun Exp $
 ##
 
 PACKAGE=	@PACKAGE@
 VERSION=	@VERSION@
 
+SHELL=		@SHELL@
 CC=		@CC@
 DEFS=		@DEFS@
 CFLAGS=		@CFLAGS@
@@ -15,11 +16,13 @@ LDFLAGS=	@LDFLAGS@
 LIBS=		@LIBS@
 RANLIB=		@RANLIB@
 INSTALL=	@INSTALL@
+mkinstalldirs=	$(SHELL) $(top_srcdir)/auxdir/mkinstalldirs
 @SET_MAKE@
 COPTS=		$(CFLAGS) $(CPPFLAGS) $(DEFS)
 
 AC_OUTPUT=	Makefile config.h conman.spec
 
+top_srcdir=	@top_srcdir@
 prefix=		@prefix@
 exec_prefix=	@exec_prefix@
 bindir=		@bindir@
@@ -50,16 +53,16 @@ conmand: $(SERVER_OBJS)
 depend:
 	makedepend -Y -- $(COPTS) -- *.[ch] 2>/dev/null
 
-install:
-	mkdir -p $(DESTDIR)$(bindir)
+install: $(PROGS)
+	$(mkinstalldirs) $(DESTDIR)$(bindir)
 	$(INSTALL) conman $(DESTDIR)$(bindir)/
 	$(INSTALL) conmen $(DESTDIR)$(bindir)/
-	mkdir -p $(DESTDIR)$(sbindir)
+	$(mkinstalldirs) $(DESTDIR)$(sbindir)
 	$(INSTALL) conmand $(DESTDIR)$(sbindir)/
-	mkdir -p $(DESTDIR)/etc
+	$(mkinstalldirs) $(DESTDIR)/etc
 	$(INSTALL) -m 644 conman.conf $(DESTDIR)/etc
 	for f in `cd lib && find * -name "CVS" -prune -o -type f -print`; do \
-	  mkdir -p `dirname $(DESTDIR)$(libdir)/$(PACKAGE)/$$f`; \
+	  $(mkinstalldirs) `dirname $(DESTDIR)$(libdir)/$(PACKAGE)/$$f`; \
 	  $(INSTALL) -m 755 lib/$$f $(DESTDIR)$(libdir)/$(PACKAGE)/$$f; \
 	done
 
@@ -70,11 +73,46 @@ distclean: clean
 	-rm -f config.cache config.log config.status stamp-h Makefile.bak
 	-rm -f $(AC_OUTPUT)
 	-rm -f $(PROGS)
+	-rm -f *.tgz *.rpm
+
+
+# AUTO-REMAKE OF AUTOCONF-RELATED TARGETS
 
 Makefile: Makefile.in config.status
 	./config.status
 
 config.status: VERSION
 	./config.status --recheck
+
+
+# DEVELOPER TARGETS
+
+tar \
+$(PACKAGE)-$(VERSION).tgz:
+	@cwd="`/bin/pwd`"; \
+	name="$(PACKAGE)-$(VERSION)"; \
+	tag="`echo $$name | tr '.' '-'`"; \
+	tmp="$${TMPDIR-/tmp}/tmp-$(PACKAGE)-$$$$"; \
+	dir="$$tmp/$$name"; \
+	echo "creating $$name.tgz ..."; \
+	$(mkinstalldirs) $$tmp >/dev/null; \
+	cvs export -r $$tag -d $$dir $(PACKAGE) >/dev/null && \
+	  (cd $$tmp; tar czf "$$cwd/$$name.tgz" $$name); \
+	rm -rf $$tmp
+
+rpm: $(PACKAGE)-$(VERSION).tgz
+	@cwd="`/bin/pwd`"; \
+	tmp="$${TMPDIR-/tmp}/tmp-$(PACKAGE)-$$$$"; \
+	for d in BUILD RPMS SOURCES SPECS SRPMS; do \
+	  $(mkinstalldirs) $$tmp/$$d >/dev/null; \
+	done; \
+	cp -p $(PACKAGE).spec $$tmp/SPECS; \
+	cp -p $(PACKAGE)-$(VERSION).tgz $$tmp/SOURCES; \
+	echo "creating $(PACKAGE)-$(VERSION) RPM ..."; \
+	rpm -ba --quiet --define _topdir$$tmp $$tmp/SPECS/$(PACKAGE).spec && \
+	  cp -p $$tmp/RPMS/*/$(PACKAGE)-$(VERSION)*.*.rpm \
+	    $$tmp/SRPMS/$(PACKAGE)-$(VERSION)*.src.rpm $$cwd/; \
+	rm -rf $$tmp
+
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
