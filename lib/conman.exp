@@ -1,7 +1,7 @@
 ##
 # ConMan Expect Language Library (CELL)
 ##
-# $Id: conman.exp,v 1.3 2001/08/24 00:28:51 dun Exp $
+# $Id: conman.exp,v 1.4 2001/08/31 00:58:11 dun Exp $
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
 
@@ -228,11 +228,11 @@ proc conman_check_console_state {spawn_id {tmout 4}} {
     return "login"
   } -gl ">>>\$" {
     return "srm"
-  } -gl "^SROM>\$" {
+  } -gl "^SROM> \$" {
     return "srom"
   } -gl "^RMC>\$" {
     return "rmc"
-  } -re "(%|#|\\\$|]|\[^>]>) \$" {
+  } -re "^\[^\r]*(%|#|\\\$|]|\[^>]>) \$" {
     return "shell"
   } -gl "\n" {
     exp_continue -continue_timer
