@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 #
-# $Id: Makefile.in,v 1.19 2001/08/24 19:15:16 dun Exp $
+# $Id: Makefile.in,v 1.20 2001/08/24 19:34:49 dun Exp $
 ##
 
 PACKAGE=	@PACKAGE@
@@ -97,28 +97,31 @@ $(PACKAGE).spec: $(PACKAGE).spec.in
 
 rpm tar:
 	@if test -z "$(PACKAGE)"; then \
-	  echo "ERROR: Undefined PACKAGE definition."; exit 1; fi; \
+	  echo "ERROR: Undefined PACKAGE macro definition" 1>&2; exit 0; fi; \
 	if test -z "$(VERSION)"; then \
-	  echo "ERROR: Undefined VERSION definition."; exit 1; fi; \
+	  echo "ERROR: Undefined VERSION macro definition" 1>&2; exit 0; fi; \
 	test -z "$$tag" && tag=`echo $(PACKAGE)-$(VERSION) | tr '.' '-'`; \
 	ver=`cvs co -r $$tag -p $(PACKAGE)/VERSION 2>/dev/null | \
 	  sed -ne 's/.*-\(.*\)/\1/p'`; \
 	if test -z "$$ver"; then \
-	  echo "ERROR: Undefined VERSION definition ($$tag)."; exit 1; fi; \
+	  echo "ERROR: Cannot determine VERSION (tag=$$tag)" 1>&2; exit 0; fi; \
 	$(MAKE) -s $@-internal tag=$$tag ver=$$ver
 
 rpm-internal:
 	@test -z "$$tag" -o -z "$$ver" && exit 1; \
+	$(MAKE) tar-internal || exit 0; \
 	tmp=$${TMPDIR-/tmp}/tmp-$(PACKAGE)-$$$$; \
 	for d in BUILD RPMS SOURCES SPECS SRPMS TMP; do \
 	  $(mkinstalldirs) $$tmp/$$d >/dev/null; \
 	done; \
-	$(MAKE) tar-internal || exit 0; \
 	cp -p $(PACKAGE)-$$ver.tgz $$tmp/SOURCES; \
 	cvs co -r $$tag -p $(PACKAGE)/$(PACKAGE).spec.in 2>/dev/null | \
 	  sed -e "s/\@PACKAGE\@/$(PACKAGE)/" -e "s/\@VERSION\@/$$ver/" \
 	  >$$tmp/SPECS/$(PACKAGE).spec; \
-	echo "creating $(PACKAGE)-$$ver rpm"; \
+	if ! test -s $$tmp/SPECS/$(PACKAGE).spec; then \
+	  echo "ERROR: No $(PACKAGE).spec file (tag=$$tag)" 1>&2; \
+	  rm -rf $$tmp; exit 0; fi; \
+	echo "creating $(PACKAGE)-$$ver*rpm (tag=$$tag)"; \
 	rpm --showrc | egrep "_(gpg|pgp)_name" >/dev/null && sign="--sign"; \
 	rpm -ba --define "_tmppath $$tmp/TMP" --define "_topdir $$tmp" \
 	  $$sign --quiet $$tmp/SPECS/$(PACKAGE).spec && \
@@ -131,7 +134,7 @@ tar-internal:
 	tmp=$${TMPDIR-/tmp}/tmp-$(PACKAGE)-$$$$; \
 	name=$(PACKAGE)-$$ver; \
 	dir=$$tmp/$$name; \
-	echo "creating $$name.tgz ($$tag)"; \
+	echo "creating $$name.tgz (tag=$$tag)"; \
 	$(mkinstalldirs) $$tmp >/dev/null; \
 	cvs export -r $$tag -d $$dir $(PACKAGE) >/dev/null && \
 	  (cd $$tmp; tar cf - $$name) | gzip -c9 > $$name.tgz; \
