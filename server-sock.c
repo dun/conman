@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-sock.c,v 1.49 2002/05/12 19:20:29 dun Exp $
+ *  $Id: server-sock.c,v 1.50 2002/05/16 18:54:20 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -132,15 +132,15 @@ void process_client(client_arg_t *args)
         req->enableReset = 1;
 
     switch(req->command) {
-    case CONNECT:
+    case CONMAN_CMD_CONNECT:
         if (perform_connect_cmd(req, conf) < 0)
             goto err;
         break;
-    case MONITOR:
+    case CONMAN_CMD_MONITOR:
         if (perform_monitor_cmd(req, conf) < 0)
             goto err;
         break;
-    case QUERY:
+    case CONMAN_CMD_QUERY:
         if (perform_query_cmd(req) < 0)
             goto err;
         break;
@@ -345,15 +345,15 @@ static int recv_req(req_t *req)
         tok = lex_next(l);
         switch(tok) {
         case CONMAN_TOK_CONNECT:
-            req->command = CONNECT;
+            req->command = CONMAN_CMD_CONNECT;
             parse_cmd_opts(l, req);
             break;
         case CONMAN_TOK_MONITOR:
-            req->command = MONITOR;
+            req->command = CONMAN_CMD_MONITOR;
             parse_cmd_opts(l, req);
             break;
         case CONMAN_TOK_QUERY:
-            req->command = QUERY;
+            req->command = CONMAN_CMD_QUERY;
             parse_cmd_opts(l, req);
             break;
         case LEX_EOF:
@@ -425,7 +425,7 @@ static int query_consoles(server_conf_t *conf, req_t *req)
     List matches;
     int rc;
 
-    if (list_is_empty(req->consoles) && (req->command != QUERY))
+    if (list_is_empty(req->consoles) && (req->command != CONMAN_CMD_QUERY))
         return(0);
 
     /*  The NULL destructor is used for 'matches' because the matches list
@@ -585,11 +585,11 @@ static int check_too_many_consoles(req_t *req)
 
     assert(!list_is_empty(req->consoles));
 
-    if (req->command == QUERY)
+    if (req->command == CONMAN_CMD_QUERY)
         return(0);
     if (list_count(req->consoles) == 1)
         return(0);
-    if ((req->command == CONNECT) && (req->enableBroadcast))
+    if ((req->command == CONMAN_CMD_CONNECT) && (req->enableBroadcast))
         return(0);
 
     snprintf(buf, sizeof(buf), "Found %d matching consoles",
@@ -631,7 +631,8 @@ static int check_busy_consoles(req_t *req)
 
     assert(!list_is_empty(req->consoles));
 
-    if ((req->command == QUERY) || (req->command == MONITOR))
+    if ((req->command == CONMAN_CMD_QUERY)
+      || (req->command == CONMAN_CMD_MONITOR))
         return(0);
     if (req->enableForce || req->enableJoin)
         return(0);
@@ -785,7 +786,7 @@ static int perform_query_cmd(req_t *req)
  *    the client socket connection is closed once it is finished.
  */
     assert(req->sd >= 0);
-    assert(req->command == QUERY);
+    assert(req->command == CONMAN_CMD_QUERY);
     assert(!list_is_empty(req->consoles));
 
     log_msg(LOG_INFO, "Client <%s@%s:%d> issued query command",
@@ -808,7 +809,7 @@ static int perform_monitor_cmd(req_t *req, server_conf_t *conf)
     obj_t *console;
 
     assert(req->sd >= 0);
-    assert(req->command == MONITOR);
+    assert(req->command == CONMAN_CMD_MONITOR);
     assert(list_count(req->consoles) == 1);
 
     log_msg(LOG_INFO, "Client <%s@%s:%d> issued monitor command",
@@ -838,7 +839,7 @@ static int perform_connect_cmd(req_t *req, server_conf_t *conf)
     ListIterator i;
 
     assert(req->sd >= 0);
-    assert(req->command == CONNECT);
+    assert(req->command == CONMAN_CMD_CONNECT);
 
     log_msg(LOG_INFO, "Client <%s@%s:%d> issued connect command",
         req->user, req->fqdn, req->port);
@@ -887,7 +888,7 @@ static void check_console_state(obj_t *console, obj_t *client)
      *    notify the client and attempt an immediate reconnect of the console.
      */
     if (is_telnet_obj(console)
-      && (console->aux.telnet.conState != TELCON_UP)) {
+      && (console->aux.telnet.conState != CONMAN_TELCON_UP)) {
 
         snprintf(buf, sizeof(buf),
             "%sConsole [%s] is currently disconnected from <%s:%d>%s",
@@ -904,7 +905,7 @@ static void check_console_state(obj_t *console, obj_t *client)
          *    since it will be misinterpreted as the completion of the
          *    non-blocking connect().
          */
-        if (console->aux.telnet.conState == TELCON_DOWN)
+        if (console->aux.telnet.conState == CONMAN_TELCON_DOWN)
             connect_telnet_obj(console);
     }
     return;

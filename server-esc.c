@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-esc.c,v 1.29 2002/05/12 19:20:29 dun Exp $
+ *  $Id: server-esc.c,v 1.30 2002/05/16 18:54:20 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -187,11 +187,11 @@ static void perform_console_writer_linkage(obj_t *client)
     gotWrite = list_count(client->readers);
 
     if (gotWrite) {
-        client->aux.client.req->command = MONITOR;
+        client->aux.client.req->command = CONMAN_CMD_MONITOR;
         unlink_objs(client, console);
     }
     else {
-        client->aux.client.req->command = CONNECT;
+        client->aux.client.req->command = CONMAN_CMD_CONNECT;
         link_objs(client, console);
     }
     return;
@@ -410,7 +410,7 @@ int process_telnet_escapes(obj_t *telnet, void *src, int len)
 
     assert(is_telnet_obj(telnet));
     assert(telnet->fd >= 0);
-    assert(telnet->aux.telnet.conState == TELCON_UP);
+    assert(telnet->aux.telnet.conState == CONMAN_TELCON_UP);
 
     if (!src || len <= 0)
         return(0);
@@ -497,7 +497,7 @@ int send_telnet_cmd(obj_t *telnet, int cmd, int opt)
 
     /*  This is a no-op if the telnet connection is not yet established.
      */
-    if ((telnet->fd < 0) || (telnet->aux.telnet.conState != TELCON_UP))
+    if ((telnet->fd < 0) || (telnet->aux.telnet.conState != CONMAN_TELCON_UP))
         return(0);
 
     *p++ = IAC;
@@ -535,7 +535,7 @@ static int process_telnet_cmd(obj_t *telnet, int cmd, int opt)
  */
     assert(is_telnet_obj(telnet));
     assert(telnet->fd >= 0);
-    assert(telnet->aux.telnet.conState == TELCON_UP);
+    assert(telnet->aux.telnet.conState == CONMAN_TELCON_UP);
 
     if (!TELCMD_OK(cmd)) {
         log_msg(LOG_WARNING,

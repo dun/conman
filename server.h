@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.h,v 1.50 2002/05/16 16:50:47 dun Exp $
+ *  $Id: server.h,v 1.51 2002/05/16 18:54:20 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -63,10 +63,10 @@
 
 
 enum obj_type {                         /* type of auxiliary obj (2 bits)    */
-    CLIENT,
-    LOGFILE,
-    SERIAL,
-    TELNET
+    CONMAN_OBJ_CLIENT,
+    CONMAN_OBJ_LOGFILE,
+    CONMAN_OBJ_SERIAL,
+    CONMAN_OBJ_TELNET
 };
 
 typedef struct client_obj {             /* CLIENT AUX OBJ DATA:              */
@@ -81,9 +81,9 @@ typedef struct logfile_opt {            /* LOGFILE OBJ OPTIONS:              */
 } logopt_t;
 
 typedef enum logfile_sanitize_state {   /* log CR/LF insanity state (2 bits) */
-    LOG_SANE_INIT,
-    LOG_SANE_CR,
-    LOG_SANE_LF
+    CONMAN_LOG_SANE_INIT,
+    CONMAN_LOG_SANE_CR,
+    CONMAN_LOG_SANE_LF
 } log_sane_state_t;
 
 typedef struct logfile_obj {            /* LOGFILE AUX OBJ DATA:             */
@@ -108,19 +108,19 @@ typedef struct serial_obj {             /* SERIAL AUX OBJ DATA:              */
 typedef struct sockaddr_in sockaddr_t;
 
 typedef enum telnet_connect_state {     /* state of n/w connection (2 bits)  */
-    TELCON_NONE,
-    TELCON_DOWN,
-    TELCON_PENDING,
-    TELCON_UP
+    CONMAN_TELCON_NONE,
+    CONMAN_TELCON_DOWN,
+    CONMAN_TELCON_PENDING,
+    CONMAN_TELCON_UP
 } telcon_state_t;
 
 typedef enum telnet_option_state {      /* rfc1143 Telnet Q-Method opt state */
-    TELOPT_NO,
-    TELOPT_YES,
-    TELOPT_WANT_NO_EMP,
-    TELOPT_WANT_NO_OPP,
-    TELOPT_WANT_YES_EMP,
-    TELOPT_WANT_YES_OPP
+    CONMAN_TELOPT_NO,
+    CONMAN_TELOPT_YES,
+    CONMAN_TELOPT_WANT_NO_EMP,
+    CONMAN_TELOPT_WANT_NO_OPP,
+    CONMAN_TELOPT_WANT_YES_EMP,
+    CONMAN_TELOPT_WANT_YES_OPP
 } telopt_state_t;
 
 typedef struct telnet_obj {             /* TELNET AUX OBJ DATA:              */
@@ -227,11 +227,11 @@ typedef struct client_args {
 **  Macros  **
 \************/
 
-#define is_client_obj(OBJ)   (OBJ->type == CLIENT)
-#define is_logfile_obj(OBJ)  (OBJ->type == LOGFILE)
-#define is_serial_obj(OBJ)   (OBJ->type == SERIAL)
-#define is_telnet_obj(OBJ)   (OBJ->type == TELNET)
-#define is_console_obj(OBJ) ((OBJ->type == SERIAL) || (OBJ->type == TELNET))
+#define is_client_obj(OBJ)   (OBJ->type == CONMAN_OBJ_CLIENT)
+#define is_logfile_obj(OBJ)  (OBJ->type == CONMAN_OBJ_LOGFILE)
+#define is_serial_obj(OBJ)   (OBJ->type == CONMAN_OBJ_SERIAL)
+#define is_telnet_obj(OBJ)   (OBJ->type == CONMAN_OBJ_TELNET)
+#define is_console_obj(OBJ)  (is_serial_obj(OBJ) || is_telnet_obj(OBJ))
 
 
 /*******************\

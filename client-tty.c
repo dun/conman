@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-tty.c,v 1.44 2002/05/12 19:20:29 dun Exp $
+ *  $Id: client-tty.c,v 1.45 2002/05/16 18:54:20 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -77,7 +77,8 @@ void connect_console(client_conf_t *conf)
     int n;
 
     assert(conf->req->sd >= 0);
-    assert((conf->req->command == CONNECT) || (conf->req->command == MONITOR));
+    assert((conf->req->command == CONMAN_CMD_CONNECT)
+        || (conf->req->command == CONMAN_CMD_MONITOR));
     assert(list_count(conf->req->consoles) > 0);
 
     /*  If only one console was selected for a broadcast, then
@@ -226,7 +227,7 @@ static int read_from_stdin(client_conf_t *conf)
      *    The server would discard them anyways, but why waste resources.
      *  Besides, we're now practicing conservation here in California. ;)
      */
-    if (conf->req->command == CONNECT) {
+    if (conf->req->command == CONMAN_CMD_CONNECT) {
         /*
          *  Perform character-stuffing of the escape-sequence character
          *    by doubling all occurrences of it.
@@ -303,7 +304,7 @@ static int perform_break_esc(client_conf_t *conf, char c)
 /*  Transmits a serial-break to all writable consoles connected to the client.
  *  Returns 1 on success, or 0 if the socket connection is to be closed.
  */
-    if (conf->req->command != CONNECT)
+    if (conf->req->command != CONMAN_CMD_CONNECT)
         return(1);
 
     return(send_esc_seq(conf, c));
@@ -334,11 +335,11 @@ static int perform_force_esc(client_conf_t *conf, char c)
  *    from existing console writers.
  *  Returns 1 on success, or 0 if the socket connection is to be closed.
  */
-    if (conf->req->command != MONITOR)
+    if (conf->req->command != CONMAN_CMD_MONITOR)
         return(1);
     assert(!conf->req->enableBroadcast);
 
-    conf->req->command = CONNECT;
+    conf->req->command = CONMAN_CMD_CONNECT;
     conf->req->enableForce = 1;
     conf->req->enableJoin = 0;
     return(send_esc_seq(conf, c));
@@ -370,13 +371,13 @@ static int perform_help_esc(client_conf_t *conf, char c)
     n = append_format_string(buf, sizeof(buf),
         "  %2s%-2s -  Send the escape character.\r\n", esc, esc);
 
-    if (conf->req->command == CONNECT) {
+    if (conf->req->command == CONMAN_CMD_CONNECT) {
         write_esc_char(ESC_CHAR_BREAK, tmp);
         n = append_format_string(buf, sizeof(buf),
             "  %2s%-2s -  Transmit a serial-break.\r\n", esc, tmp);
     }
 
-    if (conf->req->command == MONITOR) {
+    if (conf->req->command == CONMAN_CMD_MONITOR) {
         write_esc_char(ESC_CHAR_FORCE, tmp);
         n = append_format_string(buf, sizeof(buf),
             "  %2s%-2s -  Force write-privileges (console-stealing).\r\n",
@@ -387,7 +388,7 @@ static int perform_help_esc(client_conf_t *conf, char c)
     n = append_format_string(buf, sizeof(buf),
         "  %2s%-2s -  Display connection information.\r\n", esc, tmp);
 
-    if (conf->req->command == MONITOR) {
+    if (conf->req->command == CONMAN_CMD_MONITOR) {
         write_esc_char(ESC_CHAR_JOIN, tmp);
         n = append_format_string(buf, sizeof(buf),
             "  %2s%-2s -  Join write-privileges (console-sharing).\r\n",
@@ -401,7 +402,8 @@ static int perform_help_esc(client_conf_t *conf, char c)
             esc, tmp, CONMAN_REPLAY_LEN);
     }
 
-    if ((conf->req->command == CONNECT) && (!conf->req->enableBroadcast)) {
+    if ((conf->req->command == CONMAN_CMD_CONNECT)
+      && (!conf->req->enableBroadcast)) {
         write_esc_char(ESC_CHAR_MONITOR, tmp);
         n = append_format_string(buf, sizeof(buf),
             "  %2s%-2s -  Monitor without write-privileges (read-only).\r\n",
@@ -416,7 +418,8 @@ static int perform_help_esc(client_conf_t *conf, char c)
         n = append_format_string(buf, sizeof(buf), "  %2s%-2s -  "
             "Enable quiet-mode (suppress info msgs).\r\n", esc, tmp);
 
-    if ((conf->req->command == CONNECT) && (conf->req->enableReset)) {
+    if ((conf->req->command == CONMAN_CMD_CONNECT)
+      && (conf->req->enableReset)) {
         write_esc_char(ESC_CHAR_RESET, tmp);
         n = append_format_string(buf, sizeof(buf), "  %2s%-2s -  "
             "Reset node%s associated with this console.\r\n", esc, tmp,
@@ -444,8 +447,8 @@ static int perform_info_esc(client_conf_t *conf, char c)
 
     if (list_count(conf->req->consoles) == 1) {
         str = create_format_string(
-            "%sConnected %s to console [%s] on <%s:%d>%s",
-            CONMAN_MSG_PREFIX, (conf->req->command == MONITOR ? "R/O" : "R/W"),
+            "%sConnected %s to console [%s] on <%s:%d>%s", CONMAN_MSG_PREFIX,
+            (conf->req->command == CONMAN_CMD_MONITOR ? "R/O" : "R/W"),
             (char *) list_peek(conf->req->consoles),
             conf->req->host, conf->req->port, CONMAN_MSG_SUFFIX);
     }
@@ -468,11 +471,11 @@ static int perform_join_esc(client_conf_t *conf, char c)
  *    console writers.
  *  Returns 1 on success, or 0 if the socket connection is to be closed.
  */
-    if (conf->req->command != MONITOR)
+    if (conf->req->command != CONMAN_CMD_MONITOR)
         return(1);
     assert(!conf->req->enableBroadcast);
 
-    conf->req->command = CONNECT;
+    conf->req->command = CONMAN_CMD_CONNECT;
     conf->req->enableForce = 0;
     conf->req->enableJoin = 1;
     return(send_esc_seq(conf, c));
@@ -498,12 +501,12 @@ static int perform_monitor_esc(client_conf_t *conf, char c)
  *    from the console.
  *  Returns 1 on success, or 0 if the socket connection is to be closed.
  */
-    if (conf->req->command != CONNECT)
+    if (conf->req->command != CONMAN_CMD_CONNECT)
         return(1);
     if (conf->req->enableBroadcast)
         return(1);
 
-    conf->req->command = MONITOR;
+    conf->req->command = CONMAN_CMD_MONITOR;
     conf->req->enableForce = 0;
     conf->req->enableJoin = 0;
     return(send_esc_seq(conf, c));
@@ -526,7 +529,8 @@ static int perform_reset_esc(client_conf_t *conf, char c)
 /*  Transmits a reset request to all writable consoles connected to the client.
  *  Returns 1 on success, or 0 if the socket connection is to be closed.
  */
-    if ((conf->req->command != CONNECT) || (!conf->req->enableReset))
+    if ((conf->req->command != CONMAN_CMD_CONNECT)
+      || (!conf->req->enableReset))
         return(1);
 
     return(send_esc_seq(conf, c));
@@ -616,7 +620,8 @@ static void locally_display_status(client_conf_t *conf, char *msg)
     char buf[MAX_LINE];
     int n;
 
-    assert((conf->req->command == CONNECT) || (conf->req->command == MONITOR));
+    assert((conf->req->command == CONMAN_CMD_CONNECT)
+        || (conf->req->command == CONMAN_CMD_MONITOR));
 
     if (list_count(conf->req->consoles) == 1) {
         n = snprintf(buf, sizeof(buf), "%sConnection to console [%s] %s%s",

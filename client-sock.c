@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-sock.c,v 1.34 2002/05/12 19:20:29 dun Exp $
+ *  $Id: client-sock.c,v 1.35 2002/05/16 18:54:20 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -157,13 +157,13 @@ int send_req(client_conf_t *conf)
     assert(conf->req->sd >= 0);
 
     switch(conf->req->command) {
-    case QUERY:
+    case CONMAN_CMD_QUERY:
         cmd = proto_strs[LEX_UNTOK(CONMAN_TOK_QUERY)];
         break;
-    case MONITOR:
+    case CONMAN_CMD_MONITOR:
         cmd = proto_strs[LEX_UNTOK(CONMAN_TOK_MONITOR)];
         break;
-    case CONNECT:
+    case CONMAN_CMD_CONNECT:
         cmd = proto_strs[LEX_UNTOK(CONMAN_TOK_CONNECT)];
         break;
     default:
@@ -183,7 +183,7 @@ int send_req(client_conf_t *conf)
             proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
             proto_strs[LEX_UNTOK(CONMAN_TOK_REGEX)]);
     }
-    if (conf->req->command == CONNECT) {
+    if (conf->req->command == CONMAN_CMD_CONNECT) {
         if (conf->req->enableForce) {
             n = append_format_string(buf, sizeof(buf), " %s=%s",
                 proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
@@ -229,7 +229,7 @@ int send_req(client_conf_t *conf)
     /*  For QUERY commands, the write-half of the socket
      *    connection can be closed once the request is sent.
      */
-    if (conf->req->command == QUERY) {
+    if (conf->req->command == CONMAN_CMD_QUERY) {
         if (shutdown(conf->req->sd, SHUT_WR) < 0) {
             conf->errnum = CONMAN_ERR_LOCAL;
             conf->errmsg = create_format_string(

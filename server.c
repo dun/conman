@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.c,v 1.55 2002/05/16 04:44:49 dun Exp $
+ *  $Id: server.c,v 1.56 2002/05/16 18:54:20 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -458,7 +458,8 @@ static void mux_io(server_conf_t *conf)
             if (obj->fd < 0) {
                 continue;
             }
-            if ((is_telnet_obj(obj) && obj->aux.telnet.conState == TELCON_UP)
+            if ((is_telnet_obj(obj)
+                && obj->aux.telnet.conState == CONMAN_TELCON_UP)
               || is_serial_obj(obj)
               || is_client_obj(obj)) {
                 FD_SET(obj->fd, &rset);
@@ -470,7 +471,7 @@ static void mux_io(server_conf_t *conf)
                 maxfd = MAX(maxfd, obj->fd);
             }
             if (is_telnet_obj(obj)
-              && obj->aux.telnet.conState == TELCON_PENDING) {
+              && obj->aux.telnet.conState == CONMAN_TELCON_PENDING) {
                 FD_SET(obj->fd, &rset);
                 FD_SET(obj->fd, &wset);
                 maxfd = MAX(maxfd, obj->fd);
@@ -514,7 +515,7 @@ static void mux_io(server_conf_t *conf)
                 continue;
             }
             if (is_telnet_obj(obj)
-              && (obj->aux.telnet.conState == TELCON_PENDING)
+              && (obj->aux.telnet.conState == CONMAN_TELCON_PENDING)
               && (FD_ISSET(obj->fd, &rset) || FD_ISSET(obj->fd, &wset))) {
                 connect_telnet_obj(obj);
                 continue;

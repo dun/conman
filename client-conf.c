@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-conf.c,v 1.51 2002/05/14 04:32:48 dun Exp $
+ *  $Id: client-conf.c,v 1.52 2002/05/16 18:54:20 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -88,7 +88,7 @@ client_conf_t * create_client_conf(void)
      */
     conf->req->host = create_string(CONMAN_HOST);
     conf->req->port = atoi(CONMAN_PORT);
-    conf->req->command = CONNECT;
+    conf->req->command = CONMAN_CMD_CONNECT;
 
     conf->escapeChar = DEFAULT_CLIENT_ESCAPE;
     conf->log = NULL;
@@ -204,10 +204,10 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
             conf->log = create_string(optarg);
             break;
         case 'm':
-            conf->req->command = MONITOR;
+            conf->req->command = CONMAN_CMD_MONITOR;
             break;
         case 'q':
-            conf->req->command = QUERY;
+            conf->req->command = CONMAN_CMD_QUERY;
             break;
         case 'Q':
             conf->req->enableQuiet = 1;
@@ -232,7 +232,7 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
 
     /*  Disable those options not used in R/O mode.
      */
-    if (conf->req->command == MONITOR) {
+    if (conf->req->command == CONMAN_CMD_MONITOR) {
         conf->req->enableBroadcast = 0;
         conf->req->enableForce = 0;
         conf->req->enableJoin = 0;
@@ -255,7 +255,7 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
     }
 
     if (gotHelp
-        || ((conf->req->command != QUERY)
+        || ((conf->req->command != CONMAN_CMD_QUERY)
             && list_is_empty(conf->req->consoles))) {
         display_client_help(conf);
         exit(0);

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: common.h,v 1.36 2002/05/16 16:50:47 dun Exp $
+ *  $Id: common.h,v 1.37 2002/05/16 18:54:20 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -105,10 +105,10 @@ typedef int socklen_t;                  /* socklen_t is uint32_t in Posix.1g */
 
 
 typedef enum cmd_type {                 /* ConMan command (2 bits)           */
-    NONE,
-    CONNECT,
-    MONITOR,
-    QUERY
+    CONMAN_CMD_NONE,
+    CONMAN_CMD_CONNECT,
+    CONMAN_CMD_MONITOR,
+    CONMAN_CMD_QUERY
 } cmd_t;
 
 typedef struct request {

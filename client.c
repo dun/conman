@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client.c,v 1.19 2002/05/16 16:54:06 dun Exp $
+ *  $Id: client.c,v 1.20 2002/05/16 18:54:20 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -58,10 +58,10 @@ int main(int argc, char *argv[])
         display_error(conf);
     else if (recv_rsp(conf) < 0)
         display_error(conf);
-    else if (conf->req->command == QUERY)
+    else if (conf->req->command == CONMAN_CMD_QUERY)
         display_consoles(conf, STDOUT_FILENO);
-    else if ((conf->req->command == CONNECT)
-      || (conf->req->command == MONITOR))
+    else if ((conf->req->command == CONMAN_CMD_CONNECT)
+      || (conf->req->command == CONMAN_CMD_MONITOR))
         connect_console(conf);
     else
         log_err(0, "INTERNAL: Invalid command=%d", conf->req->command);

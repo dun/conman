@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-logfile.c,v 1.9 2002/05/12 19:20:29 dun Exp $
+ *  $Id: server-logfile.c,v 1.10 2002/05/16 18:54:20 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -196,20 +196,20 @@ int write_sanitized_log_data(obj_t *log, const void *src, int len)
          *    overwritten.
          */
         if (*p == '\r') {
-            if (log->aux.logfile.sanitizeState == LOG_SANE_INIT)
-                log->aux.logfile.sanitizeState = LOG_SANE_CR;
+            if (log->aux.logfile.sanitizeState == CONMAN_LOG_SANE_INIT)
+                log->aux.logfile.sanitizeState = CONMAN_LOG_SANE_CR;
         }
         else if (*p == '\n') {
-            log->aux.logfile.sanitizeState = LOG_SANE_LF;
+            log->aux.logfile.sanitizeState = CONMAN_LOG_SANE_LF;
             *q++ = '\r';
             *q++ = '\n';
         }
         else {
-            if (log->aux.logfile.sanitizeState == LOG_SANE_CR) {
+            if (log->aux.logfile.sanitizeState == CONMAN_LOG_SANE_CR) {
                 *q++ = '\r';
                 *q++ = '\n';
             }
-            log->aux.logfile.sanitizeState = LOG_SANE_INIT;
+            log->aux.logfile.sanitizeState = CONMAN_LOG_SANE_INIT;
 
             c = *p & 0x7F;              /* strip data to 7-bit ASCII */
 

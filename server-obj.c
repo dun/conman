@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-obj.c,v 1.68 2002/05/12 19:20:29 dun Exp $
+ *  $Id: server-obj.c,v 1.69 2002/05/16 18:54:20 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -72,7 +72,10 @@ static obj_t * create_obj(
 
     assert(conf != NULL);
     assert(name != NULL);
-    assert(type==CLIENT || type==LOGFILE || type==SERIAL || type==TELNET);
+    assert(type==CONMAN_OBJ_CLIENT
+        || type==CONMAN_OBJ_LOGFILE
+        || type==CONMAN_OBJ_SERIAL
+        || type==CONMAN_OBJ_TELNET);
 
     if (!(obj = malloc(sizeof(obj_t))))
         out_of_memory();
@@ -121,7 +124,7 @@ obj_t * create_client_obj(server_conf_t *conf, req_t *req)
 
     snprintf(name, sizeof(name), "%s@%s:%d", req->user, req->host, req->port);
     name[sizeof(name) - 1] = '\0';
-    client = create_obj(conf, name, req->sd, CLIENT);
+    client = create_obj(conf, name, req->sd, CONMAN_OBJ_CLIENT);
     client->aux.client.req = req;
     time(&client->aux.client.timeLastRead);
     if (client->aux.client.timeLastRead == (time_t) -1)
@@ -167,9 +170,9 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name,
     if (logfile != NULL)                /* found duplicate name */
         return(NULL);
 
-    logfile = create_obj(conf, name, -1, LOGFILE);
+    logfile = create_obj(conf, name, -1, CONMAN_OBJ_LOGFILE);
     logfile->aux.logfile.consoleName = create_string(console->name);
-    logfile->aux.logfile.sanitizeState = LOG_SANE_INIT;
+    logfile->aux.logfile.sanitizeState = CONMAN_LOG_SANE_INIT;
     logfile->aux.logfile.opts = *opts;
     if (is_serial_obj(console))
         console->aux.serial.logfile = logfile;
@@ -253,7 +256,7 @@ obj_t * create_serial_obj(server_conf_t *conf, char *name,
      *  Also note that these local opts will need to be saved in the serial obj
      *    in order to support true server reconfiguration.  But not today.
      */
-    serial = create_obj(conf, name, fd, SERIAL);
+    serial = create_obj(conf, name, fd, CONMAN_OBJ_SERIAL);
     serial->aux.serial.dev = create_string(dev);
     serial->aux.serial.logfile = NULL;
     get_tty_mode(&serial->aux.serial.tty, fd);
@@ -330,7 +333,7 @@ obj_t * create_telnet_obj(server_conf_t *conf, char *name,
         host = buf;
     }
 
-    telnet = create_obj(conf, name, -1, TELNET);
+    telnet = create_obj(conf, name, -1, CONMAN_OBJ_TELNET);
     telnet->aux.telnet.host = create_string(host);
     telnet->aux.telnet.port = port;
     telnet->aux.telnet.saddr = saddr;
@@ -339,8 +342,8 @@ obj_t * create_telnet_obj(server_conf_t *conf, char *name,
     telnet->aux.telnet.delay = TELNET_MIN_TIMEOUT;
     telnet->aux.telnet.iac = -1;
     for (n=0; n<NTELOPTS; n++)
-        telnet->aux.telnet.optState[n] = TELOPT_NO;
-    telnet->aux.telnet.conState = TELCON_DOWN;
+        telnet->aux.telnet.optState[n] = CONMAN_TELOPT_NO;
+    telnet->aux.telnet.conState = CONMAN_TELCON_DOWN;
     /*
      *  Dup 'enableKeepAlive' to prevent passing 'conf'
      *    to connect_telnet_obj().
@@ -363,14 +366,14 @@ int connect_telnet_obj(obj_t *telnet)
 
     assert(telnet != NULL);
     assert(is_telnet_obj(telnet));
-    assert(telnet->aux.telnet.conState != TELCON_UP);
+    assert(telnet->aux.telnet.conState != CONMAN_TELCON_UP);
 
     if (telnet->aux.telnet.timer >= 0) {
         untimeout(telnet->aux.telnet.timer);
         telnet->aux.telnet.timer = -1;
     }
 
-    if (telnet->aux.telnet.conState == TELCON_DOWN) {
+    if (telnet->aux.telnet.conState == CONMAN_TELCON_DOWN) {
         /*
          *  Initiate a non-blocking connection attempt.
          */
@@ -401,7 +404,7 @@ int connect_telnet_obj(obj_t *telnet)
              *      timeout((CallBackF) disconnect_telnet_obj,
              *      telnet, TELNET_MIN_TIMEOUT * 1000);
              */
-                telnet->aux.telnet.conState = TELCON_PENDING;
+                telnet->aux.telnet.conState = CONMAN_TELCON_PENDING;
             }
             else {
                 disconnect_telnet_obj(telnet);
@@ -410,7 +413,7 @@ int connect_telnet_obj(obj_t *telnet)
         }
         /* Success!  Continue after if/else expr. */
     }
-    else if (telnet->aux.telnet.conState == TELCON_PENDING) {
+    else if (telnet->aux.telnet.conState == CONMAN_TELCON_PENDING) {
         /*
          *  Did the non-blocking connect complete successfully?
          *    (cf. Stevens UNPv1 15.3 p409)
@@ -458,7 +461,7 @@ int connect_telnet_obj(obj_t *telnet)
     free(now);
     strcpy(&buf[sizeof(buf) - 3], "\r\n");
     notify_console_objs(telnet, buf);
-    telnet->aux.telnet.conState = TELCON_UP;
+    telnet->aux.telnet.conState = CONMAN_TELCON_UP;
     /*
      *  Insist that the connection must be up for a minimum length of time
      *    before resetting the reconnect delay back to zero.  This protects
@@ -506,7 +509,7 @@ void disconnect_telnet_obj(obj_t *telnet)
 
     /*  Notify linked objs when transitioning from an UP state.
      */
-    if (telnet->aux.telnet.conState == TELCON_UP) {
+    if (telnet->aux.telnet.conState == CONMAN_TELCON_UP) {
         log_msg(LOG_NOTICE, "Console [%s] disconnected from <%s:%d>",
             telnet->name, telnet->aux.telnet.host, telnet->aux.telnet.port);
         now = create_short_time_string(0);
@@ -521,7 +524,7 @@ void disconnect_telnet_obj(obj_t *telnet)
 
     /*  Set timer for establishing new connection using exponential backoff.
      */
-    telnet->aux.telnet.conState = TELCON_DOWN;
+    telnet->aux.telnet.conState = CONMAN_TELCON_DOWN;
     telnet->aux.telnet.timer = timeout((CallBackF) connect_telnet_obj,
         telnet, telnet->aux.telnet.delay * 1000);
     if (telnet->aux.telnet.delay == 0)
@@ -566,7 +569,7 @@ void destroy_obj(obj_t *obj)
  *  assert(obj->bufInPtr == obj->bufOutPtr); */
 
     switch(obj->type) {
-    case CLIENT:
+    case CONMAN_OBJ_CLIENT:
         if (obj->aux.client.req) {
             /*
              *  Prevent destroy_req() from closing 'sd' a second time.
@@ -575,11 +578,11 @@ void destroy_obj(obj_t *obj)
             destroy_req(obj->aux.client.req);
         }
         break;
-    case LOGFILE:
+    case CONMAN_OBJ_LOGFILE:
         if (obj->aux.logfile.consoleName)
             free(obj->aux.logfile.consoleName);
         break;
-    case SERIAL:
+    case CONMAN_OBJ_SERIAL:
         /*
          *  According to the UNIX Programming FAQ v1.37
          *    <http://www.faqs.org/faqs/unix-faq/programmer/faq/>
@@ -600,7 +603,7 @@ void destroy_obj(obj_t *obj)
          *  Do not destroy obj->aux.serial.logfile since it is only a ref.
          */
         break;
-    case TELNET:
+    case CONMAN_OBJ_TELNET:
         if (obj->aux.telnet.host)
             free(obj->aux.telnet.host);
         /*
@@ -993,7 +996,7 @@ int read_from_obj(obj_t *obj, fd_set *pWriteSet)
 
     /*  Do not read from an active telnet obj that is not yet in the UP state.
      */
-    if (is_telnet_obj(obj) && obj->aux.telnet.conState != TELCON_UP)
+    if (is_telnet_obj(obj) && obj->aux.telnet.conState != CONMAN_TELCON_UP)
         return(0);
 
 again:
@@ -1081,7 +1084,7 @@ int write_obj_data(obj_t *obj, void *src, int len, int isInfo)
     /*  If the obj is a disconnected telnet connection,
      *    data will simply be discarded so perform a no-op here.
      */
-    if (is_telnet_obj(obj) && obj->aux.telnet.conState != TELCON_UP) {
+    if (is_telnet_obj(obj) && obj->aux.telnet.conState != CONMAN_TELCON_UP) {
         DPRINTF((1, "Attempted to write to disconnected [%s].\n", obj->name));
         return(0);
     }
@@ -1206,7 +1209,8 @@ int write_to_obj(obj_t *obj)
     if (is_client_obj(obj) && obj->aux.client.gotSuspend) {
         avail = 0;
     }
-    else if (is_telnet_obj(obj) && obj->aux.telnet.conState != TELCON_UP) {
+    else if (is_telnet_obj(obj)
+      && obj->aux.telnet.conState != CONMAN_TELCON_UP) {
         avail = 0;
         obj->bufInPtr = obj->bufOutPtr = obj->buf;
     }

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: common.c,v 1.27 2002/05/12 19:20:29 dun Exp $
+ *  $Id: common.c,v 1.28 2002/05/16 18:54:20 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -82,7 +82,7 @@ req_t * create_req(void)
     req->ip = NULL;
     req->port = 0;
     req->consoles = list_create((ListDelF) destroy_string);
-    req->command = NONE;
+    req->command = CONMAN_CMD_NONE;
     req->enableBroadcast = 0;
     req->enableForce = 0;
     req->enableJoin = 0;
