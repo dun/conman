@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-tty.c,v 1.27 2001/08/03 21:11:46 dun Exp $
+ *  $Id: client-tty.c,v 1.28 2001/08/06 18:38:37 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -191,6 +191,8 @@ static int read_from_stdin(client_conf_t *conf)
         mode = EOL;
         switch(c) {
         case ESC_CHAR_BREAK:
+            if (conf->req->command != CONNECT)
+                return(1);
             return(send_esc_seq(conf, c));
         case ESC_CHAR_CLOSE:
             return(perform_close_esc(conf, c));
@@ -201,6 +203,8 @@ static int read_from_stdin(client_conf_t *conf)
         case ESC_CHAR_LOG:
             return(send_esc_seq(conf, c));
         case ESC_CHAR_QUIET:
+            if (conf->req->command != CONNECT)
+                return(1);
             conf->req->enableQuiet ^= 1;
             return(send_esc_seq(conf, c));
         case ESC_CHAR_SUSPEND:
@@ -322,12 +326,12 @@ static int perform_info_esc(client_conf_t *conf, char c)
     char *str;
 
     if (list_count(conf->req->consoles) == 1) {
-        str = create_fmt_string("%sConnected to console [%s] on %s:%d%s",
+        str = create_format_string("%sConnected to console [%s] on %s:%d%s",
             CONMAN_MSG_PREFIX, (char *) list_peek(conf->req->consoles),
             conf->req->host, conf->req->port, CONMAN_MSG_SUFFIX);
     }
     else {
-        str = create_fmt_string("%sBroadcasting to %d consoles on %s:%d%s",
+        str = create_format_string("%sBroadcasting to %d consoles on %s:%d%s",
             CONMAN_MSG_PREFIX, list_count(conf->req->consoles),
             conf->req->host, conf->req->port, CONMAN_MSG_SUFFIX);
     }
@@ -340,48 +344,62 @@ static int perform_info_esc(client_conf_t *conf, char c)
 
 static int perform_help_esc(client_conf_t *conf, char c)
 {
-/*  Display the "escape sequence" help.
+/*  Display a dynamic "escape sequence" help message.
  *  Returns 1 on success.
- *
- *  FIX_ME: This routine is a total kludge.
  */
-    char escChar[3];
-    char escBreak[3];
-    char escClose[3];
-    char escHelp[3];
-    char escInfo[3];
-    char escLog[3];
-    char escQuiet[3];
-    char escSuspend[3];
-    char *str;
+    char buf[MAX_BUF_SIZE] = "\0";	/* init buf with NUL for appending */
+    char esc[3];
+    char tmp[3];
+    int n;
 
-    locally_echo_esc(conf->escapeChar, c);
+    write_esc_char(conf->escapeChar, esc);
+    n = append_format_string(buf, sizeof(buf),
+        "\r\nSupported ConMan Escape Sequences:\r\n");
 
-    write_esc_char(conf->escapeChar, escChar);
-    write_esc_char(ESC_CHAR_BREAK, escBreak);
-    write_esc_char(ESC_CHAR_CLOSE, escClose);
-    write_esc_char(ESC_CHAR_HELP, escHelp);
-    write_esc_char(ESC_CHAR_INFO, escInfo);
-    write_esc_char(ESC_CHAR_LOG, escLog);
-    write_esc_char(ESC_CHAR_QUIET, escQuiet);
-    write_esc_char(ESC_CHAR_SUSPEND, escSuspend);
+    write_esc_char(ESC_CHAR_HELP, tmp);
+    n = append_format_string(buf, sizeof(buf),
+        "  %2s%-2s -  Display this help message.\r\n", esc, tmp);
 
-    str = create_fmt_string(
-        "\r\nSupported ConMan Escape Sequences:\r\n"
-        "  %2s%-2s -  Display this help message.\r\n"
-        "  %2s%-2s -  Terminate the connection.\r\n"
-        "  %2s%-2s -  Send the escape character by typing it twice.\r\n"
-        "  %2s%-2s -  Transmit a serial-break.\r\n"
-        "  %2s%-2s -  Display connection information.\r\n"
-        "  %2s%-2s -  Replay up to the last %d bytes of the log.\r\n"
-        "  %2s%-2s -  Toggle whether info messages are suppressed.\r\n"
-        "  %2s%-2s -  Suspend the client.\r\n",
-        escChar, escHelp, escChar, escClose, escChar, escChar,
-        escChar, escBreak, escChar, escInfo, escChar, escLog,
-        CONMAN_REPLAY_LEN, escChar, escQuiet, escChar, escSuspend);
-    if (write_n(STDOUT_FILENO, str, strlen(str)) < 0)
+    write_esc_char(ESC_CHAR_CLOSE, tmp);
+    n = append_format_string(buf, sizeof(buf),
+        "  %2s%-2s -  Terminate the connection.\r\n", esc, tmp);
+
+    n = append_format_string(buf, sizeof(buf),
+        "  %2s%-2s -  Send the escape character.\r\n", esc, esc);
+
+    if (conf->req->command == CONNECT) {
+        write_esc_char(ESC_CHAR_BREAK, tmp);
+        n = append_format_string(buf, sizeof(buf),
+            "  %2s%-2s -  Transmit a serial-break.\r\n", esc, tmp);
+    }
+
+    write_esc_char(ESC_CHAR_INFO, tmp);
+    n = append_format_string(buf, sizeof(buf),
+        "  %2s%-2s -  Display connection information.\r\n", esc, tmp);
+
+    write_esc_char(ESC_CHAR_LOG, tmp);
+    n = append_format_string(buf, sizeof(buf),
+        "  %2s%-2s -  Replay up to the last %d bytes of the log.\r\n",
+        esc, tmp, CONMAN_REPLAY_LEN);
+
+    if (conf->req->command == CONNECT) {
+        write_esc_char(ESC_CHAR_QUIET, tmp);
+        if (conf->req->enableQuiet)
+            n = append_format_string(buf, sizeof(buf), "  %2s%-2s -  "
+                "Disable quiet-mode (and display info msgs).\r\n", esc, tmp);
+        else
+            n = append_format_string(buf, sizeof(buf), "  %2s%-2s -  "
+                "Enable quiet-mode (and suppress info msgs).\r\n", esc, tmp);
+    }
+
+    write_esc_char(ESC_CHAR_SUSPEND, tmp);
+    n = append_format_string(buf, sizeof(buf),
+        "  %2s%-2s -  Suspend the client.\r\n", esc, tmp);
+
+    if (n < 0)				/* if buf was truncated, append CR/LF */
+        strcpy(buf + sizeof(buf) - 3, "\r\n");
+    if (write_n(STDOUT_FILENO, buf, strlen(buf)) < 0)
         err_msg(errno, "write() failed on fd=%d", STDOUT_FILENO);
-    free(str);
     return(1);
 }
 
