@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-tty.c,v 1.30 2001/08/14 23:16:47 dun Exp $
+ *  $Id: client-tty.c,v 1.31 2001/08/17 01:52:28 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -124,25 +124,21 @@ static void set_raw_tty_mode(int fd, struct termios *old)
     if (old)
         *old = term;
 
-    /*  disable SIGINT on break, CR-to-NL, input parity checking,
-     *    stripping 8th bit off input chars, output flow ctrl
+    term.c_iflag = 0;
+    term.c_oflag = 0;
+    term.c_lflag = 0;
+    /*
+     *  Ignore modem status lines, enable receiver, set 8 bits/char.
+     *  Implicitly clear size bits (CSIZE), disable parity checking (PARENB).
      */
-    term.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+    term.c_cflag = CLOCAL | CREAD | CS8;
 
-    /*  disable output processing
-     */
-    term.c_oflag &= ~(OPOST);
-
-    /*  disable echo, canonical mode, extended input processing, signal chars
-     */
-    term.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
-
-    /*  read() does not return until data is present (may block indefinitely)
+    /*  read() does not return until data is present (may block indefinitely).
      */
     term.c_cc[VMIN] = 1;
     term.c_cc[VTIME] = 0;
 
-    if (tcsetattr(fd, TCSANOW, &term) < 0)
+    if (tcsetattr(fd, TCSAFLUSH, &term) < 0)
         err_msg(errno, "tcgetattr() failed on fd=%d", fd);
     return;
 }
@@ -155,7 +151,7 @@ static void restore_tty_mode(int fd, struct termios *new)
 
     if (!isatty(fd))
         return;
-    if (tcsetattr(fd, TCSANOW, new) < 0)
+    if (tcsetattr(fd, TCSAFLUSH, new) < 0)
         err_msg(errno, "tcgetattr() failed on fd=%d", fd);
     return;
 }
