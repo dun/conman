@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-logfile.c,v 1.1 2001/12/27 20:10:50 dun Exp $
+ *  $Id: server-logfile.c,v 1.2 2001/12/27 20:17:16 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -25,13 +25,19 @@ int parse_logfile_opts(
     logopt_t *opts, const char *str, char *errbuf, int errlen)
 {
 /*  Parses 'str' for logfile device options 'opts'.
- *  The 'str' string is of the form "(sanitize|nosanitize)".
+ *    The 'opts' struct should be initialized to a default value.
+ *    The 'str' string is of the form "(sanitize|nosanitize)".
  *  Returns 0 and updates the 'opts' struct on success; o/w, returns -1
  *    (writing an error message into 'errbuf' if defined).
  */
     logopt_t optsTmp;
 
     assert(opts != NULL);
+
+    /*  By setting the tmp opts to the 'opts' that are passed in,
+     *    we establish defaults for any values that are not changed by 'str'.
+     */
+    optsTmp = *opts;
 
     if ((str == NULL) || str[0] == '\0') {
         if ((errbuf != NULL) && (errlen > 0))
