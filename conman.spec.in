@@ -1,4 +1,4 @@
-# $Id: conman.spec.in,v 1.13 2002/02/09 07:25:07 dun Exp $
+# $Id: conman.spec.in,v 1.14 2002/03/14 03:37:00 dun Exp $
 
 Name:    @PROJECT@
 Version: @VERSION@
@@ -6,22 +6,22 @@ Release: 1
 
 Summary: ConMan - Remote Console Management
 Group:   Applications/Communications
-License: LLNL/Internal-Use-Only
-#URL:     http://www.llnl.gov/linux/
+License: GPL
+URL:     http://www.llnl.gov/linux/conman.html
 
 BuildRoot: %{_tmppath}/%{name}-%{version}
 
 Source0: %{name}-%{version}.tgz
 
 %description
-ConMan is currently available for LLNL internal use only.
-An unrestricted GPL release of ConMan is pending Review & Release.
+ConMan is a remote console management utility capable of performing all
+manners of magic.
 
 %prep
 %setup
 
 %build
-test -n "$RPM_ENABLE_DEBUG" && DEBUG="--enable-debug"
+test -n "$RPM_ENABLE_DEBUG" && DEBUG="--enable-debug --with-dmalloc"
 CFLAGS="$RPM_OPT_FLAGS" LDFLAGS="-s" ./configure --prefix=/usr $DEBUG \
   --with-tcp-wrappers
 make
