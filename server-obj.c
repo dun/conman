@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.58 2001/12/31 04:48:43 dun Exp $
+ *  $Id: server-obj.c,v 1.59 2002/01/02 18:00:16 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -802,6 +802,21 @@ void unlink_objs(obj_t *src, obj_t *dst)
         notify_console_objs(dst, buf);
     }
 
+    /*  If a client obj has become completely unlinked, set its EOF flag.
+     *    This will prevent new data from being added to the obj's buffer,
+     *    and the obj will be closed once its buffer is empty.
+     */
+    if (is_client_obj(src)
+      && list_is_empty(src->readers) && list_is_empty(src->writers)) {
+        assert(is_console_obj(dst));
+        src->gotEOF = 1;
+    }
+    else if (is_client_obj(dst)
+      && list_is_empty(dst->readers) && list_is_empty(dst->writers)) {
+        assert(is_console_obj(src));
+        dst->gotEOF = 1;
+    }
+
     DPRINTF("Unlinked [%s] reads from [%s] writes.\n", src->name, dst->name);
     assert(validate_obj_links(src) >= 0);
     assert(validate_obj_links(dst) >= 0);
@@ -815,14 +830,11 @@ void unlink_obj(obj_t *obj)
  */
     obj_t *x;
 
-    /*  Set flag to ensure no additional data is written into the buffer.
-     */
-    obj->gotEOF = 1;
-
-    while ((x = list_peek(obj->readers)))
-        unlink_objs(obj, x);
     while ((x = list_peek(obj->writers)))
         unlink_objs(x, obj);
+    while ((x = list_peek(obj->readers)))
+        unlink_objs(obj, x);
+
     return;
 }
 
