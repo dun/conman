@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util.c,v 1.12 2001/08/07 00:57:41 dun Exp $
+ *  $Id: util.c,v 1.13 2001/08/14 23:19:19 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util.h" for documentation on public functions.
@@ -7,7 +7,7 @@
 
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
 #include <arpa/inet.h>
@@ -15,11 +15,13 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <netdb.h>
+#include <netinet/in.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
 #include <time.h>
 #include <unistd.h>
 #include "errors.h"
@@ -29,8 +31,12 @@
 #define MAX_STR_SIZE 1024
 
 #ifndef INET_ADDRSTRLEN
-#define INET_ADDRSTRLEN 16
+#  define INET_ADDRSTRLEN 16
 #endif /* !INET_ADDRSTRLEN */
+
+
+static int get_file_lock(int fd, int cmd, int type);
+static pid_t test_file_lock(int fd, int type);
 
 
 char * create_string(const char *str)
@@ -198,9 +204,11 @@ char * create_time_delta_string(time_t t)
 struct tm * get_localtime(time_t *t, struct tm *tm)
 {
 #ifndef HAVE_LOCALTIME_R
+
     int rc;
     static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
     struct tm *ptm;
+
 #endif /* !HAVE_LOCALTIME_R */
 
     assert(t);
@@ -243,6 +251,82 @@ void set_descriptor_nonblocking(int fd)
     if (fcntl(fd, F_SETFL, fval | O_NONBLOCK) < 0)
         err_msg(errno, "fcntl(F_SETFL) failed");
     return;
+}
+
+
+int get_read_lock(int fd)
+{
+    return(get_file_lock(fd, F_SETLK, F_RDLCK));
+}
+
+
+int get_readw_lock(int fd)
+{
+    return(get_file_lock(fd, F_SETLKW, F_RDLCK));
+}
+
+
+int get_write_lock(int fd)
+{
+    return(get_file_lock(fd, F_SETLK, F_WRLCK));
+}
+
+
+int get_writew_lock(int fd)
+{
+    return(get_file_lock(fd, F_SETLKW, F_WRLCK));
+}
+
+
+int release_lock(int fd)
+{
+    return(get_file_lock(fd, F_SETLK, F_UNLCK));
+}
+
+
+pid_t is_read_lock_blocked(int fd)
+{
+    return(test_file_lock(fd, F_RDLCK));
+}
+
+
+pid_t is_write_lock_blocked(int fd)
+{
+    return(test_file_lock(fd, F_WRLCK));
+}
+
+
+static int get_file_lock(int fd, int cmd, int type)
+{
+    struct flock lock;
+
+    assert(fd >= 0);
+
+    lock.l_type = type;
+    lock.l_start = 0;
+    lock.l_whence = SEEK_SET;
+    lock.l_len = 0;
+
+    return(fcntl(fd, cmd, &lock));
+}
+
+
+static pid_t test_file_lock(int fd, int type)
+{
+    struct flock lock;
+
+    assert(fd >= 0);
+
+    lock.l_type = type;
+    lock.l_start = 0;
+    lock.l_whence = SEEK_SET;
+    lock.l_len = 0;
+
+    if (fcntl(fd, F_GETLK, &lock) < 0)
+        err_msg(errno, "Unable to test for file lock");
+    if (lock.l_type == F_UNLCK)
+        return(0);
+    return(lock.l_pid);
 }
 
 
@@ -393,8 +477,13 @@ int inet_pton(int family, const char *str, void *addr)
         errno = EAFNOSUPPORT;
         return(-1);
     }
+#ifdef HAVE_INET_ATON
     if (!inet_aton(str, &tmpaddr))
         return(0);
+#else /* !HAVE_INET_ATON */
+    if ((tmpaddr.s_addr = inet_addr(str)) == -1)
+        return(0);
+#endif /* !HAVE_INET_ATON */
 
     memcpy(addr, &tmpaddr, sizeof(struct in_addr));
     return(1);

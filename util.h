@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util.h,v 1.8 2001/08/06 18:36:26 dun Exp $
+ *  $Id: util.h,v 1.9 2001/08/14 23:19:19 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -9,7 +9,7 @@
 
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
 #include <netinet/in.h>
@@ -18,10 +18,10 @@
 
 
 #ifndef MAX
-#define MAX(x,y) (((x) >= (y)) ? (x) : (y))
+#  define MAX(x,y) (((x) >= (y)) ? (x) : (y))
 #endif /* !MAX */
 #ifndef MIN
-#define MIN(x,y) (((x) <= (y)) ? (x) : (y))
+#  define MIN(x,y) (((x) <= (y)) ? (x) : (y))
 #endif /* !MIN */
 
 
@@ -96,6 +96,52 @@ struct tm * get_localtime(time_t *t, struct tm *tm);
 void set_descriptor_nonblocking(int fd);
 /*
  *  Sets the file descriptor (fd) for non-blocking I/O.
+ */
+
+int get_read_lock(int fd);
+/*
+ *  Obtain a read lock on the file specified by (fd).
+ *  Returns 0 on success, or -1 if prevented from obtaining the lock.
+ */
+
+int get_readw_lock(int fd);
+/*
+ *  Obtain a read lock on the file specified by (fd),
+ *    blocking until one becomes available.
+ *  Returns 0 on success, or -1 on error.
+ */
+
+int get_write_lock(int fd);
+/*
+ *  Obtain a write lock on the file specified by (fd).
+ *  Returns 0 on success, or -1 if prevented from obtaining the lock.
+ */
+
+int get_writew_lock(int fd);
+/*
+ *  Obtain a write lock on the file specified by (fd),
+ *    blocking until one becomes available.
+ *  Returns 0 on success, or -1 on error.
+ */
+
+int release_lock(int fd);
+/*
+ *  Release a lock held on the file specified by (fd).
+ *  Returns 0 on success, or -1 on error.
+ */
+
+pid_t is_read_lock_blocked(int fd);
+/*
+ *  If a lock exists the would block a request for a read-lock
+ *    (ie, if a write-lock is already being held on the file),
+ *    returns the pid of the process holding the lock; o/w, returns 0.
+ */
+
+pid_t is_write_lock_blocked(int fd);
+/*
+ *  If a lock exists the would block a request for a write-lock
+ *    (ie, if any lock is already being held on the file),
+ *    returns the pid of a process holding the lock; o/w, returns 0.
  */
 
 ssize_t read_n(int fd, void *buf, size_t n);
