@@ -3,7 +3,7 @@ dnl
 dnl ConMan AutoConf Config Jazz
 dnl   by Chris Dunlap <cdunlap@llnl.gov>
 dnl
-dnl $Id: configure.ac,v 1.11 2001/12/27 17:09:54 dun Exp $
+dnl $Id: configure.ac,v 1.12 2001/12/28 20:13:06 dun Exp $
 
 
 dnl Prologue.
@@ -30,12 +30,13 @@ dnl
 AC_MSG_CHECKING(whether debugging is enabled)
 AC_ARG_ENABLE(debug,
   AC_HELP_STRING([--enable-debug], [enable debugging for development work]),
-  [case "${enableval}" in
-    yes) debug=yes ;;
-    no)  debug=no ;;
-    *)   AC_MSG_RESULT(doh!)
-         AC_MSG_ERROR([bad value "${enableval}" for --enable-debug]) ;;
-   esac]
+  [ case "${enableval}" in
+      yes) debug=yes ;;
+      no)  debug=no ;;
+      *)   AC_MSG_RESULT(doh!)
+           AC_MSG_ERROR([bad value "${enableval}" for --enable-debug]) ;;
+    esac
+  ]
 )
 if test "$debug" = yes; then
   CFLAGS="${CFLAGS--g -Wall}"
@@ -44,7 +45,7 @@ else
   LDFLAGS="${LDFLAGS--s}"
   AC_DEFINE(NDEBUG, 1, [Define if you are building a production release.])
 fi
-AC_MSG_RESULT(${debug-no})
+AC_MSG_RESULT(${debug=no})
 
 
 dnl Determine the system type.
@@ -131,20 +132,22 @@ dnl
 AC_MSG_CHECKING(whether to use the Debug Malloc Library)
 AC_ARG_WITH(dmalloc,
   AC_HELP_STRING([--with-dmalloc], [use Gray Watson's dmalloc library]),
-  [case "${withval}" in
-    yes) dmalloc=yes ;;
-    no)  dmalloc=no ;;
-    *)   AC_MSG_RESULT(doh!)
-         AC_MSG_ERROR([bad value "${withval}" for --with-dmalloc]) ;;
-   esac]
+  [ case "$withval" in
+      yes) dmalloc=yes ;;
+      no)  dmalloc=no ;;
+      *)   AC_MSG_RESULT(doh!)
+           AC_MSG_ERROR([bad value "$withval" for --with-dmalloc]) ;;
+    esac
+  ]
 )
-AC_MSG_RESULT(${dmalloc-no})
+AC_MSG_RESULT(${dmalloc=no})
 if test "$dmalloc" = yes; then
   AC_HAVE_LIBRARY(dmalloc,
-    [AC_DEFINE_UNQUOTED(WITH_DMALLOC, 1,
-      [Define if using the debug malloc library.])
-    LIBS="-ldmalloc $LIBS"],
-    [dmalloc=no]
+    [ AC_DEFINE_UNQUOTED(WITH_DMALLOC, 1,
+        [Define if using the debug malloc library.]
+      )
+      LIBS="-ldmalloc $LIBS"
+    ], [dmalloc=no]
   )
 fi
 AH_BOTTOM(
@@ -159,20 +162,20 @@ dnl
 AC_MSG_CHECKING(whether to use TCP Wrappers)
 AC_ARG_WITH(tcp-wrappers,
   AC_HELP_STRING([--with-tcp-wrappers], [use Wietse Venema's TCP Wrappers]),
-  [case "${withval}" in
-    yes) tcp_wrappers=yes ;;
-    no)  tcp_wrappers=no ;;
-    *)   AC_MSG_RESULT(doh!)
-         AC_MSG_ERROR([bad value "${withval}" for --with-tcp-wrappers]) ;;
-   esac]
+  [ case "$withval" in
+      yes) tcp_wrappers=yes ;;
+      no)  tcp_wrappers=no ;;
+      *)   AC_MSG_RESULT(doh!)
+           AC_MSG_ERROR([bad value "$withval" for --with-tcp-wrappers]) ;;
+    esac
+  ]
 )
 AC_MSG_RESULT(${tcp_wrappers=no})
 if test "$tcp_wrappers" = yes; then
   AC_CHECK_LIB(wrap, main,
-    [AC_DEFINE_UNQUOTED(WITH_TCP_WRAPPERS, 1,
-      [Define if using TCP Wrappers.])
-    LIBS="-lwrap $LIBS"],
-    [tcp_wrappers=no]
+    [ AC_DEFINE_UNQUOTED(WITH_TCP_WRAPPERS, 1, [Define if using TCP Wrappers.])
+      LIBS="-lwrap $LIBS"
+    ], [tcp_wrappers=no]
   )
   dnl
   dnl If libnsl is already getting linked, there's no reason to do it again.
@@ -181,6 +184,57 @@ if test "$tcp_wrappers" = yes; then
     AC_CHECK_LIB(nsl, yp_get_default_domain)
   fi
 fi
+
+
+dnl Check for ConMan daemon conf file.
+dnl
+AC_MSG_CHECKING(for ConMan daemon conf file)
+AC_ARG_WITH(conman-conf,
+  AC_HELP_STRING([--with-conman-conf=FILE],
+    [default conf file of ConMan daemon]),
+  [ if test -n "$withval" -a "$withval" != yes -a "$withval" != no; then
+      CONMAN_CONF="$withval"
+    fi
+  ]
+)
+AC_MSG_RESULT(${CONMAN_CONF=/etc/conman.conf})
+AC_DEFINE_UNQUOTED(CONMAN_CONF, "$CONMAN_CONF",
+  [Define the default configuration file of the ConMan daemon])
+AC_SUBST(CONMAN_CONF)
+
+
+dnl Check for ConMan daemon host name.
+dnl
+AC_MSG_CHECKING(for ConMan daemon host name)
+AC_ARG_WITH(conman-host,
+  AC_HELP_STRING([--with-conman-host=HOST],
+    [default host name or ip addr of ConMan daemon]),
+  [ if test -n "$withval" -a "$withval" != yes -a "$withval" != no; then
+      CONMAN_HOST="$withval"
+    fi
+  ]
+)
+AC_MSG_RESULT(${CONMAN_HOST=127.0.0.1})
+AC_DEFINE_UNQUOTED(CONMAN_HOST, "$CONMAN_HOST",
+  [Define the default host name or IP address of the ConMan daemon])
+AC_SUBST(CONMAN_HOST)
+
+
+dnl Check for ConMan daemon port number.
+dnl
+AC_MSG_CHECKING(for ConMan daemon port number)
+AC_ARG_WITH(conman-port,
+  AC_HELP_STRING([--with-conman-port=PORT],
+    [default port number of ConMan daemon]),
+  [ if test `expr match "$withval" '[[0-9]]*$'` -gt 0; then
+      CONMAN_PORT="$withval"
+    fi
+  ]
+)
+AC_MSG_RESULT(${CONMAN_PORT=7890})
+AC_DEFINE_UNQUOTED(CONMAN_PORT, "$CONMAN_PORT",
+  [Define the default port number of the ConMan daemon])
+AC_SUBST(CONMAN_PORT)
 
 
 dnl Check for random silliness.

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.34 2001/12/27 20:10:50 dun Exp $
+ *  $Id: server-conf.c,v 1.35 2001/12/28 20:13:06 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -86,7 +86,7 @@ server_conf_t * create_server_conf(void)
 
     if (!(conf = malloc(sizeof(server_conf_t))))
         out_of_memory();
-    conf->confFileName = create_string(DEFAULT_SERVER_CONF);
+    conf->confFileName = create_string(CONMAN_CONF);
     conf->logDirName = NULL;
     conf->logFileName = NULL;
     conf->pidFileName = NULL;
@@ -106,7 +106,7 @@ server_conf_t * create_server_conf(void)
      *    (in order of precedence, from highest to lowest) via:
      *    1. command-line option (-p)
      *    2. configuration file (SERVER PORT=<int>)
-     *    3. macro def (DEFAULT_CONMAN_PORT)
+     *    3. macro def (CONMAN_PORT in "config.h")
      *  The problem is that the command-line options need to be processed
      *    before the configuration file, because an alternative configuration
      *    can be specified via the command-line.  If the port is set to its
@@ -294,7 +294,7 @@ void process_server_conf_file(server_conf_t *conf)
     if (port > 0)			/* restore port set via cmdline */
         conf->port = port;
     else if (conf->port <= 0)		/* port not set so use default */
-        conf->port = atoi(DEFAULT_CONMAN_PORT);
+        conf->port = atoi(CONMAN_PORT);
 
     /*  The pidfile must be created after daemonize() has finished forking.
      */
@@ -325,12 +325,12 @@ static void display_server_help(char *prog)
     printf("Usage: %s [OPTIONS]\n", prog);
     printf("\n");
     printf("  -c FILE   Specify alternate configuration (default: %s).\n",
-        DEFAULT_SERVER_CONF);
+        CONMAN_CONF);
     printf("  -h        Display this help.\n");
     printf("  -k        Kill daemon running with specified configuration.\n");
     printf("  -p PORT   Specify alternate port number (default: %d).\n",
-        atoi(DEFAULT_CONMAN_PORT));
-    printf("  -r        Reconfigure daemon running with specified "
+        atoi(CONMAN_PORT));
+    printf("  -r        Re-open logs on daemon running with specified "
         "configuration.\n");
     printf("  -v        Be verbose.\n");
     printf("  -V        Display version information.\n");

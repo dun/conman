@@ -1,5 +1,14 @@
 /* config.h.in.  Generated automatically from configure.ac by autoheader.  */
 
+/* Define the default configuration file of the ConMan daemon */
+#undef CONMAN_CONF
+
+/* Define the default host name or IP address of the ConMan daemon */
+#undef CONMAN_HOST
+
+/* Define the default port number of the ConMan daemon */
+#undef CONMAN_PORT
+
 /* Define if you have the `inet_aton' function. */
 #undef HAVE_INET_ATON
 

@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Makefile.in,v 1.40 2001/12/27 20:10:50 dun Exp $
+# $Id: Makefile.in,v 1.41 2001/12/28 20:13:06 dun Exp $
 ##
 
 PROJECT=	conman
@@ -28,6 +28,7 @@ bindir=		@bindir@
 sbindir=	@sbindir@
 libdir=		@libdir@
 
+CONF=		@CONMAN_CONF@
 PROGS=		conman conmand
 COMMON_OBJS1=	common.o errors.o list.o lex.o
 COMMON_OBJS2=	util.o util-file.o util-net.o util-str.o
@@ -61,10 +62,10 @@ install: $(PROGS)
 	$(INSTALL) conmen $(DESTDIR)$(bindir)/
 	$(mkinstalldirs) $(DESTDIR)$(sbindir)
 	$(INSTALL) conmand $(DESTDIR)$(sbindir)/
-	if ! test -f $(DESTDIR)/etc/conman.conf; then \
+	if ! test -f $(DESTDIR)$(CONF); then \
 	  $(mkinstalldirs) $(DESTDIR)/etc; \
 	  $(INSTALL) -m 644 etc/conman.conf \
-	    $(DESTDIR)/etc/conman.conf; \
+	    $(DESTDIR)$(CONF); \
 	fi;
 	if ! test -f $(DESTDIR)/etc/logrotate.d/conman; then \
 	  $(mkinstalldirs) $(DESTDIR)/etc/logrotate.d; \
