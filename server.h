@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.22 2001/08/15 14:06:04 dun Exp $
+ *  $Id: server.h,v 1.23 2001/08/17 01:53:06 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -31,7 +31,6 @@ typedef struct client_obj {		/* CLIENT AUX OBJ DATA:               */
 
 typedef struct console_obj {		/* CONSOLE AUX OBJ DATA:              */
     char            *dev;		/*  console device name               */
-    int              bps;		/*  console baud rate                 */
     struct base_obj *logfile;		/*  log obj ref for console output    */
     struct termios   term;		/*  saved cooked tty mode             */
 } console_obj_t;
@@ -63,6 +62,7 @@ typedef struct base_obj {		/* BASE OBJ:                          */
 
 typedef struct server_conf {
     char            *confFileName;	/* configuration file name            */
+    char            *logDirName;	/* dir prefix for relative logfiles   */
     char            *logFileName;	/* file to which events are logged    */
     char            *pidFileName;	/* file to which pid is written       */
     int              fd;		/* configuration file descriptor      */
@@ -105,11 +105,12 @@ int process_escape_chars(obj_t *client, void *src, int len);
 **  server-obj.c  **
 \******************/
 
-obj_t * create_console_obj(List objs, char *name, char *dev, int bps);
+obj_t * create_console_obj(
+    server_conf_t *conf, char *name, char *dev, char *opts);
 
-obj_t * create_logfile_obj(List objs, char *name, obj_t *console, int zeroLog);
+obj_t * create_logfile_obj(server_conf_t *conf, char *name, obj_t *console);
 
-obj_t * create_client_obj(List objs, req_t *req);
+obj_t * create_client_obj(server_conf_t *conf, req_t *req);
 
 void destroy_obj(obj_t *obj);
 
