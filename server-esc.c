@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-esc.c,v 1.13 2001/09/23 01:54:52 dun Exp $
+ *  $Id: server-esc.c,v 1.14 2001/09/25 20:48:51 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -248,6 +248,10 @@ static void perform_suspend(obj_t *client)
     x_pthread_mutex_lock(&client->bufLock);
     gotSuspend = client->aux.client.gotSuspend ^= 1;
     x_pthread_mutex_unlock(&client->bufLock);
+    /*
+     *  FIX_ME: check_console_state() here looking for downed telnets.
+     *    Should it check the state of all readers & writers?
+     */
 
     DPRINTF("%s output to client [%s].\n",
         (gotSuspend ? "Suspending" : "Resuming"), client->name);
@@ -396,7 +400,7 @@ static int process_telnet_cmd(obj_t *telnet, int cmd, int opt)
             cmd, telnet->name);
         return(-1);
     }
-    DPRINTF("Received telnet cmd %s%s%s from console [%s].\n",
+    DPRINTF("Rcvd telnet cmd %s%s%s from console [%s].\n",
         telcmds[cmd - TELCMD_FIRST], (TELOPT_OK(opt) ? " " : ""),
         (TELOPT_OK(opt) ? telopts[opt - TELOPT_FIRST] : ""), telnet->name);
 

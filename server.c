@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.30 2001/09/23 01:54:52 dun Exp $
+ *  $Id: server.c,v 1.31 2001/09/25 20:48:51 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -25,6 +25,7 @@
 #include "errors.h"
 #include "list.h"
 #include "server.h"
+#include "tselect.h"
 #include "util.h"
 #include "util-file.h"
 #include "wrapper.h"
@@ -329,7 +330,7 @@ static void mux_io(server_conf_t *conf)
         tval.tv_usec = 0;
 
         DPRINTF("Entering select()...\n");
-        while ((n = select(maxfd+1, &rset, &wset, NULL, &tval)) < 0) {
+        while ((n = tselect(maxfd+1, &rset, &wset, NULL)) < 0) {
             if (errno != EINTR)
                 err_msg(errno, "Unable to multiplex I/O");
             else if (done)

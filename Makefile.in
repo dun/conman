@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 #
-# $Id: Makefile.in,v 1.25 2001/09/20 20:44:26 dun Exp $
+# $Id: Makefile.in,v 1.26 2001/09/25 20:48:51 dun Exp $
 ##
 
 PACKAGE=	@PACKAGE@
@@ -35,7 +35,7 @@ COMMON_OBJS2=	util.o util-file.o util-net.o util-str.o
 COMMON_OBJS=	$(COMMON_OBJS1) $(COMMON_OBJS2) @LIBOBJS@
 CLIENT_OBJS=	client.o client-conf.o client-sock.o client-tty.o $(COMMON_OBJS)
 SERVER_OBJS1=	server.o server-conf.o server-esc.o server-obj.o server-sock.o
-SERVER_OBJS2=	server-tty.o
+SERVER_OBJS2=	server-tty.o tselect.o
 SERVER_OBJS=	$(SERVER_OBJS1) $(SERVER_OBJS2) $(COMMON_OBJS)
 COMMON_LIBS=	$(LIBS)
 CLIENT_LIBS=	$(COMMON_LIBS)

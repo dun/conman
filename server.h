@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.31 2001/09/21 05:52:06 dun Exp $
+ *  $Id: server.h,v 1.32 2001/09/25 20:48:51 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -16,6 +16,10 @@
 #include <time.h>			/* for time_t                         */
 #include "common.h"
 #include "list.h"
+
+
+#define TELNET_MIN_TIMEOUT 15
+#define TELNET_MAX_TIMEOUT 1800
 
 
 enum obj_type {				/* bit-field limited to 4 values      */
@@ -65,6 +69,8 @@ typedef struct telnet_obj {		/* TELNET AUX OBJ DATA:               */
     int              port;		/*  remote telnetd port number        */
     sockaddr_t       saddr;		/*  n/w address of terminal server    */
     struct base_obj *logfile;		/*  log obj ref for console output    */
+    int              timer;		/*  timer id for reconnects           */
+    int              delay;		/*  secs until next reconnect attempt */
     int              iac;		/*  -1, or last char if in IAC seq    */
     unsigned char    optState[NTELOPTS];/*  rfc1143 Q-Method option state     */
     telcon_state_t   conState:2;	/*  state of network connection       */

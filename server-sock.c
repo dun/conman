@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.32 2001/09/23 01:54:52 dun Exp $
+ *  $Id: server-sock.c,v 1.33 2001/09/25 20:48:51 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -46,6 +46,7 @@ static int send_rsp(req_t *req, int errnum, char *errmsg);
 static int perform_query_cmd(req_t *req);
 static int perform_monitor_cmd(req_t *req, server_conf_t *conf);
 static int perform_connect_cmd(req_t *req, server_conf_t *conf);
+static void check_console_state(obj_t *console, obj_t *client);
 
 
 void process_client(client_arg_t *args)
@@ -729,6 +730,7 @@ static int perform_monitor_cmd(req_t *req, server_conf_t *conf)
     client = create_client_obj(conf, req);
     console = list_peek(req->consoles);
     assert(is_console_obj(console));
+    check_console_state(console, client);
     link_objs(console, client);
     return(0);
 }
@@ -759,6 +761,7 @@ static int perform_connect_cmd(req_t *req, server_conf_t *conf)
          */
         console = list_peek(req->consoles);
         assert(is_console_obj(console));
+        check_console_state(console, client);
         link_objs(client, console);
         link_objs(console, client);
     }
@@ -769,9 +772,47 @@ static int perform_connect_cmd(req_t *req, server_conf_t *conf)
         i = list_iterator_create(req->consoles);
         while ((console = list_next(i))) {
             assert(is_console_obj(console));
+            check_console_state(console, client);
             link_objs(client, console);
         }
         list_iterator_destroy(i);
     }
     return(0);
+}
+
+
+static void check_console_state(obj_t *console, obj_t *client)
+{
+/*  Checks the state of the console and warns the client if needed.
+ *  This informs the newly-connected client if strange things are afoot.
+ */
+    char buf[MAX_LINE];
+
+    assert(is_console_obj(console));
+    assert(is_client_obj(client));
+
+    /*  If linking a client to a downed telnet session,
+     *    notify the client and attempt an immediate reconnect of the console.
+     */
+    if (is_telnet_obj(console) && (console->aux.telnet.conState != TELCON_UP)) {
+
+        snprintf(buf, sizeof(buf),
+            "%sConsole [%s] is currently disconnected from <%s:%d>%s",
+            CONMAN_MSG_PREFIX, console->name, console->aux.telnet.host,
+            console->aux.telnet.port, CONMAN_MSG_SUFFIX);
+        strcpy(&buf[sizeof(buf) - 3], "\r\n");
+        write_obj_data(client, buf, strlen(buf), 1);
+        /*
+         *  Reset the timeout delay.
+         */
+        console->aux.telnet.delay = TELNET_MIN_TIMEOUT;
+        /*
+         *  DO NOT call connect_telnet_obj() while in the PENDING state
+         *    since it will be misinterpreted as the completion of the
+         *    non-blocking connect().
+         */
+        if (console->aux.telnet.conState == TELCON_DOWN)
+            connect_telnet_obj(console);
+    }
+    return;
 }

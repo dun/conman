@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.45 2001/09/23 01:54:52 dun Exp $
+ *  $Id: server-obj.c,v 1.46 2001/09/25 20:48:51 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -24,6 +24,7 @@
 #include "errors.h"
 #include "list.h"
 #include "server.h"
+#include "tselect.h"
 #include "util.h"
 #include "util-file.h"
 #include "util-net.h"
@@ -317,6 +318,8 @@ obj_t * create_telnet_obj(
     telnet->aux.telnet.port = port;
     telnet->aux.telnet.saddr = saddr;
     telnet->aux.telnet.logfile = NULL;
+    telnet->aux.telnet.timer = -1;
+    telnet->aux.telnet.delay = TELNET_MIN_TIMEOUT;
     telnet->aux.telnet.iac = -1;
     for (n=0; n<NTELOPTS; n++)
         telnet->aux.telnet.optState[n] = TELOPT_NO;
@@ -345,6 +348,11 @@ int connect_telnet_obj(obj_t *telnet)
     assert(is_telnet_obj(telnet));
     assert(telnet->aux.telnet.conState != TELCON_UP);
 
+    if (telnet->aux.telnet.timer >= 0) {
+        untimeout(telnet->aux.telnet.timer);
+        telnet->aux.telnet.timer = -1;
+    }
+
     if (telnet->aux.telnet.conState == TELCON_DOWN) {
         /*
          *  Initiate a non-blocking connection attempt.
@@ -364,8 +372,12 @@ int connect_telnet_obj(obj_t *telnet)
           sizeof(telnet->aux.telnet.saddr)) < 0) {
             if (errno == EINTR)
                 continue;
-            if (errno == EINPROGRESS)
+            if (errno == EINPROGRESS) {
+                telnet->aux.telnet.timer =
+                    timeout((CallBackF) disconnect_telnet_obj,
+                    telnet, TELNET_MIN_TIMEOUT * 1000);
                 telnet->aux.telnet.conState = TELCON_PENDING;
+            }
             else
                 disconnect_telnet_obj(telnet);
             return(-1);
@@ -400,17 +412,20 @@ int connect_telnet_obj(obj_t *telnet)
 
     /*  Success!
      */
-    DPRINTF("Console [%s] is UP.\n", telnet->name);
+    log_msg(0, "Console [%s] connected to <%s:%d>.", telnet->name,
+        telnet->aux.telnet.host, telnet->aux.telnet.port);
 
+    /*  Notify linked objs when transitioning into an UP state.
+     */
     now = create_short_time_string(0);
     snprintf(buf, sizeof(buf), "%sConsole [%s] connected to <%s:%d> at %s%s",
         CONMAN_MSG_PREFIX, telnet->name, telnet->aux.telnet.host,
         telnet->aux.telnet.port, now, CONMAN_MSG_SUFFIX);
     free(now);
-    buf[sizeof(buf) - 2] = '\n';
-    buf[sizeof(buf) - 1] = '\n';
+    strcpy(&buf[sizeof(buf) - 3], "\r\n");
     notify_objs(telnet->readers, telnet->writers, buf);
     telnet->aux.telnet.conState = TELCON_UP;
+    telnet->aux.telnet.delay = 0;
 
     send_telnet_cmd(telnet, DO, TELOPT_SGA);
     send_telnet_cmd(telnet, DO, TELOPT_ECHO);
@@ -421,7 +436,8 @@ int connect_telnet_obj(obj_t *telnet)
 
 void disconnect_telnet_obj(obj_t *telnet)
 {
-/*  Tears down the connection with the specified (telnet) obj.
+/*  Closes the existing connection with the specified (telnet) obj
+ *    and sets a timer for establishing a new connection.
  */
     char buf[MAX_LINE];
     char *now;
@@ -430,29 +446,40 @@ void disconnect_telnet_obj(obj_t *telnet)
     assert(telnet->fd > 0);
     assert(is_telnet_obj(telnet));
 
-    DPRINTF("Console [%s] is DOWN.\n", telnet->name);
-
+    if (telnet->aux.telnet.timer >= 0) {
+        untimeout(telnet->aux.telnet.timer);
+        telnet->aux.telnet.timer = -1;
+    }
     if (close(telnet->fd) < 0)
         err_msg(errno, "close() of <%s:%d> failed for [%s]",
             telnet->aux.telnet.host, telnet->aux.telnet.port, telnet->name);
-
     telnet->fd = -1;
 
+    /*  Notify linked objs when transitioning from an UP state.
+     */
     if (telnet->aux.telnet.conState == TELCON_UP) {
+        log_msg(0, "Console [%s] disconnected from <%s:%d>.", telnet->name,
+            telnet->aux.telnet.host, telnet->aux.telnet.port);
         now = create_short_time_string(0);
         snprintf(buf, sizeof(buf),
             "%sConsole [%s] disconnected from <%s:%d> at %s%s",
             CONMAN_MSG_PREFIX, telnet->name, telnet->aux.telnet.host,
             telnet->aux.telnet.port, now, CONMAN_MSG_SUFFIX);
         free(now);
-        buf[sizeof(buf) - 2] = '\n';
-        buf[sizeof(buf) - 1] = '\n';
+        strcpy(&buf[sizeof(buf) - 3], "\r\n");
         notify_objs(telnet->readers, telnet->writers, buf);
     }
+
+    /*  Set timer for establishing new connection using exponential backoff.
+     */
     telnet->aux.telnet.conState = TELCON_DOWN;
-
-    /*  SCHEDULE TIMER FOR ATTEMPT AT RE-ESTABLISHING THE CONNECTION. */
-
+    telnet->aux.telnet.timer = timeout((CallBackF) connect_telnet_obj,
+        telnet, telnet->aux.telnet.delay * 1000);
+    if (telnet->aux.telnet.delay == 0)
+        telnet->aux.telnet.delay = TELNET_MIN_TIMEOUT;
+    else if (telnet->aux.telnet.delay < TELNET_MAX_TIMEOUT)
+        telnet->aux.telnet.delay =
+            MIN(telnet->aux.telnet.delay * 2, TELNET_MAX_TIMEOUT);
     return;
 }
 
@@ -598,12 +625,12 @@ void link_objs(obj_t *src, obj_t *dst)
 {
 /*  Creates a link so data read from (src) is written to (dst).
  */
-    ListIterator i;
+    int gotBcast, gotForce, gotJoin;
     char *now;
     char *tty;
-    obj_t *writer;
-    int gotBcast, gotForce, gotJoin;
     char buf[MAX_LINE];
+    ListIterator i;
+    obj_t *writer;
 
     /*  If the dst console already has writers,
      *    display a warning if the request is to be joined
@@ -626,8 +653,7 @@ void link_objs(obj_t *src, obj_t *dst)
             src->aux.client.req->user, src->aux.client.req->host,
             (tty ? " on " : ""), (tty ? tty : ""), now, CONMAN_MSG_SUFFIX);
         free(now);
-        buf[sizeof(buf) - 2] = '\n';
-        buf[sizeof(buf) - 1] = '\0';
+        strcpy(&buf[sizeof(buf) - 3], "\r\n");
         write_obj_data(src, buf, strlen(buf), 1);
 
         i = list_iterator_create(dst->writers);
@@ -691,8 +717,7 @@ static void unlink_objs_helper(obj_t *src, obj_t *dst)
             src->name, dst->aux.client.req->user, dst->aux.client.req->host,
             (tty ? " on " : ""), (tty ? tty : ""), now, CONMAN_MSG_SUFFIX);
         free(now);
-        buf[sizeof(buf) - 2] = '\n';
-        buf[sizeof(buf) - 1] = '\0';
+        strcpy(&buf[sizeof(buf) - 3], "\r\n");
 
         i = list_iterator_create(src->writers);
         while ((writer = list_next(i))) {
@@ -724,8 +749,8 @@ void shutdown_obj(obj_t *obj)
 
     assert(obj->fd >= 0);
 
-    /*  If a telent obj is shut down, tear down the existing connection
-     *    and attempt to initiate a new connection in the near future.
+    /*  If a telent obj is shut down, shutdown the existing connection
+     *    and attempt to establish a new connection.
      */
     if (is_telnet_obj(obj)) {
         disconnect_telnet_obj(obj);
