@@ -2,7 +2,7 @@
 # Alpha Library Functions
 #   or Alien Life Form (ALF)
 ##
-# $Id: alpha.exp,v 1.3 2001/08/21 21:50:04 dun Exp $
+# $Id: alpha.exp,v 1.4 2001/08/22 22:54:58 dun Exp $
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
 
@@ -112,7 +112,7 @@ proc alpha_do_srm_cmd {spawn_id output_id console echo cmd {tmout 10}} {
   } -nocase -re "(^\[^\r]*jumping to bootstrap code\[^\r]*)\r\n" {
     if {$echo} {exp_send -i $output_id "$expect_out(1,string)\n"}
     return 1				;# success for "boot" cmd
-  } -nocase -re "(^\[^\r]*received bootp packet\[^\r]*)\r\n" {
+  } -nocase -re "(^\[^\r]*bootstrap code read in\[^\r]*)\r\n" {
     if {$echo} {exp_send -i $output_id "$expect_out(1,string)\n"}
     return 1				;# success for "boot" cmd via BOOTP
   } -nocase -re "(^\[^\r]*(bad value|invalid|no such command)\[^\r]*)\r\n" {
