@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-conf.c,v 1.50 2002/05/12 19:20:29 dun Exp $
+ *  $Id: client-conf.c,v 1.51 2002/05/14 04:32:48 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -230,11 +230,6 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
         }
     }
 
-    if (gotHelp || (argc == 1)) {
-        display_client_help(conf);
-        exit(0);
-    }
-
     /*  Disable those options not used in R/O mode.
      */
     if (conf->req->command == MONITOR) {
@@ -257,6 +252,13 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
                 list_append(conf->req->consoles, create_string(p));
             p = q;
         }
+    }
+
+    if (gotHelp
+        || ((conf->req->command != QUERY)
+            && list_is_empty(conf->req->consoles))) {
+        display_client_help(conf);
+        exit(0);
     }
     return;
 }
