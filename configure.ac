@@ -3,7 +3,7 @@ dnl
 dnl ConMan AutoConf Config Jazz
 dnl   by Chris Dunlap <cdunlap@llnl.gov>
 dnl
-dnl $Id: configure.ac,v 1.10 2001/12/20 20:13:56 dun Exp $
+dnl $Id: configure.ac,v 1.11 2001/12/27 17:09:54 dun Exp $
 
 
 dnl Prologue.
@@ -110,6 +110,7 @@ AC_CHECK_FUNCS( \
   inet_ntop \
   inet_pton \
   localtime_r \
+  strcasecmp \
 )
 AC_REPLACE_FUNCS( \
   strlcat \

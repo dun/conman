@@ -21,6 +21,9 @@
 /* Define if the system has the type `socklen_t'. */
 #undef HAVE_SOCKLEN_T
 
+/* Define if you have the `strcasecmp' function. */
+#undef HAVE_STRCASECMP
+
 /* Define if you have the `strlcat' function. */
 #undef HAVE_STRLCAT
 
