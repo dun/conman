@@ -2,7 +2,7 @@
  *  list.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: list.c,v 1.1 2001/05/04 15:26:41 dun Exp $
+ *  $Id: list.c,v 1.2 2001/05/07 22:56:43 dun Exp $
  ******************************************************************************
  *  Refer to "list.h" for documentation on public functions.
 \******************************************************************************/
@@ -75,6 +75,7 @@ void list_destroy(List l)
     assert(l->magic == LIST_MAGIC);
     i = l->iNext;
     while (i) {
+        assert(i->magic == LIST_MAGIC);
         iTmp = i->iNext;
         i->magic = 0;
         free(i);
@@ -277,6 +278,7 @@ void list_iterator_destroy(ListIterator i)
     assert(i->magic == LIST_MAGIC);
     assert(i->list->magic == LIST_MAGIC);
     for (pi=&i->list->iNext; *pi; pi=&(*pi)->iNext) {
+        assert((*pi)->magic == LIST_MAGIC);
         if (*pi == i) {
             *pi = (*pi)->iNext;
             break;
@@ -311,10 +313,8 @@ void * list_insert(ListIterator i, void *x)
     assert(i->magic == LIST_MAGIC);
     assert(i->list->magic == LIST_MAGIC);
     assert(x);
-    if (list_node_create(i->list, i->prev, x)) {
-        i->prev = &(*i->prev)->next;
+    if (list_node_create(i->list, i->prev, x))
         return(x);
-    }
     return(NULL);
 }
 
@@ -365,6 +365,7 @@ static void * list_node_create(List l, ListNode *pp, void *x)
  *  Returns a ptr to data (x), or NULL if insertion fails.
  */
     ListNode p;
+    ListIterator i;
 
     assert(l);
     assert(l->magic == LIST_MAGIC);
@@ -377,6 +378,15 @@ static void * list_node_create(List l, ListNode *pp, void *x)
         l->tail = &p->next;
     *pp = p;
     l->count++;
+    i = l->iNext;
+    while (i) {
+        if (i->prev == pp)
+            i->prev = &p->next;
+        else if (i->pos == p->next)
+            i->pos = p;
+        assert((i->pos == *i->prev) || (i->pos == (*i->prev)->next));
+        i = i->iNext;
+    }
     return(x);
 }
 
@@ -388,8 +398,9 @@ static void * list_node_destroy(List l, ListNode *pp)
  *  Returns the data ptr associated with list item being removed,
  *    or NULL if (*pp) points to the NULL element.
  */
-    ListNode p;
     void *x;
+    ListNode p;
+    ListIterator i;
 
     assert(l);
     assert(l->magic == LIST_MAGIC);
@@ -400,6 +411,15 @@ static void * list_node_destroy(List l, ListNode *pp)
     if (!(*pp = p->next))
         l->tail = pp;
     l->count--;
+    i = l->iNext;
+    while (i) {
+        if (i->pos == p)
+            i->pos = p->next, i->prev = pp;
+        else if (i->prev == &p->next)
+            i->prev = pp;
+        assert((i->pos == *i->prev) || (i->pos == (*i->prev)->next));
+        i = i->iNext;
+    }
     free(p);
     return(x);
 }
