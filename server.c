@@ -2,7 +2,7 @@
  *  server.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server.c,v 1.3 2001/05/11 22:49:00 dun Exp $
+ *  $Id: server.c,v 1.4 2001/05/14 16:22:09 dun Exp $
 \******************************************************************************/
 
 
@@ -142,18 +142,15 @@ static void enable_console_logging(server_conf_t *conf)
     while ((obj = list_next(i))) {
         if ((obj->type != CONSOLE) || (obj->aux.console.log == NULL))
             continue;
-        if (!(log = create_logfile_obj(obj->aux.console.log)))
+        if (!(log = create_logfile_obj(conf->objs, obj->aux.console.log)))
             continue;
         if (link_objs(obj, log) < 0) {
             destroy_obj(log);
             continue;
         }
-        if (!list_append(conf->objs, log))
-            err_msg(0, "Out of memory");
-
         assert(log->writer->type == CONSOLE);
         now = create_time_string(0);
-        str = create_fmt_string("* Console [%s] log started %s.\n\n",
+        str = create_fmt_string("* Console [%s] log started %s.\r\n\r\n",
             log->writer->name, now);
         write_obj_data(log, str, strlen(str));
         free(now);
@@ -264,14 +261,6 @@ static void mux_io(server_conf_t *conf)
                 err_msg(rc, "pthread_create() failed");
         }
 
-        /*  FIX_ME: Something must be done to protect access to
-         *    both the conf->objs list and obj->readers list.
-         *    mux_io() cannot simply hold the objsLock mutex
-         *    the whole time since that would prevent any other
-         *    threads from accessing the list.
-         *  Maybe put a mutex in the List class to protect stuff
-         *    like list insertions and deletions, etc.
-         */
         list_iterator_reset(i);
         while ((obj = list_next(i))) {
             if (obj->fd < 0)

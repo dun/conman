@@ -2,7 +2,7 @@
  *  server-sock.c  
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server-sock.c,v 1.3 2001/05/11 22:49:00 dun Exp $
+ *  $Id: server-sock.c,v 1.4 2001/05/14 16:22:09 dun Exp $
 \******************************************************************************/
 
 
@@ -265,11 +265,13 @@ static int recv_greeting(req_t *req)
             "Invalid greeting: no user specified");
         return(-1);
     }
+#ifdef NDEBUG
     if (strcmp(req->ip, "127.0.0.1")) {
         send_rsp(req, CONMAN_ERR_AUTHENTICATE,
             "Authentication required (but not yet implemented)");
         return(-1);
     }
+#endif /* NDEBUG */
 
     DPRINTF("Received request from <%s@%s>.\n",
         req->user, (req->host ? req->host : req->ip));
@@ -662,16 +664,14 @@ static void perform_connect_cmd(req_t *req, server_conf_t *conf)
 
     send_rsp(req, CONMAN_ERR_NONE, NULL);
 
-    set_descriptor_nonblocking(req->sd);
     console = list_pop(req->consoles);
-    if (!(socket = create_socket_obj(req->user, req->host, req->sd)))
+    socket = create_socket_obj(conf->objs, req->user, req->host, req->sd);
+    if (!socket)
         return;
     if ((link_objs(socket, console) < 0) || (link_objs(console, socket) < 0)) {
         destroy_obj(socket);
         return;
     }
-    if (!list_append(conf->objs, socket))
-        err_msg(0, "Out of memory");
     return;
 }
 

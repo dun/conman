@@ -2,7 +2,7 @@
  *  client-tty.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: client-tty.c,v 1.3 2001/05/11 22:49:00 dun Exp $
+ *  $Id: client-tty.c,v 1.4 2001/05/14 16:22:09 dun Exp $
 \******************************************************************************/
 
 
@@ -24,8 +24,8 @@
 #include "util.h"
 
 
-#define ESC_CLOSE_CHAR	'.'
-#define ESC_HELP_CHAR	'?'
+#define ESC_CHAR_CLOSE	'.'
+#define ESC_CHAR_HELP	'?'
 
 
 static void exit_handler(int signum);
@@ -128,7 +128,6 @@ static void set_raw_tty_mode(int fd, struct termios *old)
     term.c_cc[VMIN] = 1;
     term.c_cc[VTIME] = 0;
 
-    DPRINTF("Setting raw tty mode.\n");
     if (tcsetattr(fd, TCSANOW, &term) < 0)
         err_msg(errno, "tcgetattr(%d) failed", fd);
     return;
@@ -142,7 +141,6 @@ static void restore_tty_mode(int fd, struct termios *new)
 
     if (tcsetattr(fd, TCSANOW, new) < 0)
         err_msg(errno, "tcgetattr(%d) failed", fd);
-    DPRINTF("Restored cooked tty mode.\n");
     return;
 }
 
@@ -169,12 +167,12 @@ static int read_from_stdin(client_conf_t *conf)
         return(1);
     }
     if (mode == ESC) {
-        if (c == ESC_HELP_CHAR) {
+        if (c == ESC_CHAR_HELP) {
             perform_help_esc(conf, c);
             mode = EOL;
             return(1);
         }
-        if (c == ESC_CLOSE_CHAR) {
+        if (c == ESC_CHAR_CLOSE) {
             perform_close_esc(conf, c);
             mode = EOL;
             return(0);			/* fake an EOF to close connection */
@@ -249,9 +247,9 @@ static void perform_help_esc(client_conf_t *conf, char c)
 
     str = write_esc_char(conf->escapeChar, esc);
     assert((str - esc) <= sizeof(esc));
-    str = write_esc_char(ESC_HELP_CHAR, escHelp);
+    str = write_esc_char(ESC_CHAR_HELP, escHelp);
     assert((str - escHelp) <= sizeof(escHelp));
-    str = write_esc_char(ESC_CLOSE_CHAR, escClose);
+    str = write_esc_char(ESC_CHAR_CLOSE, escClose);
     assert((str - escClose) <= sizeof(escClose));
 
     /*  Append CR/LFs since tty is in raw mode.

@@ -2,7 +2,7 @@
  *  server.h
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server.h,v 1.3 2001/05/11 22:49:00 dun Exp $
+ *  $Id: server.h,v 1.4 2001/05/14 16:22:09 dun Exp $
 \******************************************************************************/
 
 
@@ -57,6 +57,7 @@ typedef struct base_obj {		/* BASE OBJ:                          */
     pthread_mutex_t  bufLock;		/*  lock protecting access to buf     */
     struct base_obj *writer;		/*  obj that writes to me             */
     List             readers;		/*  list of objs that i write to      */
+    List             objs;		/*  list of all objs from conf        */
     enum obj_type    type;		/*  type of auxxiliary obj            */
     aux_obj_t        aux;		/*  auxiliary obj data                */
 } obj_t;
@@ -66,7 +67,6 @@ typedef struct server_conf {
     char            *logname;		/* file to which events are logged    */
     int              ld;		/* listening socket descriptor        */
     List             objs;		/* list of all server objects         */
-    pthread_mutex_t  objsLock;		/* lock protecting access to objs     */
 } server_conf_t;
 
 
@@ -87,13 +87,16 @@ void process_server_conf_file(server_conf_t *conf);
 **  server-obj.c  **
 \******************/
 
-obj_t * create_console_obj(char *name, char *dev, char *log, char *rst, int bps);
+obj_t * create_console_obj(List objs, char *name, char *dev,
+    char *log, char *rst, int bps);
 
-obj_t * create_logfile_obj(char *name);
+obj_t * create_logfile_obj(List objs, char *name);
 
-obj_t * create_socket_obj(char *user, char *host, int sd);
+obj_t * create_socket_obj(List objs, char *user, char *host, int sd);
 
 void destroy_obj(obj_t *obj);
+
+void dealloc_obj(obj_t *obj);
 
 int open_obj(obj_t *obj);
 
@@ -101,7 +104,11 @@ void close_obj(obj_t *obj);
 
 int compare_objs(obj_t *obj1, obj_t *obj2);
 
+int find_obj(obj_t *obj, obj_t *key);
+
 int link_objs(obj_t *src, obj_t *dst);
+
+int unlink_obj(obj_t *obj);
 
 void write_to_obj(obj_t *obj);
 

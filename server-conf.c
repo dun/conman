@@ -2,7 +2,7 @@
  *  server-conf.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server-conf.c,v 1.2 2001/05/11 22:49:00 dun Exp $
+ *  $Id: server-conf.c,v 1.3 2001/05/14 16:22:09 dun Exp $
 \******************************************************************************/
 
 
@@ -65,25 +65,20 @@ static void parse_logfile_cmd(Lex l, server_conf_t *conf);
 server_conf_t * create_server_conf(void)
 {
     server_conf_t *conf;
-    int rc;
 
     if (!(conf = malloc(sizeof(server_conf_t))))
         err_msg(0, "Out of memory");
     conf->filename = create_string(DEFAULT_SERVER_CONF);
     conf->logname = NULL;
     conf->ld = -1;
-    if (!(conf->objs = list_create((ListDelF) destroy_obj)))
+    if (!(conf->objs = list_create((ListDelF) dealloc_obj)))
         err_msg(0, "Out of memory");
-    if ((rc = pthread_mutex_init(&conf->objsLock, NULL)) != 0)
-        err_msg(rc, "pthread_mutex_init() failed for objs");
     return(conf);
 }
 
 
 void destroy_server_conf(server_conf_t *conf)
 {
-    int rc;
-
     if (conf->filename)
         free(conf->filename);
     if (conf->logname)
@@ -94,8 +89,6 @@ void destroy_server_conf(server_conf_t *conf)
         conf->ld = -1;
     }
     list_destroy(conf->objs);
-    if ((rc = pthread_mutex_destroy(&conf->objsLock)) != 0)
-        err_msg(rc, "pthread_mutex_destroy() failed for objs");
     free(conf);
     return;
 }
@@ -294,10 +287,8 @@ static void parse_console_cmd(Lex l, server_conf_t *conf)
             lex_next(l);
     }
     else {
-        if (!(obj = create_console_obj(name, dev, log, rst, bps)))
+        if (!(obj = create_console_obj(conf->objs, name, dev, log, rst, bps)))
             err_msg(0, "Unable to create console object '%s'", name);
-        if (!list_append(conf->objs, obj))
-            err_msg(0, "Out of memory");
     }
     return;
 }

@@ -2,7 +2,7 @@
  *  server-obj.c  
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server-obj.c,v 1.3 2001/05/11 22:49:00 dun Exp $
+ *  $Id: server-obj.c,v 1.4 2001/05/14 16:22:09 dun Exp $
 \******************************************************************************/
 
 
@@ -25,13 +25,14 @@
 #include "util.h"
 
 
-static obj_t * create_obj(char *name, enum obj_type type);
+static obj_t * create_obj(List objs, char *name, enum obj_type type);
 static void set_raw_console_mode(obj_t *obj);
 static void restore_console_mode(obj_t *obj);
 static void parse_buf_for_control(obj_t *obj, void *src, int *pLen);
 
 
-obj_t * create_console_obj(char *name, char *dev, char *log, char *rst, int bps)
+obj_t * create_console_obj(List objs, char *name, char *dev,
+    char *log, char *rst, int bps)
 {
     obj_t *obj;
 
@@ -44,7 +45,7 @@ obj_t * create_console_obj(char *name, char *dev, char *log, char *rst, int bps)
     /* FIX_ME: config file needs directive to specify execute dir for rst */
     /* FIX_ME: check bps for valid baud rate (cf APUE p343-344) */
 
-    obj = create_obj(name, CONSOLE);
+    obj = create_obj(objs, name, CONSOLE);
     obj->aux.console.dev = create_string(dev);
     if (log && *log)
         obj->aux.console.log = create_string(log);
@@ -55,18 +56,18 @@ obj_t * create_console_obj(char *name, char *dev, char *log, char *rst, int bps)
 }
 
 
-obj_t * create_logfile_obj(char *name)
+obj_t * create_logfile_obj(List objs, char *name)
 {
     obj_t *obj;
 
     assert(name);
 
-    obj = create_obj(name, LOGFILE);
+    obj = create_obj(objs, name, LOGFILE);
     return(obj);
 }
 
 
-obj_t * create_socket_obj(char *user, char *host, int sd)
+obj_t * create_socket_obj(List objs, char *user, char *host, int sd)
 {
     char *name;
     obj_t *obj;
@@ -75,15 +76,14 @@ obj_t * create_socket_obj(char *user, char *host, int sd)
     assert(host);
     assert(sd >= 0);
 
-    /*  FIX_ME: user@host is not unique -- doppleganger danger?
-     */
     name = create_fmt_string("%s@%s", user, host);
-    obj = create_obj(name, SOCKET);
+    obj = create_obj(objs, name, SOCKET);
     free(name);
 
     /*  Socket objs are created in the "active" state (ie, fd >= 0)
      *    since the connection has already been established.
      */
+    set_descriptor_nonblocking(sd);
     obj->fd = sd;
 
     obj->aux.socket.gotIAC = 0;
@@ -94,7 +94,7 @@ obj_t * create_socket_obj(char *user, char *host, int sd)
 }
 
 
-static obj_t * create_obj(char *name, enum obj_type type)
+static obj_t * create_obj(List objs, char *name, enum obj_type type)
 {
     obj_t *obj;
     int rc;
@@ -102,11 +102,10 @@ static obj_t * create_obj(char *name, enum obj_type type)
     assert(name);
     assert(type == CONSOLE || type == LOGFILE || type == SOCKET);
 
-    /*  FIX_ME: Lock conf->objsLock */
-
-    /*  Ensure (name) not already in use by another object of same (type).
+    /*  FIX_ME? Ensure name not already in use by another obj of same type
      */
-
+    /*  FIX_ME: Return NULL if out-of-memory
+     */
     if (!(obj = malloc(sizeof(obj_t))))
         err_msg(0, "Out of memory");
     obj->name = create_string(name);
@@ -120,8 +119,14 @@ static obj_t * create_obj(char *name, enum obj_type type)
         err_msg(0, "Out of memory");
     obj->type = type;
 
-    /*  FIX_ME: Add object to configuration */
-    /*  FIX_ME: Unlock conf->objsLock */
+    /*  Save ref to objs list so destroy_obj() can remove the obj.
+     */
+    obj->objs = objs;
+
+    /*  Add obj to conf->objs list.
+     */
+    if (!list_append(objs, obj))
+        err_msg(0, "Out of memory");
 
     DPRINTF("Created object [%s].\n", name);
     return(obj);   
@@ -130,6 +135,18 @@ static obj_t * create_obj(char *name, enum obj_type type)
 
 void destroy_obj(obj_t *obj)
 {
+    int n;
+
+    n = list_delete_all(obj->objs, (ListFindF) find_obj, obj);
+    assert(n == 1);
+    return;
+}
+
+
+void dealloc_obj(obj_t *obj)
+{
+/*  Note: Do NOT destroy objs list; it is just a ref to the actual objs list.
+ */
     int rc;
 
     assert(obj->bufInPtr == obj->bufOutPtr);
@@ -251,40 +268,11 @@ static void set_raw_console_mode(obj_t *obj)
 
 void close_obj(obj_t *obj)
 {
-    ListIterator i;
-    obj_t *reader;
-
     /*  FIX_ME: Write msg to console logfile when object is closed. */
 
-    DPRINTF("Closed object [%s].\n", obj->name);
+    unlink_obj(obj);
 
-    /*  Remove object link between my writer and me.
-     */
-    if (obj->writer != NULL) {
-        if (!(i = list_iterator_create(obj->writer->readers)))
-            err_msg(0, "Out of memory");
-        while ((reader = list_next(i))) {
-            if (reader == obj) {
-                list_delete(i);
-                if ((obj->writer->writer == NULL)
-                  && list_is_empty(obj->writer->readers))
-                    close_obj(obj->writer);
-                obj->writer = NULL;
-                break;
-            }
-        }
-        list_iterator_destroy(i);
-    }
-
-    /*  Remove object link between each of my readers and me.
-     */
-    while ((reader == list_pop(obj->readers))) {
-        if (reader->writer == obj) {
-            reader->writer = NULL;
-            if (list_is_empty(reader->readers))
-                close_obj(reader);
-        }
-    }
+    DPRINTF("Closing object [%s].\n", obj->name);
 
     /*  If buffer contains data, set "gotEOF" so write_to_obj() will flush it.
      */
@@ -300,8 +288,9 @@ void close_obj(obj_t *obj)
                 err_msg(errno, "close(%d) failed", obj->fd);
             obj->fd = -1;
         }
-        if (obj->type == SOCKET)
+        if (obj->type == SOCKET) {
             destroy_obj(obj);
+        }
     }
     return;
 }
@@ -336,6 +325,12 @@ int compare_objs(obj_t *obj1, obj_t *obj2)
 }
 
 
+int find_obj(obj_t *obj, obj_t *key)
+{
+    return(obj == key);
+}
+
+
 int link_objs(obj_t *src, obj_t *dst)
 {
     int rcSrc, rcDst;
@@ -355,14 +350,14 @@ int link_objs(obj_t *src, obj_t *dst)
         }
     }
 
-    /*  If the dst console is already in R/W use by another client, steal it!
+    /*  If the dst console is already in R/W use by another client, steal it.
      */
     if (dst->writer != NULL) {
         assert(src->type == SOCKET);
         assert(dst->type == CONSOLE);
         assert(dst->writer->type == SOCKET);
         now = create_time_string(0);
-        str = create_fmt_string("\nConsole '%s' stolen by <%s> at %s.\n",
+        str = create_fmt_string("\nConsole '%s' stolen by <%s> at %s.\r\n",
             dst->name, src->name, now);
         write_obj_data(dst->writer, str, strlen(str));
         free(now);
@@ -377,6 +372,49 @@ int link_objs(obj_t *src, obj_t *dst)
         err_msg(0, "Out of memory");
 
     DPRINTF("Linked object [%s] to [%s].\n", src->name, dst->name);
+    return(0);
+}
+
+
+int unlink_obj(obj_t *obj)
+{
+    ListIterator i;
+    obj_t *reader;
+
+    DPRINTF("Unlinking object [%s].\n", obj->name);
+
+    /*  Remove object link between my writer and me.
+     */
+    if (obj->writer != NULL) {
+        if (!(i = list_iterator_create(obj->writer->readers)))
+            err_msg(0, "Out of memory");
+        while ((reader = list_next(i))) {
+            if (reader == obj) {
+                DPRINTF("Removing(1) [%s] from [%s] readers.\n",
+                    obj->name, obj->writer->name);
+                list_delete(i);
+                if ((obj->writer->writer == NULL)
+                  && list_is_empty(obj->writer->readers))
+                    close_obj(obj->writer);
+                obj->writer = NULL;
+                break;
+            }
+        }
+        list_iterator_destroy(i);
+    }
+
+    /*  Remove object link between each of my readers and me.
+     */
+    while ((reader = list_pop(obj->readers))) {
+        if (reader->writer == obj) {
+            DPRINTF("Removing(2) [%s] from [%s] readers.\n",
+                reader->name, obj->name);
+            reader->writer = NULL;
+            if (list_is_empty(reader->readers))
+                close_obj(reader);
+        }
+    }
+
     return(0);
 }
 
@@ -421,7 +459,7 @@ again:
             }
             else if (errno == EPIPE) {
                 obj->gotEOF = 1;
-                obj->bufInPtr = obj->bufOutPtr = obj->buf;	/* flush buf! */
+                obj->bufInPtr = obj->bufOutPtr = obj->buf;	/* flush buf */
             }
             else if ((errno != EAGAIN) && (errno != EWOULDBLOCK)) {
                 err_msg(errno, "write error on fd=%d (%s)", obj->fd, obj->name);

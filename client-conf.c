@@ -2,7 +2,7 @@
  *  client-conf.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: client-conf.c,v 1.3 2001/05/11 22:49:00 dun Exp $
+ *  $Id: client-conf.c,v 1.4 2001/05/14 16:22:09 dun Exp $
 \******************************************************************************/
 
 
@@ -184,7 +184,7 @@ static void display_client_help(char *prog)
     printf("  -h        Display this help.\n");
     printf("  -b        Broadcast (write-only) to multiple consoles.\n");
     printf("  -d HOST   Specify location of server"
-        " (default: '%s:%d').\n", DEFAULT_CONMAN_HOST, DEFAULT_CONMAN_PORT);
+        " (default: %s:%d).\n", DEFAULT_CONMAN_HOST, DEFAULT_CONMAN_PORT);
     printf("  -e CHAR   Set escape character (default: '%s').\n", esc);
     printf("  -E        Disable escape character.\n");
     printf("  -f        Force open connection.\n");
