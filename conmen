@@ -3,7 +3,7 @@
 #******************************************************************************
 # ConMen: a wrapper to aid in ConMan broadcast sessions.
 #******************************************************************************
-# $Id: conmen,v 1.12 2002/05/12 19:20:29 dun Exp $
+# $Id: conmen,v 1.13 2002/05/19 06:26:36 dun Exp $
 #******************************************************************************
 # Copyright (C) 2001-2002 The Regents of the University of California.
 # Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -38,7 +38,7 @@ use Getopt::Std;
 
 $SIG{TERM} = exit_handler;
 
-$ENV{PATH} = "/usr/bin:/usr/local/bin:/usr/bin/X11:/usr/X11R6/bin";
+$ENV{PATH} = "/usr/bin:/usr/local/bin:/usr/bin/X11:/usr/X11R6/bin:/usr/X/bin";
 
 $ENV{DISPLAY}
     or die("ERROR: DISPLAY is not set.\n");
