@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client.c,v 1.15 2002/03/29 05:39:52 dun Exp $
+ *  $Id: client.c,v 1.16 2002/03/30 01:35:38 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -40,6 +40,7 @@ int main(int argc, char *argv[])
     client_conf_t *conf;
 
     conf = create_client_conf();
+    process_client_env_vars(conf);
     process_client_cmd_line(argc, argv, conf);
     open_client_log(conf);
 

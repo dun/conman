@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-conf.c,v 1.42 2002/03/29 06:59:55 dun Exp $
+ *  $Id: client-conf.c,v 1.43 2002/03/30 01:35:38 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -49,7 +49,7 @@
 
 
 static void read_consoles_from_file(List consoles, char *file);
-static void display_client_help(char *prog);
+static void display_client_help(client_conf_t *conf);
 
 
 client_conf_t * create_client_conf(void)
@@ -61,6 +61,8 @@ client_conf_t * create_client_conf(void)
 
     if (!(conf = malloc(sizeof(client_conf_t))))
         out_of_memory();
+
+    conf->prog = NULL;
     conf->req = create_req();
 
     /*  Who am I?
@@ -105,6 +107,8 @@ void destroy_client_conf(client_conf_t *conf)
     if (!conf)
         return;
 
+    if (conf->prog)
+        free(conf->prog);
     destroy_req(conf->req);
     if (conf->log)
         free(conf->log);
@@ -121,11 +125,37 @@ void destroy_client_conf(client_conf_t *conf)
 }
 
 
+void process_client_env_vars(client_conf_t *conf)
+{
+    char *p;
+    int i;
+
+    if ((p = getenv("CONMAN_HOST")) && (*p)) {
+        if (conf->req->host)
+            free(conf->req->host);
+        conf->req->host = create_string(p);
+    }
+    if ((p = getenv("CONMAN_PORT"))) {
+        i = atoi(p);
+        if (i > 0)
+            conf->req->port = i;
+    }
+    if ((p = getenv("CONMAN_ESCAPE")) && (*p)) {
+        conf->escapeChar = p[0];
+    }
+    return;
+}
+
+
 void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
 {
     int c;
     int i;
     char *str;
+    int gotHelp = 0;
+
+    if (conf->prog == NULL)
+        conf->prog = create_string(argv[0]);
 
     opterr = 0;
     while ((c = getopt(argc, argv, "bd:e:fF:hjl:mqQrvV")) != -1) {
@@ -153,8 +183,8 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
             read_consoles_from_file(conf->req->consoles, optarg);
             break;
         case 'h':
-            display_client_help(argv[0]);
-            exit(0);
+            gotHelp = 1;
+            break;
         case 'j':
             conf->req->enableForce = 0;
             conf->req->enableJoin = 1;
@@ -189,6 +219,11 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
             fprintf(stderr, "ERROR: Option \"%c\" not implemented.\n", c);
             exit(1);
         }
+    }
+
+    if (gotHelp) {
+        display_client_help(conf);
+        exit(0);
     }
 
     /*  Disable those options not used in R/O mode.
@@ -265,17 +300,17 @@ static void read_consoles_from_file(List consoles, char *file)
 }
 
 
-static void display_client_help(char *prog)
+static void display_client_help(client_conf_t *conf)
 {
     char esc[3];
 
-    write_esc_char(DEFAULT_CLIENT_ESCAPE, esc);
+    write_esc_char(conf->escapeChar, esc);
 
-    printf("Usage: %s [OPTIONS] <console(s)>\n", prog);
+    printf("Usage: %s [OPTIONS] <console(s)>\n", conf->prog);
     printf("\n");
     printf("  -b        Broadcast (write-only) to multiple consoles.\n");
     printf("  -d HOST   Specify server destination. [%s:%d]\n",
-        CONMAN_HOST, atoi(CONMAN_PORT));
+        conf->req->host, conf->req->port);
     printf("  -e CHAR   Specify escape character. [%s]\n", esc);
     printf("  -f        Force connection (console-stealing).\n");
     printf("  -F FILE   Read console names from file.\n");

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client.h,v 1.16 2002/03/29 05:39:52 dun Exp $
+ *  $Id: client.h,v 1.17 2002/03/30 01:35:38 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -34,6 +34,7 @@
 
 
 typedef struct client_conf {
+    char           *prog;               /* name of client program            */
     req_t          *req;                /* client request info               */
     int             escapeChar;         /* char to issue client escape seq   */
     char           *log;                /* connection logfile name           */
@@ -53,6 +54,8 @@ typedef struct client_conf {
 client_conf_t * create_client_conf(void);
 
 void destroy_client_conf(client_conf_t *conf);
+
+void process_client_env_vars(client_conf_t *conf);
 
 void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf);
 
