@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.32 2001/12/20 22:00:32 dun Exp $
+ *  $Id: server-conf.c,v 1.33 2001/12/22 01:08:46 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -334,22 +334,28 @@ static void signal_daemon(server_conf_t *conf, int signum)
  */
     pid_t pid;
     char *msg;
+    int gotError = 0;
 
     assert(conf != NULL);
     assert(conf->confFileName != NULL);
     assert(signum > 0);
 
-    if ((conf->fd = open(conf->confFileName, O_RDONLY)) < 0)
-        err_msg(errno, "Unable to open \"%s\"", conf->confFileName);
-
-    if (!(pid = is_write_lock_blocked(conf->fd))) {
-        if (conf->enableVerbose)
-            printf("Configuration \"%s\" is not active.\n", conf->confFileName);
+    if ((conf->fd = open(conf->confFileName, O_RDONLY)) < 0) {
+        printf("ERROR: Unable to open \"%s\": %s.\n",
+            conf->confFileName, strerror(errno));
+        gotError = 1;
+    }
+    else if (!(pid = is_write_lock_blocked(conf->fd))) {
+        printf("ERROR: Configuration \"%s\" is not active.\n",
+            conf->confFileName);
+        gotError = 1;
     }
     else {
-        if (kill(pid, signum) < 0)
-            err_msg(errno, "Unable to send signal=%d to pid %d.\n",
-                signum, pid);
+        if (kill(pid, signum) < 0) {
+            printf("ERROR: Unable to send signal=%d to pid %d: %s.\n",
+                signum, pid, strerror(errno));
+            gotError = 1;
+        }
         else if (conf->enableVerbose) {
             if (signum == SIGHUP)
                 msg = "reconfigured on";
@@ -363,7 +369,7 @@ static void signal_daemon(server_conf_t *conf, int signum)
     }
 
     destroy_server_conf(conf);
-    exit(0);
+    exit(gotError ? 1 : 0);
 }
 
 
