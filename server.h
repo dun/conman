@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.32 2001/09/25 20:48:51 dun Exp $
+ *  $Id: server.h,v 1.33 2001/09/27 01:26:00 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -18,8 +18,9 @@
 #include "list.h"
 
 
-#define TELNET_MIN_TIMEOUT 15
-#define TELNET_MAX_TIMEOUT 1800
+#define RESET_CMD_TIMEOUT	60
+#define TELNET_MIN_TIMEOUT	15
+#define TELNET_MAX_TIMEOUT	1800
 
 
 enum obj_type {				/* bit-field limited to 4 values      */
@@ -91,7 +92,7 @@ typedef struct base_obj {		/* BASE OBJ:                          */
     unsigned char   *bufInPtr;		/*  ptr for data written in to buf    */
     unsigned char   *bufOutPtr;		/*  ptr for data written out to fd    */
     pthread_mutex_t  bufLock;		/*  lock protecting access to buf     */
-    List             readers;		/*  list of objs that i write to      */
+    List             readers;		/*  list of objs that read from me    */
     List             writers;		/*  list of objs that write to me     */
     enum obj_type    type:2;		/*  type of auxiliary obj             */
     unsigned         gotBufWrap:1;	/*  true if circular-buf has wrapped  */
@@ -104,6 +105,7 @@ typedef struct server_conf {
     char            *logDirName;	/* dir prefix for relative logfiles   */
     char            *logFileName;	/* file to which events are logged    */
     char            *pidFileName;	/* file to which pid is written       */
+    int              tsInterval;	/* minutes between logfile timestamps */
     int              fd;		/* configuration file descriptor      */
     int              port;		/* port number on which to listen     */
     int              ld;		/* listening socket descriptor        */

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.23 2001/09/23 01:54:52 dun Exp $
+ *  $Id: server-conf.c,v 1.24 2001/09/27 01:26:00 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -81,6 +81,7 @@ server_conf_t * create_server_conf(void)
     conf->logDirName = NULL;
     conf->logFileName = NULL;
     conf->pidFileName = NULL;
+    conf->tsInterval = 0;
     /*
      *  The conf file's fd must be saved and kept open in order to hold an
      *    fcntl-style lock.  This lock is used to ensure only one instance
@@ -547,7 +548,7 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if ((lex_next(l) != LEX_STR) && (lex_prev(l) != LEX_INT))
+            else if (lex_next(l) != LEX_INT)
                 snprintf(err, sizeof(err), "expected INTEGER for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else if ((n = atoi(lex_text(l))) <= 0)
@@ -561,11 +562,38 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            /*
-             *  NOT_YET_IMPLEMENTED
-             */
-            snprintf(err, sizeof(err), "%s keyword not yet implemented",
-                server_conf_strs[LEX_UNTOK(tok)]);
+            else if (lex_next(l) != LEX_INT)
+                snprintf(err, sizeof(err), "expected INTEGER for %s value",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            else if ((n = atoi(lex_text(l))) < 0)
+                snprintf(err, sizeof(err), "invalid %s value %d",
+                    server_conf_strs[LEX_UNTOK(tok)], n);
+            else {
+                conf->tsInterval = n;
+                if ((lex_next(l) == LEX_EOF) || (lex_prev(l) == LEX_EOL))
+                    ; /* no-op */
+                else if (lex_prev(l) == LEX_STR) {
+                    if (lex_text(l)[1] != '\0')
+                        conf->tsInterval = -1;
+                    else if ((lex_text(l)[0] == 'm') || (lex_text(l)[0] == 'M'))
+                        ; /* no-op */
+                    else if ((lex_text(l)[0] == 'h') || (lex_text(l)[0] == 'H'))
+                        conf->tsInterval *= 60;
+                    else if ((lex_text(l)[0] == 'd') || (lex_text(l)[0] == 'D'))
+                        conf->tsInterval *= 60 * 24;
+                    else
+                        conf->tsInterval = -1;
+                }
+                else
+                    conf->tsInterval = -1;
+
+                if (conf->tsInterval < 0) {
+                    conf->tsInterval = 0;
+                    snprintf(err, sizeof(err),
+                        "expected (m|d|h) qualifier for %s value",
+                        server_conf_strs[LEX_UNTOK(tok)]);
+                }
+            }
             break;
 
         case LEX_EOF:

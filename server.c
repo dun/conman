@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.31 2001/09/25 20:48:51 dun Exp $
+ *  $Id: server.c,v 1.32 2001/09/27 01:26:00 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -9,6 +9,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include <arpa/telnet.h>
+#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <netinet/in.h>
@@ -28,6 +29,7 @@
 #include "tselect.h"
 #include "util.h"
 #include "util-file.h"
+#include "util-str.h"
 #include "wrapper.h"
 
 
@@ -35,6 +37,8 @@ static int begin_daemonize(void);
 static void end_daemonize(int fd);
 static void display_configuration(server_conf_t *conf);
 static void exit_handler(int signum);
+static void schedule_timestamp(server_conf_t *conf);
+static void timestamp_logfiles(server_conf_t *conf);
 static void create_listen_socket(server_conf_t *conf);
 static void mux_io(server_conf_t *conf);
 static void accept_client(server_conf_t *conf);
@@ -61,16 +65,15 @@ int main(int argc, char *argv[])
 
     if (conf->logFileName)
         open_msg_log(conf->logFileName);
-
     if (conf->enableVerbose)
         display_configuration(conf);
+    if (conf->tsInterval > 0)
+        schedule_timestamp(conf);
 
     create_listen_socket(conf);
-
     end_daemonize(fd);
 
     mux_io(conf);
-
     destroy_server_conf(conf);
 
     exit(0);
@@ -220,6 +223,8 @@ static void display_configuration(server_conf_t *conf)
             printf(" KeepAlive");
         if (conf->enableLoopBack)
             printf(" LoopBack");
+        if (conf->tsInterval > 0)
+            printf(" TimeStamp=%dm", conf->tsInterval);
         if (conf->enableZeroLogs)
             printf(" ZeroLogs");
     }
@@ -227,6 +232,68 @@ static void display_configuration(server_conf_t *conf)
 
     if (fflush(stdout) < 0)
         err_msg(errno, "Unable to flush standard output");
+
+    return;
+}
+
+
+static void schedule_timestamp(server_conf_t *conf)
+{
+/*  Schedules a timer for writing timestamps to the console logfiles.
+ *  Compute the expiration time assuming timestamps have been scheduled
+ *    regularly since the last hourly boundary.
+ */
+    time_t t = 0;
+    struct tm tm;
+    struct timeval tv;
+    int numCompleted;
+
+    assert(conf->tsInterval > 0);
+
+    get_localtime(&t, &tm);
+    numCompleted = tm.tm_min / conf->tsInterval;
+    tm.tm_min = (numCompleted + 1) * conf->tsInterval;
+    tm.tm_sec = 0;
+    if ((t = mktime(&tm)) == ((time_t) -1))
+        err_msg(errno, "Unable to determine time of next logfile timestamp");
+    tv.tv_sec = t;
+    tv.tv_usec = 0;
+
+    /*  The timer id is not saved because this timer will never be canceled.
+     */
+    abtimeout((CallBackF) timestamp_logfiles, conf, &tv);
+
+    return;
+}
+
+
+static void timestamp_logfiles(server_conf_t *conf)
+{
+/*  Writes a timestamp message into all of the console logfiles.
+ */
+    char *now;
+    ListIterator i;
+    obj_t *logfile;
+    char buf[MAX_LINE];
+    int gotLogs = 0;
+
+    now = create_long_time_string(0);
+    i = list_iterator_create(conf->objs);
+    while ((logfile = list_next(i))) {
+        if (!is_logfile_obj(logfile))
+            continue;
+        snprintf(buf, sizeof(buf), "%sConsole [%s] log at %s%s",
+            CONMAN_MSG_PREFIX, logfile->aux.logfile.consoleName,
+            now, CONMAN_MSG_SUFFIX);
+        strcpy(&buf[sizeof(buf) - 3], "\r\n");
+        write_obj_data(logfile, buf, strlen(buf), 1);
+        gotLogs = 1;
+    }
+    list_iterator_destroy(i);
+    free(now);
+
+    if (gotLogs)
+        schedule_timestamp(conf);
 
     return;
 }
