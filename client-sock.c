@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-sock.c,v 1.23 2001/10/08 04:02:37 dun Exp $
+ *  $Id: client-sock.c,v 1.24 2001/12/04 02:23:08 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -137,8 +137,7 @@ int send_req(client_conf_t *conf)
         cmd = proto_strs[LEX_UNTOK(CONMAN_TOK_CONNECT)];
         break;
     default:
-        err_msg(0, "Invalid command (%d) at %s:%d",
-            conf->req->command, __FILE__, __LINE__);
+        err_msg(0, "INTERNAL: Invalid command=%d", conf->req->command);
         break;
     }
 
@@ -356,11 +355,10 @@ void display_error(client_conf_t *conf)
 
     if ((conf->errnum == CONMAN_ERR_TOO_MANY_CONSOLES)
       && (!conf->req->enableBroadcast))
-        p = "\nDo you want to broadcast (option -b)?\n\n";
+        p = "\nDo you want to broadcast (-b) to multiple consoles?\n\n";
     else if ((conf->errnum == CONMAN_ERR_BUSY_CONSOLES)
       && ((!conf->req->enableForce) && (!conf->req->enableJoin)))
-        p = "\nDo you want to force (option -f) or join (option -j)"
-          " the connection?\n\n";
+        p = "\nDo you want to force (-f) or join (-j) the connection?\n\n";
     else
         p = NULL;
 

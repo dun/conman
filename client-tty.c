@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-tty.c,v 1.36 2001/10/08 04:02:37 dun Exp $
+ *  $Id: client-tty.c,v 1.37 2001/12/04 02:23:08 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -341,7 +341,7 @@ static int perform_help_esc(client_conf_t *conf, char c)
     if ((conf->req->command == CONNECT) && (conf->req->enableReset)) {
         write_esc_char(ESC_CHAR_RESET, tmp);
         n = append_format_string(buf, sizeof(buf), "  %2s%-2s -  "
-            "Reset the console%s.\r\n", esc, tmp,
+            "Reset node associated with this console%s.\r\n", esc, tmp,
             (list_count(conf->req->consoles) == 1 ? "" : "s"));
     }
 

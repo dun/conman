@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.35 2001/10/11 18:59:22 dun Exp $
+ *  $Id: server-sock.c,v 1.36 2001/12/04 02:23:08 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -132,9 +132,9 @@ static void resolve_req_addr(req_t *req, int sd)
 
     req->sd = sd;
     if (getpeername(sd, (struct sockaddr *) &addr, &addrlen) < 0)
-        err_msg(errno, "getpeername() failed");
+        err_msg(errno, "Unable to get address of remote peer");
     if (!inet_ntop(AF_INET, &addr.sin_addr, buf, sizeof(buf)))
-        err_msg(errno, "inet_ntop() failed");
+        err_msg(errno, "Unable to convert network address into string");
     req->port = ntohs(addr.sin_port);
     req->ip = create_string(buf);
     /*
@@ -613,7 +613,7 @@ static int check_busy_consoles(req_t *req)
             delta = create_time_delta_string(t);
 
             snprintf(buf, sizeof(buf),
-                "Console [%s] open %s by %s@%s%s%s (idle %s).\n",
+                "Console [%s] open %s by <%s@%s>%s%s (idle %s).\n",
                 console->name, (gotBcast ? "B/C" : "R/W"),
                 writer->aux.client.req->user, writer->aux.client.req->host,
                 (tty ? " on " : ""), (tty ? tty : ""), (delta ? delta : "???"));

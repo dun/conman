@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client.c,v 1.10 2001/08/14 23:16:47 dun Exp $
+ *  $Id: client.c,v 1.11 2001/12/04 02:23:08 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -36,8 +36,7 @@ int main(int argc, char *argv[])
       || (conf->req->command == MONITOR))
         connect_console(conf);
     else
-        err_msg(0, "Invalid command (%d) at %s:%d",
-            conf->req->command, __FILE__, __LINE__);
+        err_msg(0, "INTERNAL: Invalid command=%d", conf->req->command);
 
     close_client_log(conf);
     destroy_client_conf(conf);
