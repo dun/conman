@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Makefile.in,v 1.37 2001/12/12 18:36:28 dun Exp $
+# $Id: Makefile.in,v 1.38 2001/12/12 20:08:46 dun Exp $
 ##
 
 PROJECT=	conman
@@ -61,10 +61,21 @@ install: $(PROGS)
 	$(INSTALL) conmen $(DESTDIR)$(bindir)/
 	$(mkinstalldirs) $(DESTDIR)$(sbindir)
 	$(INSTALL) conmand $(DESTDIR)$(sbindir)/
-	$(mkinstalldirs) $(DESTDIR)/etc
-	$(INSTALL) -m 644 etc/conman.conf $(DESTDIR)/etc
-	$(mkinstalldirs) $(DESTDIR)/etc/rc.d/init.d
-	$(INSTALL) -m 755 etc/conman.init $(DESTDIR)/etc/rc.d/init.d/conman
+	if ! test -f $(DESTDIR)/etc/conman.conf; then \
+	  $(mkinstalldirs) $(DESTDIR)/etc; \
+	  $(INSTALL) -m 644 etc/conman.conf \
+	    $(DESTDIR)/etc/conman.conf; \
+	fi;
+	if ! test -f $(DESTDIR)/etc/logrotate.d/conman; then \
+	  $(mkinstalldirs) $(DESTDIR)/etc/logrotate.d; \
+	  $(INSTALL) -m 644 etc/conman.logrotate \
+	    $(DESTDIR)/etc/logrotate.d/conman; \
+	fi;
+	if ! test -f $(DESTDIR)/etc/rc.d/init.d/conman; then \
+	  $(mkinstalldirs) $(DESTDIR)/etc/rc.d/init.d; \
+	  $(INSTALL) -m 755 etc/conman.init \
+	    $(DESTDIR)/etc/rc.d/init.d/conman; \
+	fi;
 	proj="$(PROJECT)"; \
 	for f in `cd lib && find * -name CVS -prune -o -type f -print`; do \
 	  $(mkinstalldirs) `dirname $(DESTDIR)$(libdir)/$$proj/$$f`; \

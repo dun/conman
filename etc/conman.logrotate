@@ -1,0 +1,27 @@
+##
+# ConMan Logrotate Configuration
+##
+# $Id: conman.logrotate,v 1.1 2001/12/12 20:08:46 dun Exp $
+##
+
+##
+# Example logrotate entry for ConMan.
+#   Be sure to create the /var/log/conman/ and /var/log/conman.old/ dirs.
+##
+# /var/log/conman/* {
+#   compress
+#   missingok
+#   nocopytruncate
+#   nocreate
+#   nodelaycompress
+#   nomail
+#   notifempty
+#   olddir /var/log/conman.old/
+#   rotate 4
+#   sharedscripts
+#   size=5M
+#   weekly
+#   postrotate
+#     /usr/bin/killall -HUP conmand
+#   endscript
+# }
