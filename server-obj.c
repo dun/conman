@@ -2,7 +2,7 @@
  *  server-obj.c  
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server-obj.c,v 1.5 2001/05/18 15:48:16 dun Exp $
+ *  $Id: server-obj.c,v 1.6 2001/05/24 20:51:27 dun Exp $
 \******************************************************************************/
 
 
@@ -98,8 +98,8 @@ obj_t * create_logfile_obj(List objs, char *logfile, char *console)
     obj->aux.logfile.console = create_string(console);
 
     now = create_time_string(0);
-    msg = create_fmt_string("\r\nConMan: Console [%s] log started %s.\r\n",
-        console, now);
+    msg = create_fmt_string("\r\n%s Console [%s] log started %s.\r\n",
+        CONMAN_MSG_PREFIX, console, now);
     write_obj_data(obj, msg, strlen(msg));
     free(now);
     free(msg);
@@ -199,7 +199,8 @@ void destroy_obj(obj_t *obj)
     }
     if ((rc = pthread_mutex_destroy(&obj->bufLock)) != 0)
         err_msg(rc, "pthread_mutex_destroy() failed for [%s]", obj->name);
-    list_destroy(obj->readers);
+    if (obj->readers)
+        list_destroy(obj->readers);
 
     switch(obj->type) {
     case CONSOLE:
@@ -311,8 +312,6 @@ int find_obj(obj_t *obj, obj_t *key)
 {
 /*  Used by list_find_first() to locate the object
  *    specified by (key) within the list.
- *
- *  FIX_ME: Is this routine still needed?
  */
     return(obj == key);
 }
@@ -336,8 +335,8 @@ int link_objs(obj_t *src, obj_t *dst)
         assert(dst->type == CONSOLE);
         assert(dst->writer->type == SOCKET);
         now = create_time_string(0);
-        str = create_fmt_string("\r\nConMan: Console [%s] stolen by <%s>"
-            " %s.\r\n", dst->name, src->name, now);
+        str = create_fmt_string("\r\n%s Console [%s] stolen by <%s>"
+            " %s.\r\n", CONMAN_MSG_PREFIX, dst->name, src->name, now);
         write_obj_data(dst->writer, str, strlen(str));
         free(now);
         free(str);
@@ -347,6 +346,7 @@ int link_objs(obj_t *src, obj_t *dst)
     /*  Create link where src writes to dst.
      */
     dst->writer = src;
+    assert(!list_find_first(src->readers, (ListFindF) find_obj, dst));
     if (!list_append(src->readers, dst))
         err_msg(0, "Out of memory");
 
@@ -389,6 +389,8 @@ int unlink_obj(obj_t *obj)
     }
 
     /*  Remove link between each of my readers and me.
+    /*  Note: the "readers" list contains object references,
+     *    so they DO NOT get destroyed here when removed from the list.
      */
     while ((reader = list_pop(obj->readers))) {
         if (reader->writer == obj) {

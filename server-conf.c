@@ -2,7 +2,7 @@
  *  server-conf.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server-conf.c,v 1.4 2001/05/18 15:48:16 dun Exp $
+ *  $Id: server-conf.c,v 1.5 2001/05/24 20:51:26 dun Exp $
 \******************************************************************************/
 
 
@@ -88,7 +88,8 @@ void destroy_server_conf(server_conf_t *conf)
             err_msg(errno, "close(%d) failed", conf->ld);
         conf->ld = -1;
     }
-    list_destroy(conf->objs);
+    if (conf->objs)
+        list_destroy(conf->objs);
     free(conf);
     return;
 }

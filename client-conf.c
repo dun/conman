@@ -2,7 +2,7 @@
  *  client-conf.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: client-conf.c,v 1.8 2001/05/23 17:24:04 dun Exp $
+ *  $Id: client-conf.c,v 1.9 2001/05/24 20:51:26 dun Exp $
 \******************************************************************************/
 
 
@@ -93,7 +93,8 @@ void destroy_client_conf(client_conf_t *conf)
             err_msg(errno, "close(%d) failed", conf->ld);
         conf->ld = -1;
     }
-    list_destroy(conf->consoles);
+    if (conf->consoles)
+        list_destroy(conf->consoles);
     if (conf->errmsg)
         free(conf->errmsg);
     free(conf);
