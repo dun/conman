@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-net.c,v 1.10 2001/12/20 20:11:13 dun Exp $
+ *  $Id: util-net.c,v 1.11 2001/12/27 20:24:19 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util-net.h" for documentation on public functions.
@@ -33,7 +33,8 @@ static pthread_mutex_t hostentLock = PTHREAD_MUTEX_INITIALIZER;
 
 
 static int copy_hostent(const struct hostent *src, char *dst, int len);
-static int verify_hostent(const struct hostent *src, const struct hostent *dst);
+static int validate_hostent_copy(
+    const struct hostent *src, const struct hostent *dst);
 
 
 struct hostent * get_host_by_name(const char *name,
@@ -244,14 +245,15 @@ static int copy_hostent(const struct hostent *src, char *buf, int len)
     if ((len -= n) < 0)
         return(-1);
 
-    assert(verify_hostent(src, dst) >= 0);
+    assert(validate_hostent_copy(src, dst) >= 0);
     return(0);
 }
 
 
-static int verify_hostent(const struct hostent *src, const struct hostent *dst)
+static int validate_hostent_copy(
+    const struct hostent *src, const struct hostent *dst)
 {
-/*  Verifies that the src hostent struct has been successfully copied into dst.
+/*  Validates the src hostent struct has been successfully copied into dst.
  *  Returns 0 if the copy is good; o/w, returns -1.
  */
     char **p, **q;
