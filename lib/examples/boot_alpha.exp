@@ -1,7 +1,7 @@
 #!/usr/bin/expect --
 
 ##
-# $Id: boot_alpha.exp,v 1.1 2001/08/21 23:24:08 dun Exp $
+# $Id: boot_alpha.exp,v 1.2 2001/08/22 21:12:46 dun Exp $
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
 
@@ -12,6 +12,9 @@ log_user 0
 
 proc boot_alpha {spawn_id output_id console} {
 
+  exec powerman -off $console
+  sleep 2
+  exec powerman -on $console
   if {! [alpha_is_at_srm $spawn_id $output_id $console 180]} {
     return 0
   }
