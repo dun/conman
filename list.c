@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: list.c,v 1.20 2002/09/15 05:36:51 dun Exp $
+ *  $Id: list.c,v 1.21 2002/09/15 05:40:22 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -44,9 +44,9 @@
 #include "list.h"
 
 
-/*******************\
-**  Out of Memory  **
-\*******************/
+/*******************
+ *  Out of Memory  *
+ *******************/
 
 #ifdef WITH_OOMF
 #  undef out_of_memory
@@ -58,17 +58,17 @@
 #endif /* WITH_OOMF */
 
 
-/***************\
-**  Constants  **
-\***************/
+/***************
+ *  Constants  *
+ ***************/
 
 #define LIST_ALLOC 32
 #define LIST_MAGIC 0xDEADBEEF
 
 
-/****************\
-**  Data Types  **
-\****************/
+/****************
+ *  Data Types  *
+ ****************/
 
 struct listNode {
     void                 *data;         /* node's data                       */
@@ -102,9 +102,9 @@ struct list {
 typedef struct listNode * ListNode;
 
 
-/****************\
-**  Prototypes  **
-\****************/
+/****************
+ *  Prototypes  *
+ ****************/
 
 static void * list_node_create(List l, ListNode *pp, void *x);
 static void * list_node_destroy(List l, ListNode *pp);
@@ -118,9 +118,9 @@ static void * list_alloc_aux(int size, void *pfreelist);
 static void list_free_aux(void *x, void *pfreelist);
 
 
-/***************\
-**  Variables  **
-\***************/
+/***************
+ *  Variables  *
+ ***************/
 
 static List list_free_lists = NULL;
 static ListNode list_free_nodes = NULL;
@@ -130,9 +130,9 @@ static pthread_mutex_t list_free_lock = PTHREAD_MUTEX_INITIALIZER;
 #endif /* WITH_PTHREADS */
 
 
-/************\
-**  Macros  **
-\************/
+/************
+ *  Macros  *
+ ************/
 
 #ifdef WITH_PTHREADS
 
@@ -170,9 +170,9 @@ static pthread_mutex_t list_free_lock = PTHREAD_MUTEX_INITIALIZER;
 #endif /* WITH_PTHREADS */
 
 
-/***************\
-**  Functions  **
-\***************/
+/***************
+ *  Functions  *
+ ***************/
 
 List list_create(ListDelF f)
 {
