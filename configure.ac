@@ -3,7 +3,7 @@ dnl
 dnl ConMan AutoConf Config Jazz
 dnl   by Chris Dunlap <cdunlap@llnl.gov>
 dnl
-dnl $Id: configure.ac,v 1.1 2001/09/17 22:13:44 dun Exp $
+dnl $Id: configure.ac,v 1.2 2001/09/21 21:14:21 dun Exp $
 
 
 dnl Prologue.
@@ -163,7 +163,7 @@ AC_CACHE_CHECK([for a sense of humor], ac_cv_humor, ac_cv_humor=yes)
 
 dnl Add defs to config.h.
 dnl
-AC_DEFINE(USE_THREAD_SAFE_LIST, 1, [Define if list needs to be thread-safe.])
+AC_DEFINE(USE_PTHREADS, 1, [Define if using Pthreads.])
 
 
 dnl Epilogue.

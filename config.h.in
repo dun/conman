@@ -42,8 +42,8 @@
 /* Define the package name. */
 #undef PACKAGE
 
-/* Define if list needs to be thread-safe. */
-#undef USE_THREAD_SAFE_LIST
+/* Define if using Pthreads. */
+#undef USE_PTHREADS
 
 /* Define the package version. */
 #undef VERSION

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: list.c,v 1.8 2001/08/14 23:16:47 dun Exp $
+ *  $Id: list.c,v 1.9 2001/09/21 21:14:21 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "list.h" for documentation on public functions.
@@ -10,10 +10,10 @@
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#ifdef USE_THREAD_SAFE_LIST
+#ifdef USE_PTHREADS
 #  include <errno.h>
 #  include <pthread.h>
-#endif /* USE_THREAD_SAFE_LIST */
+#endif /* USE_PTHREADS */
 
 #include <assert.h>
 #include <stdio.h>
@@ -45,9 +45,9 @@ struct list {
     ListDelF              fDel;		/* function to delete node data       */
     int                   count;	/* number of nodes in list            */
     unsigned char         magic;	/* sentinel for asserting validity    */
-#ifdef USE_THREAD_SAFE_LIST
+#ifdef USE_PTHREADS
     pthread_mutex_t       mutex;	/* mutex to protect access to list    */
-#endif /* USE_THREAD_SAFE_LIST */
+#endif /* USE_PTHREADS */
 };
 
 typedef struct listNode * ListNode;
@@ -57,7 +57,7 @@ static void * list_node_create(List l, ListNode *pp, void *x);
 static void * list_node_destroy(List l, ListNode *pp);
 
 
-#ifdef USE_THREAD_SAFE_LIST
+#ifdef USE_PTHREADS
 
 #  define LIST_INIT(mutex)                                                     \
      do {                                                                      \
@@ -83,14 +83,14 @@ static void * list_node_destroy(List l, ListNode *pp);
              perror("ERROR: pthread_mutex_destroy() failed"), exit(1);         \
      } while (0)
 
-#else /* !USE_THREAD_SAFE_LIST */
+#else /* !USE_PTHREADS */
 
 #  define LIST_INIT(mutex)
 #  define LIST_LOCK(mutex)
 #  define LIST_UNLOCK(mutex)
 #  define LIST_DESTROY(mutex)
 
-#endif /* USE_THREAD_SAFE_LIST */
+#endif /* USE_PTHREADS */
 
 
 List list_create(ListDelF f)
