@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.h,v 1.16 2001/08/17 02:45:06 dun Exp $
+ *  $Id: common.h,v 1.17 2001/08/17 23:32:35 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -130,7 +130,7 @@ void get_tty_mode(int fd, struct termios *tty);
 
 void set_tty_mode(int fd, struct termios *tty);
 
-void get_tty_raw(struct termios *tty);
+void get_tty_raw(int fd, struct termios *tty);
 
 
 #endif /* !_COMMON_H */

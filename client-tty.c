@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-tty.c,v 1.32 2001/08/17 02:45:06 dun Exp $
+ *  $Id: client-tty.c,v 1.33 2001/08/17 23:32:35 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -61,7 +61,7 @@ void connect_console(client_conf_t *conf)
     Signal(SIGTERM, exit_handler);
 
     get_tty_mode(STDIN_FILENO, &conf->tty);
-    get_tty_raw(&tty);
+    get_tty_raw(STDIN_FILENO, &tty);
     set_tty_mode(STDIN_FILENO, &tty);
 
     locally_display_status(conf, "opened");
@@ -375,7 +375,7 @@ static int perform_suspend_esc(client_conf_t *conf, char c)
     if (kill(getpid(), SIGTSTP) < 0)
         err_msg(errno, "Unable to suspend client (pid %d)", getpid());
 
-    get_tty_raw(&tty);
+    get_tty_raw(STDIN_FILENO, &tty);
     set_tty_mode(STDIN_FILENO, &tty);
     locally_display_status(conf, "resumed");
     if (!send_esc_seq(conf, c))

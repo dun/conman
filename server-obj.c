@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.31 2001/08/17 02:45:06 dun Exp $
+ *  $Id: server-obj.c,v 1.32 2001/08/17 23:32:35 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -101,7 +101,7 @@ obj_t * create_console_obj(
     console->aux.console.dev = create_string(dev);
     console->aux.console.logfile = NULL;
     get_tty_mode(fd, &console->aux.console.tty);
-    get_tty_raw(&tty);
+    get_tty_raw(fd, &tty);
     set_tty_mode(fd, &tty);
 
     return(console);

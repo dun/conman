@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.c,v 1.14 2001/08/17 02:45:06 dun Exp $
+ *  $Id: common.c,v 1.15 2001/08/17 23:32:35 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -130,18 +130,31 @@ void set_tty_mode(int fd, struct termios *tty)
 }
 
 
-void get_tty_raw(struct termios *tty)
+void get_tty_raw(int fd, struct termios *tty)
 {
     assert(tty);
 
+    get_tty_mode(fd, tty);
+
     tty->c_iflag = 0;
     tty->c_oflag = 0;
-    tty->c_lflag = 0;
-    /*
-     *  Ignore modem status lines, enable receiver, set 8 bits/char.
-     *  Implicitly clear size bits (CSIZE), disable parity checking (PARENB).
+
+    /*  Set 8 bits/char.
      */
-    tty->c_cflag = CLOCAL | CREAD | CS8;
+    tty->c_cflag &= ~CSIZE;
+    tty->c_cflag |= CS8;
+
+    /*  Disable parity checking.
+     */
+    tty->c_cflag &= ~PARENB;
+
+    /*  Ignore modem status lines for locally attached device.
+     */
+    tty->c_cflag |= CLOCAL;
+  
+    /*  Disable echo, canonical mode, extended input processing, signal chars.
+     */
+    tty->c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
 
     /*  read() does not return until data is present (may block indefinitely).
      */
