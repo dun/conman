@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.9 2001/05/24 21:15:41 dun Exp $
+ *  $Id: server.h,v 1.10 2001/05/25 18:39:42 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -102,9 +102,9 @@ int compare_objs(obj_t *obj1, obj_t *obj2);
 
 int find_obj(obj_t *obj, obj_t *key);
 
-int link_objs(obj_t *src, obj_t *dst);
+void link_objs(obj_t *src, obj_t *dst);
 
-int unlink_obj(obj_t *obj);
+void unlink_obj(obj_t *obj);
 
 void read_from_obj(obj_t *obj, fd_set *pWriteSet);
 

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.8 2001/05/24 21:15:41 dun Exp $
+ *  $Id: server-obj.c,v 1.9 2001/05/25 18:39:42 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -316,11 +316,9 @@ int find_obj(obj_t *obj, obj_t *key)
 }
 
 
-int link_objs(obj_t *src, obj_t *dst)
+void link_objs(obj_t *src, obj_t *dst)
 {
 /*  Creates a link such that data read from (src) is copied to (dst).
- *
- *  FIX_ME: Is the return value used?  What happens if we're out of memory?
  */
     char *now, *str;
 
@@ -351,15 +349,13 @@ int link_objs(obj_t *src, obj_t *dst)
 
     DPRINTF("Linked [%s] reads to [%s] writes.\n",
         src->name, dst->name);
-    return(0);
+    return;
 }
 
 
-int unlink_obj(obj_t *obj)
+void unlink_obj(obj_t *obj)
 {
 /*  Destroys all links associated with (obj).
- *
- *  FIX_ME: Is the return value used?  What happens if we're out of memory?
  */
     ListIterator i;
     obj_t *reader;
@@ -400,7 +396,7 @@ int unlink_obj(obj_t *obj)
     }
 
     DPRINTF("Unlinked object [%s].\n", obj->name);
-    return(0);
+    return;
 }
 
 
