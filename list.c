@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: list.c,v 1.21 2002/09/15 05:40:22 dun Exp $
+ *  $Id: list.c,v 1.22 2002/09/15 05:45:48 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -681,7 +681,7 @@ static void * list_alloc_aux(int size, void *pfreelist)
     void **pfree = pfreelist;
     void **plast;
 
-    assert(size > sizeof(void *));
+    assert(size >= sizeof(void *));
     assert(pfreelist != NULL);
     assert(LIST_ALLOC > 0);
     list_mutex_lock(&list_free_lock);
