@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.h,v 1.49 2002/05/16 04:39:19 dun Exp $
+ *  $Id: server.h,v 1.50 2002/05/16 16:50:47 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -62,7 +62,7 @@
 #endif /* NTELOPTS */
 
 
-enum obj_type {                         /* bit-field limited to 4 values     */
+enum obj_type {                         /* type of auxiliary obj (2 bits)    */
     CLIENT,
     LOGFILE,
     SERIAL,
@@ -80,7 +80,7 @@ typedef struct logfile_opt {            /* LOGFILE OBJ OPTIONS:              */
     unsigned         enableSanitize:1;  /*  true if logfile being sanitized  */
 } logopt_t;
 
-typedef enum logfile_sanitize_state {   /* bit-field limited to 4 values     */
+typedef enum logfile_sanitize_state {   /* log CR/LF insanity state (2 bits) */
     LOG_SANE_INIT,
     LOG_SANE_CR,
     LOG_SANE_LF
@@ -89,7 +89,7 @@ typedef enum logfile_sanitize_state {   /* bit-field limited to 4 values     */
 typedef struct logfile_obj {            /* LOGFILE AUX OBJ DATA:             */
     char            *consoleName;       /*  name of console being logged     */
     logopt_t         opts;              /*  local options                    */
-    log_sane_state_t sanitizeState:2;   /*  state of logfile CR/LF insanity  */
+    unsigned         sanitizeState:2;   /*  log_sane_state_t CR/LF insanity  */
 } logfile_obj_t;
 
 typedef struct serial_opt {             /* SERIAL OBJ OPTIONS:               */
@@ -107,7 +107,7 @@ typedef struct serial_obj {             /* SERIAL AUX OBJ DATA:              */
 
 typedef struct sockaddr_in sockaddr_t;
 
-typedef enum telnet_connect_state {     /* bit-field limited to 4 values     */
+typedef enum telnet_connect_state {     /* state of n/w connection (2 bits)  */
     TELCON_NONE,
     TELCON_DOWN,
     TELCON_PENDING,
@@ -132,7 +132,7 @@ typedef struct telnet_obj {             /* TELNET AUX OBJ DATA:              */
     int              delay;             /*  secs 'til next reconnect attempt */
     int              iac;               /*  -1, or last char if in IAC seq   */
     unsigned char    optState[NTELOPTS];/*  rfc1143 Q-Method option state    */
-    telcon_state_t   conState:2;        /*  state of network connection      */
+    unsigned         conState:2;        /*  telcon_state_t of n/w connection */
     unsigned         enableKeepAlive:1; /*  true if using TCP keep-alive     */
 } telnet_obj_t;
 
@@ -152,7 +152,7 @@ typedef struct base_obj {               /* BASE OBJ:                         */
     pthread_mutex_t  bufLock;           /*  lock protecting access to buf    */
     List             readers;           /*  list of objs that read from me   */
     List             writers;           /*  list of objs that write to me    */
-    enum obj_type    type:2;            /*  type of auxiliary obj            */
+    unsigned         type:2;            /*  enum obj_type of auxiliary obj   */
     unsigned         gotBufWrap:1;      /*  true if circular-buf has wrapped */
     unsigned         gotEOF:1;          /*  true if obj got EOF on last read */
     unsigned         gotReset:1;        /*  true if resetting a console obj  */

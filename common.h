@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: common.h,v 1.35 2002/05/16 04:39:18 dun Exp $
+ *  $Id: common.h,v 1.36 2002/05/16 16:50:47 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -104,7 +104,7 @@ typedef int socklen_t;                  /* socklen_t is uint32_t in Posix.1g */
 #endif /* !HAVE_SOCKLEN_T */
 
 
-typedef enum cmd_type {                 /* bit-field limited to 8 values     */
+typedef enum cmd_type {                 /* ConMan command (2 bits)           */
     NONE,
     CONNECT,
     MONITOR,
@@ -120,7 +120,7 @@ typedef struct request {
     char     *ip;                       /* queried remote ip addr string     */
     int       port;                     /* remote port number                */
     List      consoles;                 /* list of consoles affected by cmd  */
-    cmd_t     command:3;                /* ConMan command to perform         */
+    unsigned  command:2;                /* ConMan command to perform (cmd_t) */
     unsigned  enableBroadcast:1;        /* true if b-casting to >1 consoles  */
     unsigned  enableForce:1;            /* true if forcing console conn      */
     unsigned  enableJoin:1;             /* true if joining console conn      */
