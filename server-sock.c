@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.22 2001/07/31 20:11:22 dun Exp $
+ *  $Id: server-sock.c,v 1.23 2001/08/02 19:39:37 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -626,8 +626,13 @@ static int check_busy_consoles(req_t *req)
         return(0);
     }
 
-    snprintf(buf, sizeof(buf), "Found %d console%s already in use.",
-        list_count(busy), (list_count(busy) == 1) ? "" : "s");
+    if (list_count(busy) == 1) {
+        snprintf(buf, sizeof(buf), "Found console already in use.");
+    }
+    else {
+        snprintf(buf, sizeof(buf), "Found %d consoles already in use.",
+            list_count(busy));
+    }
     send_rsp(req, CONMAN_ERR_BUSY_CONSOLES, buf);
 
     /*  Note: the "busy" list contains object references,
