@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 #
-# $Id: Makefile.in,v 1.20 2001/08/24 19:34:49 dun Exp $
+# $Id: Makefile.in,v 1.21 2001/08/24 19:42:02 dun Exp $
 ##
 
 PACKAGE=	@PACKAGE@
@@ -126,7 +126,7 @@ rpm-internal:
 	rpm -ba --define "_tmppath $$tmp/TMP" --define "_topdir $$tmp" \
 	  $$sign --quiet $$tmp/SPECS/$(PACKAGE).spec && \
 	    cp -p $$tmp/RPMS/*/$(PACKAGE)-$$ver*.*.rpm \
-	      $$tmp/SRPMS/$(PACKAGE)-$$ver*.src.rpm ./; \
+	      $$tmp/SRPMS/$(PACKAGE)-$$ver*.src.rpm $(top_srcdir)/; \
 	rm -rf $$tmp
 
 tar-internal:
@@ -137,7 +137,7 @@ tar-internal:
 	echo "creating $$name.tgz (tag=$$tag)"; \
 	$(mkinstalldirs) $$tmp >/dev/null; \
 	cvs export -r $$tag -d $$dir $(PACKAGE) >/dev/null && \
-	  (cd $$tmp; tar cf - $$name) | gzip -c9 > $$name.tgz; \
+	  (cd $$tmp; tar cf - $$name) | gzip -c9 > $(top_srcdir)/$$name.tgz; \
 	rm -rf $$tmp
 
 
