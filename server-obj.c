@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.46 2001/09/25 20:48:51 dun Exp $
+ *  $Id: server-obj.c,v 1.47 2001/09/26 21:14:20 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -373,9 +373,14 @@ int connect_telnet_obj(obj_t *telnet)
             if (errno == EINTR)
                 continue;
             if (errno == EINPROGRESS) {
-                telnet->aux.telnet.timer =
-                    timeout((CallBackF) disconnect_telnet_obj,
-                    telnet, TELNET_MIN_TIMEOUT * 1000);
+            /*
+             *  NOTE: Bug exists in timeout of connect():
+             *      server.c:335: Unable to multiplex I/O: Bad file descriptor.
+             *
+             *  telnet->aux.telnet.timer =
+             *      timeout((CallBackF) disconnect_telnet_obj,
+             *      telnet, TELNET_MIN_TIMEOUT * 1000);
+             */
                 telnet->aux.telnet.conState = TELCON_PENDING;
             }
             else
