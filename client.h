@@ -2,7 +2,7 @@
  *  client.h
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: client.h,v 1.5 2001/05/21 22:52:39 dun Exp $
+ *  $Id: client.h,v 1.6 2001/05/21 23:31:45 dun Exp $
 \******************************************************************************/
 
 
@@ -10,6 +10,7 @@
 #define _CLIENT_H
 
 
+#include <termios.h>
 #include "conman.h"
 #include "list.h"
 
@@ -31,6 +32,7 @@ typedef struct client_conf {
     int    closedByClient;		/* true if client closed console conn */
     int    errnum;			/* error number from issuing command  */
     char  *errmsg;			/* error message from issuing command */
+    struct termios term;		/* saved "cooked" terminal mode       */
 } client_conf_t;
 
 

@@ -2,7 +2,7 @@
  *  client-tty.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: client-tty.c,v 1.7 2001/05/18 15:25:55 dun Exp $
+ *  $Id: client-tty.c,v 1.8 2001/05/21 23:31:45 dun Exp $
 \******************************************************************************/
 
 
@@ -24,8 +24,9 @@
 #include "util.h"
 
 
-#define ESC_CHAR_CLOSE	'.'
-#define ESC_CHAR_HELP	'?'
+#define ESC_CHAR_CLOSE		'.'
+#define ESC_CHAR_HELP		'?'
+#define ESC_CHAR_SUSPEND	''
 
 
 static void exit_handler(int signum);
@@ -33,8 +34,9 @@ static void set_raw_tty_mode(int fd, struct termios *old);
 static void restore_tty_mode(int fd, struct termios *new);
 static int read_from_stdin(client_conf_t *conf);
 static int write_to_stdout(client_conf_t *conf);
-static void perform_help_esc(client_conf_t *conf, char c);
 static void perform_close_esc(client_conf_t *conf, char c);
+static void perform_help_esc(client_conf_t *conf, char c);
+static void perform_suspend_esc(client_conf_t *conf, char c);
 static void locally_echo_esc(char e, char c);
 
 
@@ -45,7 +47,6 @@ void connect_console(client_conf_t *conf)
 {
 /*  Connect client to the remote console(s).
  */
-    struct termios bak;
     fd_set rset, rsetBak;
     int n;
     char *str;
@@ -57,10 +58,15 @@ void connect_console(client_conf_t *conf)
     Signal(SIGINT, SIG_IGN);
     Signal(SIGQUIT, SIG_IGN);
     Signal(SIGPIPE, SIG_IGN);
-    Signal(SIGTSTP, SIG_IGN);
+    Signal(SIGTSTP, SIG_DFL);
     Signal(SIGTERM, exit_handler);
 
-    set_raw_tty_mode(STDIN_FILENO, &bak);
+    set_raw_tty_mode(STDIN_FILENO, &conf->term);
+
+    str = create_fmt_string("ConMan: Connected.\r\n");
+    if (write_n(STDOUT_FILENO, str, strlen(str)) < 0)
+        err_msg(errno, "write(%d) failed", STDOUT_FILENO);
+    free(str);
 
     FD_ZERO(&rsetBak);
     FD_SET(STDIN_FILENO, &rsetBak);
@@ -92,17 +98,14 @@ void connect_console(client_conf_t *conf)
     conf->sd = -1;
 
     if (!conf->closedByClient) {
-        /*
-         *  Append a CR/LF since tty is in raw mode.
-         */
-        str = create_fmt_string("\r\nConMan: Connection [%s:%d]"
-            " terminated by peer.\r\n", conf->dhost, conf->dport);
+        str = create_fmt_string("\r\nConMan: Connection"
+            " terminated by peer.\r\n");
         if (write_n(STDOUT_FILENO, str, strlen(str)) < 0)
             err_msg(errno, "write(%d) failed", STDOUT_FILENO);
         free(str);
     }
 
-    restore_tty_mode(STDIN_FILENO, &bak);
+    restore_tty_mode(STDIN_FILENO, &conf->term);
     return;
 }
 
@@ -188,13 +191,18 @@ static int read_from_stdin(client_conf_t *conf)
         return(1);
     }
     if (mode == ESC) {
+        if (c == ESC_CHAR_CLOSE) {
+            perform_close_esc(conf, c);
+            mode = EOL;
+            return(1);
+        }
         if (c == ESC_CHAR_HELP) {
             perform_help_esc(conf, c);
             mode = EOL;
             return(1);
         }
-        if (c == ESC_CHAR_CLOSE) {
-            perform_close_esc(conf, c);
+        if (c == ESC_CHAR_SUSPEND) {
+            perform_suspend_esc(conf, c);
             mode = EOL;
             return(1);
         }
@@ -256,40 +264,6 @@ static int write_to_stdout(client_conf_t *conf)
 }
 
 
-static void perform_help_esc(client_conf_t *conf, char c)
-{
-/*  Display the "escape sequence" help.
- */
-    char escChar[3];
-    char escClose[3];
-    char escHelp[3];
-    char *str;
-
-    locally_echo_esc(conf->escapeChar, c);
-
-    str = write_esc_char(conf->escapeChar, escChar);
-    assert((str - escChar) <= sizeof(escChar));
-    str = write_esc_char(ESC_CHAR_HELP, escHelp);
-    assert((str - escHelp) <= sizeof(escHelp));
-    str = write_esc_char(ESC_CHAR_CLOSE, escClose);
-    assert((str - escClose) <= sizeof(escClose));
-
-    /*  Append CR/LFs since tty is in raw mode.
-     */
-    str = create_fmt_string(
-        "Supported ConMan Escape Sequences:\r\n"
-        "  %2s%-2s -  Display this help message.\r\n"
-        "  %2s%-2s -  Terminate the connection.\r\n"
-        "  %2s%-2s -  Send the escape character by typing it twice.\r\n"
-        "(Note that escapes are only recognized immediately after newline)\r\n",
-        escChar, escHelp, escChar, escClose, escChar, escChar);
-    if (write_n(STDOUT_FILENO, str, strlen(str)) < 0)
-        err_msg(errno, "write(%d) failed", STDOUT_FILENO);
-    free(str);
-    return;
-}
-
-
 static void perform_close_esc(client_conf_t *conf, char c)
 {
 /*  Perform a client-initiated close.
@@ -298,10 +272,7 @@ static void perform_close_esc(client_conf_t *conf, char c)
 
     locally_echo_esc(conf->escapeChar, c);
 
-    /*  Append a CR/LF since tty is in raw mode.
-     */
-    str = create_fmt_string("ConMan: Connection to [%s:%d] closed.\r\n",
-        conf->dhost, conf->dport);
+    str = create_fmt_string("\r\nConMan: Connection closed.\r\n");
     if (write_n(STDOUT_FILENO, str, strlen(str)) < 0)
         err_msg(errno, "write(%d) failed", STDOUT_FILENO);
     free(str);
@@ -310,6 +281,60 @@ static void perform_close_esc(client_conf_t *conf, char c)
         err_msg(errno, "shutdown(%d) failed", conf->sd);
 
     conf->closedByClient = 1;
+    return;
+}
+
+
+static void perform_help_esc(client_conf_t *conf, char c)
+{
+/*  Display the "escape sequence" help.
+ */
+    char escChar[3];
+    char escClose[3];
+    char escHelp[3];
+    char escSuspend[3];
+    char *str;
+
+    locally_echo_esc(conf->escapeChar, c);
+
+    str = write_esc_char(conf->escapeChar, escChar);
+    assert((str - escChar) <= sizeof(escChar));
+    str = write_esc_char(ESC_CHAR_CLOSE, escClose);
+    assert((str - escClose) <= sizeof(escClose));
+    str = write_esc_char(ESC_CHAR_HELP, escHelp);
+    assert((str - escHelp) <= sizeof(escHelp));
+    str = write_esc_char(ESC_CHAR_SUSPEND, escSuspend);
+    assert((str - escSuspend) <= sizeof(escSuspend));
+
+    str = create_fmt_string(
+        "Supported ConMan Escape Sequences:\r\n"
+        "  %2s%-2s -  Display this help message.\r\n"
+        "  %2s%-2s -  Terminate the connection.\r\n"
+        "  %2s%-2s -  Send the escape character by typing it twice.\r\n"
+        "  %2s%-2s -  Suspend the client.\r\n"
+        "(Note that escapes are only recognized immediately after newline)\r\n",
+        escChar, escHelp, escChar, escClose, escChar, escChar,
+        escChar, escSuspend);
+    if (write_n(STDOUT_FILENO, str, strlen(str)) < 0)
+        err_msg(errno, "write(%d) failed", STDOUT_FILENO);
+    free(str);
+    return;
+}
+
+
+static void perform_suspend_esc(client_conf_t *conf, char c)
+{
+/*  Suspend the client.  While suspended, anything sent by the server
+ *    will be buffered by the network layer until the client is resumed.
+ *    Once the network buffers are full, the server should overwrite
+ *    data to this client in its circular write buffer.
+ */
+    locally_echo_esc(conf->escapeChar, c);
+
+    restore_tty_mode(STDIN_FILENO, &conf->term);
+    if (kill(getpid(), SIGTSTP) < 0)
+        err_msg(errno, "Unable to suspend client (pid %d)", getpid());
+    set_raw_tty_mode(STDIN_FILENO, &conf->term);
     return;
 }
 
