@@ -1,10 +1,10 @@
 #!/usr/bin/env perl
 
 ##
-#  $Id: conmen,v 1.9 2001/08/17 03:06:47 dun Exp $
+#  $Id: conmen,v 1.10 2001/12/30 20:08:54 dun Exp $
 #    by Chris Dunlap <cdunlap@llnl.gov>
 ##
-#  ConMen is a wrapper to aid in ConMan broadcast sessions.
+#  This is a wrapper to aid in ConMan broadcast sessions.
 #  It spawns an xterm for each of the selected consoles
 #    and uses the current tty as the broadcast window.
 #  All of the spawned xterm clients are terminated when the
@@ -26,8 +26,8 @@ $ENV{DISPLAY}
     or die("ERROR: xterm not found in PATH.\n");
 
 $help = `conman -h`;
-($def_dst) = ($help =~ /-d .* \(default: ([^\)]*)\)/);
-($def_esc) = ($help =~ /-e .* \(default: ([^\)]*)\)/);
+($def_dst) = ($help =~ /-d .* \[([^\]]*)\]/);
+($def_esc) = ($help =~ /-e .* \[([^\]]*)\]/);
 
 print_usage() if (!@ARGV || !getopts('d:e:fg:hjmrV') || $opt_h);
 
@@ -74,14 +74,14 @@ exit(0);
 sub print_usage
 {
     ($prog) = ($0 =~ m|(?:.*/)?([^/]*)|);
-    print("Usage: $prog [-d <host>] [-e <char>] [-hfjmrV] <console(s)>\n");
+    print("Usage: $prog [OPTIONS] <console(s)>\n");
     print("\n");
-    print("  -h        Display this help.\n");
-    print("  -d HOST   Specify location of server (default: $def_dst).\n");
-    print("  -e CHAR   Set escape character (default: $def_esc).\n");
-    print("  -f        Force connections (console stealing).\n");
+    print("  -d HOST   Specify server destination. [$def_dst]\n");
+    print("  -e CHAR   Specify escape character. [$def_esc]\n");
+    print("  -f        Force connections (console-stealing).\n");
     print("  -g SIZE   Specify xterm's geometry (eg, 80x24).\n");
-    print("  -j        Join connections (console sharing).\n");
+    print("  -h        Display this help.\n");
+    print("  -j        Join connections (console-sharing).\n");
     print("  -m        Monitor connections (read-only).\n");
     print("  -r        Match console names via regular expressions.\n");
     print("  -V        Display version information.\n");

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.36 2001/12/29 04:38:23 dun Exp $
+ *  $Id: server-conf.c,v 1.37 2001/12/30 20:08:55 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -319,14 +319,11 @@ static void display_server_help(char *prog)
  */
     printf("Usage: %s [OPTIONS]\n", prog);
     printf("\n");
-    printf("  -c FILE   Specify alternate configuration (default: %s).\n",
-        CONMAN_CONF);
+    printf("  -c FILE   Specify configuration. [%s]\n", CONMAN_CONF);
     printf("  -h        Display this help.\n");
-    printf("  -k        Kill daemon running with specified configuration.\n");
-    printf("  -p PORT   Specify alternate port number (default: %d).\n",
-        atoi(CONMAN_PORT));
-    printf("  -r        Re-open logs on daemon running with specified "
-        "configuration.\n");
+    printf("  -k        Kill daemon.\n");
+    printf("  -p PORT   Specify port number. [%d]\n", atoi(CONMAN_PORT));
+    printf("  -r        Re-open logs on daemon.\n");
     printf("  -v        Be verbose.\n");
     printf("  -V        Display version information.\n");
     printf("  -z        Zero console log files.\n");

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-conf.c,v 1.35 2001/12/30 05:30:59 dun Exp $
+ *  $Id: client-conf.c,v 1.36 2001/12/30 20:08:54 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -245,13 +245,13 @@ static void display_client_help(char *prog)
     printf("Usage: %s [OPTIONS] <console(s)>\n", prog);
     printf("\n");
     printf("  -b        Broadcast (write-only) to multiple consoles.\n");
-    printf("  -d HOST   Specify server destination"
-        " (default: %s:%d).\n", CONMAN_HOST, atoi(CONMAN_PORT));
-    printf("  -e CHAR   Set escape character (default: '%s').\n", esc);
-    printf("  -f        Force connection (console stealing).\n");
+    printf("  -d HOST   Specify server destination. [%s:%d]\n",
+        CONMAN_HOST, atoi(CONMAN_PORT));
+    printf("  -e CHAR   Specify escape character. [%s]\n", esc);
+    printf("  -f        Force connection (console-stealing).\n");
     printf("  -F FILE   Read console names from file.\n");
     printf("  -h        Display this help.\n");
-    printf("  -j        Join connection (console sharing).\n");
+    printf("  -j        Join connection (console-sharing).\n");
     printf("  -l FILE   Log connection output to file.\n");
     printf("  -m        Monitor connection (read-only).\n");
     printf("  -q        Query server about specified console(s).\n");
