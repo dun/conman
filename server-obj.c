@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.53 2001/12/20 01:42:34 dun Exp $
+ *  $Id: server-obj.c,v 1.54 2001/12/27 01:16:35 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -89,8 +89,8 @@ obj_t * create_client_obj(server_conf_t *conf, req_t *req)
     assert(conf != NULL);
     assert(req != NULL);
     assert(req->sd >= 0);
-    assert((req->user != NULL) && (*req->user != '\0'));
-    assert((req->host != NULL) && (*req->host != '\0'));
+    assert((req->user != NULL) && (req->user[0] != '\0'));
+    assert((req->host != NULL) && (req->host[0] != '\0'));
 
     set_fd_nonblocking(req->sd);
     set_fd_closed_on_exec(req->sd);
@@ -119,7 +119,7 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name, obj_t *console)
     obj_t *logfile;
 
     assert(conf != NULL);
-    assert((name != NULL) && (*name != '\0'));
+    assert((name != NULL) && (name[0] != '\0'));
     assert(console != NULL);
 
     /*  Check for duplicate logfile names.
@@ -273,8 +273,8 @@ obj_t * create_serial_obj(
     struct termios tty;
 
     assert(conf != NULL);
-    assert((name != NULL) && (*name != '\0'));
-    assert((dev != NULL) && (*dev != '\0'));
+    assert((name != NULL) && (name[0] != '\0'));
+    assert((dev != NULL) && (dev[0] != '\0'));
 
     /*  Check for duplicate console and device names.
      *  While the write-lock will protect against two separate daemons
@@ -357,8 +357,8 @@ obj_t * create_telnet_obj(
     char buf[MAX_LINE];
 
     assert(conf != NULL);
-    assert((name != NULL) && (*name != '\0'));
-    assert((host != NULL) && (*host != '\0'));
+    assert((name != NULL) && (name[0] != '\0'));
+    assert((host != NULL) && (host[0] != '\0'));
 
     memset(&saddr, 0, sizeof(saddr));
     saddr.sin_family = AF_INET;
