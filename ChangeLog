@@ -1,5 +1,8 @@
 2003-07-24  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* etc/conman.init:
+	Rewrote init script to be platform independent {gnats:72}.
+
 	* server-conf.c, man/conman.conf.5.in, man/conmand.8.in:
 	Added '-q' cmdline option to daemon for pid query {gnats:72}.
 
