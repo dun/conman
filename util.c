@@ -2,7 +2,7 @@
  *  util.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: util.c,v 1.4 2001/05/18 15:24:27 dun Exp $
+ *  $Id: util.c,v 1.5 2001/05/22 19:04:20 dun Exp $
  ******************************************************************************
  *  Refer to "util.h" for documentation on public functions.
 \******************************************************************************/
@@ -73,10 +73,13 @@ char * create_fmt_string(const char *fmt, ...)
 
 char * create_time_string(time_t t)
 {
-    static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-    int rc;
     char *p;
-    struct tm *tm;
+    struct tm tm;
+#ifndef HAVE_LOCALTIME_R
+    int rc;
+    static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+    struct tm *ptm;
+#endif /* !HAVE_LOCALTIME_R */
 
     if (!t) {
         if (time(&t) == ((time_t) -1))
@@ -86,18 +89,27 @@ char * create_time_string(time_t t)
     if (!(p = malloc(20)))		/* MM/DD/YYYY HH/MM/SS + NUL */
         err_msg(0, "Out of memory");
 
+#ifndef HAVE_LOCALTIME_R
+
     /*  localtime() is not thread-safe, so it is protected by a mutex.
-     *
-     *  FIX_ME: Add support for localtime_r() if present on system.
      */
     if ((rc = pthread_mutex_lock(&lock)) != 0)
         err_msg(rc, "pthread_mutex_lock() failed");
-    if (!(tm = localtime(&t)))
-        err_msg(rc, "localtime() failed");
-    if (strftime(p, 20, "%m/%d/%Y %H:%M:%S", tm) == 0)
-        err_msg(0, "strftime() failed");
+    if (!(ptm = localtime(&t)))
+        err_msg(errno, "localtime() failed");
+    tm = *ptm;
     if ((rc = pthread_mutex_unlock(&lock)) != 0)
         err_msg(rc, "pthread_mutex_unlock() failed");
+
+#else /* HAVE_LOCALTIME_R */
+
+    if (!localtime_r(&t, &tm))
+        err_msg(errno, "localtime_r() failed");
+
+#endif /* !HAVE_LOCALTIME_R */
+
+    if (strftime(p, 20, "%m/%d/%Y %H:%M:%S", &tm) == 0)
+        err_msg(0, "strftime() failed");
 
     return(p);
 }

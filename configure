@@ -1077,15 +1077,16 @@ fi
 for ac_func in \
   inet_ntop \
   inet_pton \
+  localtime_r \
 
 do
 echo $ac_n "checking for $ac_func""... $ac_c" 1>&6
-echo "configure:1084: checking for $ac_func" >&5
+echo "configure:1085: checking for $ac_func" >&5
 if eval "test \"`echo '$''{'ac_cv_func_$ac_func'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 1089 "configure"
+#line 1090 "configure"
 #include "confdefs.h"
 /* System header to define __stub macros and hopefully few prototypes,
     which can conflict with char $ac_func(); below.  */
@@ -1108,7 +1109,7 @@ $ac_func();
 
 ; return 0; }
 EOF
-if { (eval echo configure:1112: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+if { (eval echo configure:1113: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
   rm -rf conftest*
   eval "ac_cv_func_$ac_func=yes"
 else
@@ -1138,12 +1139,12 @@ for ac_func in \
 
 do
 echo $ac_n "checking for $ac_func""... $ac_c" 1>&6
-echo "configure:1142: checking for $ac_func" >&5
+echo "configure:1143: checking for $ac_func" >&5
 if eval "test \"`echo '$''{'ac_cv_func_$ac_func'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 1147 "configure"
+#line 1148 "configure"
 #include "confdefs.h"
 /* System header to define __stub macros and hopefully few prototypes,
     which can conflict with char $ac_func(); below.  */
@@ -1166,7 +1167,7 @@ $ac_func();
 
 ; return 0; }
 EOF
-if { (eval echo configure:1170: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
+if { (eval echo configure:1171: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}; then
   rm -rf conftest*
   eval "ac_cv_func_$ac_func=yes"
 else
@@ -1199,7 +1200,7 @@ done
 
 
 echo $ac_n "checking whether debugging is enabled""... $ac_c" 1>&6
-echo "configure:1203: checking whether debugging is enabled" >&5
+echo "configure:1204: checking whether debugging is enabled" >&5
 # Check whether --enable-debug or --disable-debug was given.
 if test "${enable_debug+set}" = set; then
   enableval="$enable_debug"
@@ -1226,7 +1227,7 @@ echo "$ac_t""$debug" 1>&6
 
 
 echo $ac_n "checking for a sense of humor""... $ac_c" 1>&6
-echo "configure:1230: checking for a sense of humor" >&5
+echo "configure:1231: checking for a sense of humor" >&5
 if eval "test \"`echo '$''{'ac_cv_humor'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
