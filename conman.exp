@@ -1,7 +1,7 @@
 ##
 #  ConMan Expect Language Library (CELL)
 ##
-#  $Id: conman.exp,v 1.1 2001/07/11 17:14:48 dun Exp $
+#  $Id: conman.exp,v 1.2 2001/07/11 18:22:24 dun Exp $
 #    by Chris Dunlap <cdunlap@llnl.gov>
 ##
 
@@ -176,8 +176,8 @@ proc conman_run_next {ids_r id2con_r consoles_r opts_r cmd_r args_r} {
   if {[llength $consoles] == 0} {
     return 0
   }
-  set console [lindex $consoles 0]
-  set consoles [lreplace $consoles 0 0]
+  set console [lindex $consoles 0]	;# car
+  set consoles [lrange $consoles 1 end]	;# cdr
 
   if {[catch {spawn -noecho -pty} err]} {
     send_error -- "ERROR: $err.\n"
