@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.13 2001/06/07 17:01:31 dun Exp $
+ *  $Id: server.h,v 1.14 2001/06/08 20:31:15 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -17,22 +17,10 @@
 
 
 enum obj_type {
+    CLIENT,
     CONSOLE,
     LOGFILE,
-    CLIENT,
 };
-
-typedef struct console_obj {		/* CONSOLE AUX OBJ DATA:              */
-    char            *dev;		/*  console device name               */
-    char            *log;		/*  filename where output is logged   */
-    char            *rst;		/*  filename of "console-reset" prog  */
-    int              bps;		/*  console baud rate                 */
-    struct termios   term;		/*  saved cooked tty mode             */
-} console_obj_t;
-
-typedef struct logfile_obj {		/* LOGFILE AUX OBJ DATA:              */
-    char            *console;		/*  name of console being logged      */
-} logfile_obj_t;
 
 typedef struct client_obj {		/* CLIENT AUX OBJ DATA:               */
     req_t           *req;		/*  client request info               */
@@ -40,16 +28,29 @@ typedef struct client_obj {		/* CLIENT AUX OBJ DATA:               */
     time_t           timeLastRead;	/*  time last data was read from fd   */
 } client_obj_t;
 
+typedef struct console_obj {		/* CONSOLE AUX OBJ DATA:              */
+    char            *dev;		/*  console device name               */
+    char            *rst;		/*  filename of "console-reset" prog  */
+    int              bps;		/*  console baud rate                 */
+    struct base_obj *logfile;		/*  log obj ref for console output    */
+    struct termios   term;		/*  saved cooked tty mode             */
+} console_obj_t;
+
+typedef struct logfile_obj {		/* LOGFILE AUX OBJ DATA:              */
+    char            *console;		/*  name of console being logged      */
+} logfile_obj_t;
+
 typedef union aux_obj {
+    client_obj_t     client;
     console_obj_t    console;
     logfile_obj_t    logfile;
-    client_obj_t     client;
 } aux_obj_t;
 
 typedef struct base_obj {		/* BASE OBJ:                          */
     char            *name;		/*  obj name                          */
     int              fd;		/*  file descriptor                   */
     int              gotEOF;		/*  true if obj rcvd EOF on last read */
+    int              gotWrapped;	/*  true if circular-buf has wrapped  */
     unsigned char    buf[MAX_BUF_SIZE];	/*  circular-buf to be written to fd  */
     unsigned char   *bufInPtr;		/*  ptr for data written in to buf    */
     unsigned char   *bufOutPtr;		/*  ptr for data written out to fd    */
@@ -91,9 +92,9 @@ void process_server_conf_file(server_conf_t *conf);
 \******************/
 
 obj_t * create_console_obj(List objs, char *name, char *dev,
-    char *log, char *rst, int bps);
+    char *rst, int bps);
 
-obj_t * create_logfile_obj(List objs, char *logfile, char *console);
+obj_t * create_logfile_obj(List objs, char *name, obj_t *console);
 
 obj_t * create_client_obj(List objs, req_t *req);
 

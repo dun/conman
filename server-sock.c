@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.16 2001/06/07 17:01:31 dun Exp $
+ *  $Id: server-sock.c,v 1.17 2001/06/08 20:31:15 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -744,6 +744,7 @@ static void perform_monitor_cmd(req_t *req, server_conf_t *conf)
     send_rsp(req, CONMAN_ERR_NONE, NULL);
     client = create_client_obj(conf->objs, req);
     console = list_peek(req->consoles);
+    assert(console->type == CONSOLE);
     link_objs(console, client);
     return;
 }

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-tty.c,v 1.15 2001/06/07 22:59:19 dun Exp $
+ *  $Id: client-tty.c,v 1.16 2001/06/08 20:31:15 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -189,6 +189,9 @@ static int read_from_stdin(client_conf_t *conf)
         case ESC_CHAR_HELP:
             perform_help_esc(conf, c);
             return(1);
+        case ESC_CHAR_LOG_REPLAY:
+            send_esc_seq(conf, c);
+            return(1);
         case ESC_CHAR_SUSPEND:
             perform_suspend_esc(conf, c);
             return(1);
@@ -221,7 +224,7 @@ static int read_from_stdin(client_conf_t *conf)
          *    by doubling all occurrences of it.
          */
         for (q=p-1; q>=buf; q--) {
-            if (*q == CONMAN_ESC_CHAR) {
+            if (*q == ESC_CHAR) {
                 for (r=p-1, p++; r>=q; r--)
                     *(r+1) = *r;
             }
@@ -269,7 +272,7 @@ static void send_esc_seq(client_conf_t *conf, char c)
  */
     char buf[2];
 
-    buf[0] = CONMAN_ESC_CHAR;
+    buf[0] = ESC_CHAR;
     buf[1] = c;
     if (write_n(conf->req->sd, buf, sizeof(buf)) < 0)
         err_msg(errno, "write(%d) failed", STDOUT_FILENO);
@@ -301,6 +304,7 @@ static void perform_help_esc(client_conf_t *conf, char c)
     char escBreak[3];
     char escClose[3];
     char escHelp[3];
+    char escLog[3];
     char escSuspend[3];
     char *str;
 
@@ -314,6 +318,8 @@ static void perform_help_esc(client_conf_t *conf, char c)
     assert((str - escClose) <= sizeof(escClose));
     str = write_esc_char(ESC_CHAR_HELP, escHelp);
     assert((str - escHelp) <= sizeof(escHelp));
+    str = write_esc_char(ESC_CHAR_LOG_REPLAY, escLog);
+    assert((str - escLog) <= sizeof(escLog));
     str = write_esc_char(ESC_CHAR_SUSPEND, escSuspend);
     assert((str - escSuspend) <= sizeof(escSuspend));
 
@@ -323,9 +329,11 @@ static void perform_help_esc(client_conf_t *conf, char c)
         "  %2s%-2s -  Terminate the connection.\r\n"
         "  %2s%-2s -  Send the escape character by typing it twice.\r\n"
         "  %2s%-2s -  Transmit a serial-break.\r\n"
+        "  %2s%-2s -  Replay the last %d bytes of the log.\r\n"
         "  %2s%-2s -  Suspend the client.\r\n",
         escChar, escHelp, escChar, escClose, escChar, escChar,
-        escChar, escBreak, escChar, escSuspend);
+        escChar, escBreak, escChar, escLog, CONMAN_REPLAY_LEN,
+        escChar, escSuspend);
     if (write_n(STDOUT_FILENO, str, strlen(str)) < 0)
         err_msg(errno, "write(%d) failed", STDOUT_FILENO);
     free(str);

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.7 2001/05/29 23:45:25 dun Exp $
+ *  $Id: server-conf.c,v 1.8 2001/06/08 20:31:15 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -291,12 +291,11 @@ static void parse_console_cmd(Lex l, server_conf_t *conf)
             lex_next(l);
     }
     else {
-        if (!(console = create_console_obj(
-          conf->objs, name, dev, log, rst, bps)))
+        if (!(console = create_console_obj( conf->objs, name, dev, rst, bps)))
             log_msg(0, "Unable to create console object '%s'", name);
         if (*log) {
-            if (!(logfile = create_logfile_obj(conf->objs, log, name)))
-                log_msg(0, "Unable to create logfile object '%s'", name);
+            if (!(logfile = create_logfile_obj(conf->objs, log, console)))
+                log_msg(0, "Unable to create logfile object '%s'", log);
             else
                 link_objs(console, logfile);
         }

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.12 2001/06/07 17:01:31 dun Exp $
+ *  $Id: server-obj.c,v 1.13 2001/06/08 20:31:15 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -31,17 +31,18 @@ static void restore_console_mode(obj_t *obj);
 static void unlink_objs_helper(obj_t *src, obj_t *dst);
 static int process_escape_chars(obj_t *client, void *src, int len);
 static void perform_serial_break(obj_t *client);
+static void perform_log_replay(obj_t *client);
 
 
 obj_t * create_console_obj(List objs, char *name, char *dev,
-    char *log, char *rst, int bps)
+    char *rst, int bps)
 {
 /*  Creates a new console object and adds it to the master (objs) list.
  *    Note: the console is open and set for non-blocking I/O.
  *  Returns the new object, or NULL on error.
  */
     int fd;
-    obj_t *obj;
+    obj_t *console;
 
     assert(objs);
     assert(name && *name);
@@ -62,20 +63,19 @@ obj_t * create_console_obj(List objs, char *name, char *dev,
             err_msg(errno, "close(%d) failed", fd);
         return(NULL);
     }
-    obj = create_obj(CONSOLE, objs, name, fd);
-    obj->aux.console.dev = create_string(dev);
-    if (log && *log)
-        obj->aux.console.log = create_string(log);
+    console = create_obj(CONSOLE, objs, name, fd);
+    console->aux.console.dev = create_string(dev);
     if (rst && *rst)
-        obj->aux.console.rst = create_string(rst);
-    obj->aux.console.bps = bps;
-    set_raw_console_mode(obj);
+        console->aux.console.rst = create_string(rst);
+    console->aux.console.bps = bps;
+    set_raw_console_mode(console);
+    console->aux.console.logfile = NULL;
 
-    return(obj);
+    return(console);
 }
 
 
-obj_t * create_logfile_obj(List objs, char *logfile, char *console)
+obj_t * create_logfile_obj(List objs, char *name, obj_t *console)
 {
 /*  Creates a new logfile object and adds it to the master (objs) list.
  *    Note: the logfile is open and set for non-blocking I/O.
@@ -83,30 +83,31 @@ obj_t * create_logfile_obj(List objs, char *logfile, char *console)
  */
     int flags;
     int fd;
-    obj_t *obj;
+    obj_t *logfile;
     char *now, *msg;
 
     assert(objs);
-    assert(logfile && *logfile);
-    assert(console && *console);
+    assert(name && *name);
+    assert(console);
 
     flags = O_WRONLY | O_CREAT | O_APPEND | O_NONBLOCK;
-    if ((fd = open(logfile, flags, S_IRUSR | S_IWUSR)) < 0) {
-        log_msg(0, "Unable to open logfile %s: %s", logfile, strerror(errno));
+    if ((fd = open(name, flags, S_IRUSR | S_IWUSR)) < 0) {
+        log_msg(0, "Unable to open logfile %s: %s", name, strerror(errno));
         return(NULL);
     }
 
-    obj = create_obj(LOGFILE, objs, logfile, fd);
-    obj->aux.logfile.console = create_string(console);
+    logfile = create_obj(LOGFILE, objs, name, fd);
+    logfile->aux.logfile.console = create_string(console->name);
+    console->aux.console.logfile = logfile;
 
     now = create_date_time_string(0);
     msg = create_fmt_string("\r\n%s Console %s log started at %s.\r\n",
-        CONMAN_MSG_PREFIX, console, now);
-    write_obj_data(obj, msg, strlen(msg));
+        CONMAN_MSG_PREFIX, console->name, now);
+    write_obj_data(logfile, msg, strlen(msg));
     free(now);
     free(msg);
 
-    return(obj);
+    return(logfile);
 }
 
 
@@ -117,7 +118,7 @@ obj_t * create_client_obj(List objs, req_t *req)
  *  Returns the new object.
  */
     char name[MAX_LINE];
-    obj_t *obj;
+    obj_t *client;
 
     assert(objs);
     assert(req);
@@ -129,15 +130,15 @@ obj_t * create_client_obj(List objs, req_t *req)
 
     snprintf(name, sizeof(name), "%s@%s:%d", req->user, req->host, req->port);
     name[sizeof(name) - 1] = '\0';
-    obj = create_obj(CLIENT, objs, name, req->sd);
+    client = create_obj(CLIENT, objs, name, req->sd);
 
-    obj->aux.client.req = req;
-    obj->aux.client.gotEscape = 0;
-    time(&obj->aux.client.timeLastRead);
-    if (obj->aux.client.timeLastRead == ((time_t) -1))
+    client->aux.client.req = req;
+    client->aux.client.gotEscape = 0;
+    time(&client->aux.client.timeLastRead);
+    if (client->aux.client.timeLastRead == ((time_t) -1))
         err_msg(errno, "time() failed -- What time is it?");
 
-    return(obj);
+    return(client);
 }
 
 
@@ -163,6 +164,7 @@ static obj_t * create_obj(enum obj_type type, List objs, char *name, int fd)
     obj->name = create_string(name);
     obj->fd = fd;
     obj->gotEOF = 0;
+    obj->gotWrapped = 0;
     obj->bufInPtr = obj->bufOutPtr = obj->buf;
     if ((rc = pthread_mutex_init(&obj->bufLock, NULL)) != 0)
         err_msg(rc, "pthread_mutex_init() failed for [%s]", name);
@@ -216,10 +218,9 @@ void destroy_obj(obj_t *obj)
     case CONSOLE:
         if (obj->aux.console.dev)
             free(obj->aux.console.dev);
-        if (obj->aux.console.log)
-            free(obj->aux.console.log);
         if (obj->aux.console.rst)
             free(obj->aux.console.rst);
+        /* Do not destroy obj->aux.console.logfile since it is only a ref. */
         break;
     case LOGFILE:
         if (obj->aux.logfile.console)
@@ -490,11 +491,11 @@ void read_from_obj(obj_t *obj, fd_set *pWriteSet)
 {
 /*  Reads data from the obj's file descriptor and writes it out
  *    to the circular-buffer of each obj in its "readers" list.
- *  The ptr to select()'s write-set is an optimization used to
- *    "prime" the set for write_to_obj().  This allows data read
- *    to be written out to those objs not yet traversed during the
- *    current iteration, thereby reducing the latency.  Without it,
- *    these objs would be select()'d on the next iteration of the loop.
+ *  The ptr to select()'s write-set is an optimization used to "prime"
+ *    the set for write_to_obj().  This allows data read to be written out
+ *    to those objs not yet traversed during the current list iteration,
+ *    thereby reducing the latency.  Without it, these objs would be
+ *    select()'d on the next list iteration in mux_io()'s outer-loop.
  *  An obj's circular-buffer is empty when (bufInPtr == bufOutPtr).
  *    Thus, it can hold at most (MAX_BUF_SIZE - 1) bytes of data.
  *    This routine's internal buffer is set accordingly.
@@ -554,12 +555,13 @@ again:
 
 static int process_escape_chars(obj_t *client, void *src, int len)
 {
-/*  Processes the buffer (src) of length (len) received from
- *    the client for escape char sequences.
- *  Escape characters are removed from the buffer and processed.
- *  Returns the new length of the buffer.
+/*  Processes the buffer (src) of length (len) received from the client
+ *    for escape character sequences.
+ *  Escape characters are removed (unstuffed) from the buffer
+ *    and immediately processed.
+ *  Returns the new length of the modified buffer.
  */
-    u_char *last = (u_char *) src + len;
+    const u_char *last = (u_char *) src + len;
     u_char *p, *q;
 
     assert(client->type == CLIENT);
@@ -573,19 +575,22 @@ static int process_escape_chars(obj_t *client, void *src, int len)
         if (client->aux.client.gotEscape) {
             client->aux.client.gotEscape = 0;
             switch (*p) {
+            case ESC_CHAR:
+                *q++ = *p;
+                break;
             case ESC_CHAR_BREAK:
                 perform_serial_break(client);
                 break;
-            case CONMAN_ESC_CHAR:
-                *q++ = *p;
+            case ESC_CHAR_LOG_REPLAY:
+                perform_log_replay(client);
                 break;
             default:
-                log_msg(10, "Received invalid escape char '%c' from %s.\n",
+                log_msg(10, "Received invalid escape '%c' from %s.",
                     *p, client->name);
                 break;
             }
         }
-        else if (*p == CONMAN_ESC_CHAR) {
+        else if (*p == ESC_CHAR) {
             client->aux.client.gotEscape = 1;
         }
         else {
@@ -616,6 +621,106 @@ static void perform_serial_break(obj_t *client)
                 console->name);
     }
     list_iterator_destroy(i);
+    return;
+}
+
+
+static void perform_log_replay(obj_t *client)
+{
+/*  Kinda like TiVo's Instant Replay.  :)
+ *  Replays the last bytes from the console logfile (if present) associated
+ *    with this client (in either a R/O or R/W session, but not a B/C session).
+ */
+    obj_t *console;
+    obj_t *logfile;
+    u_char buf[MAX_LINE + CONMAN_REPLAY_LEN];
+    u_char *ptr = buf;
+    int len = sizeof(buf);
+    u_char *p;
+    int n, m;
+    int rc;
+
+    assert(client->type == CLIENT);
+
+    /*  Broadcast sessions are "write-only", so the log-replay is a no-op.
+     */
+    if (list_is_empty(client->writers))
+        return;
+
+    /*  The client will have exactly one writer in either a R/O or R/W session.
+     */
+    assert(list_count(client->writers) == 1);
+    console = list_peek(client->writers);
+    assert(console->type == CONSOLE);
+    logfile = console->aux.console.logfile;
+
+    if (!logfile) {
+        n = snprintf(ptr, len, "\r\n%s Console %s is not being logged.\r\n",
+            CONMAN_MSG_PREFIX, console->name);
+        if ((n < 0) || (n >= len)) {
+            log_msg(10, "Insufficient buffer to replay console %s log for %s.",
+                console->name, client->name);
+            return;
+        }
+    }
+    else {
+        assert(logfile->type == LOGFILE);
+        n = snprintf(ptr, len, "\r\n%s Begin replay of console %s.\r\n",
+            CONMAN_MSG_PREFIX, console->name);
+        if (((n < 0) || (n >= len)) || (sizeof(buf) < 2*n)) {
+            log_msg(10, "Insufficient buffer to replay console %s log for %s.",
+                console->name, client->name);
+            return;
+        }
+        ptr += n;
+        /*
+         *  Since we know the length of the "begin" message, reserve space
+         *    in 'buf' for the "end" message by doubling its length.
+         */
+        len -= 2*n;
+
+        if ((rc = pthread_mutex_lock(&logfile->bufLock)) != 0)
+            err_msg(rc, "pthread_mutex_lock() failed for [%s]",
+                logfile->name);
+
+        /*  If the console's circular-buffer has not yet wrapped around,
+         *    don't wrap back into uncharted buffer territory.
+         */
+        if (!logfile->gotWrapped)
+            n = MIN(CONMAN_REPLAY_LEN, logfile->bufInPtr - logfile->buf);
+        else
+            n = MIN(CONMAN_REPLAY_LEN, MAX_BUF_SIZE - 1);
+        n = MIN(n, len);
+
+        p = logfile->bufInPtr - n;
+        if (p >= logfile->buf) {	/* no wrap needed */
+            memcpy(ptr, p, n);
+            ptr += n;
+        }
+        else {				/* wrap backwards */
+            m = logfile->buf - p;
+            p = &logfile->buf[MAX_BUF_SIZE] - m;
+            memcpy(ptr, p, m);
+            ptr += m;
+            n -= m;
+            memcpy(ptr, logfile->buf, n);
+            ptr += n;
+        }
+
+        if ((rc = pthread_mutex_unlock(&logfile->bufLock)) != 0)
+            err_msg(rc, "pthread_mutex_unlock() failed for [%s]",
+                logfile->name);
+
+        /*  Cannot use 'len' here since it has already subtracted space
+         *    reserved for this string.  We could get away with just sprintf().
+         */
+        n = snprintf(ptr, &buf[sizeof(buf)] - ptr,
+            "\r\n%s End replay of console %s.\r\n",
+            CONMAN_MSG_PREFIX, console->name);
+        assert((n >= 0) && (n < len));
+    }
+
+    write_obj_data(client, buf, strlen(buf));
     return;
 }
 
@@ -684,8 +789,10 @@ int write_obj_data(obj_t *obj, void *src, int len)
         /*
          *  Do the hokey-pokey and perform a circular-buffer wrap-around.
          */
-        if (obj->bufInPtr == &obj->buf[MAX_BUF_SIZE])
+        if (obj->bufInPtr == &obj->buf[MAX_BUF_SIZE]) {
             obj->bufInPtr = obj->buf;
+            obj->gotWrapped = 1;
+        }
     }
 
     /*  Copy second chunk of data (ie, from the beginning of the buffer).
@@ -698,7 +805,8 @@ int write_obj_data(obj_t *obj, void *src, int len)
     /*  Check to see if any data in circular-buffer was overwritten.
      */
     if (len > avail) {
-        log_msg(10, "Buffer for %s overwrote %d bytes", obj->name, len-avail);
+        log_msg(10, "Overwrote %d bytes in buffer for %s",
+            len-avail, obj->name);
         obj->bufOutPtr = obj->bufInPtr + 1;
         if (obj->bufOutPtr == &obj->buf[MAX_BUF_SIZE])
             obj->bufOutPtr = obj->buf;
