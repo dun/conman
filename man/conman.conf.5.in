@@ -1,4 +1,4 @@
-.\" $Id: conman.conf.5.in,v 1.5.2.2 2003/07/14 06:08:20 dun Exp $
+.\" $Id: conman.conf.5.in,v 1.5.2.3 2003/07/24 20:13:18 dun Exp $
 
 .TH CONMAN.CONF 5 "@DATE@" "@PROJECT@-@VERSION@" "LLNL"
 
@@ -45,7 +45,9 @@ thereby only accepting local client connections directed to that address
 (127.0.0.1).  The default is \fBoff\fR.
 .TP
 \fBpidfile\fR \fB=\fR "\fIfile\fR"
-Specifies the file to which the daemon's PID is written.
+Specifies the file to which the daemon's PID is written.  The use of
+a pidfile is recommended if you want to use the daemon's '\fB-k\fR'
+or '\fB-r\fR' options.
 .TP
 \fBport\fR \fB=\fR \fIinteger\fR
 Specifies the port on which the daemon will listen for client connections.

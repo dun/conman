@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-obj.c,v 1.70.2.2 2003/07/12 00:12:24 dun Exp $
+ *  $Id: server-obj.c,v 1.70.2.3 2003/07/24 20:13:17 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -143,6 +143,8 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name,
 /*  Creates a new logfile object and adds it to the master objs list.
  *    Note: the logfile is open and set for non-blocking I/O.
  *  Returns the new object, or NULL on error.
+ *
+ *  FIXME: This routine should pro'ly be moved to server_logfile.c.
  */
     ListIterator i;
     obj_t *logfile;
@@ -198,9 +200,6 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name,
     else
         log_err(0, "INTERNAL: Unrecognized console [%s] type=%d",
             console->name, console->type);
-
-    open_logfile_obj(logfile, conf->enableZeroLogs);
-
     return(logfile);
 }
 
@@ -211,11 +210,11 @@ obj_t * create_serial_obj(server_conf_t *conf, char *name,
 /*  Creates a new serial device object and adds it to the master objs list.
  *    Note: the console is open and set for non-blocking I/O.
  *  Returns the new object, or NULL on error.
+ *
+ *  FIXME: This serial routines should be refactored into server-serial.c.
  */
     ListIterator i;
     obj_t *serial;
-    int fd = -1;
-    struct termios tty;
 
     assert(conf != NULL);
     assert((name != NULL) && (name[0] != '\0'));
@@ -240,20 +239,52 @@ obj_t * create_serial_obj(server_conf_t *conf, char *name,
         }
     }
     list_iterator_destroy(i);
-    if (serial != NULL)
-        goto err;
+    if (serial != NULL) {
+        return(NULL);
+    }
+    serial = create_obj(conf, name, -1, CONMAN_OBJ_SERIAL);
+    serial->aux.serial.dev = create_string(dev);
+    serial->aux.serial.opts = *opts;
+    serial->aux.serial.logfile = NULL;
+    return(serial);
+}
 
-    if ((fd = open(dev, O_RDWR | O_NONBLOCK | O_NOCTTY)) < 0) {
-        snprintf(errbuf, errlen,
-            "unable to open \"%s\": %s", dev, strerror(errno));
+
+int open_serial_obj(obj_t *serial)
+{
+/*  (Re)opens the specified 'serial' obj.
+ *  Returns 0 if the serial console is successfully opened; o/w, returns -1.
+ *
+ *  FIXME: Check to see if "downed" serial consoles are ever resurrected.
+ */
+    int fd;
+    int flags;
+    struct termios tty;
+
+    assert(serial != NULL);
+    assert(is_serial_obj(serial));
+
+    if (serial->fd >= 0) {
+        set_tty_mode(&serial->aux.serial.tty, serial->fd);
+        if (close(serial->fd) < 0)      /* log err and continue */
+            log_msg(LOG_WARNING, "Unable to close [%s] device \"%s\": %s",
+                serial->name, serial->aux.serial.dev, strerror(errno));
+        serial->fd = -1;
+    }
+    flags = O_RDWR | O_NONBLOCK | O_NOCTTY;
+    if ((fd = open(serial->aux.serial.dev, flags)) < 0) {
+        log_msg(LOG_WARNING, "Unable to open [%s] device \"%s\": %s",
+            serial->name, serial->aux.serial.dev, strerror(errno));
         goto err;
     }
     if (get_write_lock(fd) < 0) {
-        snprintf(errbuf, errlen, "unable to lock \"%s\"", dev);
+        log_msg(LOG_WARNING, "Unable to lock [%s] device \"%s\"",
+            serial->name, serial->aux.serial.dev);
         goto err;
     }
     if (!isatty(fd)) {
-        snprintf(errbuf, errlen, "device \"%s\" is not a terminal", dev);
+        log_msg(LOG_WARNING, "[%s] device \"%s\" not a terminal",
+            serial->name, serial->aux.serial.dev);
         goto err;
     }
     /*  According to the UNIX Programming FAQ v1.37
@@ -265,33 +296,32 @@ obj_t * create_serial_obj(server_conf_t *conf, char *name,
      */
     set_fd_nonblocking(fd);
     set_fd_closed_on_exec(fd);
-
-    /*  Note that while the initial state of the console dev's termios
+    /*
+     *  Note that while the initial state of the console dev's termios
      *    are saved, the 'opts' settings are not.  This is because the
      *    settings do not change until the obj is destroyed, at which time
      *    the termios is reverted back to its initial state.
-     *  Also note that these local opts will need to be saved in the serial obj
-     *    in order to support true server reconfiguration.  But not today.
+     *
+     *  FIXME: Re-evaluate this thinking since a SIGHUP should attempt
+     *         to resurrect "downed" serial objs.
      */
-    serial = create_obj(conf, name, fd, CONMAN_OBJ_SERIAL);
-    serial->aux.serial.dev = create_string(dev);
-    serial->aux.serial.logfile = NULL;
     get_tty_mode(&serial->aux.serial.tty, fd);
     get_tty_raw(&tty, fd);
-    set_serial_opts(&tty, serial, opts);
+    set_serial_opts(&tty, serial, &serial->aux.serial.opts);
     set_tty_mode(&tty, fd);
-
-    /*  Success!
+    serial->fd = fd;
+    /*
+     *  Success!
      */
-    log_msg(LOG_INFO, "Console [%s] connected to \"%s\"", name, dev);
-
-    return(serial);
+    log_msg(LOG_INFO, "Console [%s] connected to \"%s\"",
+        serial->name, serial->aux.serial.dev);
+    return(0);
 
 err:
-    if (fd >= 0)
-        if (close(fd) < 0)
-            log_err(errno, "Unable to close console [%s]", name);
-    return(NULL);
+    if (fd >= 0) {
+        close(fd);                      /* ignore errors */
+    }
+    return(-1);
 }
 
 
@@ -302,6 +332,8 @@ obj_t * create_telnet_obj(server_conf_t *conf, char *name,
  *  Note: a non-blocking connect is initiated for the remote host:port
  *    and later completed by mux_io().
  *  Returns the new object, or NULL on error.
+ *
+ *  FIXME: This telnet routines should be refactored into server-telnet.c.
  */
     ListIterator i;
     obj_t *telnet;
@@ -367,7 +399,6 @@ obj_t * create_telnet_obj(server_conf_t *conf, char *name,
      */
     telnet->aux.telnet.enableKeepAlive = conf->enableKeepAlive;
 
-    connect_telnet_obj(telnet);
     return(telnet);
 }
 
@@ -610,22 +641,25 @@ void destroy_obj(obj_t *obj)
          *    in the close() call until the output drains.
          *    Play it safe and discard any pending output.
          */
-        /*  FIXME: Changed to non-fatal error. 20030403 */
-        if ((obj->fd >= 0) && (tcflush(obj->fd, TCIOFLUSH) < 0))
-            log_msg(LOG_INFO, "Unable to flush tty device for console [%s]",
-                obj->name);
-        if (obj->aux.serial.dev)
+        /*  FIXME: Changed tcflush() to non-fatal error. 20030403
+         */
+        if (obj->fd >= 0) {
+            set_tty_mode(&obj->aux.serial.tty, obj->fd);
+            if (tcflush(obj->fd, TCIOFLUSH) < 0)
+                log_msg(LOG_INFO,
+                    "Unable to flush tty device for console [%s]", obj->name);
+        }
+        if (obj->aux.serial.dev) {
             free(obj->aux.serial.dev);
-        set_tty_mode(&obj->aux.serial.tty, obj->fd);
-        /*
-         *  Do not destroy obj->aux.serial.logfile since it is only a ref.
+        }
+        /*  Do not destroy obj->aux.serial.logfile since it is only a ref.
          */
         break;
     case CONMAN_OBJ_TELNET:
-        if (obj->aux.telnet.host)
+        if (obj->aux.telnet.host) {
             free(obj->aux.telnet.host);
-        /*
-         *  Do not destroy obj->aux.telnet.logfile since it is only a ref.
+        }
+        /*  Do not destroy obj->aux.telnet.logfile since it is only a ref.
          */
         break;
     default:
@@ -635,18 +669,20 @@ void destroy_obj(obj_t *obj)
     }
 
     x_pthread_mutex_destroy(&obj->bufLock);
-    if (obj->readers)
+    if (obj->readers) {
         list_destroy(obj->readers);
-    if (obj->writers)
+    }
+    if (obj->writers) {
         list_destroy(obj->writers);
+    }
     if (obj->fd >= 0) {
         if (close(obj->fd) < 0)
             log_err(errno, "Unable to close object [%s]", obj->name);
         obj->fd = -1;
     }
-    if (obj->name)
+    if (obj->name) {
         free(obj->name);
-
+    }
     free(obj);
     return;
 }
@@ -786,7 +822,7 @@ static char * sanitize_file_string(char *str)
 
     if (str) {
         for (p=str; *p; p++) {
-            if (!isgraph(*p) || (*p == '/'))
+            if (!isgraph((int) *p) || (*p == '/'))
                 *p = '_';
         }
     }

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.h,v 1.55.2.1 2003/07/12 00:12:24 dun Exp $
+ *  $Id: server.h,v 1.55.2.2 2003/07/24 20:13:17 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -102,6 +102,7 @@ typedef struct serial_opt {             /* SERIAL OBJ OPTIONS:               */
 
 typedef struct serial_obj {             /* SERIAL AUX OBJ DATA:              */
     char            *dev;               /*  local serial device name         */
+    seropt_t         opts;              /*  serial options                   */
     struct base_obj *logfile;           /*  log obj ref for console replay   */
     struct termios   tty;               /*  saved cooked tty mode            */
 } serial_obj_t;
@@ -171,6 +172,7 @@ typedef struct server_conf {
     char            *pidFileName;       /* file to which pid is written      */
     char            *resetCmd;          /* cmd to invoke for reset esc-seq   */
     int              syslogFacility;    /* syslog facility or -1 if disabled */
+    int              throwSignal;       /* signal num to send running daemon */
     int              tStampMinutes;     /* minutes 'tween logfile timestamps */
     time_t           tStampNext;        /* time next stamp written to logs   */
     int              fd;                /* configuration file descriptor     */
@@ -246,13 +248,9 @@ typedef struct client_args {
 **  server-conf.c  **
 \*******************/
 
-server_conf_t * create_server_conf(void);
+server_conf_t * create_server_conf(int argc, char *argv[]);
 
 void destroy_server_conf(server_conf_t *conf);
-
-void process_server_cmd_line(int argc, char *argv[], server_conf_t *conf);
-
-void process_server_conf_file(server_conf_t *conf);
 
 
 /******************\
@@ -291,6 +289,8 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name,
 
 obj_t * create_serial_obj(server_conf_t *conf, char *name,
     char *dev, seropt_t *opts, char *errbuf, int errlen);
+
+int open_serial_obj(obj_t *serial);
 
 obj_t * create_telnet_obj(server_conf_t *conf, char *name,
     char *host, int port, char *errbuf, int errlen);

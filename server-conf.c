@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-conf.c,v 1.54.2.1 2003/07/12 00:12:24 dun Exp $
+ *  $Id: server-conf.c,v 1.54.2.2 2003/07/24 20:13:17 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -156,18 +156,22 @@ static tag_t logFacilities[] = {
 };
 
 
+static void process_server_conf(server_conf_t *conf, int argc, char *argv[]);
+static void parse_server_cmd_line(server_conf_t *conf, int argc, char *argv[]);
+static void parse_server_conf_file(server_conf_t *conf);
 static void display_server_help(char *prog);
-static void signal_daemon(server_conf_t *conf, int signum);
-static void parse_console_directive(Lex l, server_conf_t *conf);
-static void parse_global_directive(Lex l, server_conf_t *conf);
-static void parse_server_directive(Lex l, server_conf_t *conf);
-static int create_pidfile(const char *pidfile);
+static void signal_daemon(server_conf_t *conf);
+static void parse_console_directive(server_conf_t *conf, Lex l);
+static void parse_global_directive(server_conf_t *conf, Lex l);
+static void parse_server_directive(server_conf_t *conf, Lex l);
+static int read_pidfile(const char *pidfile);
+static int write_pidfile(const char *pidfile);
 static int is_empty_string(const char *s);
 static int lookup_syslog_priority(const char *priority);
 static int lookup_syslog_facility(const char *facility);
 
 
-server_conf_t * create_server_conf(void)
+server_conf_t * create_server_conf(int argc, char *argv[])
 {
     server_conf_t *conf;
     char buf[PATH_MAX];
@@ -185,6 +189,7 @@ server_conf_t * create_server_conf(void)
     conf->pidFileName = NULL;
     conf->resetCmd = NULL;
     conf->syslogFacility = -1;
+    conf->throwSignal = -1;
     conf->tStampMinutes = 0;
     conf->tStampNext = 0;
     /*
@@ -236,6 +241,7 @@ server_conf_t * create_server_conf(void)
         conf->cwd = create_string(buf);
         conf->logDirName = create_string(buf);
     }
+    process_server_conf(conf, argc, argv);
     return(conf);
 }
 
@@ -285,10 +291,46 @@ void destroy_server_conf(server_conf_t *conf)
 }
 
 
-void process_server_cmd_line(int argc, char *argv[], server_conf_t *conf)
+static void process_server_conf(server_conf_t *conf, int argc, char *argv[])
+{
+    pid_t pid;
+
+    parse_server_cmd_line(conf, argc, argv);
+    parse_server_conf_file(conf);
+
+    if (conf->throwSignal >= 0) {
+        signal_daemon(conf);
+        exit(0);
+    }
+    if ((pid = is_write_lock_blocked(conf->fd)) > 0) {
+        log_err(0, "Configuration \"%s\" in use by pid %d",
+            conf->confFileName, pid);
+    }
+    /*  Must use a read lock here since the file is only open for reading.
+     *    But exclusive access is ensured by testing for a write lock above.
+     *  Truth be told, use of a read lock here provides a small window for
+     *    a race condition where multiple processes could obtain locks.
+     *    But since the config file could be read-only, this seems an
+     *    acceptable risk.  You've got to ask yourself one question:
+     *    Do I feel lucky?  Well, do ya, punk?
+     */
+    if (get_read_lock(conf->fd) < 0) {
+        log_err(0, "Unable to lock configuration \"%s\"",
+            conf->confFileName);
+    }
+    if (conf->pidFileName) {
+        if (write_pidfile(conf->pidFileName) < 0) {
+            free(conf->pidFileName);
+            conf->pidFileName = NULL;   /* prevent unlink() at exit */
+        }
+    }
+    return;
+}
+
+
+static void parse_server_cmd_line(server_conf_t *conf, int argc, char *argv[])
 {
     int c;
-    int signum = 0;
 
     opterr = 0;
     while ((c = getopt(argc, argv, "c:hkLp:rvVz")) != -1) {
@@ -302,7 +344,7 @@ void process_server_cmd_line(int argc, char *argv[], server_conf_t *conf)
             display_server_help(argv[0]);
             exit(0);
         case 'k':
-            signum = SIGTERM;
+            conf->throwSignal = SIGTERM;
             break;
         case 'L':
             printf("%s", conman_license);
@@ -312,7 +354,7 @@ void process_server_cmd_line(int argc, char *argv[], server_conf_t *conf)
                 log_err(0, "CMDLINE: invalid port \"%d\"", conf->port);
             break;
         case 'r':
-            signum = SIGHUP;
+            conf->throwSignal = SIGHUP;
             break;
         case 'v':
             conf->enableVerbose = 1;
@@ -331,19 +373,13 @@ void process_server_cmd_line(int argc, char *argv[], server_conf_t *conf)
             break;
         }
     }
-
-    if (signum) {
-        signal_daemon(conf, signum);
-        exit(0);
-    }
     return;
 }
 
 
-void process_server_conf_file(server_conf_t *conf)
+static void parse_server_conf_file(server_conf_t *conf)
 {
     int port;
-    pid_t pid;
     struct stat fdStat;
     int len;
     char *buf;
@@ -355,24 +391,22 @@ void process_server_conf_file(server_conf_t *conf)
      *  If (port > 0), port was specified via the command-line.
      */
     port = conf->port;
-
-    if ((conf->fd = open(conf->confFileName, O_RDONLY)) < 0)
+    /*
+     *  Keep conf->fd open after parsing the file in order to obtain the lock.
+     */
+    if ((conf->fd = open(conf->confFileName, O_RDONLY)) < 0) {
         log_err(errno, "Unable to open \"%s\"", conf->confFileName);
-
-    if ((pid = is_write_lock_blocked(conf->fd)) > 0)
-        log_err(0, "Configuration \"%s\" in use by pid %d",
-            conf->confFileName, pid);
-    if (get_read_lock(conf->fd) < 0)
-        log_err(0, "Unable to lock configuration \"%s\"",
-            conf->confFileName);
-
-    if (fstat(conf->fd, &fdStat) < 0)
+    }
+    if (fstat(conf->fd, &fdStat) < 0) {
         log_err(errno, "Unable to stat \"%s\"", conf->confFileName);
+    }
     len = fdStat.st_size;
-    if (!(buf = malloc(len + 1)))
+    if (!(buf = malloc(len + 1))) {
         out_of_memory();
-    if ((n = read_n(conf->fd, buf, len)) < 0)
+    }
+    if ((n = read_n(conf->fd, buf, len)) < 0) {
         log_err(errno, "Unable to read \"%s\"", conf->confFileName);
+    }
     assert(n == len);
     buf[len] = '\0';
 
@@ -380,13 +414,13 @@ void process_server_conf_file(server_conf_t *conf)
     while ((tok = lex_next(l)) != LEX_EOF) {
         switch(tok) {
         case SERVER_CONF_CONSOLE:
-            parse_console_directive(l, conf);
+            parse_console_directive(conf, l);
             break;
         case SERVER_CONF_GLOBAL:
-            parse_global_directive(l, conf);
+            parse_global_directive(conf, l);
             break;
         case SERVER_CONF_SERVER:
-            parse_server_directive(l, conf);
+            parse_server_directive(conf, l);
             break;
         case LEX_EOL:
             break;
@@ -417,12 +451,6 @@ void process_server_conf_file(server_conf_t *conf)
         if (strchr(conf->logFileName, '%'))
             conf->logFmtName = create_string(conf->logFileName);
     }
-    if (conf->pidFileName) {
-        if (create_pidfile(conf->pidFileName) < 0) {
-            free(conf->pidFileName);
-            conf->pidFileName = NULL;   /* prevent unlink() at exit */
-        }
-    }
     return;
 }
 
@@ -447,45 +475,62 @@ static void display_server_help(char *prog)
 }
 
 
-static void signal_daemon(server_conf_t *conf, int signum)
+static void signal_daemon(server_conf_t *conf)
 {
-/*  Sends the 'signum' signal to the daemon running with the
- *    configuration specified by 'conf'.
+/*  Signals the daemon running with the configuration specified by 'conf'.
  */
     pid_t pid;
-    char *msg;
+    const char *msg;
 
     assert(conf != NULL);
     assert(conf->confFileName != NULL);
-    assert(signum > 0);
+    assert(conf->fd >= 0);
+    assert(conf->throwSignal >= 0);
 
-    if ((conf->fd = open(conf->confFileName, O_RDONLY)) < 0) {
-        log_err(errno, "Unable to open \"%s\"", conf->confFileName);
+    /*  Attempt to get the pid from the lock held on the config file.
+     *  However, that could fail if the file has been modified since the
+     *  daemon was invoked; this is because some editors move the old file
+     *  out of the way and write a new file in its place.  As such, fall
+     *  back on reading the pid file if one is available.  Unfortunately,
+     *  that could fail as well if the name of the pid file was altered in
+     *  the config file.  Note that the pid file does not support conversion
+     *  specifiers in order to reduce the likelihood of this happening.
+     */
+    if ( !(pid = is_write_lock_blocked(conf->fd))
+      && !(pid = read_pidfile(conf->pidFileName)) ) {
+        log_err(0, "Configuration \"%s\" does not appear to be active",
+            conf->confFileName);
     }
-    if (!(pid = is_write_lock_blocked(conf->fd))) {
-        log_err(0, "Configuration \"%s\" is not active", conf->confFileName);
+    /*  Prevent pidfile from being unlink()d by destroy_server_conf().
+     */
+    if (conf->pidFileName) {
+        free(conf->pidFileName);
+        conf->pidFileName = NULL;
     }
-    if (kill(pid, signum) < 0) {
+    /*  "Now go do that voodoo that you do so well."
+     */
+    if (kill(pid, conf->throwSignal) < 0) {
         log_err(errno, "Unable to send signal=%d to pid %d",
-            signum, (int) pid);
+            conf->throwSignal, (int) pid);
     }
+    /*  "We don't need no stinkin' badges."
+     */
     if (conf->enableVerbose) {
-        if (signum == SIGHUP)
+        if (conf->throwSignal == SIGHUP)
             msg = "reconfigured on";
-        else if (signum == SIGTERM)
+        else if (conf->throwSignal == SIGTERM)
             msg = "terminated on";
         else
             msg = "sent";
         fprintf(stderr, "Configuration \"%s\" (pid %d) %s signal=%d\n",
-            conf->confFileName, (int) pid, msg, signum);
+            conf->confFileName, (int) pid, msg, conf->throwSignal);
     }
-
     destroy_server_conf(conf);
     exit(0);
 }
 
 
-static void parse_console_directive(Lex l, server_conf_t *conf)
+static void parse_console_directive(server_conf_t *conf, Lex l)
 {
 /*  CONSOLE NAME="<str>" DEV="<file>" \
  *    [LOG="<file>"] [LOGOPTS="<str>"] [SEROPTS="<str>"]
@@ -651,7 +696,7 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
 }
 
 
-static void parse_global_directive(Lex l, server_conf_t *conf)
+static void parse_global_directive(server_conf_t *conf, Lex l)
 {
     char *directive;                    /* name of directive being parsed */
     int tok;
@@ -747,7 +792,7 @@ static void parse_global_directive(Lex l, server_conf_t *conf)
 }
 
 
-static void parse_server_directive(Lex l, server_conf_t *conf)
+static void parse_server_directive(server_conf_t *conf, Lex l)
 {
     char *directive;
     int tok;
@@ -990,7 +1035,39 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
 }
 
 
-static int create_pidfile(const char *pidfile)
+static int read_pidfile(const char *pidfile)
+{
+/*  Reads the PID from the specified pidfile.
+ *  Returns the PID on success, 0 if no pidfile is defined, or dies trying.
+ */
+    FILE *fp;
+    int n;
+    int pid = 0;
+
+    if (!pidfile) {
+        return (0);
+    }
+    assert(pidfile[0] == '/');
+
+    /*  FIXME: Ensure pathname is secure before trusting pid from file.
+     */
+    if (!(fp = fopen(pidfile, "r"))) {
+        log_err(errno, "Unable to open pidfile \"%s\"", pidfile);
+    }
+    if ((n = fscanf(fp, "%d", &pid)) == EOF) {
+        log_err(errno, "Unable to read from pidfile \"%s\"", pidfile);
+    }
+    else if (n == 0) {
+        log_err(0, "Unable to obtain pid from pidfile \"%s\"", pidfile);
+    }
+    if (fclose(fp) == EOF) {
+        log_err(errno, "Unable to close pidfile \"%s\"", pidfile);
+    }
+    return((pid > 1) ? pid : 0);
+}
+
+
+static int write_pidfile(const char *pidfile)
 {
 /*  Creates the specified pidfile.
  *  Returns 0 on success, or -1 on error.
@@ -999,34 +1076,39 @@ static int create_pidfile(const char *pidfile)
  *  The pidfile must be specified with an absolute pathname; o/w, the
  *    unlink() call at exit will fail because the daemon has chdir()'d.
  */
+    mode_t mask;
     FILE *fp;
-    int gotError = 0;
 
     assert(pidfile != NULL);
     assert(pidfile[0] == '/');
 
-    if (!(fp = fopen(pidfile, "w"))) {
+    /*  Protect pidfile against unauthorized writes by removing
+     *    group+other write-access from current mask.
+     */
+    mask = umask(0);
+    umask(mask | 022);
+
+    unlink(pidfile);                    /* ignore errors */
+    fp = fopen(pidfile, "w");
+    umask(mask);
+
+    if (!fp) {
         log_msg(LOG_ERR, "Unable to open pidfile \"%s\": %s",
             pidfile, strerror(errno));
-        return(-1);
     }
-    if (fprintf(fp, "%d\n", (int) getpid()) == EOF) {
+    else if (fprintf(fp, "%d\n", (int) getpid()) == EOF) {
         log_msg(LOG_ERR, "Unable to write to pidfile \"%s\": %s",
             pidfile, strerror(errno));
-        gotError = 1;
     }
-    if (fclose(fp) == EOF) {
+    else if (fclose(fp) == EOF) {
         log_msg(LOG_ERR, "Unable to close pidfile \"%s\": %s",
             pidfile, strerror(errno));
-        gotError = 1;
     }
-    if (gotError) {
-        if (unlink(pidfile) < 0)
-            log_msg(LOG_ERR, "Unable to delete pidfile \"%s\": %s",
-                pidfile, strerror(errno));
-        return(-1);
+    else {
+        return(0);
     }
-    return(0);
+    unlink(pidfile);                    /* ignore errors */
+    return(-1);
 }
 
 
