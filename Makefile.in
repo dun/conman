@@ -2,12 +2,10 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Makefile.in,v 1.35 2001/12/05 23:20:05 dun Exp $
+# $Id: Makefile.in,v 1.36 2001/12/12 00:27:32 dun Exp $
 ##
 
-PACKAGE=	`sed -ne 's/^\(.*\)-\(.*\)/\1/p' $(top_srcdir)/VERSION`
-VERSION=	`sed -ne 's/^\(.*\)-\(.*\)/\2/p' $(top_srcdir)/VERSION`
-RELEASE=	1
+PACKAGE=	conman
 
 SHELL=		@SHELL@
 CC=		@CC@
@@ -68,7 +66,7 @@ install: $(PROGS)
 	$(mkinstalldirs) $(DESTDIR)/etc/rc.d/init.d
 	$(INSTALL) -m 755 etc/conman.init $(DESTDIR)/etc/rc.d/init.d/conman
 	pkg="$(PACKAGE)"; \
-	for f in `cd lib && find * -name "CVS" -prune -o -type f -print`; do \
+	for f in `cd lib && find * -name CVS -prune -o -type f -print`; do \
 	  $(mkinstalldirs) `dirname $(DESTDIR)$(libdir)/$$pkg/$$f`; \
 	  $(INSTALL) -m 755 lib/$$f $(DESTDIR)$(libdir)/$$pkg/$$f; \
 	done; \
@@ -93,7 +91,7 @@ include Make-rpm.mk
 Makefile: Makefile.in config.status
 	./config.status
 
-config.status: VERSION
+config.status: META
 	./config.status --recheck
 
 $(PACKAGE).spec: $(PACKAGE).spec.in
