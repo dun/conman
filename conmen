@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ##
-#  $Id: conmen,v 1.5 2001/06/15 23:57:35 dun Exp $
+#  $Id: conmen,v 1.6 2001/06/18 16:40:59 dun Exp $
 #    by Chris Dunlap <cdunlap@llnl.gov>
 ##
 #  ConMen is a wrapper to aid in ConMan broadcast sessions.
@@ -14,7 +14,7 @@
 use Getopt::Std;
 
 
-$SIG{'TERM'} = signal_handler;
+$SIG{'TERM'} = exit_handler;
 
 $ENV{DISPLAY}
     or die("ERROR: DISPLAY is not set.\n");
@@ -27,9 +27,7 @@ $help = `conman -h`;
 ($def_dst) = ($help =~ /-d .* \(default: ([^\)]*)\)/);
 ($def_esc) = ($help =~ /-e .* \(default: ([^\)]*)\)/);
 
-if (!@ARGV || !getopts('d:e:fg:hjmV') || $opt_h) {
-    print_usage();
-}
+print_usage() if (!@ARGV || !getopts('d:e:fg:hjmV') || $opt_h);
 
 ($opt_f + $opt_j + $opt_m <= 1)
     or die("ERROR: Only one mode [fjm] can be specified.\n");
@@ -49,18 +47,12 @@ if ($opt_f) {
     $mode = "-m";
 }
 
-foreach (@ARGV) {
-    $_ = "'$_'";
-}
+foreach (@ARGV) { $_ = "'$_'"; }
 $patterns = join(" ", @ARGV);
 chomp(@consoles = `$conman -q $patterns`);
 
-if (@consoles == 0) {
-    exit(1);
-}
-if (@consoles == 1) {
-    exec("$conman $mode $consoles[0]");
-}
+exit(1) if (@consoles == 0);
+exec("$conman $mode $consoles[0]") if (@consoles == 1);
 
 $xterm = "xterm";
 $xterm .= " -geometry \'$opt_g\'" if ($opt_g);
@@ -71,7 +63,7 @@ foreach (@consoles) {
 }
 select(undef, undef, undef, 1.0);
 system("$conman -bj $patterns");
-kill('TERM', -getpid);
+kill('TERM', getpid);
 
 exit(0);
 
@@ -94,7 +86,7 @@ sub print_usage
 }
 
 
-sub signal_handler
+sub exit_handler
 {
     exit(0);
 }
