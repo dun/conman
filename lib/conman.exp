@@ -1,7 +1,7 @@
 ##
 # ConMan Expect Language Library (CELL)
 ##
-# $Id: conman.exp,v 1.4 2001/08/31 00:58:11 dun Exp $
+# $Id: conman.exp,v 1.5 2001/09/01 00:10:47 dun Exp $
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
 
@@ -209,7 +209,7 @@ proc conman_check_console_state {spawn_id {tmout 4}} {
 # Checks the output of the ConMan session associated with 'spawn_id'
 #   in an attempt to determine the state of the console.
 # Possible states are:
-#   active, error, inactive, login, rmc, shell, srm
+#   active, error, inactive, login, rmc, shell, srm, srom
 #
   set timeout 1
   expect -re "\r\n<ConMan> \[^\r]*\r\n" {
