@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.20 2001/08/03 21:11:46 dun Exp $
+ *  $Id: server.h,v 1.21 2001/08/14 23:19:09 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -16,7 +16,7 @@
 #include "list.h"
 
 
-enum obj_type {
+enum obj_type {				/* bit-field limited to 4 values      */
     CLIENT,
     CONSOLE,
     LOGFILE,
@@ -24,13 +24,13 @@ enum obj_type {
 
 typedef struct client_obj {		/* CLIENT AUX OBJ DATA:               */
     req_t           *req;		/*  client request info               */
-    int              gotEscape;		/*  true if last char rcvd was an esc */
     time_t           timeLastRead;	/*  time last data was read from fd   */
+    unsigned         gotEscape:1;	/*  true if last char rcvd was an esc */
+    unsigned         gotSuspend:1;	/*  true if suspending client output  */
 } client_obj_t;
 
 typedef struct console_obj {		/* CONSOLE AUX OBJ DATA:              */
     char            *dev;		/*  console device name               */
-    char            *rst;		/*  filename of "console-reset" prog  */
     int              bps;		/*  console baud rate                 */
     struct base_obj *logfile;		/*  log obj ref for console output    */
     struct termios   term;		/*  saved cooked tty mode             */
@@ -49,25 +49,29 @@ typedef union aux_obj {
 typedef struct base_obj {		/* BASE OBJ:                          */
     char            *name;		/*  obj name                          */
     int              fd;		/*  file descriptor                   */
-    int              gotEOF;		/*  true if obj rcvd EOF on last read */
-    int              gotSuspended;	/*  true if obj's output is suspended */
-    int              gotWrapped;	/*  true if circular-buf has wrapped  */
     unsigned char    buf[MAX_BUF_SIZE];	/*  circular-buf to be written to fd  */
     unsigned char   *bufInPtr;		/*  ptr for data written in to buf    */
     unsigned char   *bufOutPtr;		/*  ptr for data written out to fd    */
     pthread_mutex_t  bufLock;		/*  lock protecting access to buf     */
     List             readers;		/*  list of objs that i write to      */
     List             writers;		/*  list of objs that write to me     */
-    enum obj_type    type;		/*  type of auxiliary obj             */
-    aux_obj_t        aux;		/*  auxiliary obj data                */
+    enum obj_type    type:2;		/*  type of auxiliary obj             */
+    unsigned         gotBufWrap:1;	/*  true if circular-buf has wrapped  */
+    unsigned         gotEOF:1;		/*  true if obj rcvd EOF on last read */
+    aux_obj_t        aux;		/*  auxiliary obj data union          */
 } obj_t;
 
 typedef struct server_conf {
-    char            *filename;		/* configuration filename             */
+    char            *filename;		/* configuration file name            */
+    int              fd;		/* configuration file descriptor      */
+    int              port;		/* port number on which to listen     */
     char            *logname;		/* file to which events are logged    */
     int              ld;		/* listening socket descriptor        */
-    List             objs;		/* list of all server objects         */
-    int              zeroLogs;		/* true if console logs are zero'd    */
+    List             objs;		/* list of all server obj_t's         */
+    unsigned         enableKeepAlive:1;	/* true if using TCP keep-alive       */
+    unsigned         enableLoopBack:1;	/* true if only listening on loopback */
+    unsigned         enableVerbose:1;	/* true if verbose output requested   */
+    unsigned         enableZeroLogs:1;	/* true if console logs are zero'd    */
 } server_conf_t;
 
 typedef struct client_args {
@@ -100,8 +104,7 @@ int process_escape_chars(obj_t *client, void *src, int len);
 **  server-obj.c  **
 \******************/
 
-obj_t * create_console_obj(List objs, char *name, char *dev,
-    char *rst, int bps);
+obj_t * create_console_obj(List objs, char *name, char *dev, int bps);
 
 obj_t * create_logfile_obj(List objs, char *name, obj_t *console, int zeroLog);
 
