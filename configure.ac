@@ -2,7 +2,7 @@
 # ConMan AutoConf Configuration
 #   Process this file with autoconf to produce a configure script.
 #******************************************************************************
-# $Id: configure.ac,v 1.21 2002/05/12 19:20:29 dun Exp $
+# $Id: configure.ac,v 1.22 2002/05/16 04:34:28 dun Exp $
 #******************************************************************************
 # Copyright (C) 2001-2002 The Regents of the University of California.
 # Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -283,7 +283,9 @@ AC_DEFINE(WITH_PTHREADS, 1, [Define if using Pthreads.])
 AH_BOTTOM(
 [
 #ifdef WITH_PTHREADS
-#  define _REENTRANT
+#  ifndef _REENTRANT
+#    define _REENTRANT
+#  endif /* _REENTRANT */
 #endif /* WITH_PTHREADS */
 
 /* Override default out_of_memory() macro definition. */

@@ -81,7 +81,9 @@
 
 
 #ifdef WITH_PTHREADS
-#  define _REENTRANT
+#  ifndef _REENTRANT
+#    define _REENTRANT
+#  endif /* _REENTRANT */
 #endif /* WITH_PTHREADS */
 
 /* Override default out_of_memory() macro definition. */
