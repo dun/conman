@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 #
-# $Id: Makefile.in,v 1.1 2001/05/04 15:26:40 dun Exp $
+# $Id: Makefile.in,v 1.2 2001/05/14 15:30:49 dun Exp $
 ##
 
 PACKAGE=	@PACKAGE@
@@ -42,7 +42,7 @@ depend:
 	makedepend -Y -- $(COPTS) -- *.[ch] 2>/dev/null
 
 clean:
-	-rm -f *.o *.a *~ \#* core *.core .depend
+	-rm -f *.o *.a *~ \#* core *.core
 
 distclean: clean
 	-rm -f config.cache config.log config.status stamp-h Makefile.bak
