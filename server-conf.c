@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.35 2001/12/28 20:13:06 dun Exp $
+ *  $Id: server-conf.c,v 1.36 2001/12/29 04:38:23 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -308,11 +308,6 @@ void process_server_conf_file(server_conf_t *conf)
         if (fclose(fp) == EOF)
             err_msg(errno, "Unable to close \"%s\"", conf->pidFileName);
     }
-
-#ifndef WITH_TCP_WRAPPERS
-    if (conf->enableTCPWrap)
-        log_msg(0, "Cannot enable TCP-Wrappers without compile-time support.");
-#endif /* !WITH_TCP_WRAPPERS */
 
     return;
 }
@@ -709,6 +704,12 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
             break;
 
         case SERVER_CONF_TCPWRAPPERS:
+#ifndef WITH_TCP_WRAPPERS
+            snprintf(err, sizeof(err),
+                "%s keyword requires compile-time support",
+                server_conf_strs[LEX_UNTOK(tok)]);
+            break;
+#endif /* !WITH_TCP_WRAPPERS */
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);

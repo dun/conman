@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.41 2001/12/20 22:00:32 dun Exp $
+ *  $Id: server.c,v 1.42 2001/12/29 04:38:23 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -259,10 +259,8 @@ static void display_configuration(server_conf_t *conf)
             printf(" LoopBack");
         if (conf->resetCmd)
             printf(" ResetCmd");
-#ifdef WITH_TCP_WRAPPERS
         if (conf->enableTCPWrap)
             printf(" TCP-Wrappers");
-#endif /* WITH_TCP_WRAPPERS */
         if (conf->tStampMinutes > 0)
             printf(" TimeStamp=%dm", conf->tStampMinutes);
         if (conf->enableZeroLogs)
@@ -464,7 +462,6 @@ static void mux_io(server_conf_t *conf)
         tval.tv_sec = 1;
         tval.tv_usec = 0;
 
-        DPRINTF("Entering select()...\n");
         while ((n = tselect(maxfd+1, &rset, &wset, NULL)) < 0) {
             if (errno != EINTR)
                 err_msg(errno, "Unable to multiplex I/O");
