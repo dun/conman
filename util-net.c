@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-net.c,v 1.6 2001/09/16 23:45:05 dun Exp $
+ *  $Id: util-net.c,v 1.7 2001/09/20 23:12:32 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util-net.h" for documentation on public functions.
@@ -123,27 +123,27 @@ int host_name_to_addr4(const char *name, struct in_addr *addr)
 }
 
 
-char * host_addr4_to_name(const struct in_addr *addr, char *name, int len)
+char * host_addr4_to_name(const struct in_addr *addr, char *dst, int dstlen)
 {
     struct hostent *hptr;
     unsigned char buf[HOSTENT_SIZE];
 
     assert(addr);
-    assert(name);
+    assert(dst);
 
     if (!(hptr = get_host_by_addr((char *) addr, 4, AF_INET,
       buf, sizeof(buf), NULL)))
         return(NULL);
-    if (strlen(hptr->h_name) >= len) {
+    if (strlen(hptr->h_name) >= dstlen) {
         errno = ERANGE;
         return(NULL);
     }
-    strcpy(name, hptr->h_name);
-    return(name);
+    strcpy(dst, hptr->h_name);
+    return(dst);
 }
 
 
-char * host_name_to_cname(const char *src, char *dst, int len)
+char * host_name_to_cname(const char *src, char *dst, int dstlen)
 {
     struct hostent *hptr;
     unsigned char buf[HOSTENT_SIZE];
@@ -164,7 +164,7 @@ char * host_name_to_cname(const char *src, char *dst, int len)
     if (!(hptr = get_host_by_addr((char *) &addr, 4, AF_INET,
       buf, sizeof(buf), NULL)))
         return(NULL);
-    if (strlen(hptr->h_name) >= len) {
+    if (strlen(hptr->h_name) >= dstlen) {
         errno = ERANGE;
         return(NULL);
     }

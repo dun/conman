@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-net.h,v 1.2 2001/09/11 12:31:24 dun Exp $
+ *  $Id: util-net.h,v 1.3 2001/09/20 23:12:32 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -53,19 +53,19 @@ int host_name_to_addr4(const char *name, struct in_addr *addr);
  *  Note that this routine is thread-safe.
  */
 
-char * host_addr4_to_name(const struct in_addr *addr, char *name, int len);
+char * host_addr4_to_name(const struct in_addr *addr, char *dst, int dstlen);
 /*
  *  Converts an IPv4 address (addr) to a string residing in
- *    buffer (name) of length (len).
- *  Returns a ptr to the NULL-terminated string (name) on success,
+ *    buffer (dst) of length (dstlen).
+ *  Returns a ptr to the NULL-terminated string (dst) on success,
  *    or NULL on error.
  *  Note that this routine is thread-safe.
  */
 
-char * host_name_to_cname(const char *src, char *dst, int len);
+char * host_name_to_cname(const char *src, char *dst, int dstlen);
 /*
  *  Converts the hostname or IP address string (src) to the
- *    canonical name of the host residing in buffer (dst) of length (len).
+ *    canonical name of the host residing in buffer (dst) of length (dstlen).
  *  Returns a ptr to the NULL-terminated string (dst) on success,
  *    or NULL on error.
  *  Note that this routine is thread-safe.
