@@ -2,7 +2,7 @@
 # Makefile Include for RPM Construction
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Make-rpm.mk,v 1.5 2001/12/05 00:48:42 dun Exp $
+# $Id: Make-rpm.mk,v 1.6 2001/12/05 00:58:22 dun Exp $
 ##
 # NOTES:
 # - requires PACKAGE and VERSION macro definitions to be defined
@@ -76,7 +76,7 @@ rpm-internal: tar-internal
 	echo "creating $$pkg-$$ver*rpm (tag=$$tag)"; \
 	rpm --showrc | egrep "_(gpg|pgp)_name" >/dev/null && sign="--sign"; \
 	rpm -ba --define "_tmppath $$tmp/TMP" --define "_topdir $$tmp" \
-	  $$sign --quiet $$tmp/SPECS/$$pkg.spec >/dev/null 2>&1 && \
+	  $$sign --quiet $$tmp/SPECS/$$pkg.spec && \
 	    cp -p $$tmp/RPMS/*/$$pkg-$$ver*.*.rpm \
 	      $$tmp/SRPMS/$$pkg-$$ver*.src.rpm .; \
 	rm -rf $$tmp
