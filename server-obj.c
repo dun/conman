@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.27 2001/08/15 00:50:17 dun Exp $
+ *  $Id: server-obj.c,v 1.28 2001/08/15 02:21:23 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -39,7 +39,7 @@ obj_t * create_console_obj(List objs, char *name, char *dev, int bps)
  */
     ListIterator i;
     obj_t *console;
-    int fd;
+    int fd = -1;
 
     assert(objs);
     assert(name && *name);
@@ -67,21 +67,19 @@ obj_t * create_console_obj(List objs, char *name, char *dev, int bps)
     }
     list_iterator_destroy(i);
     if (console != NULL)
-        return(NULL);
+        goto err;
 
     if ((fd = open(dev, O_RDWR | O_NONBLOCK)) < 0) {
         log_msg(0, "Unable to open console [%s]: %s", name, strerror(errno));
-        return(NULL);
+        goto err;
     }
     if (get_write_lock(fd) < 0) {
         log_msg(0, "Unable to lock \"%s\" for console [%s].", dev, name);
-        return(NULL);
+        goto err;
     }
     if (!isatty(fd)) {
         log_msg(0, "Console [%s] is not a TTY device", name);
-        if (close(fd) < 0)
-            err_msg(errno, "close() failed on fd=%d", fd);
-        return(NULL);
+        goto err;
     }
     console = create_obj(CONSOLE, objs, name, fd);
     console->aux.console.dev = create_string(dev);
@@ -90,6 +88,12 @@ obj_t * create_console_obj(List objs, char *name, char *dev, int bps)
     console->aux.console.logfile = NULL;
 
     return(console);
+
+err:
+    if (fd >= 0)
+        if (close(fd) < 0)
+            err_msg(errno, "close() failed on fd=%d", fd);
+    return(NULL);
 }
 
 
@@ -102,7 +106,7 @@ obj_t * create_logfile_obj(List objs, char *name, obj_t *console, int zeroLog)
     ListIterator i;
     obj_t *logfile;
     int flags;
-    int fd;
+    int fd = -1;
     char *now, *msg;
 
     assert(objs);
@@ -127,19 +131,19 @@ obj_t * create_logfile_obj(List objs, char *name, obj_t *console, int zeroLog)
     }
     list_iterator_destroy(i);
     if (logfile != NULL)
-        return(NULL);
+        goto err;
 
     flags = O_WRONLY | O_CREAT | O_APPEND | O_NONBLOCK;
     if (zeroLog)
         flags |= O_TRUNC;
     if ((fd = open(name, flags, S_IRUSR | S_IWUSR)) < 0) {
         log_msg(0, "Unable to open logfile \"%s\": %s", name, strerror(errno));
-        return(NULL);
+        goto err;
     }
     if (get_write_lock(fd) < 0) {
         log_msg(0, "Unable to lock \"%s\" for console [%s].",
             name, console->name);
-        return(NULL);
+        goto err;
     }
 
     logfile = create_obj(LOGFILE, objs, name, fd);
@@ -154,6 +158,12 @@ obj_t * create_logfile_obj(List objs, char *name, obj_t *console, int zeroLog)
     free(msg);
 
     return(logfile);
+
+err:
+    if (fd >= 0)
+        if (close(fd) < 0)
+            err_msg(errno, "close() failed on fd=%d", fd);
+    return(NULL);
 }
 
 
