@@ -1,20 +1,13 @@
 /*****************************************************************************\
- *  $Id: errors.c,v 1.9 2002/03/14 03:37:00 dun Exp $
+ *  $Id: errors.c,v 1.10 2002/03/29 05:39:52 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
+ *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
  *  Written by Chris Dunlap <cdunlap@llnl.gov>.
  *  UCRL-CODE-2002-009.
  *  
  *  This file is part of ConMan, a remote console management program.
  *  For details, see <http://www.llnl.gov/linux/conman.html>.
- *  
- *  ConMan was produced at the University of California, Lawrence Livermore
- *  National Laboratory (UC LLNL) under contract no. W-7405-ENG-48
- *  (Contract 48) between the U.S. Department of Energy (DOE) and The Regents
- *  of the University of California (University) for the operation of UC LLNL.
- *  The rights of the Federal Government are reserved under Contract 48
- *  subject to the restrictions agreed upon by the DOE and University as
- *  allowed under DOE Acquisition Letter 97-1.
  *  
  *  ConMan is free software; you can redistribute it and/or modify it under
  *  the terms of the GNU General Public License as published by the Free
