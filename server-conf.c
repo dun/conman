@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-conf.c,v 1.50 2002/05/19 23:22:15 dun Exp $
+ *  $Id: server-conf.c,v 1.51 2002/05/20 00:00:41 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -32,6 +32,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include <assert.h>
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
@@ -112,6 +113,7 @@ static void parse_console_directive(Lex l, server_conf_t *conf);
 static void parse_global_directive(Lex l, server_conf_t *conf);
 static void parse_server_directive(Lex l, server_conf_t *conf);
 static int create_pidfile(const char *pidfile);
+static int is_empty_string(const char *s);
 static int lookup_syslog_facility(const char *facility);
 
 
@@ -456,7 +458,7 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if (lex_next(l) != LEX_STR)
+            else if ((lex_next(l) != LEX_STR) || is_empty_string(lex_text(l)))
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else
@@ -467,7 +469,7 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if (lex_next(l) != LEX_STR)
+            else if ((lex_next(l) != LEX_STR) || is_empty_string(lex_text(l)))
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else
@@ -478,7 +480,7 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if (lex_next(l) != LEX_STR)
+            else if ((lex_next(l) != LEX_STR) || is_empty_string(lex_text(l)))
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else if ((lex_text(l)[0] != '/') && (conf->logDirName))
@@ -492,7 +494,7 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if (lex_next(l) != LEX_STR)
+            else if ((lex_next(l) != LEX_STR) || is_empty_string(lex_text(l)))
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else
@@ -503,7 +505,7 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if (lex_next(l) != LEX_STR)
+            else if ((lex_next(l) != LEX_STR) || is_empty_string(lex_text(l)))
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else
@@ -589,7 +591,7 @@ static void parse_global_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if (lex_next(l) != LEX_STR)
+            else if ((lex_next(l) != LEX_STR) || is_empty_string(lex_text(l)))
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else
@@ -601,7 +603,7 @@ static void parse_global_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if (lex_next(l) != LEX_STR)
+            else if ((lex_next(l) != LEX_STR) || is_empty_string(lex_text(l)))
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else
@@ -666,7 +668,7 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if (lex_next(l) != LEX_STR)
+            else if ((lex_next(l) != LEX_STR) || is_empty_string(lex_text(l)))
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else {
@@ -687,7 +689,7 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if (lex_next(l) != LEX_STR)
+            else if ((lex_next(l) != LEX_STR) || is_empty_string(lex_text(l)))
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else {
@@ -718,7 +720,7 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if (lex_next(l) != LEX_STR)
+            else if ((lex_next(l) != LEX_STR) || is_empty_string(lex_text(l)))
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else {
@@ -750,7 +752,7 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if (lex_next(l) != LEX_STR)
+            else if ((lex_next(l) != LEX_STR) || is_empty_string(lex_text(l)))
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else {
@@ -764,7 +766,7 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
-            else if (lex_next(l) != LEX_STR)
+            else if ((lex_next(l) != LEX_STR) || is_empty_string(lex_text(l)))
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else if ((n = lookup_syslog_facility(lex_text(l))) < 0)
@@ -893,6 +895,21 @@ static int create_pidfile(const char *pidfile)
         return(-1);
     }
     return(0);
+}
+
+
+static int is_empty_string(const char *s)
+{
+/*  Returns non-zero if the string is empty (ie, contains only white-space).
+ */
+    const char *p;
+
+    assert(s != NULL);
+
+    for (p=s; *p; p++)
+        if (!isspace(*p))
+            return(0);
+    return(1);
 }
 
 
