@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-conf.c,v 1.48 2002/05/11 05:39:26 dun Exp $
+ *  $Id: client-conf.c,v 1.49 2002/05/11 20:11:31 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -317,7 +317,7 @@ static void display_client_help(client_conf_t *conf)
 
     printf("Usage: %s [OPTIONS] [CONSOLES]\n", conf->prog);
     printf("\n");
-    printf("  -b        Broadcast (write-only) to multiple consoles.\n");
+    printf("  -b        Broadcast to multiple consoles (write-only).\n");
     printf("  -d HOST   Specify server destination. [%s:%d]\n",
         conf->req->host, conf->req->port);
     printf("  -e CHAR   Specify escape character. [%s]\n", esc);
