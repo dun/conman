@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util.c,v 1.11 2001/08/06 18:36:25 dun Exp $
+ *  $Id: util.c,v 1.12 2001/08/07 00:57:41 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util.h" for documentation on public functions.
@@ -72,18 +72,25 @@ char * create_format_string(const char *fmt, ...)
 
 size_t append_format_string(char *dst, size_t size, const char *fmt, ...)
 {
-    char *p = dst;
-    int nAvail = size;
+    char *p;
+    int nAvail;
     int lenOrig;
     va_list vargs;
     int n;
 
-    if (!dst || !fmt)
+    assert(dst);
+    if (!fmt || !size)
         return(0);
 
-    while ((nAvail > 0) && *p)
-        nAvail--, p++;
-    if (nAvail <= 1)
+    p = dst;
+    nAvail = size;
+    while (*p && (nAvail > 0))
+        p++, nAvail--;
+
+    /*  Assert (dst) was NUL-terminated.  If (nAvail == 0), no NUL was found.
+     */
+    assert(nAvail != 0);
+    if (nAvail <= 1)			/* dst is full, only room for NUL */
         return(-1);
     lenOrig = p - dst;
 
@@ -91,7 +98,7 @@ size_t append_format_string(char *dst, size_t size, const char *fmt, ...)
     n = vsnprintf(p, nAvail, fmt, vargs);
     va_end(vargs);
 
-    if (n < 0 || n >= nAvail) {
+    if ((n < 0) || (n >= nAvail)) {
         dst[size - 1] = '\0';		/* ensure dst is NUL-terminated */
         return(-1);
     }
