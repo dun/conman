@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.h,v 1.55 2002/05/20 06:51:45 dun Exp $
+ *  $Id: server.h,v 1.55.2.1 2003/07/12 00:12:24 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -87,7 +87,8 @@ typedef enum logfile_sanitize_state {   /* log CR/LF insanity state (2 bits) */
 } log_sane_state_t;
 
 typedef struct logfile_obj {            /* LOGFILE AUX OBJ DATA:             */
-    char            *consoleName;       /*  name of console being logged     */
+    struct base_obj *console;           /*  con obj ref for name expansion   */
+    char            *fmtName;           /*  name with conversion specifiers  */
     logopt_t         opts;              /*  local options                    */
     unsigned         sanitizeState:2;   /*  log_sane_state_t CR/LF insanity  */
 } logfile_obj_t;
@@ -164,6 +165,7 @@ typedef struct server_conf {
     char            *confFileName;      /* configuration file name           */
     char            *logDirName;        /* dir prefix for relative logfiles  */
     char            *logFileName;       /* file to which logmsgs are written */
+    char            *logFmtName;        /* name with conversion specifiers   */
     FILE            *logFilePtr;        /* msg log file ptr, !closed at exit */
     int              logFileLevel;      /* level at which to log msg to file */
     char            *pidFileName;       /* file to which pid is written      */
@@ -298,6 +300,8 @@ int connect_telnet_obj(obj_t *telnet);
 void disconnect_telnet_obj(obj_t *telnet);
 
 void destroy_obj(obj_t *obj);
+
+int format_obj_string(char *buf, int buflen, obj_t *obj, const char *fmt);
 
 int compare_objs(obj_t *obj1, obj_t *obj2);
 

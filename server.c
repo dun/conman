@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.c,v 1.60 2002/05/20 02:47:31 dun Exp $
+ *  $Id: server.c,v 1.60.2.1 2003/07/12 00:12:24 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -389,7 +389,7 @@ static void timestamp_logfiles(server_conf_t *conf)
         if (!is_logfile_obj(logfile))
             continue;
         snprintf(buf, sizeof(buf), "%sConsole [%s] log at %s%s",
-            CONMAN_MSG_PREFIX, logfile->aux.logfile.consoleName,
+            CONMAN_MSG_PREFIX, logfile->aux.logfile.console->name,
             now, CONMAN_MSG_SUFFIX);
         strcpy(&buf[sizeof(buf) - 3], "\r\n");
         write_obj_data(logfile, buf, strlen(buf), 1);
@@ -592,22 +592,34 @@ static void open_daemon_logfile(server_conf_t *conf)
             mode = "w";
         once = 0;
     }
+    if (conf->logFmtName) {
+
+        char buf[MAX_LINE];
+
+        if (format_obj_string(buf, sizeof(buf), NULL, conf->logFmtName) < 0) {
+            log_msg(LOG_WARNING,
+                "Unable to open daemon logfile: filename too long");
+            goto err;
+        }
+        free(conf->logFileName);
+        conf->logFileName = create_string(buf);
+    }
     if (!(fp = fopen(conf->logFileName, mode))) {
-        log_msg(LOG_WARNING, "Unable to open logfile \"%s\": %s",
+        log_msg(LOG_WARNING, "Unable to open daemon logfile \"%s\": %s",
             conf->logFileName, strerror(errno));
         goto err;
     }
     if ((fd = fileno(fp)) < 0) {
         log_msg(LOG_WARNING,
-            "Unable to obtain descriptor for logfile \"%s\": %s",
+            "Unable to obtain descriptor for daemon logfile \"%s\": %s",
             conf->logFileName, strerror(errno));
         goto err;
     }
     if (get_write_lock(fd) < 0) {
-        log_msg(LOG_WARNING, "Unable to lock logfile \"%s\"",
+        log_msg(LOG_WARNING, "Unable to lock daemon logfile \"%s\"",
             conf->logFileName);
         if (fclose(fp) == EOF)
-            log_msg(LOG_WARNING, "Unable to close logfile \"%s\"",
+            log_msg(LOG_WARNING, "Unable to close daemon logfile \"%s\"",
                 conf->logFileName);
         goto err;
     }
@@ -618,7 +630,7 @@ static void open_daemon_logfile(server_conf_t *conf)
     log_set_file(fp, conf->logFileLevel, 1);
     if (conf->logFilePtr)
         if (fclose(conf->logFilePtr) == EOF)
-            log_msg(LOG_WARNING, "Unable to close logfile \"%s\"",
+            log_msg(LOG_WARNING, "Unable to close daemon logfile \"%s\"",
                 conf->logFileName);
     conf->logFilePtr = fp;
     return;
@@ -629,7 +641,7 @@ err:
     log_set_file(NULL, 0, 0);
     if (conf->logFilePtr)
         if (fclose(conf->logFilePtr) == EOF)
-            log_msg(LOG_WARNING, "Unable to close logfile \"%s\"",
+            log_msg(LOG_WARNING, "Unable to close daemon logfile \"%s\"",
                 conf->logFileName);
     conf->logFilePtr = NULL;
     return;
@@ -724,8 +736,7 @@ static void reset_console(obj_t *console, const char *cmd)
     DPRINTF((5, "Resetting console [%s].\n", console->name));
     console->gotReset = 0;
 
-    if (substitute_string(cmdbuf, sizeof(cmdbuf), cmd,
-      DEFAULT_CONFIG_ESCAPE, console->name) < 0) {
+    if (format_obj_string(cmdbuf, sizeof(cmdbuf), console, cmd) < 0) {
         log_msg(LOG_NOTICE, "Unable to reset console [%s]: command too long",
             console->name);
         return;

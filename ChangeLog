@@ -1,3 +1,11 @@
+2003-07-11  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* : Released 0.1.8.5.
+
+	* common.h, server-conf.c, server-logfile.c, server-obj.c, server.c,
+	server.h, etc/conman.conf, man/conman.conf.5.in, man/conmand.8.in:
+	Added support for conversion specifiers {gnats:208}.
+
 2003-04-03  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* : Released 0.1.8.4.

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-logfile.c,v 1.11 2002/05/19 23:08:55 dun Exp $
+ *  $Id: server-logfile.c,v 1.11.2.1 2003/07/12 00:12:24 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -96,7 +96,8 @@ int open_logfile_obj(obj_t *logfile, int gotTrunc)
     assert(is_logfile_obj(logfile));
     assert(logfile->name != NULL);
     assert(logfile->name[0] == '/');
-    assert(logfile->aux.logfile.consoleName != NULL);
+    assert(logfile->aux.logfile.console != NULL);
+    assert(logfile->aux.logfile.console->name != NULL);
 
     if (logfile->fd >= 0) {
         if (close(logfile->fd) < 0)     /* log err and continue */
@@ -104,7 +105,22 @@ int open_logfile_obj(obj_t *logfile, int gotTrunc)
                 logfile->name, strerror(errno));
         logfile->fd = -1;
     }
+    if (logfile->aux.logfile.fmtName) {
 
+        char buf[MAX_LINE];
+
+        if (format_obj_string(buf, sizeof(buf),
+          logfile->aux.logfile.console,
+          logfile->aux.logfile.fmtName) < 0) {
+            log_msg(LOG_WARNING,
+                "Unable to open logfile for [%s]: filename exceeded buffer",
+                logfile->aux.logfile.console->name);
+            logfile->fd = -1;
+            return(-1);
+        }
+        free(logfile->name);
+        logfile->name = create_string(buf);
+    }
     flags = O_WRONLY | O_CREAT | O_APPEND | O_NONBLOCK;
     if (gotTrunc)
         flags |= O_TRUNC;
@@ -124,7 +140,7 @@ int open_logfile_obj(obj_t *logfile, int gotTrunc)
 
     now = create_long_time_string(0);
     msg = create_format_string("%sConsole [%s] log opened at %s%s",
-        CONMAN_MSG_PREFIX, logfile->aux.logfile.consoleName, now,
+        CONMAN_MSG_PREFIX, logfile->aux.logfile.console->name, now,
         CONMAN_MSG_SUFFIX);
     write_obj_data(logfile, msg, strlen(msg), 0);
     free(now);
@@ -132,7 +148,7 @@ int open_logfile_obj(obj_t *logfile, int gotTrunc)
 
     DPRINTF((10, "Opened %slogfile \"%s\" for console [%s].\n",
         (logfile->aux.logfile.opts.enableSanitize ? "SANE " : ""),
-        logfile->name, logfile->aux.logfile.consoleName));
+        logfile->name, logfile->aux.logfile.console->name));
     return(0);
 }
 
@@ -188,7 +204,7 @@ int write_sanitized_log_data(obj_t *log, const void *src, int len)
         len = sizeof(buf) / 2;
 
     DPRINTF((15, "Sanitizing %d bytes for [%s] log.\n",
-        len, log->aux.logfile.consoleName));
+        len, log->aux.logfile.console->name));
 
     for (p=src, q=buf; len>0; p++, len--) {
 

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-conf.c,v 1.54 2002/05/20 17:02:33 dun Exp $
+ *  $Id: server-conf.c,v 1.54.2.1 2003/07/12 00:12:24 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -179,6 +179,7 @@ server_conf_t * create_server_conf(void)
     conf->confFileName = create_string(CONMAN_CONF);
     conf->logDirName = NULL;
     conf->logFileName = NULL;
+    conf->logFmtName = NULL;
     conf->logFilePtr = NULL;
     conf->logFileLevel = LOG_INFO;
     conf->pidFileName = NULL;
@@ -250,6 +251,8 @@ void destroy_server_conf(server_conf_t *conf)
         free(conf->logDirName);
     if (conf->logFileName)
         free(conf->logFileName);
+    if (conf->logFmtName)
+        free(conf->logFmtName);
     if (conf->pidFileName) {
         if (unlink(conf->pidFileName) < 0)
             log_msg(LOG_ERR, "Unable to delete pidfile \"%s\": %s",
@@ -404,11 +407,16 @@ void process_server_conf_file(server_conf_t *conf)
 
     /*  Kludge to ensure port is properly set (cf, create_server_conf()).
      */
-    if (port > 0)                       /* restore port set via cmdline */
+    if (port > 0) {                     /* restore port set via cmdline */
         conf->port = port;
-    else if (conf->port <= 0)           /* port not set so use default */
+    }
+    else if (conf->port <= 0) {         /* port not set so use default */
         conf->port = atoi(CONMAN_PORT);
-
+    }
+    if (conf->logFileName) {
+        if (strchr(conf->logFileName, '%'))
+            conf->logFmtName = create_string(conf->logFileName);
+    }
     if (conf->pidFileName) {
         if (create_pidfile(conf->pidFileName) < 0) {
             free(conf->pidFileName);
@@ -542,11 +550,20 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
                 gotEmptyLogName = 1;
                 *log = '\0';
             }
-            else if ((lex_text(l)[0] != '/') && (conf->logDirName))
-                snprintf(log, sizeof(log), "%s/%s",
-                    conf->logDirName, lex_text(l));
-            else
-                strlcpy(log, lex_text(l), sizeof(log));
+#ifdef DO_CONF_ESCAPE_ERROR
+            else if (strchr(lex_text(l), DEPRECATED_CONF_ESCAPE))
+                snprintf(err, sizeof(err),
+                    "ignoring %s %s value with deprecated '%c' -- use '%%N'",
+                    directive, server_conf_strs[LEX_UNTOK(tok)],
+                    DEPRECATED_CONF_ESCAPE);
+#endif /* DO_CONF_ESCAPE_ERROR */
+            else {
+                if ((lex_text(l)[0] != '/') && (conf->logDirName))
+                    snprintf(log, sizeof(log), "%s/%s",
+                        conf->logDirName, lex_text(l));
+                else
+                    strlcpy(log, lex_text(l), sizeof(log));
+            }
             break;
 
         case SERVER_CONF_LOGOPTS:
@@ -620,17 +637,11 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
     }
 
     if (console && *log) {
-        if (substitute_string(name, sizeof(name), log,
-          DEFAULT_CONFIG_ESCAPE, console->name) < 0) {
+        if (!(logfile = create_logfile_obj(
+          conf, log, console, &logopts, err, sizeof(err)))) {
             log_msg(LOG_ERR, "CONFIG[%s:%d]: console [%s] cannot log to "
-                "\"%s\": %c-expansion failed", conf->confFileName, line,
-                console->name, log, DEFAULT_CONFIG_ESCAPE);
-        }
-        else if (!(logfile = create_logfile_obj(
-          conf, name, console, &logopts, err, sizeof(err)))) {
-            log_msg(LOG_ERR, "CONFIG[%s:%d]: console [%s] cannot log to "
-                "\"%s\": %s", conf->confFileName, line, console->name,
-                name, err);
+                "specified file: %s", conf->confFileName, line,
+                console->name, err);
         }
         else {
             link_objs(console, logfile);
@@ -669,9 +680,17 @@ static void parse_global_directive(Lex l, server_conf_t *conf)
                     conf->globalLogName = NULL;
                 }
             }
-            else if (!strchr(lex_text(l), '&'))
-                snprintf(err, sizeof(err), "expected '&' within %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+#ifdef DO_CONF_ESCAPE_ERROR
+            else if (strchr(lex_text(l), DEPRECATED_CONF_ESCAPE))
+                snprintf(err, sizeof(err),
+                    "ignoring %s %s value with deprecated '%c' -- use '%%N'",
+                    directive, server_conf_strs[LEX_UNTOK(tok)],
+                    DEPRECATED_CONF_ESCAPE);
+#endif /* DO_CONF_ESCAPE_ERROR */
+            else if (!strstr(lex_text(l), "%N") && !strstr(lex_text(l), "%D"))
+                snprintf(err, sizeof(err),
+                    "ignoring %s %s value without '%%N' or '%%D'",
+                    directive, server_conf_strs[LEX_UNTOK(tok)]);
             else {
                 if (conf->globalLogName)
                     free(conf->globalLogName);
@@ -861,6 +880,13 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
             else if ((lex_next(l) != LEX_STR) || is_empty_string(lex_text(l)))
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
+#ifdef DO_CONF_ESCAPE_ERROR
+            else if (strchr(lex_text(l), DEPRECATED_CONF_ESCAPE))
+                snprintf(err, sizeof(err),
+                    "ignoring %s %s value with deprecated '%c' -- use '%%N'",
+                    directive, server_conf_strs[LEX_UNTOK(tok)],
+                    DEPRECATED_CONF_ESCAPE);
+#endif /* DO_CONF_ESCAPE_ERROR */
             else {
                 if (conf->resetCmd)
                     free(conf->resetCmd);

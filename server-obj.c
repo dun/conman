@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-obj.c,v 1.70.2.1 2003/04/04 05:34:49 dun Exp $
+ *  $Id: server-obj.c,v 1.70.2.2 2003/07/12 00:12:24 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -56,6 +56,7 @@
 static obj_t * create_obj(
     server_conf_t *conf, char *name, int fd, enum obj_type type);
 static void reset_telnet_delay(obj_t *telnet);
+static char * sanitize_file_string(char *str);
 static char * find_trailing_int_str(char *str);
 #ifndef NDEBUG
 static int validate_obj_links(obj_t *obj);
@@ -145,6 +146,8 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name,
  */
     ListIterator i;
     obj_t *logfile;
+    char buf[MAX_LINE];
+    char *pname;
 
     assert(conf != NULL);
     assert((name != NULL) && (name[0] != '\0'));
@@ -157,23 +160,37 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name,
      *    objects within the same daemon process using the same filename.
      *    So that check is performed here.
      */
+    if (strchr(name, '%') &&
+      (format_obj_string(buf, sizeof(buf), console, name) >= 0)) {
+        pname = buf;
+    }
+    else {
+        pname = name;
+    }
+
     i = list_iterator_create(conf->objs);
     while ((logfile = list_next(i))) {
         if (!is_logfile_obj(logfile))
             continue;
-        if (!strcmp(logfile->name, name)) {
-            snprintf(errbuf, errlen, "log already in use");
+        if (!strcmp(logfile->name, pname))
             break;
-        }
     }
     list_iterator_destroy(i);
-    if (logfile != NULL)                /* found duplicate name */
-        return(NULL);
 
+    if (logfile) {
+        snprintf(errbuf, errlen, "console [%s] already logging to \"%s\"",
+            logfile->aux.logfile.console->name, pname);
+        return(NULL);
+    }
     logfile = create_obj(conf, name, -1, CONMAN_OBJ_LOGFILE);
-    logfile->aux.logfile.consoleName = create_string(console->name);
+    logfile->aux.logfile.console = console;
     logfile->aux.logfile.sanitizeState = CONMAN_LOG_SANE_INIT;
     logfile->aux.logfile.opts = *opts;
+    if (strchr(name, '%'))
+        logfile->aux.logfile.fmtName = create_string(name);
+    else
+        logfile->aux.logfile.fmtName = NULL;
+
     if (is_serial_obj(console))
         console->aux.serial.logfile = logfile;
     else if (is_telnet_obj(console))
@@ -579,8 +596,8 @@ void destroy_obj(obj_t *obj)
         }
         break;
     case CONMAN_OBJ_LOGFILE:
-        if (obj->aux.logfile.consoleName)
-            free(obj->aux.logfile.consoleName);
+        if (obj->aux.logfile.fmtName)
+            free(obj->aux.logfile.fmtName);
         break;
     case CONMAN_OBJ_SERIAL:
         /*
@@ -632,6 +649,148 @@ void destroy_obj(obj_t *obj)
 
     free(obj);
     return;
+}
+
+
+int format_obj_string(char *buf, int buflen, obj_t *obj, const char *fmt)
+{
+/*  Prints the format string (fmt) based on object (obj)
+ *    into the buffer (buf) of length (buflen).
+ *  Returns the number of characters written into (buf) on success,
+ *    or -1 if (buf) was of insufficient length.
+ */
+    const char *psrc;
+    char *pdst;
+    int n, m;
+    time_t t;
+    struct tm tm;
+    char *p, *q;
+    char c;
+    char tfmt[3] = "%%";
+    char * const pspec = &tfmt[1];
+
+    assert (buf != NULL);
+    assert (fmt != NULL);
+
+    psrc = fmt;
+    pdst = buf;
+    n = buflen;
+
+    t = 0;
+    get_localtime(&t, &tm);
+
+    while (((c = *psrc++) != '\0') && (n > 0)) {
+        if ((c != '%') || ((*pspec = *psrc++) == '\0')) {
+            if (--n > 0) {
+                *pdst++ = c;
+            }
+        }
+        else {
+            switch (*pspec) {
+            case 'N':                   /* console name */
+                if (!obj)
+                    goto ignore_specifier;
+                if (is_console_obj(obj)) {
+                    p = obj->name;
+                    m = strlen(p);
+                    if ((n -= m) > 0) {
+                        strcpy(pdst, p);
+                        sanitize_file_string(pdst);
+                        pdst += m;
+                    }
+                }
+                break;
+            case 'D':                   /* console device */
+                if (!obj)
+                    goto ignore_specifier;
+                if (is_serial_obj(obj)) {
+                    q = obj->aux.serial.dev;
+                    p = (p = strrchr(q, '/')) ? p + 1 : q;
+                    m = strlen(p);
+                    if ((n -= m) > 0) {
+                        strcpy(pdst, p);
+                        sanitize_file_string(pdst);
+                        pdst += m;
+                    }
+                }
+                else if (is_telnet_obj(obj)) {
+                    m = snprintf (pdst, n, "%s:%d",
+                        obj->aux.telnet.host, obj->aux.telnet.port);
+                    if ((m < 0) || (m >= n))
+                        n = 0;
+                    else {
+                        sanitize_file_string(pdst);
+                        n -= m;
+                        pdst += m;
+                    }
+                }
+                break;
+            case 'P':                   /* daemon's pid */
+                m = snprintf (pdst, n, "%d", getpid());
+                if ((m < 0) || (m >= n))
+                    n = 0;
+                else {
+                    n -= m;
+                    pdst += m;
+                }
+                break;
+            case 'Y':                   /* year with century (0000-9999) */
+                /* fall-thru */
+            case 'y':                   /* year without century (00-99) */
+                /* fall-thru */
+            case 'm':                   /* month (01-12) */
+                /* fall-thru */
+            case 'd':                   /* day of month (01-31) */
+                /* fall-thru */
+            case 'H':                   /* hour (00-23) */
+                /* fall-thru */
+            case 'M':                   /* minute (00-59) */
+                /* fall-thru */
+            case 'S':                   /* second (00-61) */
+                /* fall-thru */
+            case 's':                   /* seconds since unix epoch */
+                if (!(m = strftime (pdst, n, tfmt, &tm)))
+                    n = 0;
+                else {
+                    n -= m;
+                    pdst += m;
+                }
+                break;
+            case '%':                   /* literal '%' character */
+                if (--n > 0) {
+                    *pdst++ = *pspec;
+                }
+                break;
+ignore_specifier:
+            default:                    /* ignore conversion specifier */
+                if ((n -= 2) > 0) {
+                    *pdst++ = '%';
+                    *pdst++ = *pspec;
+                }
+                break;
+            }
+        }
+    }
+    assert (pdst < (buf + buflen));
+    *pdst = '\0';
+    return((n <= 0) ? -1 : pdst - buf);
+}
+
+
+static char * sanitize_file_string(char *str)
+{
+/*  Replaces non-printable characters in the string (str) with underscores.
+ *  Returns the original (potentially modified) string (str).
+ */
+    char *p;
+
+    if (str) {
+        for (p=str; *p; p++) {
+            if (!isgraph(*p) || (*p == '/'))
+                *p = '_';
+        }
+    }
+    return(str);
 }
 
 
