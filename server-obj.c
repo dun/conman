@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.13 2001/06/08 20:31:15 dun Exp $
+ *  $Id: server-obj.c,v 1.14 2001/06/08 21:26:40 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -711,11 +711,11 @@ static void perform_log_replay(obj_t *client)
             err_msg(rc, "pthread_mutex_unlock() failed for [%s]",
                 logfile->name);
 
-        /*  Cannot use 'len' here since it has already subtracted space
-         *    reserved for this string.  We could get away with just sprintf().
+        /*  Must recompute 'len' since we already subtracted space reserved
+         *    for this string.  We could get away with just sprintf() here.
          */
-        n = snprintf(ptr, &buf[sizeof(buf)] - ptr,
-            "\r\n%s End replay of console %s.\r\n",
+        len = &buf[sizeof(buf)] - ptr;
+        n = snprintf(ptr, len, "\r\n%s End replay of console %s.\r\n",
             CONMAN_MSG_PREFIX, console->name);
         assert((n >= 0) && (n < len));
     }
