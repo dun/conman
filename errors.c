@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: errors.c,v 1.6 2001/08/14 23:16:47 dun Exp $
+ *  $Id: errors.c,v 1.7 2001/09/22 21:17:57 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "errors.h" for documentation on public functions.
@@ -39,6 +39,7 @@ void close_msg_log(void)
 }
 
 
+#undef log_msg
 void log_msg(int level, const char *fmt, ...)
 {
     /*  FIX_ME: NOT_IMPLEMENTED_YET
@@ -47,6 +48,7 @@ void log_msg(int level, const char *fmt, ...)
 }
 
 
+#undef err_msg
 void err_msg(int errnum, const char *fmt, ...)
 {
 /*  FIX_ME: Replace snprintf()'s with append_format_string().
@@ -97,5 +99,9 @@ void err_msg(int errnum, const char *fmt, ...)
     fflush(stdout);
     fputs(buf, stderr);
     fflush(stderr);
+
+#ifndef NDEBUG
+    abort();
+#endif /* !NDEBUG */
     exit(1);
 }
