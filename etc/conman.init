@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: conman.init,v 1.1 2001/08/22 18:06:06 dun Exp $
+# $Id: conman.init,v 1.2 2001/08/22 18:42:27 dun Exp $
 #
 # chkconfig:	345 95 5
 # description:	The ConMan daemon is used for serial console management.
@@ -19,7 +19,7 @@
 DAEMON=conmand
 RETVAL=0
 
-[ -x "$DAEMON" ] || exit 0
+[ -x "/usr/sbin/$DAEMON" ] || exit 0
 
 # See how we were called.
 case "$1" in
