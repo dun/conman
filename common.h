@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.h,v 1.13 2001/08/06 19:47:16 dun Exp $
+ *  $Id: common.h,v 1.14 2001/08/14 23:17:20 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -14,7 +14,6 @@
 #define DEFAULT_CONMAN_HOST	"127.0.0.1"
 #define DEFAULT_CONMAN_PORT	7890
 #define DEFAULT_SERVER_CONF	"/etc/conman.conf"
-
 #define DEFAULT_CLIENT_ESCAPE	'&'
 #define DEFAULT_CONSOLE_BAUD	9600
 
@@ -42,13 +41,21 @@
 #define ESC_CHAR_SUSPEND	'Z'
 
 #ifndef NDEBUG
-#define DEBUG_STRING " (debug)"
+#  define FEATURE_DEBUG " DEBUG"
 #else
-#define DEBUG_STRING ""
+#  define FEATURE_DEBUG ""
 #endif /* !NDEBUG */
 
+#ifdef WITH_DMALLOC
+#  define FEATURE_DMALLOC " DMALLOC"
+#else
+#  define FEATURE_DMALLOC ""
+#endif /* WITH_DMALLOC */
 
-typedef enum cmd_type {
+#define FEATURES (FEATURE_DEBUG FEATURE_DMALLOC)
+
+
+typedef enum cmd_type {			/* bit-field limited to 8 values      */
     NONE,
     CONNECT,
     MONITOR,
@@ -56,20 +63,20 @@ typedef enum cmd_type {
 } cmd_t;
 
 typedef struct request {
-    int    sd;				/* socket descriptor                  */
-    char  *user;			/* login name of client user          */
-    char  *tty;				/* device name of client terminal     */
-    char  *fqdn;			/* remote FQDN (or ip) string         */
-    char  *host;			/* remote host name (or ip) string    */
-    char  *ip;				/* remote ip addr string              */
-    int    port;			/* remote port number                 */
-    cmd_t  command;			/* conman command to perform          */
-    int    enableBroadcast;		/* true if b-casting to many consoles */
-    int    enableForce;			/* true if forcing console connection */
-    int    enableJoin;			/* true if joining console connection */
-    int    enableQuiet;			/* true if suppressing info messages  */
-    int    enableRegex;			/* true if console matching via regex */
-    List   consoles;			/* list of consoles affected by cmd   */
+    int       sd;			/* socket descriptor                  */
+    char     *user;			/* login name of client user          */
+    char     *tty;			/* device name of client terminal     */
+    char     *fqdn;			/* remote FQDN (or ip) string         */
+    char     *host;			/* remote host name (or ip) string    */
+    char     *ip;			/* remote ip addr string              */
+    int       port;			/* remote port number                 */
+    List      consoles;			/* list of consoles affected by cmd   */
+    cmd_t     command:3;		/* ConMan command to perform          */
+    unsigned  enableBroadcast:1;	/* true if b-casting to many consoles */
+    unsigned  enableForce:1;		/* true if forcing console connection */
+    unsigned  enableJoin:1;		/* true if joining console connection */
+    unsigned  enableQuiet:1;		/* true if suppressing info messages  */
+    unsigned  enableRegex:1;		/* true if console matching via regex */
 } req_t;
 
 
