@@ -2,7 +2,7 @@
  *  server-sock.c  
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server-sock.c,v 1.4 2001/05/14 16:22:09 dun Exp $
+ *  $Id: server-sock.c,v 1.5 2001/05/14 21:55:27 dun Exp $
 \******************************************************************************/
 
 
@@ -100,23 +100,23 @@ void process_client(server_conf_t *conf)
     }
     if (!(req->ip = strdup(buf))) {
         log_msg(0, "Request from %s terminated: out of memory", buf);
-        goto end;
+        goto err;
     }
     if (get_hostname_via_addr(&addr.sin_addr, buf, sizeof(buf))) {
         if (!(req->host = strdup(buf))) {
             log_msg(0, "Request from %s terminated: out of memory", buf);
-            goto end;
+            goto err;
         }
     }
 
     if (recv_greeting(req) < 0)
-        goto end;
+        goto err;
     if (recv_req(req) < 0)
-        goto end;
+        goto err;
     if (query_consoles(conf, req) < 0)
-        goto end;
+        goto err;
     if (validate_req(req) < 0)
-        goto end;
+        goto err;
 
     switch(req->command) {
     case CONNECT:
@@ -142,7 +142,19 @@ void process_client(server_conf_t *conf)
 
     /*  FIX_ME: Is a pthread_exit() needed here?  Check the weird ps behavior.
      */
-end:
+    destroy_req(req);
+    return;
+
+err:
+    /*  Only close the client's socket connection on error,
+     *    since it may be further handled by mux_io().
+     */
+    if (req->sd > 0) {
+        if (close(req->sd) < 0)
+            log_msg(0, "Error closing connection from %s: %s",
+                req->ip, strerror(errno));
+        req->sd = -1;
+    }
     destroy_req(req);
     return;
 }
@@ -637,8 +649,8 @@ static void perform_query_cmd(req_t *req)
 
     list_iterator_destroy(i);
 
-    if (shutdown(req->sd, SHUT_RDWR) < 0)
-        err_msg(errno, "shutdown(%d) failed", req->sd);
+    if (close(req->sd) < 0)
+        err_msg(errno, "close(%d) failed", req->sd);
     req->sd = -1;
 
     return;
