@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-conf.c,v 1.34 2001/12/28 20:13:06 dun Exp $
+ *  $Id: client-conf.c,v 1.35 2001/12/30 05:30:59 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -9,6 +9,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include <assert.h>
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <pwd.h>
@@ -21,7 +22,6 @@
 #include "common.h"
 #include "client.h"
 #include "errors.h"
-#include "lex.h"
 #include "list.h"
 #include "util-file.h"
 #include "util-str.h"
@@ -191,48 +191,47 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
 
 static void read_consoles_from_file(List consoles, char *file)
 {
-    int fd;
-    struct stat fdStat;
-    int len;
-    char *buf;
-    int n;
-    Lex l;
-    int tok;
+/*  Reads console names/patterns from 'file'.
+ *  Returns an updated 'consoles' list.
+ *  The format of the file is as follows:
+ *    - one console name/pattern per line
+ *    - leading/trailing whitespace and comments are ignored
+ */
+    FILE *fp;
+    char buf[MAX_LINE];
+    char *p, *q;
 
-    if ((fd = open(file, O_RDONLY)) < 0)
+    assert(consoles != NULL);
+    assert(file != NULL);
+
+    if (!(fp = fopen(file, "r")))
         err_msg(errno, "Unable to open \"%s\"", file);
-    if (fstat(fd, &fdStat) < 0)
-        err_msg(errno, "Unable to stat \"%s\"", file);
-    len = fdStat.st_size;
-    if (!(buf = malloc(len + 1)))
-        out_of_memory();
-    if ((n = read_n(fd, buf, len)) < 0)
-        err_msg(errno, "Unable to read \"%s\"", file);
-    assert(n == len);
-    if (close(fd) < 0)
-        err_msg(errno, "Unable to close \"%s\"", file);
-    buf[len] = '\0';
 
-    l = lex_create(buf, NULL);
-    while ((tok = lex_next(l)) != LEX_EOF) {
-        switch(tok) {
-        case LEX_INT:
-            /* fall-thru... whee! */
-        case LEX_STR:
-            list_append(consoles, create_string(lex_text(l)));
-            break;
-        case LEX_EOL:
-            break;
-        case LEX_ERR:
-            fprintf(stderr, "ERROR: %s:%d: unmatched quote.\n",
-                file, lex_line(l));
-            break;
-        default:
-            break;
-        }
+    while (fgets(buf, sizeof(buf), fp) != NULL) {
+
+        /*  Remove trailing whitespace.
+         */
+        q = strchr(buf, '\0') - 1;
+        while ((q >= buf) && isspace(*q))
+            *q-- = '\0';
+
+        /*  Remove leading whitespace.
+         */
+        p = buf;
+        while ((p < q) && isspace(*p))
+            p++;
+
+        /*  Skip comments and empty lines.
+         */
+        if ((*p == '#') || (*p == '\0'))
+            continue;
+
+        list_append(consoles, create_string(p));
     }
-    lex_destroy(l);
-    free(buf);
+
+    if (fclose(fp) != 0)
+        err_msg(errno, "Unable to close \"%s\"", file);
+
     return;
 }
 
