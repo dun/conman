@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.35 2001/10/11 18:59:22 dun Exp $
+ *  $Id: server.c,v 1.36 2001/12/04 08:08:30 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
         open_msg_log(conf->logFileName);
     if (conf->enableVerbose)
         display_configuration(conf);
-    if (conf->tsInterval > 0)
+    if (conf->tStampMinutes > 0)
         schedule_timestamp(conf);
 
     create_listen_socket(conf);
@@ -259,8 +259,8 @@ static void display_configuration(server_conf_t *conf)
             printf(" LoopBack");
         if (conf->resetCmd)
             printf(" ResetCmd");
-        if (conf->tsInterval > 0)
-            printf(" TimeStamp=%dm", conf->tsInterval);
+        if (conf->tStampMinutes > 0)
+            printf(" TimeStamp=%dm", conf->tStampMinutes);
         if (conf->enableZeroLogs)
             printf(" ZeroLogs");
     }
@@ -278,24 +278,36 @@ static void display_configuration(server_conf_t *conf)
 static void schedule_timestamp(server_conf_t *conf)
 {
 /*  Schedules a timer for writing timestamps to the console logfiles.
- *  Compute the expiration time assuming timestamps have been scheduled
- *    regularly since the last hourly boundary.
  */
-    time_t t = 0;
+    time_t t;
     struct tm tm;
     struct timeval tv;
     int numCompleted;
 
-    assert(conf->tsInterval > 0);
+    assert(conf->tStampMinutes > 0);
 
+    t = conf->tStampNext;
     get_localtime(&t, &tm);
-    numCompleted = tm.tm_min / conf->tsInterval;
-    tm.tm_min = (numCompleted + 1) * conf->tsInterval;
+    /*
+     *  If this is the first scheduled timestamp, compute the expiration time
+     *    assuming timestamps have been scheduled regularly since midnight.
+     *  Otherwise, base it off of the previous timestamp.
+     */
+    if (!conf->tStampNext) {
+        numCompleted = ((tm.tm_hour * 60) + tm.tm_min) / conf->tStampMinutes;
+        tm.tm_min = (numCompleted + 1) * conf->tStampMinutes;
+        tm.tm_hour = 0;
+    }
+    else {
+        tm.tm_min += conf->tStampMinutes;
+    }
     tm.tm_sec = 0;
+
     if ((t = mktime(&tm)) == ((time_t) -1))
         err_msg(errno, "Unable to determine time of next logfile timestamp");
     tv.tv_sec = t;
     tv.tv_usec = 0;
+    conf->tStampNext = t;
 
     /*  The timer id is not saved because this timer will never be canceled.
      */

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.35 2001/10/11 18:59:22 dun Exp $
+ *  $Id: server.h,v 1.36 2001/12/04 08:08:30 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -107,7 +107,8 @@ typedef struct server_conf {
     char            *logFileName;	/* file to which events are logged    */
     char            *pidFileName;	/* file to which pid is written       */
     char            *resetCmd;		/* cmd to invoke for reset esc-seq    */
-    int              tsInterval;	/* minutes between logfile timestamps */
+    int              tStampMinutes;	/* minutes between logfile timestamps */
+    time_t           tStampNext;	/* time next stamp written to logs    */
     int              fd;		/* configuration file descriptor      */
     int              port;		/* port number on which to listen     */
     int              ld;		/* listening socket descriptor        */
