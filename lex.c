@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: lex.c,v 1.7 2001/05/24 20:56:08 dun Exp $
+ *  $Id: lex.c,v 1.8 2001/08/14 23:18:15 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "lex.h" for documentation on public functions.
@@ -7,7 +7,7 @@
 
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
 #include <assert.h>
@@ -19,7 +19,7 @@
 
 
 #ifndef MIN
-#define MIN(x,y) (((x) <= (y)) ? (x) : (y))
+#  define MIN(x,y) (((x) <= (y)) ? (x) : (y))
 #endif /* !MIN */
 
 #define LEX_MAGIC 0xCD
@@ -99,10 +99,10 @@ int lex_next(Lex l)
                 l->pos++;
             } while (*l->pos && (*l->pos != '\n') && (*l->pos != '\r'));
             break;
-        case '\r':			/* EOL: \r, \n, \r\n */
+        case '\r':			/* EOL: CR, LF, CR/LF */
             if (*(l->pos+1) == '\n')
                 l->pos++; 
-            /* fall-thru */
+            /* fall-thru... whee! */
         case '\n':
             l->text[0] = *l->pos++;
             l->text[1] = '\0';
@@ -134,20 +134,21 @@ int lex_next(Lex l)
                 l->line++;
                 break;
             }
-            /* fall-thru */
+            /* fall-thru... whee! */
         default:
-            if (isalpha(*l->pos) || (*l->pos == '_')) {
-                for (p=l->pos+1; *p && (isalnum(*p) || *p == '_'); p++) {;}
+            if (isalpha((int)*l->pos) || (*l->pos == '_')) {
+                for (p=l->pos+1; *p && (isalnum((int)*p) || *p == '_'); p++) {;}
                 len = MIN(p - l->pos, LEX_MAX_STR - 1);
                 memcpy(l->text, l->pos, len);
                 l->text[len] = '\0';
                 l->pos = p;
                 return(l->prev = lookup_token(l->text, l->toks));
             }
-            else if (isdigit(*l->pos)
+            else if (isdigit((int)*l->pos)
               || (((*l->pos == '-') || (*l->pos == '+'))
-              && isdigit(*(l->pos+1)))) {	/* integer: [-+]?[0-9]+ */
-                for (p=l->pos+1; *p && isdigit(*p); p++) {;}
+              && isdigit((int)*(l->pos+1)))) {
+                /* integer: [-+]?[0-9]+ */
+                for (p=l->pos+1; *p && isdigit((int)*p); p++) {;}
                 len = MIN(p - l->pos, LEX_MAX_STR - 1);
                 memcpy(l->text, l->pos, len);
                 l->text[len] = '\0';
