@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 #
-# $Id: Makefile.in,v 1.9 2001/08/21 00:47:59 dun Exp $
+# $Id: Makefile.in,v 1.10 2001/08/21 18:24:05 dun Exp $
 ##
 
 PACKAGE=	@PACKAGE@
@@ -88,31 +88,35 @@ config.status: VERSION
 # DEVELOPER TARGETS
 
 tar \
-$(PACKAGE)-$(VERSION).tgz:
-	@cwd="`/bin/pwd`"; \
-	name="$(PACKAGE)-$(VERSION)"; \
-	tag="`echo $$name | tr '.' '-'`"; \
-	tmp="$${TMPDIR-/tmp}/tmp-$(PACKAGE)-$$$$"; \
-	dir="$$tmp/$$name"; \
-	echo "creating $$name.tgz ..."; \
+$(PACKAGE)-$(VERSION).tgz: VERSION
+	@if test -z "$(PACKAGE)"; then echo "PACKAGE undefined"; exit 1; fi; \
+	if test -z "$(VERSION)"; then echo "VERSION undefined"; exit 1; fi; \
+	tmp=$${TMPDIR-/tmp}/tmp-$(PACKAGE)-$$$$; \
+	name=$(PACKAGE)-$(VERSION); \
+	tag=`echo $$name | tr '.' '-'`; \
+	dir=$$tmp/$$name; \
+	echo "creating $$name.tgz"; \
 	$(mkinstalldirs) $$tmp >/dev/null; \
 	cvs export -r $$tag -d $$dir $(PACKAGE) >/dev/null && \
-	  (cd $$tmp; tar czf "$$cwd/$$name.tgz" $$name); \
+	  (cd $$tmp; tar cf - $$name) | gzip -c --best > $$name.tgz; \
 	rm -rf $$tmp
 
 rpm: $(PACKAGE)-$(VERSION).tgz
-	@cwd="`/bin/pwd`"; \
-	tmp="$${TMPDIR-/tmp}/tmp-$(PACKAGE)-$$$$"; \
-	test -f $(PACKAGE)-$(VERSION).tgz || exit 1; \
+	@if test -z "$(PACKAGE)"; then echo "PACKAGE undefined"; exit 1; fi; \
+	if test -z "$(VERSION)"; then echo "VERSION undefined"; exit 1; fi; \
+	tmp=$${TMPDIR-/tmp}/tmp-$(PACKAGE)-$$$$; \
+	test -f $(PACKAGE)-$(VERSION).tgz || exit 0; \
 	for d in BUILD RPMS SOURCES SPECS SRPMS; do \
 	  $(mkinstalldirs) $$tmp/$$d >/dev/null; \
 	done; \
 	cp -p $(PACKAGE).spec $$tmp/SPECS; \
 	cp -p $(PACKAGE)-$(VERSION).tgz $$tmp/SOURCES; \
-	echo "creating $(PACKAGE)-$(VERSION) RPM ..."; \
-	rpm -ba --quiet --define _topdir$$tmp $$tmp/SPECS/$(PACKAGE).spec && \
-	  cp -p $$tmp/RPMS/*/$(PACKAGE)-$(VERSION)*.*.rpm \
-	    $$tmp/SRPMS/$(PACKAGE)-$(VERSION)*.src.rpm $$cwd/; \
+	echo "creating $(PACKAGE)-$(VERSION) RPM"; \
+	rpm --showrc | egrep "_(gpg|pgp)_name" >/dev/null && sign="--sign"; \
+	rpm -ba --quiet $$sign --define _topdir$$tmp \
+	  $$tmp/SPECS/$(PACKAGE).spec && \
+	    cp -p $$tmp/RPMS/*/$(PACKAGE)-$(VERSION)*.*.rpm \
+	      $$tmp/SRPMS/$(PACKAGE)-$(VERSION)*.src.rpm ./; \
 	rm -rf $$tmp
 
 
