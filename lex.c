@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: lex.c,v 1.10 2001/09/24 17:26:54 dun Exp $
+ *  $Id: lex.c,v 1.11 2001/10/14 06:09:01 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "lex.h" for documentation on public functions.
@@ -36,7 +36,7 @@
 **  Constants  **
 \***************/
 
-#define LEX_MAGIC 0xCD
+#define LEX_MAGIC 0xDEADBEEF
 
 
 /****************\
@@ -44,13 +44,15 @@
 \****************/
 
 struct lexer_state {
-    char           *pos;		/* current ptr in buffer              */
-    char          **toks;		/* array of recognized strings        */
-    char            text[LEX_MAX_STR];	/* tmp buffer for lexed strings       */
-    int	            prev;		/* prev token returned by lex_next()  */
-    int	            line;		/* current line number in buffer      */
-    int	            gotEOL;		/* true if next token is on new line  */
-    unsigned char   magic;		/* sentinel for asserting validity    */
+    char          *pos;			/* current ptr in buffer              */
+    char         **toks;		/* array of recognized strings        */
+    char           text[LEX_MAX_STR];	/* tmp buffer for lexed strings       */
+    int	           prev;		/* prev token returned by lex_next()  */
+    int	           line;		/* current line number in buffer      */
+    int	           gotEOL;		/* true if next token is on new line  */
+#ifndef NDEBUG
+    unsigned int   magic;		/* sentinel for asserting validity    */
+#endif /* NDEBUG */
 };
 
 

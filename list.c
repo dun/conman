@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: list.c,v 1.12 2001/09/24 17:47:22 dun Exp $
+ *  $Id: list.c,v 1.13 2001/10/14 06:09:01 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "list.h" for documentation on public functions.
@@ -42,7 +42,7 @@
 \***************/
 
 #define LIST_ALLOC 10
-#define LIST_MAGIC 0xCD
+#define LIST_MAGIC 0xDEADBEEF
 
 
 /****************\
@@ -59,7 +59,9 @@ struct listIterator {
     struct listNode      *pos;		/* the next node to be iterated       */
     struct listNode     **prev;		/* addr of 'next' ptr to prev It node */
     struct listIterator  *iNext;	/* iterator chain for list_destroy()  */
-    unsigned char         magic;	/* sentinel for asserting validity    */
+#ifndef NDEBUG
+    unsigned int          magic;	/* sentinel for asserting validity    */
+#endif /* NDEBUG */
 };
 
 struct list {
@@ -68,10 +70,12 @@ struct list {
     struct listIterator  *iNext;	/* iterator chain for list_destroy()  */
     ListDelF              fDel;		/* function to delete node data       */
     int                   count;	/* number of nodes in list            */
-    unsigned char         magic;	/* sentinel for asserting validity    */
 #ifdef USE_PTHREADS
     pthread_mutex_t       mutex;	/* mutex to protect access to list    */
 #endif /* USE_PTHREADS */
+#ifndef NDEBUG
+    unsigned int          magic;	/* sentinel for asserting validity    */
+#endif /* NDEBUG */
 };
 
 typedef struct listNode * ListNode;
