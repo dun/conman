@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-conf.c,v 1.53 2002/05/20 06:51:45 dun Exp $
+ *  $Id: server-conf.c,v 1.54 2002/05/20 17:02:33 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -25,8 +25,6 @@
 \*****************************************************************************/
 
 
-#define SYSLOG_NAMES                    /* for my lookup_syslog_facility() */
-
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
@@ -35,6 +33,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -104,6 +103,56 @@ static char *server_conf_strs[] = {
     "TCPWRAPPERS",
     "TIMESTAMP",
     NULL
+};
+
+
+/*  The <sys/syslog.h> prioritynames[] and facilitynames[] are not portable
+ *    (solaris2.8 doesn't have 'em), so they're effectively reproduced here.
+ */
+typedef struct tag {
+    const char *key;
+    int         val;
+} tag_t;
+
+static tag_t logPriorities[] = {
+    { "alert",      LOG_ALERT },
+    { "crit",       LOG_CRIT },
+    { "critical",   LOG_CRIT },
+    { "debug",      LOG_DEBUG },
+    { "emerg",      LOG_EMERG },
+    { "emergency",  LOG_EMERG },
+    { "err",        LOG_ERR },
+    { "error",      LOG_ERR },
+    { "info",       LOG_INFO },
+    { "notice",     LOG_NOTICE },
+    { "panic",      LOG_EMERG },
+    { "warn",       LOG_WARNING },
+    { "warning",    LOG_WARNING },
+    { NULL,         -1 }
+};
+
+static tag_t logFacilities[] = {
+    { "auth",       LOG_AUTH },
+#ifdef LOG_AUTHPRIV
+    { "authpriv",   LOG_AUTHPRIV },
+#endif /* LOG_AUTHPRIV */
+    { "cron",       LOG_CRON },
+    { "daemon",     LOG_DAEMON },
+    { "kern",       LOG_KERN },
+    { "lpr",        LOG_LPR },
+    { "mail",       LOG_MAIL },
+    { "news",       LOG_NEWS },
+    { "user",       LOG_USER },
+    { "uucp",       LOG_UUCP },
+    { "local0",     LOG_LOCAL0 },
+    { "local1",     LOG_LOCAL1 },
+    { "local2",     LOG_LOCAL2 },
+    { "local3",     LOG_LOCAL3 },
+    { "local4",     LOG_LOCAL4 },
+    { "local5",     LOG_LOCAL5 },
+    { "local6",     LOG_LOCAL6 },
+    { "local7",     LOG_LOCAL7 },
+    { NULL,         -1 }
 };
 
 
@@ -964,7 +1013,7 @@ static int is_empty_string(const char *s)
     assert(s != NULL);
 
     for (p=s; *p; p++)
-        if (!isspace(*p))
+        if (!isspace((int) *p))
             return(0);
     return(1);
 }
@@ -974,19 +1023,17 @@ static int lookup_syslog_priority(const char *priority)
 {
 /*  Returns the numeric id associated with the specified syslog priority,
  *    or -1 if no match is found.
- *
- *  XXX: Is this portable?
  */
-    CODE *p;
+    tag_t *t;
 
     assert(priority != NULL);
 
-    while (*priority && isspace(*priority))
+    while (*priority && isspace((int) *priority))
         priority++;
 
-    for (p=prioritynames; p->c_name; p++)
-        if (!strcasecmp(p->c_name, priority))
-            return(p->c_val);
+    for (t=logPriorities; t->key; t++)
+        if (!strcasecmp(t->key, priority))
+            return(t->val);
     return(-1);
 }
 
@@ -995,18 +1042,16 @@ static int lookup_syslog_facility(const char *facility)
 {
 /*  Returns the numeric id associated with the specified syslog facility,
  *    or -1 if no match is found.
- *
- *  XXX: Is this portable?
  */
-    CODE *p;
+    tag_t *t;
 
     assert(facility != NULL);
 
-    while (*facility && isspace(*facility))
+    while (*facility && isspace((int) *facility))
         facility++;
 
-    for (p=facilitynames; p->c_name; p++)
-        if (!strcasecmp(p->c_name, facility))
-            return(p->c_val);
+    for (t=logFacilities; t->key; t++)
+        if (!strcasecmp(t->key, facility))
+            return(t->val);
     return(-1);
 }
