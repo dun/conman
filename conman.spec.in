@@ -1,30 +1,37 @@
-# $Id: conman.spec.in,v 1.16 2002/05/09 16:59:58 dun Exp $
+# $Id: conman.spec.in,v 1.17 2002/05/11 23:24:51 dun Exp $
 
-Name:    @PROJECT@
-Version: @VERSION@
-Release: 1
+Name:		@PROJECT@
+Version:	@VERSION@
+Release:	1
 
-Summary: ConMan - Remote Console Management
-Group:   Applications/Communications
-License: GPL
-URL:     http://www.llnl.gov/linux/conman.html
+Summary:	ConMan - Remote Console Management
+Group:		Applications/Communications
+License:	GPL
+URL:		http://www.llnl.gov/linux/conman.html
 
-BuildRoot: %{_tmppath}/%{name}-%{version}
+BuildRoot:	%{_tmppath}/%{name}-%{version}
 
-Source0: %{name}-%{version}.tgz
+Source0:	%{name}-%{version}.tgz
 
 %description
-ConMan is a remote console management utility capable of performing all
-manners of magic.
+ConMan is a remote console management program designed to support a large
+number of console devices and simultaneous users.  It currently supports
+local serial devices and remote terminal servers (via the telnet protocol).
+Its features include:
 
+  - mapping symbolic names to console devices
+  - logging all output from a console device to file
+  - supporting monitor (R/O), interactive (R/W), and
+    broadcast (W/O) modes of console access
+  - allowing clients to join or steal console "write" privileges
+  - executing Expect scripts across multiple consoles in parallel
 %prep
 %setup
 
 %build
 unset DEBUG
 test -n "$RPM_ENABLE_DEBUG" && DEBUG="--enable-debug --with-dmalloc"
-CFLAGS="$RPM_OPT_FLAGS" LDFLAGS="-s" ./configure --prefix=/usr $DEBUG \
-  --with-tcp-wrappers
+CFLAGS="$RPM_OPT_FLAGS" ./configure --prefix=/usr --with-tcp-wrappers $DEBUG
 make
 
 %install
@@ -52,7 +59,7 @@ if [ -x /etc/rc.d/init.d/conman ]; then
 fi
 
 %preun
-if [ "$1" = 0 ]; then                   # last version of pkg being erased
+if [ "$1" = 0 ]; then
   if [ -x /etc/rc.d/init.d/conman ]; then
     [ -x /sbin/chkconfig ] && /sbin/chkconfig --del conman
     if /etc/rc.d/init.d/conman status | grep running >/dev/null 2>&1; then
@@ -68,15 +75,18 @@ fi
 %config(noreplace) /etc/conman.conf
 %config(noreplace) /etc/logrotate.d/conman
 %config(noreplace) /etc/rc.d/init.d/conman
-/usr/bin/conman
-/usr/bin/conmen
-/usr/sbin/conmand
-%dir /usr/lib/conman
-/usr/lib/conman/alpha.exp
-/usr/lib/conman/conman.exp
-%dir /usr/lib/conman/examples
-/usr/lib/conman/examples/boot_alpha.exp
-/usr/lib/conman/examples/mac.exp
-/usr/lib/conman/examples/rmc.exp
-/usr/lib/conman/examples/srm.exp
-/usr/lib/conman/examples/wtf.exp
+%{_bindir}/conman
+%{_bindir}/conmen
+%{_sbindir}/conmand
+%dir %{_libdir}/conman
+%{_libdir}/conman/alpha.exp
+%{_libdir}/conman/conman.exp
+%dir %{_libdir}/conman/examples
+%{_libdir}/conman/examples/boot_alpha.exp
+%{_libdir}/conman/examples/mac.exp
+%{_libdir}/conman/examples/rmc.exp
+%{_libdir}/conman/examples/srm.exp
+%{_libdir}/conman/examples/wtf.exp
+%{_mandir}/man1/conman.1*
+%{_mandir}/man5/conman.conf.5*
+%{_mandir}/man8/conmand.8*

@@ -1,0 +1,68 @@
+.\" $Id: conmand.8.in,v 1.1 2002/05/11 23:24:52 dun Exp $
+
+.TH CONMAND 8 "@DATE@" "@PROJECT@-@VERSION@" "LLNL"
+
+.SH NAME
+conmand \- ConMan daemon
+
+.SH SYNOPSIS
+.B conmand
+[\fIOPTION\fR]...
+
+.SH DESCRIPTION
+\fBconmand\fR is the daemon responsible for managing consoles defined by its
+configuration file as well as listening for connections from clients.
+
+.SH OPTIONS
+.TP
+.B \-c \fIfile\fR
+Specify a configuration file, overriding the default location [@CONMAN_CONF@].
+.TP
+.B \-h
+Display a summary of the command-line options.
+.TP
+.B \-k
+Kill the \fBconmand\fR process that is associated with the specified
+configuration.
+.TP
+.B \-p \fIport\fR
+Specify the port on which \fBconmand\fR will listen for clients, overriding
+both the default port [@CONMAN_PORT@] and the port specified in the
+configuration file.
+.TP
+.B \-r
+Re-open the console log files.  This is useful for \fBlogrotate\fR
+configurations.
+.TP
+.B \-v
+Enable verbose mode.
+.TP
+.B \-V
+Display version information.
+.TP
+.B \-z
+Truncate the console log files.
+
+.SH SECURITY
+The client/server communications are not yet encrypted.
+
+.SH AUTHOR
+Chris Dunlap <cdunlap@llnl.gov>
+
+.SH COPYRIGHT
+Copyright (C) 2001-2002 by the Regents of the University of California.
+Produced at Lawrence Livermore National Laboratory.  UCRL-CODE-2002-009.
+
+ConMan is free software; you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation.
+
+.SH "SEE ALSO"
+.BR conman (1),
+.BR conman.conf (5).
+.PP
+The ConMan FTP site:
+  \fBftp://ftp.llnl.gov/pub/linux/conman/\fR
+.PP
+The ConMan Web page:
+  \fBhttp://www.llnl.gov/linux/conman.html\fR

@@ -2,7 +2,7 @@
 # ConMan AutoConf Configuration
 #   Process this file with autoconf to produce a configure script.
 #******************************************************************************
-# $Id: configure.ac,v 1.19 2002/05/08 06:12:19 dun Exp $
+# $Id: configure.ac,v 1.20 2002/05/11 23:24:51 dun Exp $
 #******************************************************************************
 # Copyright (C) 2001-2002 The Regents of the University of California.
 # Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -44,6 +44,10 @@ AC_SUBST(PROJECT)
 VERSION="`perl -ne 'print,exit if s/^\s*VERSION:\s*(\S*).*/\1/i' $srcdir/META`"
 AC_DEFINE_UNQUOTED(VERSION, "$VERSION", [Define the project's version.])
 AC_SUBST(VERSION)
+DATE="`perl -ne 'print,exit if s/^\s*DATE:\s*(\S*).*/\1/i' $srcdir/META`"
+test -z "$DATE" && DATE="`date +%Y-%m-%d`"
+AC_DEFINE_UNQUOTED(DATE, "$DATE", [Define the build date.])
+AC_SUBST(DATE)
 
 
 dnl Determine the system type.
@@ -294,4 +298,7 @@ AC_OUTPUT_COMMANDS(echo "creating dependencies"; make depend >/dev/null)
 AC_OUTPUT([
   Makefile
   conman.spec
+  man/conman.1
+  man/conman.conf.5
+  man/conmand.8
 ])

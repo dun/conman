@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Makefile.in,v 1.47 2002/05/08 05:32:40 dun Exp $
+# $Id: Makefile.in,v 1.48 2002/05/11 23:24:51 dun Exp $
 ##
 
 PROJECT=	conman
@@ -15,11 +15,8 @@ LDFLAGS=	@LDFLAGS@
 LIBS=		@LIBS@
 RANLIB=		@RANLIB@
 INSTALL=	@INSTALL@
-mkinstalldirs=	$(SHELL) $(top_srcdir)/auxdir/mkinstalldirs
 @SET_MAKE@
 COPTS=		$(CFLAGS) $(CPPFLAGS) $(DEFS)
-
-AC_OUTPUT=	Makefile config.h conman.spec
 
 top_srcdir=	@top_srcdir@
 prefix=		@prefix@
@@ -27,6 +24,10 @@ exec_prefix=	@exec_prefix@
 bindir=		@bindir@
 sbindir=	@sbindir@
 libdir=		@libdir@
+mandir=		@mandir@
+
+AC_OUTPUT=	Makefile config.h conman.spec \
+		man/conman.1 man/conman.conf.5 man/conmand.8
 
 CONF=		@CONMAN_CONF@
 PROGS=		conman conmand
@@ -55,32 +56,38 @@ conmand: $(SERVER_OBJS)
 	$(CC) $(COPTS) -c $<
 
 install: $(PROGS)
-	$(mkinstalldirs) -m 755 $(DESTDIR)$(bindir)
+	$(INSTALL) -m 755 -d $(DESTDIR)$(bindir)
 	$(INSTALL) -m 755 -s conman $(DESTDIR)$(bindir)/
 	$(INSTALL) -m 755 conmen $(DESTDIR)$(bindir)/
-	$(mkinstalldirs) -m 755 $(DESTDIR)$(sbindir)
+	$(INSTALL) -m 755 -d $(DESTDIR)$(sbindir)
 	$(INSTALL) -m 755 -s conmand $(DESTDIR)$(sbindir)/
 	if test ! -f $(DESTDIR)$(CONF); then \
-	  $(mkinstalldirs) -m 755 $(DESTDIR)/etc; \
-	  $(INSTALL) -m 644 etc/conman.conf \
-	    $(DESTDIR)$(CONF); \
+	  $(INSTALL) -m 755 -d $(DESTDIR)/etc; \
+	  $(INSTALL) -m 644 etc/conman.conf $(DESTDIR)$(CONF); \
 	fi;
 	if test ! -f $(DESTDIR)/etc/logrotate.d/conman; then \
-	  $(mkinstalldirs) -m 755 $(DESTDIR)/etc/logrotate.d; \
+	  $(INSTALL) -m 755 -d $(DESTDIR)/etc/logrotate.d; \
 	  $(INSTALL) -m 644 etc/conman.logrotate \
 	    $(DESTDIR)/etc/logrotate.d/conman; \
 	fi;
 	if test ! -f $(DESTDIR)/etc/rc.d/init.d/conman; then \
-	  $(mkinstalldirs) -m 755 $(DESTDIR)/etc/rc.d/init.d; \
-	  $(INSTALL) -m 755 etc/conman.init \
-	    $(DESTDIR)/etc/rc.d/init.d/conman; \
+	  $(INSTALL) -m 755 -d $(DESTDIR)/etc/rc.d/init.d; \
+	  $(INSTALL) -m 755 etc/conman.init $(DESTDIR)/etc/rc.d/init.d/conman; \
 	fi;
-	proj="$(PROJECT)"; \
 	for f in `cd lib && find * -name CVS -prune -o -type f -print`; do \
-	  $(mkinstalldirs) -m 755 `dirname $(DESTDIR)$(libdir)/$$proj/$$f`; \
-	  $(INSTALL) -m 755 lib/$$f $(DESTDIR)$(libdir)/$$proj/$$f; \
+	  $(INSTALL) -m 755 -d `dirname $(DESTDIR)$(libdir)/$(PROJECT)/$$f`; \
+	  $(INSTALL) -m 755 lib/$$f $(DESTDIR)$(libdir)/$(PROJECT)/$$f; \
 	done; \
-	chmod 644 $(DESTDIR)$(libdir)/$$proj/*.exp
+	chmod 644 $(DESTDIR)$(libdir)/$(PROJECT)/*.exp
+	for d in man1 man5 man8; do \
+	  $(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/$$d; \
+	done
+	$(INSTALL) -m 644 man/conman.1 \
+	  $(DESTDIR)$(mandir)/man1/conman.1
+	$(INSTALL) -m 644 man/conman.conf.5 \
+	  $(DESTDIR)$(mandir)/man5/conman.conf.5
+	$(INSTALL) -m 644 man/conmand.8 \
+	  $(DESTDIR)$(mandir)/man8/conmand.8
 
 clean:
 	-rm -f *.o *.a *~ \#* .\#* cscope*.out core core.* *.core tags TAGS
