@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: errors.h,v 1.3 2001/05/24 20:56:08 dun Exp $
+ *  $Id: errors.h,v 1.4 2001/06/14 23:47:26 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -24,9 +24,9 @@
  */
 #ifndef NDEBUG
 #define DPRINTF(fmt, args...) \
-  do { fprintf(stderr, fmt, ##args); } while (0)
+  do { fprintf(stderr, fmt , ## args); } while (0)
 #define LDPRINTF(fmt, args...) \
-  do { fprintf(stderr, "%s:%d: " fmt, __FILE__, __LINE__, ##args); } while (0)
+  do { fprintf(stderr, "%s:%d: " fmt, __FILE__, __LINE__ , ## args); } while (0)
 #else /* NDEBUG */
 #define DPRINTF(fmt, args...)
 #define LDPRINTF(fmt, args...)
@@ -59,6 +59,11 @@ void err_msg(int errnum, const char *fmt, ...);
  *  If the error is related to a failing system call,
  *    'errnum' specifies the non-zero return code (eg, errno).
  */
+
+#ifndef NDEBUG
+#define err_msg(num, fmt, args...) \
+  err_msg(num, "%s:%d: " fmt, __FILE__, __LINE__ , ## args)
+#endif /* NDEBUG */
 
 
 #endif /* !_ERRORS_H */
