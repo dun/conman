@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-esc.c,v 1.22 2001/12/31 04:48:43 dun Exp $
+ *  $Id: server-esc.c,v 1.23 2002/01/02 19:46:48 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -217,6 +217,7 @@ static void perform_log_replay(obj_t *client)
                 console->name, client->name);
             return;
         }
+        ptr += n;
     }
     else {
         assert(is_logfile_obj(logfile));
