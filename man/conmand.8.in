@@ -1,4 +1,4 @@
-.\" $Id: conmand.8.in,v 1.3 2002/05/15 03:44:45 dun Exp $
+.\" $Id: conmand.8.in,v 1.4 2002/05/15 04:27:38 dun Exp $
 
 .TH CONMAND 8 "@DATE@" "@PROJECT@-@VERSION@" "LLNL"
 
@@ -23,9 +23,7 @@ Display a summary of the command-line options.
 .TP
 .B \-k
 Kill the \fBconmand\fR process that is associated with the specified
-configuration.  If the configuration file has been modified while the
-daemon is running, this option will be unable to identify the daemon
-process and a SIGTERM will have to be sent to it manually.
+configuration.
 .TP
 .B \-p \fIport\fR
 Specify the port on which \fBconmand\fR will listen for clients, overriding
@@ -33,7 +31,7 @@ both the default port [@CONMAN_PORT@] and the port specified in the
 configuration file.
 .TP
 .B \-r
-Re-open the console log files.  This is useful for \fBlogrotate\fR
+Reopen the console log files.  This is useful for \fBlogrotate\fR
 configurations.
 .TP
 .B \-v
@@ -45,8 +43,22 @@ Display version information.
 .B \-z
 Truncate the console log files.
 
+.SH SIGNALS
+.TP 12
+.B SIGHUP
+Close and reopen the console log files.
+.TP 12
+.B SIGTERM
+Terminate the daemon.
+
 .SH SECURITY
 The client/server communications are not yet encrypted.
+
+.SH NOTES
+If the configuration file is modified while the daemon is running,
+the '\fB-k\fR' and '\fB-r\fR' options will be unable to identify the daemon
+process.  As a result, the appropriate signal will have to be sent to the
+daemon manually.
 
 .SH AUTHOR
 Chris Dunlap <cdunlap@llnl.gov>
