@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.26 2001/08/14 23:59:11 dun Exp $
+ *  $Id: server-obj.c,v 1.27 2001/08/15 00:50:17 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -45,21 +45,29 @@ obj_t * create_console_obj(List objs, char *name, char *dev, int bps)
     assert(name && *name);
     assert(dev && *dev);
 
-    /*  Check for duplicate name.
+    /*  Check for duplicate console and device names.
+     *  While the write-lock will protect against two separate daemons
+     *    using the same device, it will not protect against two console
+     *    objects within the same daemon process using the same device.
+     *    So that check is performed here.
      */
     if (!(i = list_iterator_create(objs)))
         err_msg(0, "Out of memory");
     while ((console = list_next(i))) {
         if (console->type != CONSOLE)
             continue;
-        if (!strcmp(console->name, name))
+        if (!strcmp(console->name, name)) {
+            log_msg(0, "Ignoring duplicate console name \"%s\".", name);
             break;
+        }
+        if (!strcmp(console->aux.console.dev, dev)) {
+            log_msg(0, "Ignoring duplicate device name \"%s\".", dev);
+            break;
+        }
     }
     list_iterator_destroy(i);
-    if (console != NULL) {
-        log_msg(0, "Ignoring duplicate console name \"%s\".", name);
+    if (console != NULL)
         return(NULL);
-    }
 
     if ((fd = open(dev, O_RDWR | O_NONBLOCK)) < 0) {
         log_msg(0, "Unable to open console [%s]: %s", name, strerror(errno));
@@ -101,27 +109,36 @@ obj_t * create_logfile_obj(List objs, char *name, obj_t *console, int zeroLog)
     assert(name && *name);
     assert(console);
 
-    /*  Check for duplicate name.
+    /*  Check for duplicate logfile names.
+     *  While the write-lock will protect against two separate daemons
+     *    using the same logfile, it will not protect against two logfile
+     *    objects within the same daemon process using the same filename.
+     *    So that check is performed here.
      */
     if (!(i = list_iterator_create(objs)))
         err_msg(0, "Out of memory");
     while ((logfile = list_next(i))) {
         if (logfile->type != LOGFILE)
             continue;
-        if (!strcmp(logfile->name, name))
+        if (!strcmp(logfile->name, name)) {
+            log_msg(0, "Ignoring duplicate logfile name \"%s\".", name);
             break;
+        }
     }
     list_iterator_destroy(i);
-    if (logfile != NULL) {
-        log_msg(0, "Ignoring duplicate logfile name \"%s\".", name);
+    if (logfile != NULL)
         return(NULL);
-    }
 
     flags = O_WRONLY | O_CREAT | O_APPEND | O_NONBLOCK;
     if (zeroLog)
         flags |= O_TRUNC;
     if ((fd = open(name, flags, S_IRUSR | S_IWUSR)) < 0) {
         log_msg(0, "Unable to open logfile \"%s\": %s", name, strerror(errno));
+        return(NULL);
+    }
+    if (get_write_lock(fd) < 0) {
+        log_msg(0, "Unable to lock \"%s\" for console [%s].",
+            name, console->name);
         return(NULL);
     }
 
