@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ##
-#  $Id: conmen,v 1.7 2001/06/18 21:32:07 dun Exp $
+#  $Id: conmen,v 1.8 2001/06/21 17:08:56 dun Exp $
 #    by Chris Dunlap <cdunlap@llnl.gov>
 ##
 #  ConMen is a wrapper to aid in ConMan broadcast sessions.
@@ -14,7 +14,9 @@
 use Getopt::Std;
 
 
-$SIG{'TERM'} = exit_handler;
+$SIG{TERM} = exit_handler;
+
+$ENV{PATH} = "/usr/bin:/usr/local/bin:/usr/bin/X11:/usr/X11R6/bin";
 
 $ENV{DISPLAY}
     or die("ERROR: DISPLAY is not set.\n");
@@ -64,7 +66,7 @@ foreach (@consoles) {
 }
 select(undef, undef, undef, 1.0);
 system("$conman -bj $patterns");
-kill('TERM', getpid);
+kill(TERM, getpid);
 
 exit(0);
 
