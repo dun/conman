@@ -1,5 +1,7 @@
 2003-07-24  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* : Released 0.1.8.6.
+
 	* etc/conman.init:
 	Rewrote init script to be platform independent {gnats:72}.
 
