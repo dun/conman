@@ -2,7 +2,7 @@
  *  util.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: util.c,v 1.3 2001/05/11 22:48:18 dun Exp $
+ *  $Id: util.c,v 1.4 2001/05/18 15:24:27 dun Exp $
  ******************************************************************************
  *  Refer to "util.h" for documentation on public functions.
 \******************************************************************************/
@@ -99,6 +99,54 @@ char * create_time_string(time_t t)
     if ((rc = pthread_mutex_unlock(&lock)) != 0)
         err_msg(rc, "pthread_mutex_unlock() failed");
 
+    return(p);
+}
+
+
+char * create_time_delta_string(time_t t)
+{
+    time_t now;
+    long n;
+    int years, weeks, days, hours, minutes, seconds;
+    char buf[25];
+    char *p;
+
+    if (time(&now) == ((time_t) -1))
+        err_msg(errno, "time() failed -- What time is it?");
+    n = difftime(now, t);
+
+    seconds = n % 60;
+    n /= 60;
+    minutes = n % 60;
+    n /= 60;
+    hours = n % 24;
+    n /= 24;
+    days = n % 7;
+    n /= 7;
+    weeks = n % 52;
+    n /= 52;
+    years = n;
+
+    if (years > 0)
+        n = snprintf(buf, sizeof(buf), "%dy %dw %dd %dh %dm %ds",
+            years, weeks, days, hours, minutes, seconds);
+    else if (weeks > 0)
+        n = snprintf(buf, sizeof(buf), "%dw %dd %dh %dm %ds",
+            weeks, days, hours, minutes, seconds);
+    else if (days > 0)
+        n = snprintf(buf, sizeof(buf), "%dd %dh %dm %ds",
+            days, hours, minutes, seconds);
+    else if (hours > 0)
+        n = snprintf(buf, sizeof(buf), "%dh %dm %ds", hours, minutes, seconds);
+    else if (minutes > 0)
+        n = snprintf(buf, sizeof(buf), "%dm %ds", minutes, seconds);
+    else
+        n = snprintf(buf, sizeof(buf), "%ds", seconds);
+
+    if ((n < 0) || (n >= sizeof(buf)))
+        return(NULL);
+    if (!(p = strdup(buf)))
+        return(NULL);
     return(p);
 }
 

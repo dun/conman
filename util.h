@@ -2,7 +2,7 @@
  *  util.h
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: util.h,v 1.1 2001/05/04 15:26:41 dun Exp $
+ *  $Id: util.h,v 1.2 2001/05/18 15:24:27 dun Exp $
 \******************************************************************************/
 
 
@@ -51,6 +51,15 @@ char * create_time_string(time_t t);
  *    in the format "MM/DD/YYYY HH/MM/SS" in a thread-safe manner
  *    (or throws a fatal error if something strange happens).
  *  If no time is given (t=0), the current date & time is used.
+ *  Note that the caller is responsible for freeing this string.
+ */
+
+char * create_time_delta_string(time_t t);
+/*
+ *  Creates and returns a new string indicating the time delta
+ *    between time (t) and the current time, or NULL on error.
+ *  The difference is broken-down into years, weeks, days, hours,
+ *    minutes, and seconds.
  *  Note that the caller is responsible for freeing this string.
  */
 
