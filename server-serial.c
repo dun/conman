@@ -1,7 +1,7 @@
-/******************************************************************************\
- *  $Id: server-serial.c,v 1.1 2001/12/27 20:10:50 dun Exp $
+/*****************************************************************************\
+ *  $Id: server-serial.c,v 1.2 2002/02/08 18:12:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
-\******************************************************************************/
+\*****************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
@@ -23,7 +23,7 @@ typedef struct bps_tag {
 } bps_tag_t;
 
 
-static bps_tag_t bps_table[] = {	/* values are in increasing order */
+static bps_tag_t bps_table[] = {        /* values are in increasing order */
     {B50,     50},
     {B75,     75},
     {B110,    110},
@@ -38,7 +38,7 @@ static bps_tag_t bps_table[] = {	/* values are in increasing order */
     {B4800,   4800},
     {B9600,   9600},
     {B19200,  19200},
-    {B38400,  38400},			/* end of the line for POSIX.1 bps's */
+    {B38400,  38400},                   /* end of the line for POSIX.1 bps's */
 #ifdef B57600
     {B57600,  57600},
 #endif /* B57600 */
@@ -51,7 +51,7 @@ static bps_tag_t bps_table[] = {	/* values are in increasing order */
 #ifdef B460800
     {B460800, 460800},
 #endif /* B460800 */
-    {0,       0}			/* sentinel denotes end of array */
+    {0,       0}                        /* sentinel denotes end of array */
 };
 
 
@@ -226,7 +226,7 @@ void set_serial_opts(struct termios *tty, obj_t *serial, seropt_t *opts)
     else if (opts->databits == 7) {
         tty->c_cflag |= CS7;
     }
-    else /* (opts->databits == 8) */ {	/* safe default in case value is bad */
+    else /* (opts->databits == 8) */ {  /* safe default in case value is bad */
         tty->c_cflag |= CS8;
     }
 
@@ -237,14 +237,14 @@ void set_serial_opts(struct termios *tty, obj_t *serial, seropt_t *opts)
         tty->c_cflag |= PARENB;
         tty->c_cflag &= ~PARODD;
     }
-    else /* (opts->parity == 0) */ {	/* safe default in case value is bad */
+    else /* (opts->parity == 0) */ {    /* safe default in case value is bad */
         tty->c_cflag &= ~(PARENB | PARODD);
     }
 
     if (opts->stopbits == 2) {
         tty->c_cflag |= CSTOPB;
     }
-    else /* (opts->stopbits == 1) */ {	/* safe default in case value is bad */
+    else /* (opts->stopbits == 1) */ {  /* safe default in case value is bad */
         tty->c_cflag &= ~CSTOPB;
     }
 

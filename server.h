@@ -1,7 +1,7 @@
-/******************************************************************************\
- *  $Id: server.h,v 1.43 2002/01/28 06:01:42 dun Exp $
+/*****************************************************************************\
+ *  $Id: server.h,v 1.44 2002/02/08 18:12:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
-\******************************************************************************/
+\*****************************************************************************/
 
 
 #ifndef _SERVER_H
@@ -9,26 +9,26 @@
 
 
 #include <arpa/telnet.h>
-#include <netinet/in.h>			/* for struct sockaddr_in             */
+#include <netinet/in.h>                 /* for struct sockaddr_in            */
 #include <pthread.h>
 #include <sys/types.h>
-#include <termios.h>			/* for struct termios, speed_t        */
-#include <time.h>			/* for time_t                         */
+#include <termios.h>                    /* for struct termios, speed_t       */
+#include <time.h>                       /* for time_t                        */
 #include "common.h"
 #include "list.h"
 
 
-#define DEFAULT_LOGOPT_SANITIZE	0
+#define DEFAULT_LOGOPT_SANITIZE 0
 
-#define DEFAULT_SEROPT_BPS	B9600
-#define DEFAULT_SEROPT_DATABITS	8
-#define DEFAULT_SEROPT_PARITY	0
-#define DEFAULT_SEROPT_STOPBITS	1
+#define DEFAULT_SEROPT_BPS      B9600
+#define DEFAULT_SEROPT_DATABITS 8
+#define DEFAULT_SEROPT_PARITY   0
+#define DEFAULT_SEROPT_STOPBITS 1
 
-#define RESET_CMD_TIMEOUT	60
+#define RESET_CMD_TIMEOUT       60
 
-#define TELNET_MIN_TIMEOUT	15
-#define TELNET_MAX_TIMEOUT	1800
+#define TELNET_MIN_TIMEOUT      15
+#define TELNET_MAX_TIMEOUT      1800
 
 
 /*  Under Solaris and Tru64, NTELOPTS is only defined when TELOPTS is defined.
@@ -41,59 +41,59 @@
 #endif /* NTELOPTS */
 
 
-enum obj_type {				/* bit-field limited to 4 values      */
+enum obj_type {                         /* bit-field limited to 4 values     */
     CLIENT,
     LOGFILE,
     SERIAL,
     TELNET,
 };
 
-typedef struct client_obj {		/* CLIENT AUX OBJ DATA:               */
-    req_t           *req;		/*  client request info               */
-    time_t           timeLastRead;	/*  time last data was read from fd   */
-    unsigned         gotEscape:1;	/*  true if last char rcvd was an esc */
-    unsigned         gotSuspend:1;	/*  true if suspending client output  */
+typedef struct client_obj {             /* CLIENT AUX OBJ DATA:              */
+    req_t           *req;               /*  client request info              */
+    time_t           timeLastRead;      /*  time last data was read from fd  */
+    unsigned         gotEscape:1;       /*  true if last char rcvd was esc   */
+    unsigned         gotSuspend:1;      /*  true if suspending client output */
 } client_obj_t;
 
-typedef struct logfile_opt {		/* LOGFILE OBJ OPTIONS:               */
-    unsigned         enableSanitize:1;	/*  true if logfile being sanitized   */
+typedef struct logfile_opt {            /* LOGFILE OBJ OPTIONS:              */
+    unsigned         enableSanitize:1;  /*  true if logfile being sanitized  */
 } logopt_t;
 
-typedef enum logfile_sanitize_state {	/* bit-field limited to 4 values      */
+typedef enum logfile_sanitize_state {   /* bit-field limited to 4 values     */
     LOG_SANE_INIT,
     LOG_SANE_CR,
     LOG_SANE_LF,
 } log_sane_state_t;
 
-typedef struct logfile_obj {		/* LOGFILE AUX OBJ DATA:              */
-    char            *consoleName;	/*  name of console being logged      */
-    logopt_t         opts;		/*  local options                     */
-    log_sane_state_t sanitizeState:2;	/*  state of logfile CR/LF insanity   */
+typedef struct logfile_obj {            /* LOGFILE AUX OBJ DATA:             */
+    char            *consoleName;       /*  name of console being logged     */
+    logopt_t         opts;              /*  local options                    */
+    log_sane_state_t sanitizeState:2;   /*  state of logfile CR/LF insanity  */
 } logfile_obj_t;
 
-typedef struct serial_opt {		/* SERIAL OBJ OPTIONS:                */
-    speed_t          bps;		/*  bps def for cfset*speed()         */
-    int              databits;		/*  databits (5-8)                    */
-    int              parity;		/*  parity (0=NONE,1=ODD,2=EVEN)      */
-    int              stopbits;		/*  stopbits (1-2)                    */
+typedef struct serial_opt {             /* SERIAL OBJ OPTIONS:               */
+    speed_t          bps;               /*  bps def for cfset*speed()        */
+    int              databits;          /*  databits (5-8)                   */
+    int              parity;            /*  parity (0=NONE,1=ODD,2=EVEN)     */
+    int              stopbits;          /*  stopbits (1-2)                   */
 } seropt_t;
 
-typedef struct serial_obj {		/* SERIAL AUX OBJ DATA:               */
-    char            *dev;		/*  local serial device name          */
-    struct base_obj *logfile;		/*  log obj ref for console replay    */
-    struct termios   tty;		/*  saved cooked tty mode             */
+typedef struct serial_obj {             /* SERIAL AUX OBJ DATA:              */
+    char            *dev;               /*  local serial device name         */
+    struct base_obj *logfile;           /*  log obj ref for console replay   */
+    struct termios   tty;               /*  saved cooked tty mode            */
 } serial_obj_t;
 
 typedef struct sockaddr_in sockaddr_t;
 
-typedef enum telnet_connect_state {	/* bit-field limited to 4 values      */
+typedef enum telnet_connect_state {     /* bit-field limited to 4 values     */
     TELCON_NONE,
     TELCON_DOWN,
     TELCON_PENDING,
     TELCON_UP,
 } telcon_state_t;
 
-typedef enum telnet_option_state {	/* rfc1143 Telnet Q-Method opt state  */
+typedef enum telnet_option_state {      /* rfc1143 Telnet Q-Method opt state */
     TELOPT_NO,
     TELOPT_YES,
     TELOPT_WANT_NO_EMP,
@@ -102,17 +102,17 @@ typedef enum telnet_option_state {	/* rfc1143 Telnet Q-Method opt state  */
     TELOPT_WANT_YES_OPP,
 } telopt_state_t;
 
-typedef struct telnet_obj {		/* TELNET AUX OBJ DATA:               */
-    char            *host;		/*  remote telnetd host name (or ip)  */
-    int              port;		/*  remote telnetd port number        */
-    sockaddr_t       saddr;		/*  n/w address of terminal server    */
-    struct base_obj *logfile;		/*  log obj ref for console replay    */
-    int              timer;		/*  timer id for reconnects           */
-    int              delay;		/*  secs until next reconnect attempt */
-    int              iac;		/*  -1, or last char if in IAC seq    */
-    unsigned char    optState[NTELOPTS];/*  rfc1143 Q-Method option state     */
-    telcon_state_t   conState:2;	/*  state of network connection       */
-    unsigned         enableKeepAlive:1;	/*  true if using TCP keep-alive      */
+typedef struct telnet_obj {             /* TELNET AUX OBJ DATA:              */
+    char            *host;              /*  remote telnetd host name (or ip) */
+    int              port;              /*  remote telnetd port number       */
+    sockaddr_t       saddr;             /*  n/w address of terminal server   */
+    struct base_obj *logfile;           /*  log obj ref for console replay   */
+    int              timer;             /*  timer id for reconnects          */
+    int              delay;             /*  secs 'til next reconnect attempt */
+    int              iac;               /*  -1, or last char if in IAC seq   */
+    unsigned char    optState[NTELOPTS];/*  rfc1143 Q-Method option state    */
+    telcon_state_t   conState:2;        /*  state of network connection      */
+    unsigned         enableKeepAlive:1; /*  true if using TCP keep-alive     */
 } telnet_obj_t;
 
 typedef union aux_obj {
@@ -122,46 +122,46 @@ typedef union aux_obj {
     telnet_obj_t     telnet;
 } aux_obj_t;
 
-typedef struct base_obj {		/* BASE OBJ:                          */
-    char            *name;		/*  obj name                          */
-    int              fd;		/*  file descriptor                   */
-    unsigned char    buf[MAX_BUF_SIZE];	/*  circular-buf to be written to fd  */
-    unsigned char   *bufInPtr;		/*  ptr for data written in to buf    */
-    unsigned char   *bufOutPtr;		/*  ptr for data written out to fd    */
-    pthread_mutex_t  bufLock;		/*  lock protecting access to buf     */
-    List             readers;		/*  list of objs that read from me    */
-    List             writers;		/*  list of objs that write to me     */
-    enum obj_type    type:2;		/*  type of auxiliary obj             */
-    unsigned         gotBufWrap:1;	/*  true if circular-buf has wrapped  */
-    unsigned         gotEOF:1;		/*  true if obj rcvd EOF on last read */
-    unsigned         gotReset:1;	/*  true if resetting a console obj   */
-    aux_obj_t        aux;		/*  auxiliary obj data union          */
+typedef struct base_obj {               /* BASE OBJ:                         */
+    char            *name;              /*  obj name                         */
+    int              fd;                /*  file descriptor                  */
+    unsigned char    buf[MAX_BUF_SIZE]; /*  circular-buf to be written to fd */
+    unsigned char   *bufInPtr;          /*  ptr for data written in to buf   */
+    unsigned char   *bufOutPtr;         /*  ptr for data written out to fd   */
+    pthread_mutex_t  bufLock;           /*  lock protecting access to buf    */
+    List             readers;           /*  list of objs that read from me   */
+    List             writers;           /*  list of objs that write to me    */
+    enum obj_type    type:2;            /*  type of auxiliary obj            */
+    unsigned         gotBufWrap:1;      /*  true if circular-buf has wrapped */
+    unsigned         gotEOF:1;          /*  true if obj got EOF on last read */
+    unsigned         gotReset:1;        /*  true if resetting a console obj  */
+    aux_obj_t        aux;               /*  auxiliary obj data union         */
 } obj_t;
 
 typedef struct server_conf {
-    char            *confFileName;	/* configuration file name            */
-    char            *logDirName;	/* dir prefix for relative logfiles   */
-    char            *logFileName;	/* file to which events are logged    */
-    char            *pidFileName;	/* file to which pid is written       */
-    char            *resetCmd;		/* cmd to invoke for reset esc-seq    */
-    int              tStampMinutes;	/* minutes between logfile timestamps */
-    time_t           tStampNext;	/* time next stamp written to logs    */
-    int              fd;		/* configuration file descriptor      */
-    int              port;		/* port number on which to listen     */
-    int              ld;		/* listening socket descriptor        */
-    List             objs;		/* list of all server obj_t's         */
-    logopt_t         logopts;		/* global options for logfile objects */
-    seropt_t         seropts;		/* global options for serial objects  */
-    unsigned         enableKeepAlive:1;	/* true if using TCP keep-alive       */
-    unsigned         enableLoopBack:1;	/* true if only listening on loopback */
-    unsigned         enableTCPWrap:1;	/* true if TCP-Wrappers is enabled    */
-    unsigned         enableVerbose:1;	/* true if verbose output requested   */
-    unsigned         enableZeroLogs:1;	/* true if console logs are zero'd    */
+    char            *confFileName;      /* configuration file name           */
+    char            *logDirName;        /* dir prefix for relative logfiles  */
+    char            *logFileName;       /* file to which events are logged   */
+    char            *pidFileName;       /* file to which pid is written      */
+    char            *resetCmd;          /* cmd to invoke for reset esc-seq   */
+    int              tStampMinutes;     /* minutes 'tween logfile timestamps */
+    time_t           tStampNext;        /* time next stamp written to logs   */
+    int              fd;                /* configuration file descriptor     */
+    int              port;              /* port number on which to listen    */
+    int              ld;                /* listening socket descriptor       */
+    List             objs;              /* list of all server obj_t's        */
+    logopt_t         logopts;           /* global opts for logfile objects   */
+    seropt_t         seropts;           /* global opts for serial objects    */
+    unsigned         enableKeepAlive:1; /* true if using TCP keep-alive      */
+    unsigned         enableLoopBack:1;  /* true if only listening on loopback*/
+    unsigned         enableTCPWrap:1;   /* true if TCP-Wrappers is enabled   */
+    unsigned         enableVerbose:1;   /* true if verbose output requested  */
+    unsigned         enableZeroLogs:1;  /* true if console logs are zero'd   */
 } server_conf_t;
 
 typedef struct client_args {
-    int              sd;		/* socket descriptor of new client    */
-    server_conf_t   *conf;		/* server's configuration             */
+    int              sd;                /* socket descriptor of new client   */
+    server_conf_t   *conf;              /* server's configuration            */
 } client_arg_t;
 
 

@@ -1,7 +1,7 @@
-/******************************************************************************\
- *  $Id: server-esc.c,v 1.23 2002/01/02 19:46:48 dun Exp $
+/*****************************************************************************\
+ *  $Id: server-esc.c,v 1.24 2002/02/08 18:12:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
-\******************************************************************************/
+\*****************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
@@ -185,7 +185,7 @@ static void perform_log_replay(obj_t *client)
  *    circular-buffer via write_obj_data() is (MAX_BUF_SIZE - 1) bytes.
  *    But writing this much data may likely overwrite data in the buffer that
  *    has not been flushed to the object's file descriptor via write_to_obj().
- *    Therefore, it is recommended that (CONMAN_REPLAY_LEN <= MAX_BUF_SIZE / 2).
+ *    Therefore, it is recommended (CONMAN_REPLAY_LEN <= MAX_BUF_SIZE / 2).
  */
     obj_t *console;
     obj_t *logfile;
@@ -248,11 +248,11 @@ static void perform_log_replay(obj_t *client)
         n = MIN(n, len);
 
         p = logfile->bufInPtr - n;
-        if (p >= logfile->buf) {	/* no wrap needed */
+        if (p >= logfile->buf) {        /* no wrap needed */
             memcpy(ptr, p, n);
             ptr += n;
         }
-        else {				/* wrap backwards */
+        else {                          /* wrap backwards */
             m = logfile->buf - p;
             p = &logfile->buf[MAX_BUF_SIZE] - m;
             memcpy(ptr, p, m);
@@ -331,7 +331,7 @@ static void perform_reset(obj_t *client)
     i = list_iterator_create(client->readers);
     while ((console = list_next(i))) {
         assert(is_console_obj(console));
-        if (console->gotReset)		/* prior reset not yet processed */
+        if (console->gotReset)          /* prior reset not yet processed */
             continue;
         console->gotReset = 1;
         log_msg(0, "Console [%s] reset by <%s@%s>", console->name,
@@ -363,7 +363,7 @@ static void perform_suspend(obj_t *client)
 
     gotSuspend = client->aux.client.gotSuspend ^= 1;
     /*
-     *  FIX_ME: Do check_console_state() here looking for downed telnets.
+     *  FIXME: Do check_console_state() here looking for downed telnets.
      *    Should it check the state of all readers & writers?
      */
     DPRINTF("%s output to client [%s].\n",

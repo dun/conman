@@ -1,9 +1,9 @@
-/******************************************************************************\
- *  $Id: lex.c,v 1.14 2002/01/14 17:13:05 dun Exp $
+/*****************************************************************************\
+ *  $Id: lex.c,v 1.15 2002/02/08 18:12:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
- ******************************************************************************
+ *****************************************************************************
  *  Refer to "lex.h" for documentation on public functions.
-\******************************************************************************/
+\*****************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
@@ -44,15 +44,15 @@
 \****************/
 
 struct lexer_state {
-    char          *pos;			/* current ptr in buffer              */
-    char         **toks;		/* array of recognized strings        */
-    int            numtoks;		/* number of strings in toks[]        */
-    char           text[LEX_MAX_STR];	/* tmp buffer for lexed strings       */
-    int            prev;		/* prev token returned by lex_next()  */
-    int            line;		/* current line number in buffer      */
-    int            gotEOL;		/* true if next token is on new line  */
+    char          *pos;                 /* current ptr in buffer             */
+    char         **toks;                /* array of recognized strings       */
+    int            numtoks;             /* number of strings in toks[]       */
+    char           text[LEX_MAX_STR];   /* tmp buffer for lexed strings      */
+    int            prev;                /* prev token returned by lex_next() */
+    int            line;                /* current line number in buffer     */
+    int            gotEOL;              /* true if next token is on new line */
 #ifndef NDEBUG
-    unsigned int   magic;		/* sentinel for asserting validity    */
+    unsigned int   magic;               /* sentinel for asserting validity   */
 #endif /* NDEBUG */
 };
 
@@ -96,7 +96,7 @@ Lex lex_create(void *buf, char *toks[])
     l->prev = 0;
     l->line = 0;
     l->gotEOL = 1;
-    assert(l->magic = LEX_MAGIC);	/* set magic via assert abuse */
+    assert(l->magic = LEX_MAGIC);       /* set magic via assert abuse */
     return(l);
 }
 
@@ -106,7 +106,7 @@ void lex_destroy(Lex l)
     assert(l != NULL);
     assert(l->magic == LEX_MAGIC);
 
-    assert(l->magic = 1);		/* clear magic via assert abuse */
+    assert(l->magic = 1);               /* clear magic via assert abuse */
     free(l);
     return;
 }
@@ -120,54 +120,54 @@ int lex_next(Lex l)
     assert(l != NULL);
     assert(l->magic == LEX_MAGIC);
 
-    if (l->gotEOL) {			/* deferred line count increment */
+    if (l->gotEOL) {                    /* deferred line count increment */
         l->line++;
         l->gotEOL = 0;
     }
 
     for (;;) {
         switch (*l->pos) {
-        case '\0':			/* EOF */
+        case '\0':                      /* EOF */
             l->text[0] = '\0';
             return(l->prev = LEX_EOF);
             break;
-        case ' ':			/* ignore whitespace */
+        case ' ':                       /* ignore whitespace */
         case '\t':
         case '\v':
         case '\f':
             l->pos++;
             break;
-        case '#':			/* ignore comments */
+        case '#':                       /* ignore comments */
             do {
                 l->pos++;
             } while (*l->pos && (*l->pos != '\n') && (*l->pos != '\r'));
             break;
-        case '\r':			/* EOL: CR, LF, CR/LF */
+        case '\r':                      /* EOL: CR, LF, CR/LF */
             if (*(l->pos+1) == '\n')
                 l->pos++; 
             /* fall-thru... whee! */
         case '\n':
             l->text[0] = *l->pos++;
             l->text[1] = '\0';
-            l->gotEOL = 1;		/* do not back up; severe tire damage */
+            l->gotEOL = 1;              /* do not back up;severe tire damage */
             return(l->prev = LEX_EOL);
         case '"':
         case '\'':
-            for (p=l->pos+1; *p && *p!=*l->pos && *p!='\r' && *p!='\n'; p++) {;}
-            if (*p == *l->pos) {	/* valid string */
+            for (p=l->pos+1; *p && *p!=*l->pos && *p!='\r' && *p!='\n'; p++){;}
+            if (*p == *l->pos) {        /* valid string */
                 len = MIN(p - l->pos - 1, LEX_MAX_STR - 1);
                 memcpy(l->text, l->pos + 1, len);
                 l->text[len] = '\0';
                 l->pos = p + 1;
                 return(l->prev = LEX_STR);
             }
-            else {			/* unmatched quote */
+            else {                      /* unmatched quote */
                 l->text[0] = '\0';
                 l->pos = p;
                 return(l->prev = LEX_ERR);
             }
         case '\\':
-            if (*(l->pos+1) == '\n') {	/* ignore EOL, continue to next line */
+            if (*(l->pos+1) == '\n') {  /* ignore EOL, continue to next line */
                 l->pos += 2;
                 l->line++;
                 break;
@@ -180,7 +180,7 @@ int lex_next(Lex l)
             /* fall-thru... whee! */
         default:
             if (isalpha((int)*l->pos) || (*l->pos == '_')) {
-                for (p=l->pos+1; *p && (isalnum((int)*p) || *p == '_'); p++) {;}
+                for (p=l->pos+1; *p && (isalnum((int)*p) || *p=='_'); p++) {;}
                 len = MIN(p - l->pos, LEX_MAX_STR - 1);
                 memcpy(l->text, l->pos, len);
                 l->text[len] = '\0';
@@ -198,7 +198,7 @@ int lex_next(Lex l)
                 l->pos = p;
                 return(l->prev = LEX_INT);
             }
-            l->text[0] = *l->pos++;	/* single-character token */
+            l->text[0] = *l->pos++;     /* single-character token */
             l->text[1] = '\0';
             return(l->prev = l->text[0]);
         }
@@ -286,11 +286,11 @@ static int lookup_token(char *str, char *toks[], int numtoks)
                 high = middle - 1;
             else if (x > 0)
                 low = middle + 1;
-            else			/* token found, whoohoo! */
+            else                        /* token found, whoohoo! */
                 return(middle + LEX_TOK_OFFSET);
         }
     }
-    return(LEX_STR);			/* token not found; doh! */
+    return(LEX_STR);                    /* token not found; doh! */
 }
 
 
@@ -301,9 +301,9 @@ char * lex_encode(char *str)
     if (!str)
         return(NULL);
     for (p=str; *p; p++) {
-        assert(!(*p & 0x80));		/* assert all high bits are cleared */
+        assert(!(*p & 0x80));           /* assert all high bits are cleared */
         if (*p == '\'' || *p == '"')
-            *p |= 0x80;			/* set high bit to encode funky char */
+            *p |= 0x80;                 /* set high bit to encode funky char */
     }
     return(str);
 }
@@ -316,7 +316,7 @@ char * lex_decode(char *str)
     if (!str)
         return(NULL);
     for (p=str; *p; p++) {
-        *p &= 0x7F;			/* clear all high bits */
+        *p &= 0x7F;                     /* clear all high bits */
     }
     return(str);
 }

@@ -1,9 +1,9 @@
-/******************************************************************************\
- *  $Id: util-str.c,v 1.9 2001/12/27 19:24:39 dun Exp $
+/*****************************************************************************\
+ *  $Id: util-str.c,v 1.10 2002/02/08 18:12:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
- ******************************************************************************
+ *****************************************************************************
  *  Refer to "util-str.h" for documentation on public functions.
-\******************************************************************************/
+\*****************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
@@ -52,7 +52,7 @@ char * create_format_string(const char *fmt, ...)
     vsnprintf(buf, sizeof(buf), fmt, vargs);
     va_end(vargs);
 
-    buf[sizeof(buf) - 1] = '\0';	/* ensure buf is NUL-terminated */
+    buf[sizeof(buf) - 1] = '\0';        /* ensure buf is NUL-terminated */
 
     if (!(p = strdup(buf)))
         out_of_memory();
@@ -88,7 +88,7 @@ size_t append_format_string(char *dst, size_t size, const char *fmt, ...)
     /*  Assert (dst) was NUL-terminated.  If (nAvail == 0), no NUL was found.
      */
     assert(nAvail != 0);
-    if (nAvail <= 1)			/* dst is full, only room for NUL */
+    if (nAvail <= 1)                    /* dst is full, only room for NUL */
         return(-1);
     lenOrig = p - dst;
 
@@ -97,7 +97,7 @@ size_t append_format_string(char *dst, size_t size, const char *fmt, ...)
     va_end(vargs);
 
     if ((n < 0) || (n >= nAvail)) {
-        dst[size - 1] = '\0';		/* ensure dst is NUL-terminated */
+        dst[size - 1] = '\0';           /* ensure dst is NUL-terminated */
         return(-1);
     }
     return(lenOrig + n);
@@ -142,7 +142,7 @@ char * create_long_time_string(time_t t)
 {
     char *p;
     struct tm tm;
-    const int len = 25;			/* MM/DD/YYYY HH:MM:SS ZONE + NUL */
+    const int len = 25;                 /* MM/DD/YYYY HH:MM:SS ZONE + NUL */
 
     if (!(p = malloc(len)))
         out_of_memory();
@@ -160,7 +160,7 @@ char * create_short_time_string(time_t t)
 {
     char *p;
     struct tm tm;
-    const int len = 12;			/* MM/DD HH:MM + NUL */
+    const int len = 12;                 /* MM/DD HH:MM + NUL */
 
     if (!(p = malloc(len)))
         out_of_memory();

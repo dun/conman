@@ -2,7 +2,7 @@
 # Makefile Include for RPM Construction
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Make-rpm.mk,v 1.14 2001/12/12 18:31:07 dun Exp $
+# $Id: Make-rpm.mk,v 1.15 2002/02/08 18:12:25 dun Exp $
 ##
 # REQUIREMENTS:
 # - requires project to be under CVS version control
@@ -51,7 +51,7 @@ tar rpm:
 	  echo "ERROR: PROJECT macro def is not defined." 1>&2; exit 1; fi; \
 	if test -z "$$tag"; then \
 	  if ! test -f META; then \
-	    echo "ERROR: Cannot find $$proj metadata in \"`pwd`/META\"." 1>&2; \
+	    echo "ERROR: Cannot find $$proj metadata in \"`pwd`/META\"." 1>&2;\
 	      exit 1; fi; \
 	  name=`perl -ne 'print,exit if s/^\s*NAME:\s*(\S*).*/\1/i' META`; \
 	  ver=`perl -ne 'print,exit if s/^\s*VERSION:\s*(\S*).*/\1/i' META`; \
@@ -100,7 +100,7 @@ rpm-internal: tar-internal
 	  && spec=$$tmp/$$pkg/$$proj.spec.in \
 	  || spec=$$tmp/$$pkg/$$proj.spec; \
 	if ! test -f $$spec; then \
-	  echo "ERROR: Cannot find $$proj spec file in CVS." 1>&2; exit 1; fi; \
+	  echo "ERROR: Cannot find $$proj spec file in CVS." 1>&2; exit 1; fi;\
 	sed -e "s/^\([ 	]*Name:\).*/\1 $$proj/i" \
 	    -e "s/^\([ 	]*Version:\).*/\1 $$ver/i" \
 	    -e "s/^\([ 	]*Release:\).*/\1 $$rel/i" \
@@ -112,4 +112,5 @@ rpm-internal: tar-internal
 	if ! rpm -ba --define "_tmppath $$tmp/TMP" --define "_topdir $$tmp" \
 	  $$sign --quiet $$tmp/SPECS/$$proj.spec >$$tmp/rpm.log 2>&1; then \
 	    cat $$tmp/rpm.log; exit 1; fi; \
-	cp -p $$tmp/RPMS/*/$$proj-*.rpm $$tmp/SRPMS/$$proj-*.src.rpm . || exit 1
+	cp -p $$tmp/RPMS/*/$$proj-*.rpm $$tmp/SRPMS/$$proj-*.src.rpm . \
+	  || exit 1

@@ -2,7 +2,7 @@
 # Alpha Library Functions
 #   or Alien Life Form (ALF)
 ##
-# $Id: alpha.exp,v 1.4 2001/08/22 22:54:58 dun Exp $
+# $Id: alpha.exp,v 1.5 2002/02/08 18:12:25 dun Exp $
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
 
@@ -27,11 +27,11 @@ proc alpha_do_rmc_cmd {spawn_id output_id console echo cmd {tmout 10}} {
   } eof {
     return 0
   } timeout {
-    if {$timeout == 2} {		;# already at RMC?
+    if {$timeout == 2} {                ;# already at RMC?
       exp_send "\r"
       set timeout 1
       exp_continue
-    } else {				;# no RMC? i'm outta here!
+    } else {                            ;# no RMC? i'm outta here!
       return 0
     }
   }
@@ -40,7 +40,7 @@ proc alpha_do_rmc_cmd {spawn_id output_id console echo cmd {tmout 10}} {
   set timeout $tmout
   exp_send -- "$cmd\r"
   expect -gl "^$cmd\r\n" {
-    exp_continue -continue_timer	;# expect the cmd just sent
+    exp_continue -continue_timer        ;# expect the cmd just sent
   } -nocase -re "(^\[^\r]*(unknown command|power is off)\[^\r]*)\r\n" {
     if {$echo} {exp_send -i $output_id "$expect_out(1,string)\n"}
     set status 0
@@ -67,11 +67,11 @@ proc alpha_is_at_srm {spawn_id output_id console {tmout 3}} {
 #
 # Checks whether the console session associated with 'spawn_id' is at SRM.
 #   Times-out after approx 'tmout' secs; if you are waiting for the SRM prompt
-#   following a reset, you will want to specify a longer timeout (eg, 120 secs).
+#   following a reset, you will want to specify a longer timeout (eg, 120secs).
 # Returns 1 if the console is at SRM; o/w, returns 0.
 #
-  set again 1				;# sometimes the first \r gets lost
-  set timeout 1				;#   so try again in a second
+  set again 1                           ;# sometimes the first \r gets lost
+  set timeout 1                         ;#   so try again in a second
   exp_send "\r"
   expect -re "\nCPU \[0-9]+ booting" {
     exp_send "\003"
@@ -108,13 +108,13 @@ proc alpha_do_srm_cmd {spawn_id output_id console echo cmd {tmout 10}} {
   set timeout $tmout
   exp_send -- "$cmd\r"
   expect -gl "^$cmd\r\n" {
-    exp_continue -continue_timer	;# expect the cmd just sent
+    exp_continue -continue_timer        ;# expect the cmd just sent
   } -nocase -re "(^\[^\r]*jumping to bootstrap code\[^\r]*)\r\n" {
     if {$echo} {exp_send -i $output_id "$expect_out(1,string)\n"}
-    return 1				;# success for "boot" cmd
+    return 1                            ;# success for "boot" cmd
   } -nocase -re "(^\[^\r]*bootstrap code read in\[^\r]*)\r\n" {
     if {$echo} {exp_send -i $output_id "$expect_out(1,string)\n"}
-    return 1				;# success for "boot" cmd via BOOTP
+    return 1                            ;# success for "boot" cmd via BOOTP
   } -nocase -re "(^\[^\r]*(bad value|invalid|no such command)\[^\r]*)\r\n" {
     if {$echo} {exp_send -i $output_id "$expect_out(1,string)\n"}
     set status 0

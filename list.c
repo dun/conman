@@ -1,9 +1,9 @@
-/******************************************************************************\
- *  $Id: list.c,v 1.15 2001/12/15 14:33:49 dun Exp $
+/*****************************************************************************\
+ *  $Id: list.c,v 1.16 2002/02/08 18:12:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
- ******************************************************************************
+ *****************************************************************************
  *  Refer to "list.h" for documentation on public functions.
-\******************************************************************************/
+\*****************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
@@ -50,31 +50,31 @@
 \****************/
 
 struct listNode {
-    void                 *data;		/* node's data                        */
-    struct listNode      *next;		/* next node in list                  */
+    void                 *data;         /* node's data                       */
+    struct listNode      *next;         /* next node in list                 */
 };
 
 struct listIterator {
-    struct list          *list;		/* the list being iterated            */
-    struct listNode      *pos;		/* the next node to be iterated       */
-    struct listNode     **prev;		/* addr of 'next' ptr to prev It node */
-    struct listIterator  *iNext;	/* iterator chain for list_destroy()  */
+    struct list          *list;         /* the list being iterated           */
+    struct listNode      *pos;          /* the next node to be iterated      */
+    struct listNode     **prev;         /* addr of 'next' ptr to prv It node */
+    struct listIterator  *iNext;        /* iterator chain for list_destroy() */
 #ifndef NDEBUG
-    unsigned int          magic;	/* sentinel for asserting validity    */
+    unsigned int          magic;        /* sentinel for asserting validity   */
 #endif /* NDEBUG */
 };
 
 struct list {
-    struct listNode      *head;		/* head of the list                   */
-    struct listNode     **tail;		/* addr of last node's 'next' ptr     */
-    struct listIterator  *iNext;	/* iterator chain for list_destroy()  */
-    ListDelF              fDel;		/* function to delete node data       */
-    int                   count;	/* number of nodes in list            */
+    struct listNode      *head;         /* head of the list                  */
+    struct listNode     **tail;         /* addr of last node's 'next' ptr    */
+    struct listIterator  *iNext;        /* iterator chain for list_destroy() */
+    ListDelF              fDel;         /* function to delete node data      */
+    int                   count;        /* number of nodes in list           */
 #ifdef WITH_PTHREADS
-    pthread_mutex_t       mutex;	/* mutex to protect access to list    */
+    pthread_mutex_t       mutex;        /* mutex to protect access to list   */
 #endif /* WITH_PTHREADS */
 #ifndef NDEBUG
-    unsigned int          magic;	/* sentinel for asserting validity    */
+    unsigned int          magic;        /* sentinel for asserting validity   */
 #endif /* NDEBUG */
 };
 
@@ -115,28 +115,28 @@ static pthread_mutex_t freeListIteratorsLock = PTHREAD_MUTEX_INITIALIZER;
 
 #ifdef WITH_PTHREADS
 
-#  define list_mutex_init(mutex)                                               \
-     do {                                                                      \
-         if ((errno = pthread_mutex_init(mutex, NULL)) != 0)                   \
-             perror("ERROR: pthread_mutex_init() failed"), exit(1);            \
+#  define list_mutex_init(mutex)                                              \
+     do {                                                                     \
+         if ((errno = pthread_mutex_init(mutex, NULL)) != 0)                  \
+             perror("ERROR: pthread_mutex_init() failed"), exit(1);           \
      } while (0)
 
-#  define list_mutex_lock(mutex)                                               \
-     do {                                                                      \
-         if ((errno = pthread_mutex_lock(mutex)) != 0)                         \
-             perror("ERROR: pthread_mutex_lock() failed"), exit(1);            \
+#  define list_mutex_lock(mutex)                                              \
+     do {                                                                     \
+         if ((errno = pthread_mutex_lock(mutex)) != 0)                        \
+             perror("ERROR: pthread_mutex_lock() failed"), exit(1);           \
      } while (0)
 
-#  define list_mutex_unlock(mutex)                                             \
-     do {                                                                      \
-         if ((errno = pthread_mutex_unlock(mutex)) != 0)                       \
-             perror("ERROR: pthread_mutex_unlock() failed"), exit(1);          \
+#  define list_mutex_unlock(mutex)                                            \
+     do {                                                                     \
+         if ((errno = pthread_mutex_unlock(mutex)) != 0)                      \
+             perror("ERROR: pthread_mutex_unlock() failed"), exit(1);         \
      } while (0)
 
-#  define list_mutex_destroy(mutex)                                            \
-     do {                                                                      \
-         if ((errno = pthread_mutex_destroy(mutex)) != 0)                      \
-             perror("ERROR: pthread_mutex_destroy() failed"), exit(1);         \
+#  define list_mutex_destroy(mutex)                                           \
+     do {                                                                     \
+         if ((errno = pthread_mutex_destroy(mutex)) != 0)                     \
+             perror("ERROR: pthread_mutex_destroy() failed"), exit(1);        \
      } while (0)
 
 #else /* !WITH_PTHREADS */
@@ -165,7 +165,7 @@ List list_create(ListDelF f)
     l->fDel = f;
     l->count = 0;
     list_mutex_init(&l->mutex);
-    assert(l->magic = LIST_MAGIC);	/* set magic via assert abuse */
+    assert(l->magic = LIST_MAGIC);      /* set magic via assert abuse */
     return(l);
 }
 
@@ -182,7 +182,7 @@ void list_destroy(List l)
     while (i) {
         assert(i->magic == LIST_MAGIC);
         iTmp = i->iNext;
-        assert(i->magic = 1);		/* clear magic via assert abuse */
+        assert(i->magic = 1);           /* clear magic via assert abuse */
         list_iterator_free(i);
         i = iTmp;
     }
@@ -194,7 +194,7 @@ void list_destroy(List l)
         list_node_free(p);
         p = pTmp;
     }
-    assert(l->magic = 1);		/* clear magic via assert abuse */
+    assert(l->magic = 1);               /* clear magic via assert abuse */
     list_mutex_unlock(&l->mutex);
     list_mutex_destroy(&l->mutex);
     list_free(l);
@@ -432,7 +432,7 @@ ListIterator list_iterator_create(List l)
     i->iNext = l->iNext;
     l->iNext = i;
     list_mutex_unlock(&l->mutex);
-    assert(i->magic = LIST_MAGIC);	/* set magic via assert abuse */
+    assert(i->magic = LIST_MAGIC);      /* set magic via assert abuse */
     return(i);
 }
 
@@ -466,7 +466,7 @@ void list_iterator_destroy(ListIterator i)
         }
     }
     list_mutex_unlock(&i->list->mutex);
-    assert(i->magic = 1);		/* clear magic via assert abuse */
+    assert(i->magic = 1);               /* clear magic via assert abuse */
     list_iterator_free(i);
     return;
 }

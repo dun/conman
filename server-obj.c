@@ -1,7 +1,7 @@
-/******************************************************************************\
- *  $Id: server-obj.c,v 1.60 2002/01/28 06:01:42 dun Exp $
+/*****************************************************************************\
+ *  $Id: server-obj.c,v 1.61 2002/02/08 18:12:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
-\******************************************************************************/
+\*****************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
@@ -140,7 +140,7 @@ obj_t * create_logfile_obj(
         }
     }
     list_iterator_destroy(i);
-    if (logfile != NULL)		/* found duplicate name */
+    if (logfile != NULL)                /* found duplicate name */
         return(NULL);
 
     logfile = create_obj(conf, name, -1, LOGFILE);
@@ -313,7 +313,8 @@ obj_t * create_telnet_obj(
         telnet->aux.telnet.optState[n] = TELOPT_NO;
     telnet->aux.telnet.conState = TELCON_DOWN;
     /*
-     *  Dup 'enableKeepAlive' to prevent passing 'conf' to connect_telnet_obj().
+     *  Dup 'enableKeepAlive' to prevent passing 'conf'
+     *    to connect_telnet_obj().
      */
     telnet->aux.telnet.enableKeepAlive = conf->enableKeepAlive;
 
@@ -363,7 +364,7 @@ int connect_telnet_obj(obj_t *telnet)
           sizeof(telnet->aux.telnet.saddr)) < 0) {
             if (errno == EINPROGRESS) {
             /*
-             *  NOTE: Bug exists in timeout of connect():
+             *  FIXME: Bug exists in timeout of connect():
              *      server.c:335: Unable to multiplex I/O: Bad file descriptor.
              *
              *  telnet->aux.telnet.timer =
@@ -400,7 +401,7 @@ int connect_telnet_obj(obj_t *telnet)
              *    that failed to connect() will return with an error of
              *    "invalid argument".  So close & ignore the return code here.
              */
-            close(telnet->fd);		/* ignore return code */
+            close(telnet->fd);          /* ignore return code */
             telnet->fd = -1;
             disconnect_telnet_obj(telnet);
             return(-1);
@@ -467,7 +468,8 @@ void disconnect_telnet_obj(obj_t *telnet)
     if (telnet->fd >= 0) {
         if (close(telnet->fd) < 0)
             err_msg(errno, "Unable to close connection to <%s:%d> for [%s]",
-                telnet->aux.telnet.host, telnet->aux.telnet.port, telnet->name);
+                telnet->aux.telnet.host, telnet->aux.telnet.port,
+                telnet->name);
         telnet->fd = -1;
     }
 
@@ -528,7 +530,7 @@ void destroy_obj(obj_t *obj)
     assert(obj != NULL);
     DPRINTF("Destroying object [%s].\n", obj->name);
 
-/*  FIX_ME? Ensure obj buf is flushed (if not suspended) before destruction.
+/*  FIXME? Ensure obj buf is flushed (if not suspended) before destruction.
  *
  *  assert(obj->bufInPtr == obj->bufOutPtr); */
 
@@ -967,7 +969,7 @@ again:
     else if (n == 0) {
         int rc = shutdown_obj(obj);
         if (obj->fd >= 0)
-            FD_SET(obj->fd, pWriteSet);	/* ensure buffer is flushed if needed */
+            FD_SET(obj->fd, pWriteSet); /* ensure buffer is flushed */
         return(rc);
     }
     else {
@@ -1107,7 +1109,7 @@ int write_obj_data(obj_t *obj, void *src, int len, int isInfo)
      */
     if (n > 0) {
         memcpy(obj->bufInPtr, src, n);
-        obj->bufInPtr += n;		/* Hokey-Pokey not needed here */
+        obj->bufInPtr += n;             /* Hokey-Pokey not needed here */
     }
 
     /*  Check to see if any data in circular-buffer was overwritten.
@@ -1181,7 +1183,7 @@ again:
             if (errno == EINTR)
                 goto again;
             /*
-             *  FIX_ME: Mirror read_from_obj() construct here when dethreaded.
+             *  FIXME: Mirror read_from_obj() construct here when dethreaded.
              */
             if ((errno != EAGAIN) && (errno != EWOULDBLOCK)) {
                 log_msg(20, "Unable to write to [%s]: %s.",

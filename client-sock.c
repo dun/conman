@@ -1,7 +1,7 @@
-/******************************************************************************\
- *  $Id: client-sock.c,v 1.28 2001/12/30 21:21:17 dun Exp $
+/*****************************************************************************\
+ *  $Id: client-sock.c,v 1.29 2002/02/08 18:12:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
-\******************************************************************************/
+\*****************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
@@ -77,7 +77,7 @@ int connect_to_server(client_conf_t *conf)
 
 int send_greeting(client_conf_t *conf)
 {
-    char buf[MAX_SOCK_LINE] = "";	/* init buf for appending with NUL */
+    char buf[MAX_SOCK_LINE] = "";       /* init buf for appending with NUL */
     int n;
 
     assert(conf->req->sd >= 0);
@@ -112,7 +112,7 @@ int send_greeting(client_conf_t *conf)
     if (recv_rsp(conf) < 0) {
         if (conf->errnum == CONMAN_ERR_AUTHENTICATE) {
             /*
-             *  FIX_ME: NOT_IMPLEMENTED_YET
+             *  FIXME: NOT_IMPLEMENTED_YET
              */
             if (close(conf->req->sd) < 0)
                 err_msg(errno, "Unable to close connection to <%s:%d>",
@@ -127,7 +127,7 @@ int send_greeting(client_conf_t *conf)
 
 int send_req(client_conf_t *conf)
 {
-    char buf[MAX_SOCK_LINE] = "";	/* init buf for appending with NUL */
+    char buf[MAX_SOCK_LINE] = "";       /* init buf for appending with NUL */
     int n;
     char *cmd;
     char *str;
@@ -248,7 +248,7 @@ int recv_rsp(client_conf_t *conf)
     while (!done) {
         tok = lex_next(l);
         switch(tok) {
-        case CONMAN_TOK_OK:		/* OK, so ignore rest of line */
+        case CONMAN_TOK_OK:             /* OK, so ignore rest of line */
             parse_rsp_ok(l, conf);
             done = 1;
             break;
@@ -260,7 +260,7 @@ int recv_rsp(client_conf_t *conf)
         case LEX_EOL:
             done = -1;
             break;
-        default:			/* ignore unrecognized tokens */
+        default:                        /* ignore unrecognized tokens */
             break;
         }
     }
@@ -303,7 +303,7 @@ static void parse_rsp_ok(Lex l, client_conf_t *conf)
             done = 1;
             break;
         default:
-            break;			/* ignore unrecognized tokens */
+            break;                      /* ignore unrecognized tokens */
         }
     }
     return;
@@ -333,7 +333,7 @@ static void parse_rsp_err(Lex l, client_conf_t *conf)
             done = 1;
             break;
         default:
-            break;			/* ignore unrecognized tokens */
+            break;                      /* ignore unrecognized tokens */
         }
     }
     conf->errnum = err;

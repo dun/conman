@@ -1,7 +1,7 @@
-/******************************************************************************\
- *  $Id: server.c,v 1.44 2002/01/02 17:14:22 dun Exp $
+/*****************************************************************************\
+ *  $Id: server.c,v 1.45 2002/02/08 18:12:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
-\******************************************************************************/
+\*****************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
@@ -522,13 +522,13 @@ static void reopen_logfiles(List objs)
     ListIterator i;
     obj_t *logfile;
 
-    /*  FIX_ME: Re-Open server's logfile here as well.
+    /*  FIXME: Re-Open server's logfile here as well.
      */
     i = list_iterator_create(objs);
     while ((logfile = list_next(i))) {
         if (!is_logfile_obj(logfile))
             continue;
-        open_logfile_obj(logfile, 0);	/* do not truncate the logfile */
+        open_logfile_obj(logfile, 0);   /* do not truncate the logfile */
     }
     list_iterator_destroy(i);
     return;
@@ -614,11 +614,11 @@ static void reset_console(obj_t *console, const char *cmd)
     }
     else if (pid == 0) {
         setpgid(pid, 0);
-        close(STDIN_FILENO);    	/* ignore errors on close() */
+        close(STDIN_FILENO);            /* ignore errors on close() */
         close(STDOUT_FILENO);
         close(STDERR_FILENO);
         execl("/bin/sh", "sh", "-c", cmdbuf, NULL);
-        _exit(127);			/* execl() error */
+        _exit(127);                     /* execl() error */
     }
     /*  Both parent and child call setpgid() to make the child a process
      *    group leader.  One of these calls is redundant, but by doing
@@ -652,9 +652,9 @@ static void kill_console_reset(pid_t *arg)
     assert(pid > 0);
     free(arg);
 
-    if (kill(pid, 0) < 0)		/* process is no longer running */
+    if (kill(pid, 0) < 0)               /* process is no longer running */
         return;
-    if (kill(-pid, SIGKILL) == 0)	/* kill entire process group */
+    if (kill(-pid, SIGKILL) == 0)       /* kill entire process group */
         log_msg(0, "ResetCmd process pid=%d exceeded %ds time limit.",
             (int) pid, RESET_CMD_TIMEOUT);
     return;

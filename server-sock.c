@@ -1,7 +1,7 @@
-/******************************************************************************\
- *  $Id: server-sock.c,v 1.42 2001/12/31 04:00:48 dun Exp $
+/*****************************************************************************\
+ *  $Id: server-sock.c,v 1.43 2002/02/08 18:12:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
-\******************************************************************************/
+\*****************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
@@ -39,8 +39,8 @@
 extern int hosts_ctl(
   char *daemon, char *client_name, char *client_addr, char *client_user);
 
-int allow_severity = LOG_INFO;		/* logging level for accepted reqs */
-int deny_severity = LOG_WARNING;	/* logging level for rejected reqs */
+int allow_severity = LOG_INFO;          /* logging level for accepted reqs */
+int deny_severity = LOG_WARNING;        /* logging level for rejected reqs */
 
 #endif /* WITH_TCP_WRAPPERS */
 
@@ -572,7 +572,7 @@ static int check_too_many_consoles(req_t *req)
         list_count(req->consoles));
     send_rsp(req, CONMAN_ERR_TOO_MANY_CONSOLES, buf);
 
-    /*  FIX_ME? Replace with single write_n()?
+    /*  FIXME? Replace with single write_n()?
      */
     i = list_iterator_create(req->consoles);
     while ((obj = list_next(i))) {
@@ -655,7 +655,8 @@ static int check_busy_consoles(req_t *req)
                 "Console [%s] open %s by <%s@%s>%s%s (idle %s).\n",
                 console->name, (gotBcast ? "B/C" : "R/W"),
                 writer->aux.client.req->user, writer->aux.client.req->host,
-                (tty ? " on " : ""), (tty ? tty : ""), (delta ? delta : "???"));
+                (tty ? " on " : ""), (tty ? tty : ""),
+                (delta ? delta : "???"));
             buf[sizeof(buf) - 2] = '\n';
             buf[sizeof(buf) - 1] = '\0';
             if (delta)
@@ -682,8 +683,8 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
  *    and (errmsg) is a string describing the error in more detail.
  *  Returns 0 if the response is sent OK, or -1 on error.
  */
-    char buf[MAX_SOCK_LINE] = "";	/* init buf for appending with NUL */
-    char tmp[MAX_LINE];			/* tmp buffer for lex-encoding strs */
+    char buf[MAX_SOCK_LINE] = "";       /* init buf for appending with NUL */
+    char tmp[MAX_LINE];                 /* tmp buffer for lex-encoding strs */
     int n;
     ListIterator i;
     obj_t *console;
@@ -696,8 +697,9 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
         n = append_format_string(buf, sizeof(buf), "%s",
             proto_strs[LEX_UNTOK(CONMAN_TOK_OK)]);
 
-        /*  If consoles have been defined by this point, the response is to the
-         *    request as opposed to the greeting.  Yeah, it's a bit of a kludge.
+        /*  If consoles have been defined by this point, the "response"
+         *    is to the request as opposed to the greeting.
+         *  Yeah, it's a bit of a kludge.
          */
         if (list_count(req->consoles) > 0) {
 
@@ -710,7 +712,8 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
             while ((console = list_next(i))) {
                 n = strlcpy(tmp, console->name, sizeof(tmp));
                 n = append_format_string(buf, sizeof(buf), " %s='%s'",
-                    proto_strs[LEX_UNTOK(CONMAN_TOK_CONSOLE)], lex_encode(tmp));
+                    proto_strs[LEX_UNTOK(CONMAN_TOK_CONSOLE)],
+                    lex_encode(tmp));
             }
             list_iterator_destroy(i);
         }
@@ -719,7 +722,7 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
     }
     else {
     /*
-     *  FIX_ME: Should all errors be logged here?
+     *  FIXME: Should all errors be logged here?
      */
         n = strlcpy(tmp, (errmsg ? errmsg : "Doh!"), sizeof(tmp));
         n = snprintf(buf, sizeof(buf), "%s %s=%d %s='%s'\n",
@@ -728,7 +731,7 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
             proto_strs[LEX_UNTOK(CONMAN_TOK_MESSAGE)], lex_encode(tmp));
     }
 
-    /*  FIX_ME: Gracefully handle buffer overruns.
+    /*  FIXME: Gracefully handle buffer overruns.
      */
     if ((n < 0) || (n >= sizeof(buf))) {
         log_msg(10, "Request from <%s@%s:%d> terminated by buffer overrun.",
@@ -850,7 +853,8 @@ static void check_console_state(obj_t *console, obj_t *client)
     /*  If linking a client to a downed telnet session,
      *    notify the client and attempt an immediate reconnect of the console.
      */
-    if (is_telnet_obj(console) && (console->aux.telnet.conState != TELCON_UP)) {
+    if (is_telnet_obj(console)
+      && (console->aux.telnet.conState != TELCON_UP)) {
 
         snprintf(buf, sizeof(buf),
             "%sConsole [%s] is currently disconnected from <%s:%d>%s",

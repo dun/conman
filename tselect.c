@@ -1,12 +1,12 @@
-/******************************************************************************\
- *  $Id: tselect.c,v 1.7 2001/12/15 14:33:49 dun Exp $
+/*****************************************************************************\
+ *  $Id: tselect.c,v 1.8 2002/02/08 18:12:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
- ****************************************************************************** 
+ ***************************************************************************** 
  *  Based on the implementation in Jon C. Snader's
  *    "Effective TCP/IP Programming" (Tip #20).
- ****************************************************************************** 
+ ***************************************************************************** 
  *  Refer to "tselect.h" for documentation on public functions.
-\******************************************************************************/
+\*****************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <time.h>						/* xyzzy */
+#include <time.h>                                                   /* xyzzy */
 #include <unistd.h>
 #include "tselect.h"
 
@@ -50,11 +50,11 @@
 \****************/
 
 struct timer {
-    int             id;			/* timer ID                           */
-    CallBackF       fnc;		/* callback function                  */
-    void           *arg;		/* callback function arg              */
-    struct timeval  tv;			/* time at which timer expires        */
-    struct timer   *next;		/* next timer in list                 */
+    int             id;                 /* timer ID                          */
+    CallBackF       fnc;                /* callback function                 */
+    void           *arg;                /* callback function arg             */
+    struct timeval  tv;                 /* time at which timer expires       */
+    struct timer   *next;               /* next timer in list                */
 };
 
 typedef struct timer * Timer;
@@ -106,7 +106,7 @@ int tselect(int maxfdp1, fd_set *rset, fd_set *wset, fd_set *xset)
          */
         while (active && !timercmp(&tvNow, &active->tv, <)) {
             DPRINTF("TSELECT: dispatching timer %d for f:%p a:%p.\n",
-                active->id, active->fnc, active->arg);		/* xyzzy */
+                active->id, active->fnc, active->arg);              /* xyzzy */
             t = active;
             active = active->next;
             t->next = inactive;
@@ -229,7 +229,7 @@ int abtimeout(CallBackF callback, void *arg, const struct timeval *tvp)
     t->next = tCurr;
 
     DPRINTF("TSELECT: started timer %d for f:%p a:%p in %ld secs.\n",
-        t->id, callback, arg, (tvp->tv_sec - (long) time(NULL))); /* xyzzy */
+        t->id, callback, arg, (tvp->tv_sec - (long) time(NULL)));   /* xyzzy */
     return(t->id);
 }
 
@@ -249,13 +249,13 @@ void untimeout(int timerid)
         tCurr = tCurr->next;
     }
 
-    if (!tCurr)				/* timer id not active */
+    if (!tCurr)                         /* timer id not active */
         return;
     *tPrevPtr = tCurr->next;
     tCurr->next = inactive;
     inactive = tCurr;
 
-    DPRINTF("TSELECT: canceled timer %d.\n", timerid);		/* xyzzy */
+    DPRINTF("TSELECT: canceled timer %d.\n", timerid);              /* xyzzy */
     return;
 }
 

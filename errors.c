@@ -1,9 +1,9 @@
-/******************************************************************************\
- *  $Id: errors.c,v 1.7 2001/09/22 21:17:57 dun Exp $
+/*****************************************************************************\
+ *  $Id: errors.c,v 1.8 2002/02/08 18:12:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
- ******************************************************************************
+ *****************************************************************************
  *  Refer to "errors.h" for documentation on public functions.
-\******************************************************************************/
+\*****************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
@@ -25,7 +25,7 @@
 
 int open_msg_log(char *filename)
 {
-    /*  FIX_ME: NOT_IMPLEMENTED_YET
+    /*  FIXME: NOT_IMPLEMENTED_YET
      */
     return(0);
 }
@@ -33,7 +33,7 @@ int open_msg_log(char *filename)
 
 void close_msg_log(void)
 {
-    /*  FIX_ME: NOT_IMPLEMENTED_YET
+    /*  FIXME: NOT_IMPLEMENTED_YET
      */
     return;
 }
@@ -42,7 +42,7 @@ void close_msg_log(void)
 #undef log_msg
 void log_msg(int level, const char *fmt, ...)
 {
-    /*  FIX_ME: NOT_IMPLEMENTED_YET
+    /*  FIXME: NOT_IMPLEMENTED_YET
      */
     return;
 }
@@ -51,7 +51,7 @@ void log_msg(int level, const char *fmt, ...)
 #undef err_msg
 void err_msg(int errnum, const char *fmt, ...)
 {
-/*  FIX_ME: Replace snprintf()'s with append_format_string().
+/*  FIXME: Replace snprintf()'s with append_format_string().
  */
     char buf[MAX_LINE];
     char *ptr;

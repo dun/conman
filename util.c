@@ -1,9 +1,9 @@
-/******************************************************************************\
- *  $Id: util.c,v 1.17 2001/12/15 14:33:49 dun Exp $
+/*****************************************************************************\
+ *  $Id: util.c,v 1.18 2002/02/08 18:12:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
- ******************************************************************************
+ *****************************************************************************
  *  Refer to "util.h" for documentation on public functions.
-\******************************************************************************/
+\*****************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
@@ -24,7 +24,7 @@ void * out_of_memory(void)
 /*  Example for an external Out-Of-Memory Function.
  */
     err_msg(0, "Out of memory");
-    return(NULL);                       /* not reached, but prevents warnings */
+    return(NULL);                       /* not reached but prevents warnings */
 }
 #endif /* WITH_OOMF */
 
@@ -41,12 +41,12 @@ SigFunc * posix_signal(int signum, SigFunc *f)
     act1.sa_flags = 0;
     if (signum == SIGALRM) {
 #ifdef SA_INTERRUPT
-        act1.sa_flags |= SA_INTERRUPT;	/* SunOS 4.x */
+        act1.sa_flags |= SA_INTERRUPT;  /* SunOS 4.x */
 #endif /* SA_INTERRUPT */
     }
     else {
 #ifdef SA_RESTART
-        act1.sa_flags |= SA_RESTART;	/* SVR4, 4.4BSD */
+        act1.sa_flags |= SA_RESTART;    /* SVR4, 4.4BSD */
 #endif /* SA_RESTART */
     }
 

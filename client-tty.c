@@ -1,7 +1,7 @@
-/******************************************************************************\
- *  $Id: client-tty.c,v 1.39 2001/12/30 21:21:17 dun Exp $
+/*****************************************************************************\
+ *  $Id: client-tty.c,v 1.40 2002/02/08 18:12:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
-\******************************************************************************/
+\*****************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
@@ -328,7 +328,7 @@ static int perform_help_esc(client_conf_t *conf, char c)
 /*  Displays a dynamic help message regarding the available escape sequences.
  *  Returns 1 on success, or 0 if the socket connection is to be closed.
  */
-    char buf[MAX_BUF_SIZE] = "";	/* init buf for appending with NUL */
+    char buf[MAX_BUF_SIZE] = "";        /* init buf for appending with NUL */
     char esc[3];
     char tmp[3];
     int n;
@@ -405,7 +405,7 @@ static int perform_help_esc(client_conf_t *conf, char c)
     n = append_format_string(buf, sizeof(buf),
         "  %2s%-2s -  Suspend the client.\r\n", esc, tmp);
 
-    if (n < 0)				/* if buf was truncated, append CR/LF */
+    if (n < 0)                          /* append CR/LF if buf was truncated */
         strcpy(&buf[sizeof(buf) - 3], "\r\n");
     if (write_n(STDOUT_FILENO, buf, strlen(buf)) < 0)
         err_msg(errno, "Unable to write to stdout");
@@ -574,7 +574,7 @@ char * write_esc_char(char c, char *dst)
         *dst++ = '^';
         *dst++ = c + '@';
     }
-    else if (c == 0x7F) {		/* ASCII DEL char */
+    else if (c == 0x7F) {               /* ASCII DEL char */
         *dst++ = '^';
         *dst++ = '?';
     }
@@ -582,7 +582,7 @@ char * write_esc_char(char c, char *dst)
         *dst++ = c;
     }
 
-    *dst = '\0';			/* DO NOT advance ptr here */
+    *dst = '\0';                        /* DO NOT advance ptr here */
     return(dst);
 }
 
@@ -607,7 +607,7 @@ static void locally_display_status(client_conf_t *conf, char *msg)
             msg, CONMAN_MSG_SUFFIX);
     }
 
-    if ((n < 0) || (n >= sizeof(buf)))	/* if buf was truncated, append CR/LF */
+    if ((n < 0) || (n >= sizeof(buf)))  /* append CR/LF if buf was truncated */
         strcpy(&buf[sizeof(buf) - 3], "\r\n");
     if (write_n(STDOUT_FILENO, buf, strlen(buf)) < 0)
         err_msg(errno, "Unable to write to stdout");

@@ -1,16 +1,16 @@
-/******************************************************************************\
- *  $Id: lex.h,v 1.7 2002/01/14 17:13:05 dun Exp $
+/*****************************************************************************\
+ *  $Id: lex.h,v 1.8 2002/02/08 18:12:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
-\******************************************************************************/
+\*****************************************************************************/
 
 
 #ifndef _LEX_H
 #define _LEX_H
 
 
-/******************************************************************************\
+/*****************************************************************************\
  *  Laws of the Lexer:
- *-----------------------------------------------------------------------------
+ *----------------------------------------------------------------------------
  *  - Whitespace is ignored.
  *  - Comments are ignored (from the pound char to the newline).
  *  - Lines may be terminated by either carriage-returns (CR),
@@ -22,7 +22,7 @@
  *  - Unquoted strings are sequences of letters, digits, and underscores;
  *    they may not begin with a digit (just like a C identifier).
  *  - Tokens are unquoted case-insensitive strings.
-\******************************************************************************/
+\*****************************************************************************/
 
 
 /***********\
@@ -41,15 +41,15 @@
 **  Constants  **
 \***************/
 
-#define LEX_MAX_STR 1024		/* max length of lexer string         */
+#define LEX_MAX_STR 1024                /* max length of lexer string        */
 
 enum common_tokens {
-    LEX_ERR = -1,			/* lex error token                    */
-    LEX_EOF = 0,			/* end-of-file/buffer token           */
-    LEX_EOL = 256,			/* end-of-line token                  */
-    LEX_INT,				/* integer token: ([+-]?[0-9]+)       */
-    LEX_STR,				/* string token                       */
-    LEX_TOK_OFFSET			/* (cf. LEX_UNTOK macro)              */
+    LEX_ERR = -1,                       /* lex error token                   */
+    LEX_EOF = 0,                        /* end-of-file/buffer token          */
+    LEX_EOL = 256,                      /* end-of-line token                 */
+    LEX_INT,                            /* integer token: ([+-]?[0-9]+)      */
+    LEX_STR,                            /* string token                      */
+    LEX_TOK_OFFSET                      /* (cf. LEX_UNTOK macro)             */
 };
 
 

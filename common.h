@@ -1,7 +1,7 @@
-/******************************************************************************\
- *  $Id: common.h,v 1.29 2002/01/14 17:13:05 dun Exp $
+/*****************************************************************************\
+ *  $Id: common.h,v 1.30 2002/02/08 18:12:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
-\******************************************************************************/
+\*****************************************************************************/
 
 
 #ifndef _COMMON_H
@@ -14,20 +14,20 @@
 
 /*  Default escape char for the client.
  */
-#define DEFAULT_CLIENT_ESCAPE	'&'
+#define DEFAULT_CLIENT_ESCAPE   '&'
 
 /*  Escape char for the server's configuration file.
  */
-#define DEFAULT_CONFIG_ESCAPE	'&'
+#define DEFAULT_CONFIG_ESCAPE   '&'
 
 /*  Name of daemon for TCP-Wrappers.
  */
-#define CONMAN_DAEMON_NAME	"conmand"
+#define CONMAN_DAEMON_NAME      "conmand"
 
 /*  Message prefix/suffix defs for info msgs written to clients & logfiles.
  */
-#define CONMAN_MSG_PREFIX	"\r\n<ConMan> "
-#define CONMAN_MSG_SUFFIX	".\r\n"
+#define CONMAN_MSG_PREFIX       "\r\n<ConMan> "
+#define CONMAN_MSG_SUFFIX       ".\r\n"
 
 /*  Notes regarding the recommended sizes of various constants:
  *
@@ -35,25 +35,25 @@
  *    - MAX_BUF_SIZE >= MAX_LINE
  *    - MAX_SOCK_LINE >= MAX_LINE
  */
-#define CONMAN_REPLAY_LEN	4096
-#define MAX_BUF_SIZE		8192
-#define MAX_SOCK_LINE		8192
-#define MAX_LINE		1024
+#define CONMAN_REPLAY_LEN       4096
+#define MAX_BUF_SIZE            8192
+#define MAX_SOCK_LINE           8192
+#define MAX_LINE                1024
 
 /*  Escape codes used to send ctrl info 'tween client & server.
  */
-#define ESC_CHAR		0xFF
-#define ESC_CHAR_BREAK		'B'
-#define ESC_CHAR_CLOSE		'.'
-#define ESC_CHAR_FORCE		'F'
-#define ESC_CHAR_HELP		'?'
-#define ESC_CHAR_INFO		'I'
-#define ESC_CHAR_JOIN		'J'
-#define ESC_CHAR_LOG		'L'
-#define ESC_CHAR_MONITOR	'M'
-#define ESC_CHAR_QUIET		'Q'
-#define ESC_CHAR_RESET		'R'
-#define ESC_CHAR_SUSPEND	'Z'
+#define ESC_CHAR                0xFF
+#define ESC_CHAR_BREAK          'B'
+#define ESC_CHAR_CLOSE          '.'
+#define ESC_CHAR_FORCE          'F'
+#define ESC_CHAR_HELP           '?'
+#define ESC_CHAR_INFO           'I'
+#define ESC_CHAR_JOIN           'J'
+#define ESC_CHAR_LOG            'L'
+#define ESC_CHAR_MONITOR        'M'
+#define ESC_CHAR_QUIET          'Q'
+#define ESC_CHAR_RESET          'R'
+#define ESC_CHAR_SUSPEND        'Z'
 
 /*  Version string information
  */
@@ -79,11 +79,11 @@
 #define SERVER_FEATURES (FEATURE_DEBUG FEATURE_DMALLOC FEATURE_TCP_WRAPPERS)
 
 #ifndef HAVE_SOCKLEN_T
-typedef unsigned int socklen_t;		/* socklen_t is defined in Posix.1g   */
+typedef unsigned int socklen_t;         /* socklen_t is defined in Posix.1g  */
 #endif /* !HAVE_SOCKLEN_T */
 
 
-typedef enum cmd_type {			/* bit-field limited to 8 values      */
+typedef enum cmd_type {                 /* bit-field limited to 8 values     */
     NONE,
     CONNECT,
     MONITOR,
@@ -91,21 +91,21 @@ typedef enum cmd_type {			/* bit-field limited to 8 values      */
 } cmd_t;
 
 typedef struct request {
-    int       sd;			/* socket descriptor                  */
-    char     *user;			/* login name of client user          */
-    char     *tty;			/* device name of client terminal     */
-    char     *fqdn;			/* queried remote FQDN (or ip) string */
-    char     *host;			/* short remote host name (or ip) str */
-    char     *ip;			/* queried remote ip addr string      */
-    int       port;			/* remote port number                 */
-    List      consoles;			/* list of consoles affected by cmd   */
-    cmd_t     command:3;		/* ConMan command to perform          */
-    unsigned  enableBroadcast:1;	/* true if b-casting to many consoles */
-    unsigned  enableForce:1;		/* true if forcing console connection */
-    unsigned  enableJoin:1;		/* true if joining console connection */
-    unsigned  enableQuiet:1;		/* true if suppressing info messages  */
-    unsigned  enableRegex:1;		/* true if console matching via regex */
-    unsigned  enableReset:1;		/* true if server supports reset cmd  */
+    int       sd;                       /* socket descriptor                 */
+    char     *user;                     /* login name of client user         */
+    char     *tty;                      /* device name of client terminal    */
+    char     *fqdn;                     /* queried remote FQDN (or ip) str   */
+    char     *host;                     /* short remote hostname (or ip) str */
+    char     *ip;                       /* queried remote ip addr string     */
+    int       port;                     /* remote port number                */
+    List      consoles;                 /* list of consoles affected by cmd  */
+    cmd_t     command:3;                /* ConMan command to perform         */
+    unsigned  enableBroadcast:1;        /* true if b-casting to >1 consoles  */
+    unsigned  enableForce:1;            /* true if forcing console conn      */
+    unsigned  enableJoin:1;             /* true if joining console conn      */
+    unsigned  enableQuiet:1;            /* true if suppressing info messages */
+    unsigned  enableRegex:1;            /* true if regex console matching    */
+    unsigned  enableReset:1;            /* true if server supports reset cmd */
 } req_t;
 
 
@@ -144,7 +144,7 @@ enum proto_toks {
     CONMAN_TOK_USER,
 };
 
-extern char *proto_strs[];		/* defined in common.c */
+extern char *proto_strs[];              /* defined in common.c */
 
 
 /**************\

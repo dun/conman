@@ -1,7 +1,7 @@
-/******************************************************************************\
- *  $Id: server-logfile.c,v 1.3 2002/01/28 06:01:42 dun Exp $
+/*****************************************************************************\
+ *  $Id: server-logfile.c,v 1.4 2002/02/08 18:12:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
-\******************************************************************************/
+\*****************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
@@ -75,7 +75,7 @@ int open_logfile_obj(obj_t *logfile, int gotTrunc)
     assert(logfile->aux.logfile.consoleName != NULL);
 
     if (logfile->fd >= 0) {
-        if (close(logfile->fd) < 0)	/* log err and continue */
+        if (close(logfile->fd) < 0)     /* log err and continue */
             log_msg(0, "Unable to close logfile \"%s\": %s.",
                 logfile->name, strerror(errno));
         logfile->fd = -1;
@@ -91,11 +91,11 @@ int open_logfile_obj(obj_t *logfile, int gotTrunc)
     }
     if (get_write_lock(logfile->fd) < 0) {
         log_msg(0, "Unable to lock \"%s\".", logfile->name);
-        close(logfile->fd);		/* ignore err on close() */
+        close(logfile->fd);             /* ignore err on close() */
         logfile->fd = -1;
         return(-1);
     }
-    set_fd_nonblocking(logfile->fd);	/* redundant, just playing it safe */
+    set_fd_nonblocking(logfile->fd);    /* redundant, just playing it safe */
     set_fd_closed_on_exec(logfile->fd);
 
     now = create_long_time_string(0);
@@ -190,13 +190,13 @@ int write_sanitized_log_data(obj_t *log, const void *src, int len)
             }
             log->aux.logfile.sanitizeState = LOG_SANE_INIT;
 
-            c = *p & 0x7F;		/* strip data to 7-bit ASCII */
+            c = *p & 0x7F;              /* strip data to 7-bit ASCII */
 
-            if (c < 0x20) {		/* ASCII ctrl-chars */
+            if (c < 0x20) {             /* ASCII ctrl-chars */
                 *q++ = '^';
                 *q++ = c + '@';
             }
-            else if (c == 0x7F) {	/* ASCII DEL char */
+            else if (c == 0x7F) {       /* ASCII DEL char */
                 *q++ = '^';
                 *q++ = c + '?';
             }

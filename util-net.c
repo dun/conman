@@ -1,9 +1,9 @@
-/******************************************************************************\
- *  $Id: util-net.c,v 1.12 2002/01/14 17:10:13 dun Exp $
+/*****************************************************************************\
+ *  $Id: util-net.c,v 1.13 2002/02/08 18:12:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
- ******************************************************************************
+ *****************************************************************************
  *  Refer to "util-net.h" for documentation on public functions.
-\******************************************************************************/
+\*****************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
@@ -232,7 +232,7 @@ static int copy_hostent(const struct hostent *src, char *buf, int len)
     for (p=src->h_aliases, q=dst->h_aliases; *p; p++, q++) {
         n = strlcpy(buf, *p, len);
         *q = buf;
-        buf += ++n;			/* allow for trailing NUL char */
+        buf += ++n;                     /* allow for trailing NUL char */
         if ((len -= n) < 0)
             return(-1);
     }
@@ -242,7 +242,7 @@ static int copy_hostent(const struct hostent *src, char *buf, int len)
      */
     dst->h_name = buf;
     n = strlcpy(buf, src->h_name, len);
-    buf += ++n;				/* allow for trailing NUL char */
+    buf += ++n;                         /* allow for trailing NUL char */
     if ((len -= n) < 0)
         return(-1);
 

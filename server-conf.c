@@ -1,7 +1,7 @@
-/******************************************************************************\
- *  $Id: server-conf.c,v 1.38 2002/01/14 17:13:05 dun Exp $
+/*****************************************************************************\
+ *  $Id: server-conf.c,v 1.39 2002/02/08 18:12:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
-\******************************************************************************/
+\*****************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
@@ -214,7 +214,7 @@ void process_server_cmd_line(int argc, char *argv[], server_conf_t *conf)
         case 'z':
             conf->enableZeroLogs = 1;
             break;
-        case '?':			/* invalid option */
+        case '?':                       /* invalid option */
             fprintf(stderr, "ERROR: Invalid option \"%c\".\n", optopt);
             exit(1);
         default:
@@ -242,7 +242,7 @@ void process_server_conf_file(server_conf_t *conf)
     Lex l;
     int tok;
 
-    /*  Save conf->port because it may be redefined by parse_server_directive().
+    /*  Save conf->port 'cause it may be redefined by parse_server_directive().
      *  If (port > 0), port was specified via the command-line.
      */
     port = conf->port;
@@ -298,9 +298,9 @@ void process_server_conf_file(server_conf_t *conf)
 
     /*  Kludge to ensure port is properly set (cf, create_server_conf()).
      */
-    if (port > 0)			/* restore port set via cmdline */
+    if (port > 0)                       /* restore port set via cmdline */
         conf->port = port;
-    else if (conf->port <= 0)		/* port not set so use default */
+    else if (conf->port <= 0)           /* port not set so use default */
         conf->port = atoi(CONMAN_PORT);
 
     /*  The pidfile must be created after daemonize() has finished forking.
@@ -390,8 +390,8 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
 /*  CONSOLE NAME="<str>" DEV="<file>" [LOG="<file>"] \
  *    [LOGOPTS="<str>"] [SEROPTS="<str>"]
  */
-    char *directive;			/* name of directive being parsed */
-    int line;				/* line number where directive begins */
+    char *directive;                    /* name of directive being parsed */
+    int line;                           /* line# where directive begins */
     int tok;
     int done = 0;
     char err[MAX_LINE] = "";
@@ -517,7 +517,8 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
             log_msg(0, "%s:%d: Console [%s] cannot log to \"%s\": "
                 "%c-expansion failed.", conf->confFileName, line,
                 console->name, log, DEFAULT_CONFIG_ESCAPE);
-        else if (!(logfile = create_logfile_obj(conf, name, console, &logopts)))
+        else if (!(logfile = create_logfile_obj(
+          conf, name, console, &logopts)))
             log_msg(0, "%s:%d: Console [%s] cannot log to \"%s\".",
                 conf->confFileName, line, console->name, name);
         else
@@ -529,7 +530,7 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
 
 static void parse_global_directive(Lex l, server_conf_t *conf)
 {
-    char *directive;			/* name of directive being parsed */
+    char *directive;                    /* name of directive being parsed */
     int tok;
     int done = 0;
     char err[MAX_LINE] = "";
@@ -743,11 +744,11 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
                 else if (lex_prev(l) == LEX_STR) {
                     if (lex_text(l)[1] != '\0')
                         conf->tStampMinutes = -1;
-                    else if ((lex_text(l)[0] == 'm') || (lex_text(l)[0] == 'M'))
+                    else if (lex_text(l)[0] == 'm' || lex_text(l)[0] == 'M')
                         ; /* no-op */
-                    else if ((lex_text(l)[0] == 'h') || (lex_text(l)[0] == 'H'))
+                    else if (lex_text(l)[0] == 'h' || lex_text(l)[0] == 'H')
                         conf->tStampMinutes *= 60;
-                    else if ((lex_text(l)[0] == 'd') || (lex_text(l)[0] == 'D'))
+                    else if (lex_text(l)[0] == 'd' || lex_text(l)[0] == 'D')
                         conf->tStampMinutes *= 60 * 24;
                     else
                         conf->tStampMinutes = -1;

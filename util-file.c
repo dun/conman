@@ -1,9 +1,9 @@
-/******************************************************************************\
- *  $Id: util-file.c,v 1.2 2001/10/08 04:02:37 dun Exp $
+/*****************************************************************************\
+ *  $Id: util-file.c,v 1.3 2002/02/08 18:12:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
- ******************************************************************************
+ *****************************************************************************
  *  Refer to "util-file.h" for documentation on public functions.
-\******************************************************************************/
+\*****************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
@@ -137,7 +137,7 @@ ssize_t read_n(int fd, void *buf, size_t n)
             else
                 return(-1);
         }
-        else if (nread == 0) {		/* EOF */
+        else if (nread == 0) {          /* EOF */
             break;
         }
         nleft -= nread;
@@ -176,18 +176,18 @@ ssize_t read_line(int fd, void *buf, size_t maxlen)
 
     n = 0;
     p = buf;
-    while (n < maxlen - 1) {		/* reserve space for NUL-termination */
+    while (n < maxlen - 1) {            /* reserve space for NUL-termination */
 
         if ((rc = read(fd, &c, 1)) == 1) {
             n++;
             *p++ = c;
             if (c == '\n')
-                break;			/* store newline, like fgets() */
+                break;                  /* store newline, like fgets() */
         }
         else if (rc == 0) {
-            if (n == 0)			/* EOF, no data read */
+            if (n == 0)                 /* EOF, no data read */
                 return(0);
-            else			/* EOF, some data read */
+            else                        /* EOF, some data read */
                 break;
         }
         else {
@@ -197,6 +197,6 @@ ssize_t read_line(int fd, void *buf, size_t maxlen)
         }
     }
 
-    *p = '\0';				/* NUL-terminate, like fgets() */
+    *p = '\0';                          /* NUL-terminate, like fgets() */
     return(n);
 }

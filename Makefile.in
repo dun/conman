@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Makefile.in,v 1.43 2002/01/02 17:17:19 dun Exp $
+# $Id: Makefile.in,v 1.44 2002/02/08 18:12:25 dun Exp $
 ##
 
 PROJECT=	conman
@@ -33,7 +33,8 @@ PROGS=		conman conmand
 COMMON_OBJS1=	common.o errors.o list.o lex.o
 COMMON_OBJS2=	util.o util-file.o util-net.o util-str.o
 COMMON_OBJS=	$(COMMON_OBJS1) $(COMMON_OBJS2) @LIBOBJS@
-CLIENT_OBJS=	client.o client-conf.o client-sock.o client-tty.o $(COMMON_OBJS)
+CLIENT_OBJS1=	client.o client-conf.o client-sock.o client-tty.o
+CLIENT_OBJS=	$(CLIENT_OBJS1) $(COMMON_OBJS)
 SERVER_OBJS1=	server.o server-conf.o server-esc.o server-logfile.o
 SERVER_OBJS2=	server-obj.o server-serial.o server-sock.o tselect.o
 SERVER_OBJS=	$(SERVER_OBJS1) $(SERVER_OBJS2) $(COMMON_OBJS)

@@ -1,7 +1,7 @@
 ##
 # ConMan Expect Language Library (CELL)
 ##
-# $Id: conman.exp,v 1.5 2001/09/01 00:10:47 dun Exp $
+# $Id: conman.exp,v 1.6 2002/02/08 18:12:25 dun Exp $
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
 
@@ -18,10 +18,11 @@ proc conman_parse_opts {args_r} {
   for {set i 0} {$i < [llength $args]} {incr i} {
     set arg [lindex $args $i]
     switch -regexp -- $arg {
-      "^--$" {foreach x [lrange $args [expr $i+1] end] {lappend cons $x}; break}
-      "^-d$" {lappend opts $arg; lappend opts [lindex $args [incr i]]}
-      "^-e$" {incr i ;# ignore changing esc-char seq}
-      "^-" {lappend opts $arg}
+      "^--$"  {foreach x [lrange $args [expr $i+1] end] {lappend cons $x};
+               break}
+      "^-d$"  {lappend opts $arg; lappend opts [lindex $args [incr i]]}
+      "^-e$"  {incr i ;# ignore changing esc-char seq}
+      "^-"    {lappend opts $arg}
       default {lappend cons $arg}
     }
   }
@@ -121,7 +122,7 @@ proc conman_run {nproc consoles cmd args} {
 # Data being returned from multiple concurrent consoles can be demux'd with
 #   a stable sort such as: "sort -s -t: -k1,1".
 #
-  global conman_global_ids		;# global req'd for indirect spawn ids
+  global conman_global_ids              ;# global req'd for indirect spawn ids
   set conman_global_ids {}
 
   if {$nproc <= 0} {
@@ -177,8 +178,8 @@ proc conman_run_next {ids_r id2con_r consoles_r opts_r cmd_r args_r} {
   if {[llength $consoles] == 0} {
     return 0
   }
-  set console [lindex $consoles 0]	;# car
-  set consoles [lrange $consoles 1 end]	;# cdr
+  set console [lindex $consoles 0]      ;# car
+  set consoles [lrange $consoles 1 end] ;# cdr
 
   if {[catch {spawn -noecho -pty} err]} {
     send_error -- "ERROR: $err.\n"

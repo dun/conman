@@ -1,7 +1,7 @@
-/******************************************************************************\
- *  $Id: client.h,v 1.13 2001/12/19 23:38:01 dun Exp $
+/*****************************************************************************\
+ *  $Id: client.h,v 1.14 2002/02/08 18:12:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
-\******************************************************************************/
+\*****************************************************************************/
 
 
 #ifndef _CLIENT_H
@@ -13,15 +13,15 @@
 
 
 typedef struct client_conf {
-    req_t          *req;		/* client request info                */
-    int             escapeChar;		/* char to issue client escape seq    */
-    char           *log;		/* connection logfile name            */
-    int             logd;		/* connection logfile descriptor      */
-    int             errnum;		/* error number from issuing command  */
-    char           *errmsg;		/* error message from issuing command */
-    struct termios  tty;		/* saved "cooked" terminal mode       */
-    unsigned        enableVerbose:1;	/* true if verbose output requested   */
-    unsigned        isClosedByClient:1;	/* true if socket closed by client    */
+    req_t          *req;                /* client request info               */
+    int             escapeChar;         /* char to issue client escape seq   */
+    char           *log;                /* connection logfile name           */
+    int             logd;               /* connection logfile descriptor     */
+    int             errnum;             /* error number from issuing command */
+    char           *errmsg;             /* error msg from issuing command    */
+    struct termios  tty;                /* saved "cooked" terminal mode      */
+    unsigned        enableVerbose:1;    /* true if verbose output requested  */
+    unsigned        isClosedByClient:1; /* true if socket closed by client   */
 } client_conf_t;
 
 

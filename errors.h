@@ -1,7 +1,7 @@
-/******************************************************************************\
- *  $Id: errors.h,v 1.6 2001/08/31 01:12:26 dun Exp $
+/*****************************************************************************\
+ *  $Id: errors.h,v 1.7 2002/02/08 18:12:25 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
-\******************************************************************************/
+\*****************************************************************************/
 
 
 #ifndef _ERRORS_H
@@ -26,7 +26,8 @@
 #  define DPRINTF(fmt, args...) do \
      { fprintf(stderr, fmt , ## args); } while (0)
 #  define LDPRINTF(fmt, args...) do \
-     { fprintf(stderr, "%s:%d: " fmt, __FILE__, __LINE__ , ## args); } while (0)
+     { fprintf(stderr, "%s:%d: " fmt, __FILE__, __LINE__ , ## args); } \
+       while (0)
 #else /* NDEBUG */
 #  define DPRINTF(fmt, args...)
 #  define LDPRINTF(fmt, args...)
@@ -46,7 +47,7 @@ void close_msg_log(void);
 #define log_msg(level, fmt, args...) \
   do { fprintf(stderr, fmt, ##args); fprintf(stderr, "\n"); } while (0)
 /*
- *  FIX_ME: Remove kludge macro once function is implemented.
+ *  FIXME: Remove kludge macro once function is implemented.
  *
 void log_msg(int priority, const char *fmt, ...);
  *
