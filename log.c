@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: log.c,v 1.3 2002/05/15 03:49:21 dun Exp $
+ *  $Id: log.c,v 1.4 2002/05/19 03:13:51 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -31,12 +31,14 @@
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
+#include <assert.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
+#include <time.h>
 #include "log.h"
 
 
@@ -47,6 +49,7 @@
 
 static FILE * log_file = NULL;
 static int    log_file_priority = -1;
+static int    log_file_timestamp = 0;
 static int    log_syslog = 0;
 
 
@@ -77,21 +80,24 @@ void dprintf(int level, const char *format, ...)
 }
 
 
-void log_set_file(FILE *fp, int priority)
+void log_set_file(FILE *fp, int priority, int timestamp)
 {
     if (fp && !ferror(fp)) {
-        log_file_priority = priority;
         log_file = fp;
+        log_file_priority = (priority > 0) ? priority : 0;
+        log_file_timestamp = !!timestamp;
         setvbuf(fp, NULL, _IONBF, 0);   /* set stream unbuffered */
     }
     else {
         log_file = NULL;
+        log_file_priority = -1;
+        log_file_timestamp = 0;
     }
     return;
 }
 
 
-void log_set_syslog(char *ident)
+void log_set_syslog(char *ident, int facility)
 {
     char *p;
 
@@ -99,7 +105,7 @@ void log_set_syslog(char *ident)
         ident = p + 1;
 
     if (ident) {
-        openlog(ident, LOG_NDELAY | LOG_PID, LOG_DAEMON);
+        openlog(ident, LOG_NDELAY | LOG_PID, facility);
         log_syslog = 1;
     }
     else {
@@ -119,7 +125,8 @@ void log_err(int errnum, const char *format, ...)
     va_end(vargs);
 
 #ifndef NDEBUG
-    abort();                            /* generate core for debugging */
+    if (getenv("DEBUG"))
+        abort();                        /* generate core for debugging */
 #endif /* !NDEBUG */
     exit(1);
 }
@@ -140,21 +147,42 @@ void log_msg(int priority, const char *format, ...)
 static void log_aux(int priority, int errnum,
     const char *format, va_list vargs)
 {
+    time_t t;
+    struct tm *tm_ptr;
     const char *prefix;
     char buf[MAX_LINE];
+    char *pbuf;
     char *sbuf;
     char *p;
     int len;
     int n;
 
-    p = sbuf = buf;
+    p = sbuf = pbuf = buf;
     len = sizeof(buf) - 1;              /* reserve char for terminating '\n' */
 
+    /*  XXX: localtime() is not thread-safe.
+     */
+    if (time(&t) != ((time_t) -1)) {
+        if ((tm_ptr = localtime(&t)) != NULL) {
+            n = strftime(p, len, "%Y-%m-%d %H:%M:%S ", tm_ptr);
+            if (n == 0) {
+                *p = '\0';
+                len = 0;
+            }
+            p = sbuf = pbuf += n;
+            len -= n;
+        }
+    }
+
     if ((prefix = log_prefix(priority))) {
-        n = snprintf(p, len, "%s: ", prefix);
+        int m = 10 - strlen(prefix);
+        if (m <= 0)
+            m = 1;
+        assert(strlen(prefix) < 10);
+        n = snprintf(p, len, "%s:%*c", prefix, m, 0x20);
         if ((n < 0) || (n >= len))
             n = len - 1;
-        sbuf = p += n;
+        p = sbuf += n;
         len -= n;
     }
 
@@ -175,10 +203,14 @@ static void log_aux(int priority, int errnum,
         strcat(p, "\n");
     }
 
-    if (log_syslog)
+    if (log_syslog) {
         syslog(priority, "%s", sbuf);
+    }
     if (log_file && (priority <= log_file_priority)) {
-        fprintf(log_file, "%s", buf);
+        if (fprintf(log_file, "%s", log_file_timestamp ? buf : pbuf) == EOF) {
+            syslog(LOG_CRIT, "Logging stopped due to error");
+            log_file = NULL;
+        }
     }
     return;
 }

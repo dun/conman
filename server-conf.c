@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-conf.c,v 1.47 2002/05/18 23:09:00 dun Exp $
+ *  $Id: server-conf.c,v 1.48 2002/05/19 03:13:51 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -25,6 +25,8 @@
 \*****************************************************************************/
 
 
+#define SYSLOG_NAMES                    /* for my lookup_syslog_facility() */
+
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
@@ -38,6 +40,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <syslog.h>
 #include <unistd.h>
 #include "common.h"
 #include "lex.h"
@@ -58,6 +61,7 @@ enum server_conf_toks {
     SERVER_CONF_KEEPALIVE,
     SERVER_CONF_LOG,
     SERVER_CONF_LOGDIR,
+    SERVER_CONF_LOGFILE,
     SERVER_CONF_LOGOPTS,
     SERVER_CONF_LOOPBACK,
     SERVER_CONF_NAME,
@@ -68,6 +72,7 @@ enum server_conf_toks {
     SERVER_CONF_RESETCMD,
     SERVER_CONF_SEROPTS,
     SERVER_CONF_SERVER,
+    SERVER_CONF_SYSLOG,
     SERVER_CONF_TCPWRAPPERS,
     SERVER_CONF_TIMESTAMP
 };
@@ -83,6 +88,7 @@ static char *server_conf_strs[] = {
     "KEEPALIVE",
     "LOG",
     "LOGDIR",
+    "LOGFILE",
     "LOGOPTS",
     "LOOPBACK",
     "NAME",
@@ -93,6 +99,7 @@ static char *server_conf_strs[] = {
     "RESETCMD",
     "SEROPTS",
     "SERVER",
+    "SYSLOG",
     "TCPWRAPPERS",
     "TIMESTAMP",
     NULL
@@ -104,6 +111,7 @@ static void signal_daemon(server_conf_t *conf, int signum);
 static void parse_console_directive(Lex l, server_conf_t *conf);
 static void parse_global_directive(Lex l, server_conf_t *conf);
 static void parse_server_directive(Lex l, server_conf_t *conf);
+static int lookup_syslog_facility(const char *facility);
 
 
 server_conf_t * create_server_conf(void)
@@ -114,8 +122,11 @@ server_conf_t * create_server_conf(void)
         out_of_memory();
     conf->confFileName = create_string(CONMAN_CONF);
     conf->logDirName = NULL;
+    conf->logFileName = NULL;
+    conf->logFilePtr = NULL;
     conf->pidFileName = NULL;
     conf->resetCmd = NULL;
+    conf->syslogFacility = -1;
     conf->tStampMinutes = 0;
     conf->tStampNext = 0;
     /*
@@ -165,6 +176,8 @@ void destroy_server_conf(server_conf_t *conf)
 
     if (conf->logDirName)
         free(conf->logDirName);
+    if (conf->logFileName)
+        free(conf->logFileName);
     if (conf->pidFileName) {
         if (unlink(conf->pidFileName) < 0)
             log_err(errno, "Unable to delete \"%s\"", conf->pidFileName);
@@ -298,11 +311,11 @@ void process_server_conf_file(server_conf_t *conf)
         case LEX_EOL:
             break;
         case LEX_ERR:
-            log_msg(LOG_ERR, "CONF[%s:%d]: unmatched quote",
+            log_msg(LOG_ERR, "CONFIG[%s:%d]: unmatched quote",
                 conf->confFileName, lex_line(l));
             break;
         default:
-            log_msg(LOG_ERR, "CONF[%s:%d]: unrecognized token '%s'",
+            log_msg(LOG_ERR, "CONFIG[%s:%d]: unrecognized token '%s'",
                 conf->confFileName, lex_line(l), lex_text(l));
             while (tok != LEX_EOL && tok != LEX_EOF)
                 tok = lex_next(l);
@@ -349,10 +362,10 @@ static void display_server_help(char *prog)
     printf("  -k        Kill daemon.\n");
     printf("  -L        Display license information.\n");
     printf("  -p PORT   Specify port number. [%d]\n", atoi(CONMAN_PORT));
-    printf("  -r        Re-open logs on daemon.\n");
+    printf("  -r        Re-open log files.\n");
     printf("  -v        Be verbose.\n");
     printf("  -V        Display version information.\n");
-    printf("  -z        Zero console log files.\n");
+    printf("  -z        Zero log files.\n");
     printf("\n");
     return;
 }
@@ -504,7 +517,7 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
         snprintf(err, sizeof(err), "incomplete %s directive", directive);
     }
     if (*err) {
-        log_msg(LOG_ERR, "CONF[%s:%d]: %s",
+        log_msg(LOG_ERR, "CONFIG[%s:%d]: %s",
             conf->confFileName, lex_line(l), err);
         while (lex_prev(l) != LEX_EOL && lex_prev(l) != LEX_EOF)
             lex_next(l);
@@ -515,13 +528,13 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
         *p++ = '\0';
         if (!(console = create_telnet_obj(
           conf, name, dev, atoi(p), err, sizeof(err)))) {
-            log_msg(LOG_ERR, "CONF[%s:%d]: console [%s] %s",
+            log_msg(LOG_ERR, "CONFIG[%s:%d]: console [%s] %s",
                 conf->confFileName, line, name, err);
         }
     }
     else if (!(console = create_serial_obj(
       conf, name, dev, &seropts, err, sizeof(err)))) {
-        log_msg(LOG_ERR, "CONF[%s:%d]: console [%s] %s",
+        log_msg(LOG_ERR, "CONFIG[%s:%d]: console [%s] %s",
             conf->confFileName, line, name, err);
     }
 
@@ -529,13 +542,13 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
 
         if (substitute_string(name, sizeof(name), log,
           DEFAULT_CONFIG_ESCAPE, console->name) < 0) {
-            log_msg(LOG_ERR, "CONF[%s:%d]: console [%s] cannot log to "
+            log_msg(LOG_ERR, "CONFIG[%s:%d]: console [%s] cannot log to "
                 "\"%s\": %c-expansion failed", conf->confFileName, line,
                 console->name, log, DEFAULT_CONFIG_ESCAPE);
         }
         else if (!(logfile = create_logfile_obj(
           conf, name, console, &logopts, err, sizeof(err)))) {
-            log_msg(LOG_ERR, "CONF[%s:%d]: console [%s] cannot log to "
+            log_msg(LOG_ERR, "CONFIG[%s:%d]: console [%s] cannot log to "
                 "\"%s\": %s", conf->confFileName, line, console->name,
                 name, err);
         }
@@ -600,7 +613,7 @@ static void parse_global_directive(Lex l, server_conf_t *conf)
     }
 
     if (*err) {
-        log_msg(LOG_ERR, "CONF[%s:%d]: %s",
+        log_msg(LOG_ERR, "CONFIG[%s:%d]: %s",
             conf->confFileName, lex_line(l), err);
         while (lex_prev(l) != LEX_EOL && lex_prev(l) != LEX_EOF)
             lex_next(l);
@@ -651,6 +664,24 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
                 p = conf->logDirName + strlen(conf->logDirName) - 1;
                 while ((p >= conf->logDirName) && (*p == '/'))
                     *p-- = '\0';
+            }
+            break;
+
+        case SERVER_CONF_LOGFILE:
+            if (lex_next(l) != '=')
+                snprintf(err, sizeof(err), "expected '=' after %s keyword",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            else if (lex_next(l) != LEX_STR)
+                snprintf(err, sizeof(err), "expected STRING for %s value",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            else {
+                if (conf->logFileName)
+                    free(conf->logFileName);
+                if ((lex_text(l)[0] != '/') && (conf->logDirName))
+                    conf->logFileName = create_format_string("%s/%s",
+                        conf->logDirName, lex_text(l));
+                else
+                    conf->logFileName = create_string(lex_text(l));
             }
             break;
 
@@ -707,6 +738,20 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
                     free(conf->resetCmd);
                 conf->resetCmd = create_string(lex_text(l));
             }
+            break;
+
+        case SERVER_CONF_SYSLOG:
+            if (lex_next(l) != '=')
+                snprintf(err, sizeof(err), "expected '=' after %s keyword",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            else if (lex_next(l) != LEX_STR)
+                snprintf(err, sizeof(err), "expected STRING for %s value",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            else if ((n = lookup_syslog_facility(lex_text(l))) < 0)
+                snprintf(err, sizeof(err), "invalid %s facility \"%s\"",
+                    server_conf_strs[LEX_UNTOK(tok)], lex_text(l));
+            else
+                conf->syslogFacility = n;
             break;
 
         case SERVER_CONF_TCPWRAPPERS:
@@ -782,10 +827,26 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
     }
 
     if (*err) {
-        log_msg(LOG_ERR, "CONF[%s:%d]: %s",
+        log_msg(LOG_ERR, "CONFIG[%s:%d]: %s",
             conf->confFileName, lex_line(l), err);
         while (lex_prev(l) != LEX_EOL && lex_prev(l) != LEX_EOF)
             lex_next(l);
     }
     return;
+}
+
+
+static int lookup_syslog_facility(const char *facility)
+{
+/*  Returns the numeric id associated with the specified facility,
+ *    or -1 if no match is found.
+ *
+ *  XXX: Is this portable?
+ */
+    CODE *p;
+
+    for (p=facilitynames; p->c_name; p++)
+        if (!strcasecmp(p->c_name, facility))
+            return(p->c_val);
+    return(-1);
 }

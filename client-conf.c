@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-conf.c,v 1.54 2002/05/18 23:09:00 dun Exp $
+ *  $Id: client-conf.c,v 1.55 2002/05/19 03:13:51 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -225,10 +225,10 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
             printf("%s-%s%s\n", PROJECT, VERSION, CLIENT_FEATURES);
             exit(0);
         case '?':                       /* invalid option */
-            fprintf(stderr, "ERROR: Invalid option \"%c\".\n", optopt);
+            log_err(0, "CMDLINE: invalid option \"%c\"", optopt);
             exit(1);
         default:
-            fprintf(stderr, "ERROR: Option \"%c\" not implemented.\n", c);
+            log_err(0, "CMDLINE: option \"%c\" not implemented", c);
             exit(1);
         }
     }

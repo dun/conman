@@ -1,4 +1,4 @@
-.\" $Id: conmand.8.in,v 1.7 2002/05/18 23:09:00 dun Exp $
+.\" $Id: conmand.8.in,v 1.8 2002/05/19 03:13:52 dun Exp $
 
 .TH CONMAND 8 "@DATE@" "@PROJECT@-@VERSION@" "LLNL"
 
@@ -34,8 +34,8 @@ both the default port [@CONMAN_PORT@] and the port specified in the
 configuration file.
 .TP
 .B \-r
-Reopen the console log files.  This is useful for \fBlogrotate\fR
-configurations.
+Reopen both the daemon's log file and individual console log files.
+This is useful for \fBlogrotate\fR configurations.
 .TP
 .B \-v
 Enable verbose mode.
@@ -44,7 +44,8 @@ Enable verbose mode.
 Display version information.
 .TP
 .B \-z
-Truncate the console log files.
+Truncate both the daemon's log file and individual console log files
+at start-up.
 
 .SH SIGNALS
 .TP 12
@@ -58,6 +59,11 @@ Terminate the daemon.
 The client/server communications are not yet encrypted.
 
 .SH NOTES
+Log messages are sent to standard-error until after the configuration file
+has been read, at which time future messages are discarded unless either
+the \fBlogfile\fR or \fBsyslog\fR keyword has been specified (cf,
+\fBconman.conf\fR(5)).
+.PP
 If the configuration file is modified while the daemon is running,
 the '\fB-k\fR' and '\fB-r\fR' options may be unable to identify the daemon
 process.  Consequently, the appropriate signal may need to be sent to the

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.h,v 1.51 2002/05/16 18:54:20 dun Exp $
+ *  $Id: server.h,v 1.52 2002/05/19 03:13:51 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -162,8 +162,11 @@ typedef struct base_obj {               /* BASE OBJ:                         */
 typedef struct server_conf {
     char            *confFileName;      /* configuration file name           */
     char            *logDirName;        /* dir prefix for relative logfiles  */
+    char            *logFileName;       /* file to which logmsgs are written */
+    FILE            *logFilePtr;        /* msg log file ptr, !closed at exit */
     char            *pidFileName;       /* file to which pid is written      */
     char            *resetCmd;          /* cmd to invoke for reset esc-seq   */
+    int              syslogFacility;    /* syslog facility or -1 if disabled */
     int              tStampMinutes;     /* minutes 'tween logfile timestamps */
     time_t           tStampNext;        /* time next stamp written to logs   */
     int              fd;                /* configuration file descriptor     */

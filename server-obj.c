@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-obj.c,v 1.69 2002/05/16 18:54:20 dun Exp $
+ *  $Id: server-obj.c,v 1.70 2002/05/19 03:13:51 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -228,11 +228,11 @@ obj_t * create_serial_obj(server_conf_t *conf, char *name,
 
     if ((fd = open(dev, O_RDWR | O_NONBLOCK | O_NOCTTY)) < 0) {
         snprintf(errbuf, errlen,
-            "cannot open \"%s\": %s", dev, strerror(errno));
+            "unable to open \"%s\": %s", dev, strerror(errno));
         goto err;
     }
     if (get_write_lock(fd) < 0) {
-        snprintf(errbuf, errlen, "cannot lock \"%s\"", dev);
+        snprintf(errbuf, errlen, "unable to lock \"%s\"", dev);
         goto err;
     }
     if (!isatty(fd)) {
@@ -304,7 +304,7 @@ obj_t * create_telnet_obj(server_conf_t *conf, char *name,
     }
     saddr.sin_port = htons(port);
     if (host_name_to_addr4(host, &saddr.sin_addr) < 0) {
-        snprintf(errbuf, errlen, "cannot resolve host \"%s\"", host);
+        snprintf(errbuf, errlen, "unable to resolve host \"%s\"", host);
         return(NULL);
     }
 

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.c,v 1.56 2002/05/16 18:54:20 dun Exp $
+ *  $Id: server.c,v 1.57 2002/05/19 03:13:51 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -68,7 +68,8 @@ static void schedule_timestamp(server_conf_t *conf);
 static void timestamp_logfiles(server_conf_t *conf);
 static void create_listen_socket(server_conf_t *conf);
 static void mux_io(server_conf_t *conf);
-static void reopen_logfiles(List objs);
+static void open_daemon_logfile(server_conf_t *conf);
+static void reopen_logfiles(server_conf_t *conf);
 static void accept_client(server_conf_t *conf);
 static void reset_console(obj_t *console, const char *cmd);
 static void kill_console_reset(pid_t *arg);
@@ -84,11 +85,10 @@ int main(int argc, char *argv[])
     server_conf_t *conf;
 
 #ifdef NDEBUG
-    log_set_file(stderr, LOG_WARNING);
-    log_set_syslog(argv[0]);
+    log_set_file(stderr, LOG_WARNING, 0);
     fd = begin_daemonize();
 #else /* NDEBUG */
-    log_set_file(stderr, LOG_DEBUG);
+    log_set_file(stderr, LOG_DEBUG, 0);
     fd = -1;                            /* suppress unused variable warning */
 #endif /* NDEBUG */
 
@@ -109,9 +109,15 @@ int main(int argc, char *argv[])
 
     create_listen_socket(conf);
 
+    if (conf->syslogFacility > 0)
+        log_set_syslog(argv[0], conf->syslogFacility);
+    if (conf->logFileName)
+        open_daemon_logfile(conf);
+
 #ifdef NDEBUG
     end_daemonize(fd);
-    log_set_file(NULL, -1);
+    if (!conf->logFileName)
+        log_set_file(NULL, 0, 0);
 #endif /* NDEBUG */
 
     log_msg(LOG_NOTICE, "Starting ConMan daemon %s (pid %d)",
@@ -207,6 +213,8 @@ static void end_daemonize(int fd)
     int devNull;
 
     /*  Ensure process does not keep a directory in use.
+     *
+     *  XXX: Avoid relative pathname from this point on!
      */
     if (chdir("/") < 0)
         log_err(errno, "Unable to change to root directory");
@@ -267,6 +275,7 @@ static void display_configuration(server_conf_t *conf)
     ListIterator i;
     obj_t *obj;
     int n = 0;
+    int gotOptions = 0;
 
     i = list_iterator_create(conf->objs);
     while ((obj = list_next(i)))
@@ -274,32 +283,50 @@ static void display_configuration(server_conf_t *conf)
             n++;
     list_iterator_destroy(i);
 
-    fprintf(stderr, "Starting ConMan daemon %s (pid %d)\n",
+    fprintf(stderr, "\nStarting ConMan daemon %s (pid %d)\n",
         VERSION, (int) getpid());
     fprintf(stderr, "Configuration: %s\n", conf->confFileName);
     fprintf(stderr, "Options:");
-    if (!conf->enableKeepAlive
-      && !conf->enableZeroLogs
-      && !conf->enableLoopBack) {
-        fprintf(stderr, " None");
+
+    if (conf->enableKeepAlive) {
+        fprintf(stderr, " KeepAlive");
+        gotOptions++;
     }
-    else {
-        if (conf->enableKeepAlive)
-            fprintf(stderr, " KeepAlive");
-        if (conf->enableLoopBack)
-            fprintf(stderr, " LoopBack");
-        if (conf->resetCmd)
-            fprintf(stderr, " ResetCmd");
-        if (conf->enableTCPWrap)
-            fprintf(stderr, " TCP-Wrappers");
-        if (conf->tStampMinutes > 0)
-            fprintf(stderr, " TimeStamp=%dm", conf->tStampMinutes);
-        if (conf->enableZeroLogs)
-            fprintf(stderr, " ZeroLogs");
+    if (conf->logFileName) {
+        fprintf(stderr, " LogFile");
+        gotOptions++;
+    }
+    if (conf->enableLoopBack) {
+        fprintf(stderr, " LoopBack");
+        gotOptions++;
+    }
+    if (conf->resetCmd) {
+        fprintf(stderr, " ResetCmd");
+        gotOptions++;
+    }
+    if (conf->syslogFacility >= 0) {
+        fprintf(stderr, " SysLog");
+        gotOptions++;
+    }
+    if (conf->enableTCPWrap) {
+        fprintf(stderr, " TCP-Wrappers");
+        gotOptions++;
+    }
+    if (conf->tStampMinutes > 0) {
+        fprintf(stderr, " TimeStamp=%dm", conf->tStampMinutes);
+        gotOptions++;
+    }
+    if (conf->enableZeroLogs) {
+        fprintf(stderr, " ZeroLogs");
+        gotOptions++;
+    }
+    if (!gotOptions) {
+        fprintf(stderr, " None");
     }
     fprintf(stderr, "\n");
     fprintf(stderr, "Listening on port %d\n", conf->port);
     fprintf(stderr, "Monitoring %d console%s\n", n, ((n == 1) ? "" : "s"));
+    fprintf(stderr, "\n");
     return;
 }
 
@@ -440,7 +467,7 @@ static void mux_io(server_conf_t *conf)
     while (!done) {
 
         if (reconfig) {
-            reopen_logfiles(conf->objs);
+            reopen_logfiles(conf);
             reconfig = 0;
         }
 
@@ -544,20 +571,85 @@ static void mux_io(server_conf_t *conf)
 }
 
 
-static void reopen_logfiles(List objs)
+static void open_daemon_logfile(server_conf_t *conf)
 {
-/*  Reopens all of the logfiles in the 'objs' list.
+/*  (Re)opens the daemon logfile.
+ */
+    static int once = 1;
+    const char *mode = "a";
+    FILE *fp;
+    int fd;
+
+    assert(conf->logFileName != NULL);
+
+    /*  Only truncate logfile at startup if needed.
+     */
+    if (once) {
+        if (conf->enableZeroLogs)
+            mode = "w";
+        once = 0;
+    }
+    if (!(fp = fopen(conf->logFileName, mode))) {
+        log_msg(LOG_WARNING, "Unable to open logfile \"%s\": %s",
+            conf->logFileName, strerror(errno));
+        goto err;
+    }
+    if ((fd = fileno(fp)) < 0) {
+        log_msg(LOG_WARNING,
+            "Unable to obtain descriptor for logfile \"%s\": %s",
+            conf->logFileName, strerror(errno));
+        goto err;
+    }
+    if (get_write_lock(fd) < 0) {
+        log_msg(LOG_WARNING, "Unable to lock logfile \"%s\"",
+            conf->logFileName);
+        if (fclose(fp) == EOF)
+            log_msg(LOG_WARNING, "Unable to close logfile \"%s\"",
+                conf->logFileName);
+        goto err;
+    }
+    set_fd_closed_on_exec(fd);
+
+    /*  Transition to new log file.
+     */
+    log_set_file(fp, LOG_INFO, 1);
+    if (conf->logFilePtr)
+        if (fclose(conf->logFilePtr) == EOF)
+            log_msg(LOG_WARNING, "Unable to close logfile \"%s\"",
+                conf->logFileName);
+    conf->logFilePtr = fp;
+    return;
+
+err:
+    /*  Abandon old log file and go logless.
+     */
+    log_set_file(NULL, 0, 0);
+    if (conf->logFilePtr)
+        if (fclose(conf->logFilePtr) == EOF)
+            log_msg(LOG_WARNING, "Unable to close logfile \"%s\"",
+                conf->logFileName);
+    conf->logFilePtr = NULL;
+    return;
+}
+
+
+static void reopen_logfiles(server_conf_t *conf)
+{
+/*  Reopens the daemon logfile and all of the logfiles in the 'objs' list.
  */
     ListIterator i;
     obj_t *logfile;
 
-    i = list_iterator_create(objs);
+    i = list_iterator_create(conf->objs);
     while ((logfile = list_next(i))) {
         if (!is_logfile_obj(logfile))
             continue;
         open_logfile_obj(logfile, 0);   /* do not truncate the logfile */
     }
     list_iterator_destroy(i);
+
+    open_daemon_logfile(conf);
+
     return;
 }
 

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: log.h,v 1.2 2002/05/12 19:20:29 dun Exp $
+ *  $Id: log.h,v 1.3 2002/05/19 03:13:51 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -53,17 +53,18 @@ void dprintf(int level, const char *format, ...);
  *    when 'level' is less than or equal to the "DEBUG" env var.
  */
 
-void log_set_file(FILE *fp, int priority);
+void log_set_file(FILE *fp, int priority, int timestamp);
 /*
  *  If (fp) is non-null, logging of messages at the (priority) level
  *    and higher to the specified file is enabled; o/w, logging to
- *    the previously-specified file is disabled.
+ *    the previously-specified file is disabled.  If (timestamp) is
+ *    non-zero, timestamps will be prepended to each message.
  */
 
-void log_set_syslog(char *ident);
+void log_set_syslog(char *ident, int facility);
 /*
- *  If (ident) is non-null, logging via syslog is enabled using (ident)
- *    as the string which will be prepended to each message;
+ *  If (ident) is non-null, logging via syslog is enabled to (facility)
+ *    using (ident) as the string which will be prepended to each message;
  *    o/w, logging via syslog is disabled.
  *  Note that only the trailing "filename" component of (ident) is used.
  */
