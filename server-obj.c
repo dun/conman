@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.18 2001/06/15 23:22:37 dun Exp $
+ *  $Id: server-obj.c,v 1.19 2001/06/18 22:45:09 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -517,13 +517,11 @@ again:
         if (errno == EINTR) {
             goto again;
         }
-        else if (errno == EPIPE) {
+        else if ((errno != EAGAIN) && (errno != EWOULDBLOCK)) {
             obj->bufInPtr = obj->bufOutPtr = obj->buf;	/* flush buf */
             shutdown_obj(obj);
-        }
-        else if ((errno != EAGAIN) && (errno != EWOULDBLOCK)) {
-            err_msg(errno, "read error on fd=%d (%s)",
-                obj->fd, obj->name);
+            log_msg(20, "read error=%d on fd=%d (%s): %s",
+                errno, obj->fd, obj->name, strerror(errno));
         }
     }
     else if (n == 0) {
@@ -712,20 +710,17 @@ int write_to_obj(obj_t *obj)
     if (avail > 0) {
 again:
         if ((n = write(obj->fd, obj->bufOutPtr, avail)) < 0) {
-
             if (errno == EINTR) {
                 goto again;
             }
-            else if (errno == EPIPE) {
+            else if ((errno != EAGAIN) && (errno != EWOULDBLOCK)) {
                 obj->gotEOF = 1;
                 obj->bufInPtr = obj->bufOutPtr = obj->buf;	/* flush buf */
-            }
-            else if ((errno != EAGAIN) && (errno != EWOULDBLOCK)) {
-                err_msg(errno, "write error on fd=%d (%s)", obj->fd, obj->name);
+                log_msg(20, "write error=%d on fd=%d (%s): %s",
+                    errno, obj->fd, obj->name, strerror(errno));
             }
         }
         else if (n > 0) {
-
             DPRINTF("Wrote %d bytes to [%s].\n", n, obj->name); /* xyzzy */
             obj->bufOutPtr += n;
             /*
