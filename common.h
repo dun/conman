@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.h,v 1.12 2001/08/03 21:11:46 dun Exp $
+ *  $Id: common.h,v 1.13 2001/08/06 19:47:16 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -82,8 +82,6 @@ enum err_type {
     CONMAN_ERR_NO_CONSOLES,
     CONMAN_ERR_TOO_MANY_CONSOLES,
     CONMAN_ERR_BUSY_CONSOLES,
-    CONMAN_ERR_NO_PROGRAM,
-    CONMAN_ERR_BAD_PROGRAM,
     CONMAN_ERR_NO_RESOURCES,
 };
 
@@ -103,7 +101,6 @@ enum proto_toks {
     CONMAN_TOK_MESSAGE,
     CONMAN_TOK_MONITOR,
     CONMAN_TOK_OPTION,
-    CONMAN_TOK_PROGRAM,
     CONMAN_TOK_QUERY,
     CONMAN_TOK_QUIET,
     CONMAN_TOK_REGEX,
