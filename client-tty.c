@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-tty.c,v 1.37 2001/12/04 02:23:08 dun Exp $
+ *  $Id: client-tty.c,v 1.38 2001/12/14 07:43:03 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -460,7 +460,7 @@ char * write_esc_char(char c, char *dst)
  *  Returns a ptr to the char following the escape char in the buffer.
  *  (cf. Stevens UNP p638).
  */
-    assert(dst);
+    assert(dst != NULL);
 
     c &= 0x7F;
 

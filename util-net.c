@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-net.c,v 1.8 2001/09/20 23:35:17 dun Exp $
+ *  $Id: util-net.c,v 1.9 2001/12/14 07:43:04 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util-net.h" for documentation on public functions.
@@ -45,8 +45,8 @@ struct hostent * get_host_by_name(const char *name,
     struct hostent *hptr;
     int n = 0;
 
-    assert(name);
-    assert(buf);
+    assert(name != NULL);
+    assert(buf != NULL);
 
     x_pthread_mutex_lock(&hostentLock);
     if ((hptr = gethostbyname(name)))
@@ -72,8 +72,8 @@ struct hostent * get_host_by_addr(const char *addr, int len, int type,
     struct hostent *hptr;
     int n = 0;
 
-    assert(addr);
-    assert(buf);
+    assert(addr != NULL);
+    assert(buf != NULL);
 
     x_pthread_mutex_lock(&hostentLock);
     if ((hptr = gethostbyaddr(addr, len, type)))
@@ -109,8 +109,8 @@ int host_name_to_addr4(const char *name, struct in_addr *addr)
     struct hostent *hptr;
     unsigned char buf[HOSTENT_SIZE];
 
-    assert(name);
-    assert(addr);
+    assert(name != NULL);
+    assert(addr != NULL);
 
     if (!(hptr = get_host_by_name(name, buf, sizeof(buf), NULL)))
         return(-1);
@@ -128,8 +128,8 @@ char * host_addr4_to_name(const struct in_addr *addr, char *dst, int dstlen)
     struct hostent *hptr;
     unsigned char buf[HOSTENT_SIZE];
 
-    assert(addr);
-    assert(dst);
+    assert(addr != NULL);
+    assert(dst != NULL);
 
     if (!(hptr = get_host_by_addr((char *) addr, 4, AF_INET,
       buf, sizeof(buf), NULL)))
@@ -149,8 +149,8 @@ char * host_name_to_cname(const char *src, char *dst, int dstlen)
     unsigned char buf[HOSTENT_SIZE];
     struct in_addr addr;
 
-    assert(src);
-    assert(dst);
+    assert(src != NULL);
+    assert(dst != NULL);
 
     if (!(hptr = get_host_by_name(src, buf, sizeof(buf), NULL)))
         return(NULL);
@@ -185,8 +185,8 @@ static int copy_hostent(const struct hostent *src, char *dst, int len)
     int n;
     char **p, **q;
 
-    assert(src);
-    assert(dst);
+    assert(src != NULL);
+    assert(dst != NULL);
 
     hptr = (struct hostent *) dst;
     buf = dst + sizeof(struct hostent);
@@ -253,8 +253,8 @@ static int verify_hostent(const struct hostent *src, const struct hostent *dst)
  */
     char **p, **q;
 
-    assert(src);
-    assert(dst);
+    assert(src != NULL);
+    assert(dst != NULL);
 
     if (!dst->h_name)
         return(-1);
@@ -309,7 +309,7 @@ const char * inet_ntop(int family, const void *addr, char *str, size_t len)
     const unsigned char *p = (const unsigned char *) addr;
     char tmpstr[INET_ADDRSTRLEN];
 
-    assert(str);
+    assert(str != NULL);
 
     if (family != AF_INET) {
         errno = EAFNOSUPPORT;

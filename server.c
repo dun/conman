@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.37 2001/12/13 21:31:37 dun Exp $
+ *  $Id: server.c,v 1.38 2001/12/14 07:43:04 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -592,7 +592,7 @@ static void reset_console(obj_t *console, const char *cmd)
 
     assert(is_console_obj(console));
     assert(console->gotReset);
-    assert(cmd);
+    assert(cmd != NULL);
 
     DPRINTF("Resetting console [%s].\n", console->name);
     console->gotReset = 0;

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.c,v 1.19 2001/10/08 04:02:37 dun Exp $
+ *  $Id: common.c,v 1.20 2001/12/14 07:43:03 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -104,7 +104,7 @@ void destroy_req(req_t *req)
 void get_tty_mode(struct termios *tty, int fd)
 {
     assert(fd >= 0);
-    assert(tty);
+    assert(tty != NULL);
 
     if (!isatty(fd))
         return;
@@ -117,7 +117,7 @@ void get_tty_mode(struct termios *tty, int fd)
 void set_tty_mode(struct termios *tty, int fd)
 {
     assert(fd >= 0);
-    assert(tty);
+    assert(tty != NULL);
 
     if (!isatty(fd))
         return;
@@ -129,7 +129,7 @@ void set_tty_mode(struct termios *tty, int fd)
 
 void get_tty_raw(struct termios *tty, int fd)
 {
-    assert(tty);
+    assert(tty != NULL);
 
     get_tty_mode(tty, fd);
 

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.28 2001/12/12 18:36:28 dun Exp $
+ *  $Id: server-conf.c,v 1.29 2001/12/14 07:43:03 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -327,8 +327,8 @@ static void signal_daemon(server_conf_t *conf, int signum)
     pid_t pid;
     char *msg;
 
-    assert(conf);
-    assert(conf->confFileName);
+    assert(conf != NULL);
+    assert(conf->confFileName != NULL);
     assert(signum > 0);
 
     if ((conf->fd = open(conf->confFileName, O_RDONLY)) < 0)

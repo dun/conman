@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.49 2001/10/11 18:59:22 dun Exp $
+ *  $Id: server-obj.c,v 1.50 2001/12/14 07:43:04 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -47,8 +47,8 @@ static obj_t * create_obj(
  */
     obj_t *obj;
 
-    assert(conf);
-    assert(name);
+    assert(conf != NULL);
+    assert(name != NULL);
     assert(type==CLIENT || type==LOGFILE || type==SERIAL || type==TELNET);
 
     if (!(obj = malloc(sizeof(obj_t))))
@@ -83,11 +83,11 @@ obj_t * create_client_obj(server_conf_t *conf, req_t *req)
     char name[MAX_LINE];
     obj_t *client;
 
-    assert(conf);
-    assert(req);
+    assert(conf != NULL);
+    assert(req != NULL);
     assert(req->sd >= 0);
-    assert(req->user && *req->user);
-    assert(req->host && *req->host);
+    assert((req->user != NULL) && (*req->user != '\0'));
+    assert((req->host != NULL) && (*req->host != '\0'));
 
     set_fd_nonblocking(req->sd);
     set_fd_closed_on_exec(req->sd);
@@ -116,9 +116,9 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name, obj_t *console)
     ListIterator i;
     obj_t *logfile;
 
-    assert(conf);
-    assert(name && *name);
-    assert(console);
+    assert(conf != NULL);
+    assert((name != NULL) && (*name != '\0'));
+    assert(console != NULL);
 
     /*  Check for duplicate logfile names.
      *  While the write-lock will protect against two separate daemons
@@ -168,10 +168,10 @@ int open_logfile_obj(obj_t *logfile, int gotTrunc)
     int flags;
     char *now, *msg;
 
-    assert(logfile);
+    assert(logfile != NULL);
     assert(is_logfile_obj(logfile));
-    assert(logfile->name);
-    assert(logfile->aux.logfile.consoleName);
+    assert(logfile->name != NULL);
+    assert(logfile->aux.logfile.consoleName != NULL);
 
     if (logfile->fd >= 0) {
         if (close(logfile->fd) < 0) {
@@ -221,9 +221,9 @@ obj_t * create_serial_obj(
     int fd = -1;
     struct termios tty;
 
-    assert(conf);
-    assert(name && *name);
-    assert(dev && *dev);
+    assert(conf != NULL);
+    assert((name != NULL) && (*name != '\0'));
+    assert((dev != NULL) && (*dev != '\0'));
 
     /*  Check for duplicate console and device names.
      *  While the write-lock will protect against two separate daemons
@@ -306,9 +306,9 @@ obj_t * create_telnet_obj(
     int n;
     char buf[MAX_LINE];
 
-    assert(conf);
-    assert(name && *name);
-    assert(host && *host);
+    assert(conf != NULL);
+    assert((name != NULL) && (*name != '\0'));
+    assert((host != NULL) && (*host != '\0'));
 
     memset(&saddr, 0, sizeof(saddr));
     saddr.sin_family = AF_INET;
@@ -379,7 +379,7 @@ int connect_telnet_obj(obj_t *telnet)
     char *now;
     char buf[MAX_LINE];
 
-    assert(telnet);
+    assert(telnet != NULL);
     assert(is_telnet_obj(telnet));
     assert(telnet->aux.telnet.conState != TELCON_UP);
 
@@ -491,7 +491,7 @@ void disconnect_telnet_obj(obj_t *telnet)
     char buf[MAX_LINE];
     char *now;
 
-    assert(telnet);
+    assert(telnet != NULL);
     assert(telnet->fd > 0);
     assert(is_telnet_obj(telnet));
 
@@ -558,7 +558,7 @@ void destroy_obj(obj_t *obj)
  *  NOTE: Be sure the destroyed obj is removed from the master objs list;
  *    this routine will normally be called via the objs list destructor.
  */
-    assert(obj);
+    assert(obj != NULL);
     DPRINTF("Destroyed object [%s].\n", obj->name);
 
 /*  FIX_ME? Ensure obj buf is flushed (if not suspended) before destruction.
@@ -638,10 +638,10 @@ int compare_objs(obj_t *obj1, obj_t *obj2)
     char *s1, *s2;
     char *i1, *i2;
 
-    assert(obj1);
-    assert(obj2);
-    assert(obj1->name);
-    assert(obj2->name);
+    assert(obj1 != NULL);
+    assert(obj2 != NULL);
+    assert(obj1->name != NULL);
+    assert(obj2->name != NULL);
 
     s1 = obj1->name;
     s2 = obj2->name;
@@ -682,8 +682,8 @@ int find_obj(obj_t *obj, obj_t *key)
 /*  Used by list_find_first() and list_delete_all() to locate
  *    the object specified by (key) within the list.
  */
-    assert(obj);
-    assert(key);
+    assert(obj != NULL);
+    assert(key != NULL);
 
     return(obj == key);
 }

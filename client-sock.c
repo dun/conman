@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-sock.c,v 1.24 2001/12/04 02:23:08 dun Exp $
+ *  $Id: client-sock.c,v 1.25 2001/12/14 07:43:03 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -36,7 +36,7 @@ void connect_to_server(client_conf_t *conf)
     char buf[MAX_LINE];
     char *p;
 
-    assert(conf->req->host);
+    assert(conf->req->host != NULL);
     assert(conf->req->port > 0);
 
     if ((sd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
@@ -74,7 +74,7 @@ int send_greeting(client_conf_t *conf)
     int n;
 
     assert(conf->req->sd >= 0);
-    assert(conf->req->user);
+    assert(conf->req->user != NULL);
 
     n = append_format_string(buf, sizeof(buf), "%s %s='%s'",
         proto_strs[LEX_UNTOK(CONMAN_TOK_HELLO)],

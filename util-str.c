@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-str.c,v 1.6 2001/10/08 04:02:37 dun Exp $
+ *  $Id: util-str.c,v 1.7 2001/12/14 07:43:04 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util-str.h" for documentation on public functions.
@@ -79,7 +79,7 @@ size_t append_format_string(char *dst, size_t size, const char *fmt, ...)
     va_list vargs;
     int n;
 
-    assert(dst);
+    assert(dst != NULL);
     if (!fmt || !size)
         return(0);
 
@@ -114,7 +114,7 @@ int substitute_string(char *dst, size_t dstlen, const char *src,
     char *q;
     int n, m;
 
-    assert(dst);
+    assert(dst != NULL);
     if (!dstlen || !src)
         return(0);
 
@@ -231,8 +231,8 @@ struct tm * get_localtime(time_t *tPtr, struct tm *tmPtr)
 
 #endif /* !HAVE_LOCALTIME_R */
 
-    assert(tPtr);
-    assert(tmPtr);
+    assert(tPtr != NULL);
+    assert(tmPtr != NULL);
 
     if (*tPtr == 0) {
         if (time(tPtr) == (time_t) -1)

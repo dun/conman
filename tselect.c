@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: tselect.c,v 1.4 2001/10/11 07:48:47 dun Exp $
+ *  $Id: tselect.c,v 1.5 2001/12/14 07:43:04 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ****************************************************************************** 
  *  Based on the implementation in Jon C. Snader's
@@ -182,7 +182,7 @@ int timeout(CallBackF callback, void *arg, int ms)
 {
     struct timeval tv;
 
-    assert(callback);
+    assert(callback != NULL);
     assert(ms >= 0);
 
     if (gettimeofday(&tv, NULL) < 0) {
@@ -205,8 +205,8 @@ int abtimeout(CallBackF callback, void *arg, const struct timeval *tvp)
     Timer tCurr;
     Timer *tPrevPtr;
 
-    assert(callback);
-    assert(tvp);
+    assert(callback != NULL);
+    assert(tvp != NULL);
 
     if (!(t = alloc_timer()))
         return(-1);

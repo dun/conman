@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.36 2001/12/04 02:23:08 dun Exp $
+ *  $Id: server-sock.c,v 1.37 2001/12/14 07:43:04 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -64,7 +64,7 @@ void process_client(client_arg_t *args)
     /*  Free the tmp struct that was created by accept_client()
      *    in order to pass multiple args to this thread.
      */
-    assert(args);
+    assert(args != NULL);
     sd = args->sd;
     conf = args->conf;
     free(args);

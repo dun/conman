@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-tty.c,v 1.3 2001/09/07 18:27:41 dun Exp $
+ *  $Id: server-tty.c,v 1.4 2001/12/14 07:43:04 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -82,8 +82,8 @@ void set_serial_opts(struct termios *tty, obj_t *serial, char *str)
  */
     serial_opts_t opts;
 
-    assert(tty);
-    assert(serial);
+    assert(tty != NULL);
+    assert(serial != NULL);
     assert(is_serial_obj(serial));
 
     opts.bps = DEFAULT_SERIAL_BPS;
@@ -156,8 +156,8 @@ static void parse_serial_opts(serial_opts_t *opts, char *console, char *str)
     char parity;
     int stopbits;
 
-    assert(opts);
-    assert(console);
+    assert(opts != NULL);
+    assert(console != NULL);
     if (!str || !*str)			/* no string or empty string */
         return;
 

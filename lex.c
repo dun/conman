@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: lex.c,v 1.11 2001/10/14 06:09:01 dun Exp $
+ *  $Id: lex.c,v 1.12 2001/12/14 07:43:03 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "lex.h" for documentation on public functions.
@@ -80,7 +80,7 @@ Lex lex_create(void *buf, char *toks[])
 {
     Lex l;
 
-    assert(buf);
+    assert(buf != NULL);
 
     if (!(l = (Lex) malloc(sizeof(struct lexer_state))))
         return(out_of_memory());
@@ -97,7 +97,7 @@ Lex lex_create(void *buf, char *toks[])
 
 void lex_destroy(Lex l)
 {
-    assert(l);
+    assert(l != NULL);
     assert(l->magic == LEX_MAGIC);
 
     assert(l->magic = 1);		/* clear magic via assert abuse */
@@ -111,7 +111,7 @@ int lex_next(Lex l)
     char *p;
     int len;
 
-    assert(l);
+    assert(l != NULL);
     assert(l->magic == LEX_MAGIC);
 
     if (l->gotEOL) {			/* deferred line count increment */
@@ -202,7 +202,7 @@ int lex_next(Lex l)
 
 int lex_prev(Lex l)
 {
-    assert(l);
+    assert(l != NULL);
     assert(l->magic == LEX_MAGIC);
     return(l->prev);
 }
@@ -210,7 +210,7 @@ int lex_prev(Lex l)
 
 int lex_line(Lex l)
 {
-    assert(l);
+    assert(l != NULL);
     assert(l->magic == LEX_MAGIC);
     return(l->line);
 }
@@ -218,7 +218,7 @@ int lex_line(Lex l)
 
 const char * lex_text(Lex l)
 {
-    assert(l);
+    assert(l != NULL);
     assert(l->magic == LEX_MAGIC);
     return(l->text);
 }
@@ -236,7 +236,9 @@ static int lookup_token(char *str, char *toks[])
 
     if (toks) {
         for (i=0; (q=toks[i]) != NULL; i++) {
-            for (p=str; *p && toupper(*p) == toupper(*q); p++, q++) {;}
+            p = str;
+            while (*p && toupper((int) *p) == toupper((int) *q))
+                p++, q++;
             if (!*p && !*q)		/* token found, whoohoo! */
                 return(i + LEX_TOK_OFFSET);
         }
