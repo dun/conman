@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.36 2001/12/04 08:08:30 dun Exp $
+ *  $Id: server.c,v 1.37 2001/12/13 21:31:37 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -225,7 +225,7 @@ static void sig_chld_handler(int signum)
     pid_t pid;
 
     while ((pid = waitpid(-1, NULL, WNOHANG)) > 0)
-        DPRINTF("Process %d terminated.\n", pid);
+        DPRINTF("Process %d terminated.\n", (int) pid);
     return;
 }
 
@@ -640,6 +640,6 @@ static void kill_console_reset(pid_t pid)
         return;
     if (kill(-pid, SIGKILL) == 0)	/* kill entire process group */
         log_msg(0, "ResetCmd process pid=%d exceeded %ds time limit.",
-            pid, RESET_CMD_TIMEOUT);
+            (int) pid, RESET_CMD_TIMEOUT);
     return;
 }
