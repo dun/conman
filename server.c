@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.c,v 1.50 2002/05/09 08:27:33 dun Exp $
+ *  $Id: server.c,v 1.51 2002/05/09 16:57:12 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -83,12 +83,11 @@ int main(int argc, char *argv[])
     int fd;
     server_conf_t *conf;
 
-    log_set_file(stderr, LOG_DEBUG);
-
 #ifdef NDEBUG
     log_set_syslog(argv[0]);
     fd = begin_daemonize();
 #else /* NDEBUG */
+    log_set_file(stderr, LOG_DEBUG);
     fd = -1;                            /* suppress unused variable warning */
 #endif /* NDEBUG */
 
@@ -111,7 +110,6 @@ int main(int argc, char *argv[])
 
 #ifdef NDEBUG
     end_daemonize(fd);
-    log_set_file(NULL, 0);
 #endif /* NDEBUG */
 
     log_msg(LOG_NOTICE, "Starting ConMan daemon %s (pid %d)",
