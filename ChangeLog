@@ -1,3 +1,8 @@
+2003-09-22  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* common.c, man/conman.1.in, man/conman.conf.5.in, man/conmand.8.in:
+	  Updated copyright.
+
 2003-07-24  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* : Released 0.1.8.6.
@@ -34,10 +39,10 @@
 	* : Released 0.1.8.4.
 
 	* server-esc.c (process_telnet_cmd):
-	Added temporary kludge lowering invalid telnet cmd msgs to LOG_DEBUG.
+	Lowered priority of invalid telnet cmd msgs to LOG_DEBUG.
 
-	* server-obj.c (destroy_obj):
-	Added temporary kludge making failed serial obj tcflush() nonfatal.
+	* server-obj.c (destroy_obj): For tcflush() of serial obj, ensured
+	fd is valid and changed fatal err to nonfatal msg {gnats:93}.
 
 	* etc/conman.init: Fixed bug where active terminal server connections
 	were not closed when conmand's host was rebooted/halted {gnats:160}.

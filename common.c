@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: common.c,v 1.30 2002/05/18 06:57:09 dun Exp $
+ *  $Id: common.c,v 1.30.2.1 2003/09/22 18:41:22 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -40,7 +40,7 @@
 
 
 const char *conman_license = \
-    "Copyright (C) 2001-2002 The Regents of the University of California.\n"  \
+    "Copyright (C) 2001-2003 The Regents of the University of California.\n"  \
     "Produced at Lawrence Livermore National Laboratory.\n"                   \
     "Written by Chris Dunlap <cdunlap@llnl.gov>.\n"                           \
     "http://www.llnl.gov/linux/conman/\n"                                     \
