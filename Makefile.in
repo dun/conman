@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 #
-# $Id: Makefile.in,v 1.27 2001/10/06 05:15:47 dun Exp $
+# $Id: Makefile.in,v 1.28 2001/10/06 20:27:08 dun Exp $
 ##
 
 PACKAGE=	@PACKAGE@
@@ -103,21 +103,25 @@ rpm tar:
 	  echo "ERROR: Undefined PACKAGE macro definition" 1>&2; exit 0; fi; \
 	if test -z "$(VERSION)"; then \
 	  echo "ERROR: Undefined VERSION macro definition" 1>&2; exit 0; fi; \
-	test -f CVS/Root && cvs="cvs -d `cat CVS/Root`" || cvs=cvs; \
+	test -f CVS/Root && cvs="cvs -d `cat CVS/Root`" || cvs="cvs"; \
+	test -n "$(mkinstalldirs)" && mkdir="$(mkinstalldirs)" \
+	  || mkdir="mkdir -p"; \
 	test -z "$$tag" && tag=`echo $(PACKAGE)-$(VERSION) | tr '.' '-'`; \
 	ver=`$$cvs -Q co -r $$tag -p $(PACKAGE)/VERSION | \
 	  sed -ne 's/.*-\(.*\)/\1/p'`; \
-	test -z "$$rel" && rel=1; \
 	if test -z "$$ver"; then \
 	  echo "ERROR: Cannot determine VERSION (tag=$$tag)" 1>&2; exit 0; fi; \
-	$(MAKE) -s $@-internal cvs="$$cvs" tag="$$tag" ver="$$ver" rel="$$rel"
+	test -z "$$rel" && rel=1; \
+	$(MAKE) -s $@-internal cvs="$$cvs" mkdir="$$mkdir" \
+	  tag="$$tag" ver="$$ver" rel="$$rel"
 
 rpm-internal: tar-internal
-	@test -z "$$tag" -o -z "$$ver" && exit 1; \
+	@test -z "$$tag" -o -z "$$ver" -o -z "$$rel" && exit 1; \
 	tmp=$${TMPDIR-/tmp}/tmp-$(PACKAGE)-$$$$; \
 	tar=$(PACKAGE)-$$ver.tgz; \
 	for d in BUILD RPMS SOURCES SPECS SRPMS TMP; do \
-	  $(mkinstalldirs) $$tmp/$$d >/dev/null; \
+	  if ! $$mkdir $$tmp/$$d >/dev/null; then \
+	    echo "ERROR: Cannot create \"$$tmp/$$d\" dir." 1>&2; exit 1; fi; \
 	done; \
 	cp -p $$tar $$tmp/SOURCES; \
 	($$cvs -Q co -r $$tag -p $(PACKAGE)/$(PACKAGE).spec.in || \
@@ -134,7 +138,7 @@ rpm-internal: tar-internal
 	rpm -ba --define "_tmppath $$tmp/TMP" --define "_topdir $$tmp" \
 	  $$sign --quiet $$tmp/SPECS/$(PACKAGE).spec >/dev/null 2>&1 && \
 	    cp -p $$tmp/RPMS/*/$(PACKAGE)-$$ver*.*.rpm \
-	      $$tmp/SRPMS/$(PACKAGE)-$$ver*.src.rpm $(top_srcdir)/; \
+	      $$tmp/SRPMS/$(PACKAGE)-$$ver*.src.rpm .; \
 	rm -rf $$tmp
 
 tar-internal:
@@ -145,12 +149,13 @@ tar-internal:
 	tar=$$name.tgz; \
 	rm -f $$tar; \
 	echo "creating $$tar (tag=$$tag)"; \
-	$(mkinstalldirs) $$tmp >/dev/null; \
+	if ! $$mkdir $$tmp >/dev/null; then \
+	  echo "ERROR: Cannot create \"$$tmp\" dir." 1>&2; exit 1; fi; \
 	(cd $$tmp; $$cvs -Q export -r $$tag -d $$name $(PACKAGE)) && \
-	  (cd $$tmp; tar cf - $$name) | gzip -c9 > $(top_srcdir)/$$tar; \
+	  (cd $$tmp; tar cf - $$name) | gzip -c9 >$$tar; \
 	rm -rf $$tmp; \
 	if ! test -f $$tar; then \
-	  echo "ERROR: Unable to create $$tar." 1>&2; exit 1; fi; \
+	  echo "ERROR: Cannot create $$tar." 1>&2; exit 1; fi; \
 
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
