@@ -2,7 +2,7 @@
  *  list.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: list.c,v 1.2 2001/05/07 22:56:43 dun Exp $
+ *  $Id: list.c,v 1.3 2001/05/09 16:00:05 dun Exp $
  ******************************************************************************
  *  Refer to "list.h" for documentation on public functions.
 \******************************************************************************/
@@ -378,14 +378,12 @@ static void * list_node_create(List l, ListNode *pp, void *x)
         l->tail = &p->next;
     *pp = p;
     l->count++;
-    i = l->iNext;
-    while (i) {
+    for (i=l->iNext; i; i=i->iNext) {
         if (i->prev == pp)
             i->prev = &p->next;
         else if (i->pos == p->next)
             i->pos = p;
         assert((i->pos == *i->prev) || (i->pos == (*i->prev)->next));
-        i = i->iNext;
     }
     return(x);
 }
@@ -411,14 +409,12 @@ static void * list_node_destroy(List l, ListNode *pp)
     if (!(*pp = p->next))
         l->tail = pp;
     l->count--;
-    i = l->iNext;
-    while (i) {
+    for (i=l->iNext; i; i=i->iNext) {
         if (i->pos == p)
             i->pos = p->next, i->prev = pp;
         else if (i->prev == &p->next)
             i->prev = pp;
         assert((i->pos == *i->prev) || (i->pos == (*i->prev)->next));
-        i = i->iNext;
     }
     free(p);
     return(x);
