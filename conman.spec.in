@@ -1,4 +1,4 @@
-# $Id: conman.spec.in,v 1.21.2.1 2003/04/04 01:04:48 dun Exp $
+# $Id: conman.spec.in,v 1.21.2.2 2003/04/04 05:41:18 dun Exp $
 
 Name:		@PROJECT@
 Version:	@VERSION@
@@ -69,6 +69,7 @@ fi
 
 %files
 %defattr(-,root,root,0755)
+%doc ChangeLog
 %doc COPYING
 %doc DISCLAIMER
 %config(noreplace) /etc/conman.conf
