@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.26 2001/08/14 23:16:47 dun Exp $
+ *  $Id: server-sock.c,v 1.27 2001/08/17 01:52:58 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -782,7 +782,7 @@ static int perform_monitor_cmd(req_t *req, server_conf_t *conf)
 
     if (send_rsp(req, CONMAN_ERR_NONE, NULL) < 0)
         return(-1);
-    client = create_client_obj(conf->objs, req);
+    client = create_client_obj(conf, req);
     console = list_peek(req->consoles);
     assert(console->type == CONSOLE);
     link_objs(console, client);
@@ -807,7 +807,7 @@ static int perform_connect_cmd(req_t *req, server_conf_t *conf)
 
     if (send_rsp(req, CONMAN_ERR_NONE, NULL) < 0)
         return(-1);
-    client = create_client_obj(conf->objs, req);
+    client = create_client_obj(conf, req);
 
     if (list_count(req->consoles) == 1) {
         /*
