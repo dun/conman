@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-conf.c,v 1.55 2002/05/19 03:13:51 dun Exp $
+ *  $Id: client-conf.c,v 1.56 2002/05/19 22:24:57 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -307,7 +307,7 @@ static void read_consoles_from_file(List consoles, char *file)
         list_append(consoles, create_string(p));
     }
 
-    if (fclose(fp) != 0)
+    if (fclose(fp) == EOF)
         log_err(errno, "Unable to close \"%s\"", file);
 
     return;
