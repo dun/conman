@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-logfile.c,v 1.11.2.7 2003/10/07 23:11:09 dun Exp $
+ *  $Id: server-logfile.c,v 1.11.2.8 2003/12/03 19:54:10 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -250,7 +250,7 @@ int write_log_data(obj_t *log, const void *src, int len)
             }
             else if (log->aux.logfile.lineState == CONMAN_LOG_LINE_INIT) {
                 if (log->aux.logfile.opts.enableTimestamp)
-                    q += write_time_string(0, q, qLast - q);
+                    q += write_time_string(0, (char *) q, qLast - q);
                 log->aux.logfile.lineState = CONMAN_LOG_LINE_CR;
             }
             else {
@@ -261,7 +261,7 @@ int write_log_data(obj_t *log, const void *src, int len)
             if (  (log->aux.logfile.lineState == CONMAN_LOG_LINE_INIT)
                || (log->aux.logfile.lineState == CONMAN_LOG_LINE_LF) ) {
                 if (log->aux.logfile.opts.enableTimestamp)
-                    q += write_time_string(0, q, qLast - q);
+                    q += write_time_string(0, (char *) q, qLast - q);
             }
             *q++ = '\r';
             *q++ = '\n';
@@ -279,7 +279,7 @@ int write_log_data(obj_t *log, const void *src, int len)
             }
             if (log->aux.logfile.lineState != CONMAN_LOG_LINE_DATA) {
                 if (log->aux.logfile.opts.enableTimestamp)
-                    q += write_time_string(0, q, qLast - q);
+                    q += write_time_string(0, (char *) q, qLast - q);
             }
             log->aux.logfile.lineState = CONMAN_LOG_LINE_DATA;
 

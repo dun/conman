@@ -1,3 +1,8 @@
+2003-12-03  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server-logfile.c (write_log_data):
+	Fixed compiler warnings under Tru64 v5.1 {gnats:343}.
+
 2003-10-22  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* lib/examples/shell_cmd_1.exp, lib/examples/shell_cmd_n.exp:
