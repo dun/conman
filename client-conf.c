@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-conf.c,v 1.23 2001/08/03 21:11:46 dun Exp $
+ *  $Id: client-conf.c,v 1.24 2001/08/06 18:35:39 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -213,7 +213,7 @@ void open_client_log(client_conf_t *conf)
         err_msg(errno, "Unable to open logfile [%s]", conf->log);
 
     now = create_long_time_string(0);
-    str = create_fmt_string("%sLog started at %s%s",
+    str = create_format_string("%sLog started at %s%s",
         CONMAN_MSG_PREFIX, now, CONMAN_MSG_SUFFIX);
     if (write_n(conf->logd, str, strlen(str)) < 0)
         err_msg(errno, "write() failed on fd=%d", conf->logd);
@@ -233,7 +233,7 @@ void close_client_log(client_conf_t *conf)
     assert(conf->logd >= 0);
 
     now = create_long_time_string(0);
-    str = create_fmt_string("%sLog finished at %s%s",
+    str = create_format_string("%sLog finished at %s%s",
         CONMAN_MSG_PREFIX, now, CONMAN_MSG_SUFFIX);
     if (write_n(conf->logd, str, strlen(str)) < 0)
         err_msg(errno, "write() failed on fd=%d", conf->logd);

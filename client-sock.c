@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-sock.c,v 1.16 2001/08/03 21:11:46 dun Exp $
+ *  $Id: client-sock.c,v 1.17 2001/08/06 18:35:39 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -91,7 +91,8 @@ int send_greeting(client_conf_t *conf)
 
     if (write_n(conf->req->sd, buf, strlen(buf)) < 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
-        conf->errmsg = create_fmt_string("Cannot send greeting to [%s:%d]: %s",
+        conf->errmsg = create_format_string(
+            "Cannot send greeting to [%s:%d]: %s",
             conf->req->host, conf->req->port, strerror(errno));
         return(-1);
     }
@@ -221,7 +222,7 @@ int send_req(client_conf_t *conf)
 
     if (write_n(conf->req->sd, buf, strlen(buf)) < 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
-        conf->errmsg = create_fmt_string(
+        conf->errmsg = create_format_string(
             "Unable to send greeting to [%s:%d]: %s",
             conf->req->host, conf->req->port, strerror(errno));
         return(-1);
@@ -233,7 +234,7 @@ int send_req(client_conf_t *conf)
     if (conf->req->command == QUERY) {
         if (shutdown(conf->req->sd, SHUT_WR) < 0) {
             conf->errnum = CONMAN_ERR_LOCAL;
-            conf->errmsg = create_fmt_string(
+            conf->errmsg = create_format_string(
                 "Unable to close write-half of connection to [%s:%d]: %s",
                 conf->req->host, conf->req->port, strerror(errno));
             return(-1);
@@ -261,14 +262,14 @@ int recv_rsp(client_conf_t *conf)
 
     if ((n = read_line(conf->req->sd, buf, sizeof(buf))) < 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
-        conf->errmsg = create_fmt_string(
+        conf->errmsg = create_format_string(
             "Cannot read response from [%s:%d]: %s",
             conf->req->host, conf->req->port, strerror(errno));
         return(-1);
     }
     else if (n == 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
-        conf->errmsg = create_fmt_string("Connection terminated by [%s:%d]",
+        conf->errmsg = create_format_string("Connection terminated by [%s:%d]",
             conf->req->host, conf->req->port);
         return(-1);
     }
@@ -302,7 +303,7 @@ int recv_rsp(client_conf_t *conf)
         return(0);
     if (conf->errnum == CONMAN_ERR_NONE) {
         conf->errnum = CONMAN_ERR_LOCAL;
-        conf->errmsg = create_fmt_string("Received invalid reponse from"
+        conf->errmsg = create_format_string("Received invalid reponse from"
             " [%s:%d]", conf->req->host, conf->req->port);
     }
     return(-1);
@@ -376,7 +377,7 @@ void display_error(client_conf_t *conf)
 
     assert(conf->errnum > 0);
 
-    p = create_fmt_string("ERROR: %s\n\n",
+    p = create_format_string("ERROR: %s\n\n",
         (conf->errmsg ? conf->errmsg : "Unspecified"));
     if (write_n(STDERR_FILENO, p, strlen(p)) < 0)
         err_msg(errno, "write() failed on fd=%d", STDERR_FILENO);

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.23 2001/08/03 21:11:46 dun Exp $
+ *  $Id: server-obj.c,v 1.24 2001/08/06 18:35:39 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -100,7 +100,7 @@ obj_t * create_logfile_obj(List objs, char *name, obj_t *console, int zeroLog)
     console->aux.console.logfile = logfile;
 
     now = create_long_time_string(0);
-    msg = create_fmt_string("%sConsole [%s] log started at %s%s",
+    msg = create_format_string("%sConsole [%s] log started at %s%s",
         CONMAN_MSG_PREFIX, console->name, now, CONMAN_MSG_SUFFIX);
     write_obj_data(logfile, msg, strlen(msg), 0);
     free(now);
