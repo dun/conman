@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-tty.c,v 1.22 2001/06/15 17:28:03 dun Exp $
+ *  $Id: client-tty.c,v 1.23 2001/06/15 20:00:08 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -47,6 +47,11 @@ void connect_console(client_conf_t *conf)
 
     assert(conf->req->sd >= 0);
     assert((conf->req->command == CONNECT) || (conf->req->command == MONITOR));
+
+    if (!isatty(STDIN_FILENO))
+        err_msg(0, "Standard Input is not a terminal device.");
+    if (!isatty(STDOUT_FILENO))
+        err_msg(0, "Standard Output is not a terminal device.");
 
     Signal(SIGHUP, SIG_IGN);
     Signal(SIGINT, SIG_IGN);
