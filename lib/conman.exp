@@ -1,7 +1,7 @@
 ##
 # ConMan Expect Language Library (CELL)
 ##
-# $Id: conman.exp,v 1.1 2001/08/17 16:51:42 dun Exp $
+# $Id: conman.exp,v 1.2 2001/08/23 17:58:54 dun Exp $
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
 
@@ -30,7 +30,7 @@ proc conman_parse_opts {args_r} {
 }
 
 
-proc conman_query {opts args {errmsg_r {}}} {
+proc conman_query {args {opts {}} {errmsg_r {}}} {
 #
 # Queries ConMan for consoles specified by the 'args' list;
 #   the 'opts' list specifies ConMan command-line options
@@ -59,7 +59,7 @@ proc conman_query {opts args {errmsg_r {}}} {
 }
 
 
-proc conman_open {opts console {errmsg_r {}}} {
+proc conman_open {console {opts {}} {errmsg_r {}}} {
 #
 # Opens a ConMan session to the specified console;
 #   the 'opts' list specifies ConMan command-line options
@@ -128,7 +128,7 @@ proc conman_run {nproc consoles cmd args} {
     return
   }
   set opts [conman_parse_opts consoles]
-  set consoles [conman_query $opts $consoles err]
+  set consoles [conman_query $consoles $opts err]
   if {[llength $consoles] == 0} {
     send_error -- "ERROR: $err.\n"
     return
@@ -185,7 +185,7 @@ proc conman_run_next {ids_r id2con_r consoles_r opts_r cmd_r args_r} {
   }
   if {[fork] == 0} {
     set stdout_id $spawn_id
-    set console_id [conman_open $opts $console err]
+    set console_id [conman_open $console $opts err]
     if {[string length $console_id] == 0} {
       send_error -- "$console:ERROR: $err.\n"
       exit 0
