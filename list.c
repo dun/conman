@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: list.c,v 1.19 2002/05/12 19:20:29 dun Exp $
+ *  $Id: list.c,v 1.20 2002/09/15 05:36:51 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -62,7 +62,7 @@
 **  Constants  **
 \***************/
 
-#define LIST_ALLOC 10
+#define LIST_ALLOC 32
 #define LIST_MAGIC 0xDEADBEEF
 
 
@@ -109,24 +109,24 @@ typedef struct listNode * ListNode;
 static void * list_node_create(List l, ListNode *pp, void *x);
 static void * list_node_destroy(List l, ListNode *pp);
 static List list_alloc(void);
-static ListNode list_node_alloc(void);
-static ListIterator list_iterator_alloc(void);
 static void list_free(List l);
+static ListNode list_node_alloc(void);
 static void list_node_free(ListNode p);
+static ListIterator list_iterator_alloc(void);
 static void list_iterator_free(ListIterator i);
+static void * list_alloc_aux(int size, void *pfreelist);
+static void list_free_aux(void *x, void *pfreelist);
 
 
 /***************\
 **  Variables  **
 \***************/
 
-static List freeLists = NULL;
-static ListNode freeListNodes = NULL;
-static ListIterator freeListIterators = NULL;
+static List list_free_lists = NULL;
+static ListNode list_free_nodes = NULL;
+static ListIterator list_free_iterators = NULL;
 #ifdef WITH_PTHREADS
-static pthread_mutex_t freeListsLock = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t freeListNodesLock = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t freeListIteratorsLock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t list_free_lock = PTHREAD_MUTEX_INITIALIZER;
 #endif /* WITH_PTHREADS */
 
 
@@ -637,95 +637,82 @@ static void * list_node_destroy(List l, ListNode *pp)
 
 static List list_alloc(void)
 {
-    List l;
-    List last;
-
-    list_mutex_lock(&freeListsLock);
-    if (!freeLists) {
-        freeLists = malloc(LIST_ALLOC * sizeof(struct list));
-        if (freeLists) {
-            last = freeLists + LIST_ALLOC - 1;
-            for (l=freeLists; l<last; l++)
-                l->iNext = (ListIterator) (l + 1);
-            last->iNext = NULL;
-        }
-    }
-    if ((l = freeLists))
-        freeLists = (List) freeLists->iNext;
-    list_mutex_unlock(&freeListsLock);
-    return(l);
-}
-
-
-static ListNode list_node_alloc(void)
-{
-    ListNode p;
-    ListNode last;
-
-    list_mutex_lock(&freeListNodesLock);
-    if (!freeListNodes) {
-        freeListNodes = malloc(LIST_ALLOC * sizeof(struct listNode));
-        if (freeListNodes) {
-            last = freeListNodes + LIST_ALLOC - 1;
-            for (p=freeListNodes; p<last; p++)
-                p->next = p + 1;
-            last->next = NULL;
-        }
-    }
-    if ((p = freeListNodes))
-        freeListNodes = freeListNodes->next;
-    list_mutex_unlock(&freeListNodesLock);
-    return(p);
-}
-
-
-static ListIterator list_iterator_alloc(void)
-{
-    ListIterator i;
-    ListIterator last;
-
-    list_mutex_lock(&freeListIteratorsLock);
-    if (!freeListIterators) {
-        freeListIterators = malloc(LIST_ALLOC * sizeof(struct listIterator));
-        if (freeListIterators) {
-            last = freeListIterators + LIST_ALLOC - 1;
-            for (i=freeListIterators; i<last; i++)
-                i->iNext = i + 1;
-            last->iNext = NULL;
-        }
-    }
-    if ((i = freeListIterators))
-        freeListIterators = freeListIterators->iNext;
-    list_mutex_unlock(&freeListIteratorsLock);
-    return(i);
+    return(list_alloc_aux(sizeof(struct list), &list_free_lists));
 }
 
 
 static void list_free(List l)
 {
-    list_mutex_lock(&freeListsLock);
-    l->iNext = (ListIterator) freeLists;
-    freeLists = l;
-    list_mutex_unlock(&freeListsLock);
-    return;
+    return(list_free_aux(l, &list_free_lists));
+}
+
+
+static ListNode list_node_alloc(void)
+{
+    return(list_alloc_aux(sizeof(struct listNode), &list_free_nodes));
 }
 
 
 static void list_node_free(ListNode p)
 {
-    list_mutex_lock(&freeListNodesLock);
-    p->next = freeListNodes;
-    freeListNodes = p;
-    list_mutex_unlock(&freeListNodesLock);
-    return;
+    return(list_free_aux(p, &list_free_nodes));
+}
+
+
+static ListIterator list_iterator_alloc(void)
+{
+    return(list_alloc_aux(sizeof(struct listIterator), &list_free_iterators));
 }
 
 
 static void list_iterator_free(ListIterator i)
 {
-    list_mutex_lock(&freeListIteratorsLock);
-    i->iNext = freeListIterators;
-    freeListIterators = i;
-    list_mutex_unlock(&freeListIteratorsLock);
+    return(list_free_aux(i, &list_free_iterators));
+}
+
+
+static void * list_alloc_aux(int size, void *pfreelist)
+{
+/*  Allocates an object from the specified freelist (*pfreelist).
+ *  Memory is added to the freelist in chunks of size LIST_ALLOC.
+ *  Returns a ptr to the object, or NULL if the memory request fails.
+ */
+    void **px;
+    void **pfree = pfreelist;
+    void **plast;
+
+    assert(size > sizeof(void *));
+    assert(pfreelist != NULL);
+    assert(LIST_ALLOC > 0);
+    list_mutex_lock(&list_free_lock);
+    if (!*pfree) {
+        if ((*pfree = malloc(LIST_ALLOC * size))) {
+            px = *pfree;
+            plast = *pfree + ((LIST_ALLOC - 1) * size);
+            while (px < plast)
+                *px = (char *) px + size, px = *px;
+            *plast = NULL;
+        }
+    }
+    if ((px = *pfree))
+        *pfree = *px;
+    list_mutex_unlock(&list_free_lock);
+    return(px);
+}
+
+
+static void list_free_aux(void *x, void *pfreelist)
+{
+/*  Frees the object (x), returning it to the specified freelist (*pfreelist).
+ */
+    void **px = x;
+    void **pfree = pfreelist;
+
+    assert(x != NULL);
+    assert(pfreelist != NULL);
+    list_mutex_lock(&list_free_lock);
+    *px = *pfree;
+    *pfree = px;
+    list_mutex_unlock(&list_free_lock);
     return;
 }
