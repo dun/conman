@@ -2,7 +2,7 @@
  *  lex.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: lex.c,v 1.3 2001/05/09 21:40:50 dun Exp $
+ *  $Id: lex.c,v 1.4 2001/05/11 15:28:58 dun Exp $
  ******************************************************************************
  *  Refer to "lex.h" for documentation on public functions.
 \******************************************************************************/
@@ -215,8 +215,9 @@ char * lex_encode(char *str)
     if (!str)
         return(NULL);
     for (p=str; *p; p++) {
+        assert(!(*p & 0x80));		/* assert all high bits are cleared */
         if (*p == '\'' || *p == '"')
-            *p |= 0x80;
+            *p |= 0x80;			/* set high bit to encode funky char */
     }
     return(str);
 }
@@ -229,7 +230,7 @@ char * lex_decode(char *str)
     if (!str)
         return(NULL);
     for (p=str; *p; p++) {
-        *p &= 0x7F;
+        *p &= 0x7F;			/* clear all high bits */
     }
     return(str);
 }
