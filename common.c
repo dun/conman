@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.c,v 1.4 2001/05/31 18:20:19 dun Exp $
+ *  $Id: common.c,v 1.5 2001/06/08 20:33:11 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -19,25 +19,25 @@
 
 char *proto_strs[] = {
 /*
- *  Keep strings in sync w/ conman.h:proto_toks enum.
+ *  Keep strings in sync w/ common.h:proto_toks enum.
  */
     "OK",
     "ERROR",
-    "HELLO",
-    "QUERY",
-    "MONITOR",
-    "CONNECT",
-    "EXECUTE",
-    "CODE",
-    "MESSAGE",
-    "USER",
-    "TTY",
-    "CONSOLE",
-    "PROGRAM",
-    "OPTION",
     "BROADCAST",
+    "CODE",
+    "CONNECT",
+    "CONSOLE",
+    "EXECUTE",
     "FORCE",
+    "HELLO",
     "JOIN",
+    "MESSAGE",
+    "MONITOR",
+    "OPTION",
+    "PROGRAM",
+    "QUERY",
+    "TTY",
+    "USER",
     NULL
 };
 
