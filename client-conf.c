@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-conf.c,v 1.25 2001/08/14 23:16:47 dun Exp $
+ *  $Id: client-conf.c,v 1.26 2001/08/15 22:22:23 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -165,9 +165,22 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
     }
 
     for (i=optind; i<argc; i++) {
-        str = create_string(argv[i]);
-        if (!list_append(conf->req->consoles, str))
-            err_msg(0, "Out of memory");
+
+        char *p, *q;
+
+        /*  Process comma-separated console list in order to appease Jim.  :)
+         */
+        p = argv[i];
+        while (p) {
+            if ((q = strchr(p, ',')))
+                *q++ = '\0';
+            if (*p) {
+                str = create_string(p);
+                if (!list_append(conf->req->consoles, str))
+                    err_msg(0, "Out of memory");
+            }
+            p = q;
+        }
     }
     return;
 }
