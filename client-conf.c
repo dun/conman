@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-conf.c,v 1.29 2001/09/06 21:55:01 dun Exp $
+ *  $Id: client-conf.c,v 1.30 2001/09/23 01:54:52 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -39,9 +39,8 @@ client_conf_t * create_client_conf(void)
     struct passwd *passp;
 
     if (!(conf = malloc(sizeof(client_conf_t))))
-        err_msg(0, "Out of memory");
-    if (!(conf->req = create_req()))
-        err_msg(0, "Out of memory");
+        out_of_memory();
+    conf->req = create_req();
 
     /*  Who am I?
      */
@@ -181,10 +180,8 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
         while (p) {
             if ((q = strchr(p, ',')))
                 *q++ = '\0';
-            if (*p) {
-                if (!list_append(conf->req->consoles, create_string(p)))
-                    err_msg(0, "Out of memory");
-            }
+            if (*p)
+                list_append(conf->req->consoles, create_string(p));
             p = q;
         }
     }
@@ -216,15 +213,13 @@ static void read_consoles_from_file(List consoles, char *file)
         err_msg(errno, "Unable to close \"%s\"", file);
     buf[len] = '\0';
 
-    if (!(l = lex_create(buf, NULL)))
-        err_msg(0, "Unable to create lexer");
+    l = lex_create(buf, NULL);
     while ((tok = lex_next(l)) != LEX_EOF) {
         switch(tok) {
         case LEX_INT:
             /* fall-thru... whee! */
         case LEX_STR:
-            if (!list_append(consoles, create_string(lex_text(l))))
-                err_msg(0, "Out of memory");
+            list_append(consoles, create_string(lex_text(l)));
             break;
         case LEX_EOL:
             break;

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.44 2001/09/21 05:52:05 dun Exp $
+ *  $Id: server-obj.c,v 1.45 2001/09/23 01:54:52 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -51,23 +51,20 @@ static obj_t * create_obj(
     assert(type==CLIENT || type==LOGFILE || type==SERIAL || type==TELNET);
 
     if (!(obj = malloc(sizeof(obj_t))))
-        err_msg(0, "Out of memory");
+        out_of_memory();
     obj->name = create_string(name);
     obj->fd = fd;
     obj->bufInPtr = obj->bufOutPtr = obj->buf;
     x_pthread_mutex_init(&obj->bufLock, NULL);
-    if (!(obj->readers = list_create(NULL)))
-        err_msg(0, "Out of memory");
-    if (!(obj->writers = list_create(NULL)))
-        err_msg(0, "Out of memory");
+    obj->readers = list_create(NULL);
+    obj->writers = list_create(NULL);
     obj->type = type;
     obj->gotBufWrap = 0;
     obj->gotEOF = 0;
 
     /*  Add obj to the master conf->objs list.
      */
-    if (!list_append(conf->objs, obj))
-        err_msg(0, "Out of memory");
+    list_append(conf->objs, obj);
 
     DPRINTF("Created object [%s] on fd=%d.\n", obj->name, obj->fd);
     return(obj);   
@@ -128,8 +125,7 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name, obj_t *console)
      *    objects within the same daemon process using the same filename.
      *    So that check is performed here.
      */
-    if (!(i = list_iterator_create(conf->objs)))
-        err_msg(0, "Out of memory");
+    i = list_iterator_create(conf->objs);
     while ((logfile = list_next(i))) {
         if (!is_logfile_obj(logfile))
             continue;
@@ -202,8 +198,7 @@ obj_t * create_serial_obj(
      *    objects within the same daemon process using the same device.
      *    So that check is performed here.
      */
-    if (!(i = list_iterator_create(conf->objs)))
-        err_msg(0, "Out of memory");
+    i = list_iterator_create(conf->objs);
     while ((serial = list_next(i))) {
         if (is_console_obj(serial) && !strcmp(serial->name, name)) {
             log_msg(0, "Ignoring duplicate console name \"%s\".", name);
@@ -294,8 +289,7 @@ obj_t * create_telnet_obj(
 
     /*  Check for duplicate console names and terminal server locations.
      */
-    if (!(i = list_iterator_create(conf->objs)))
-        err_msg(0, "Out of memory");
+    i = list_iterator_create(conf->objs);
     while ((telnet = list_next(i))) {
         if (is_console_obj(telnet) && !strcmp(telnet->name, name)) {
             log_msg(0, "Ignoring duplicate console name \"%s\".", name);
@@ -636,8 +630,7 @@ void link_objs(obj_t *src, obj_t *dst)
         buf[sizeof(buf) - 1] = '\0';
         write_obj_data(src, buf, strlen(buf), 1);
 
-        if (!(i = list_iterator_create(dst->writers)))
-            err_msg(0, "Out of memory");
+        i = list_iterator_create(dst->writers);
         while ((writer = list_next(i))) {
             assert(is_client_obj(writer));
             write_obj_data(writer, buf, strlen(buf), 1);
@@ -650,11 +643,9 @@ void link_objs(obj_t *src, obj_t *dst)
     /*  Create link from src reads to dst writes.
      */
     assert(!list_find_first(src->readers, (ListFindF) find_obj, dst));
-    if (!list_append(src->readers, dst))
-        err_msg(0, "Out of memory");
+    list_append(src->readers, dst);
     assert(!list_find_first(dst->writers, (ListFindF) find_obj, src));
-    if (!list_append(dst->writers, src))
-        err_msg(0, "Out of memory");
+    list_append(dst->writers, src);
 
     DPRINTF("Linked [%s] reads to [%s] writes.\n", src->name, dst->name);
     return;
@@ -703,8 +694,7 @@ static void unlink_objs_helper(obj_t *src, obj_t *dst)
         buf[sizeof(buf) - 2] = '\n';
         buf[sizeof(buf) - 1] = '\0';
 
-        if (!(i = list_iterator_create(src->writers)))
-            err_msg(0, "Out of memory");
+        i = list_iterator_create(src->writers);
         while ((writer = list_next(i))) {
             assert(is_client_obj(writer));
             write_obj_data(writer, buf, strlen(buf), 1);
@@ -742,14 +732,12 @@ void shutdown_obj(obj_t *obj)
         return;
     }
 
-    if (!(i = list_iterator_create(obj->readers)))
-        err_msg(0, "Out of memory");
+    i = list_iterator_create(obj->readers);
     while ((reader = list_next(i)))
         unlink_objs(obj, reader);
     list_iterator_destroy(i);
 
-    if (!(i = list_iterator_create(obj->writers)))
-        err_msg(0, "Out of memory");
+    i = list_iterator_create(obj->writers);
     while ((writer = list_next(i)))
         unlink_objs(obj, writer);
     list_iterator_destroy(i);
@@ -773,15 +761,13 @@ void notify_objs(List list1, List list2, char *msg)
     if (!msg || !strlen(msg))
         return;
 
-    if (!(i = list_iterator_create(list1)))
-        err_msg(0, "Out of memory");
+    i = list_iterator_create(list1);
     while ((obj = list_next(i)))
         write_obj_data(obj, msg, strlen(msg), 1);
     list_iterator_destroy(i);
 
     if (list2) {
-        if (!(i = list_iterator_create(list2)))
-            err_msg(0, "Out of memory");
+        i = list_iterator_create(list2);
         while ((obj = list_next(i))) {
             if (!list_find_first(list1, (ListFindF) find_obj, obj))
                 write_obj_data(obj, msg, strlen(msg), 1);
@@ -856,8 +842,7 @@ again:
          *    after the escape characters have been processed.
          */
         if (n > 0) {
-            if (!(i = list_iterator_create(obj->readers)))
-                err_msg(0, "Out of memory");
+            i = list_iterator_create(obj->readers);
             while ((reader = list_next(i))) {
                 /*
                  *  If the obj's gotEOF flag is set,

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.h,v 1.20 2001/09/17 22:57:21 dun Exp $
+ *  $Id: common.h,v 1.21 2001/09/23 01:54:52 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -90,7 +90,6 @@ enum err_type {
     CONMAN_ERR_NO_CONSOLES,
     CONMAN_ERR_TOO_MANY_CONSOLES,
     CONMAN_ERR_BUSY_CONSOLES,
-    CONMAN_ERR_NO_RESOURCES,
 };
 
 enum proto_toks {

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-sock.c,v 1.21 2001/09/13 02:53:14 dun Exp $
+ *  $Id: client-sock.c,v 1.22 2001/09/23 01:54:52 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -236,9 +236,7 @@ int recv_rsp(client_conf_t *conf)
         return(-1);
     }
 
-    if (!(l = lex_create(buf, proto_strs)))
-        err_msg(0, "Out of memory");
-
+    l = lex_create(buf, proto_strs);
     while (!done) {
         tok = lex_next(l);
         switch(tok) {
@@ -258,7 +256,6 @@ int recv_rsp(client_conf_t *conf)
             break;
         }
     }
-
     lex_destroy(l);
 
     if (done == 1)
@@ -284,8 +281,7 @@ static void parse_rsp_ok(Lex l, client_conf_t *conf)
         case CONMAN_TOK_CONSOLE:
             if ((lex_next(l) == '=') && (lex_next(l) == LEX_STR)) {
                 if ((str = lex_decode(create_string(lex_text(l)))))
-                    if (!list_append(conf->req->consoles, str))
-                        err_msg(0, "Out of memory");
+                    list_append(conf->req->consoles, str);
             }
             break;
         case LEX_EOF:
@@ -406,8 +402,7 @@ void display_consoles(client_conf_t *conf, int fd)
     char buf[MAX_LINE];
     int n;
 
-    if (!(i = list_iterator_create(conf->req->consoles)))
-        err_msg(0, "Out of memory");
+    i = list_iterator_create(conf->req->consoles);
     while ((p = list_next(i))) {
         n = snprintf(buf, sizeof(buf), "%s\n", p);
         if (n < 0 || n >= sizeof(buf))

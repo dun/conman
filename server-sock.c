@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.31 2001/09/16 23:45:05 dun Exp $
+ *  $Id: server-sock.c,v 1.32 2001/09/23 01:54:52 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -31,9 +31,9 @@
 
 static void resolve_req_addr(req_t *req, int sd);
 static int recv_greeting(req_t *req);
-static int parse_greeting(Lex l, req_t *req);
+static void parse_greeting(Lex l, req_t *req);
 static int recv_req(req_t *req);
-static int parse_cmd_opts(Lex l, req_t *req);
+static void parse_cmd_opts(Lex l, req_t *req);
 static int query_consoles(server_conf_t *conf, req_t *req);
 static int query_consoles_via_globbing(
     server_conf_t *conf, req_t *req, List matches);
@@ -72,11 +72,7 @@ void process_client(client_arg_t *args)
 
     x_pthread_detach(pthread_self());
 
-    if (!(req = create_req())) {
-        if (close(sd) < 0)
-            err_msg(errno, "close() failed on fd=%d", sd);
-        return;
-    }
+    req = create_req();
     resolve_req_addr(req, sd);
 
     if (recv_greeting(req) < 0)
@@ -182,16 +178,12 @@ static int recv_greeting(req_t *req)
 
     DPRINTF("Received greeting: %s", buf); /* xyzzy */
 
-    if (!(l = lex_create(buf, proto_strs))) {
-        send_rsp(req, CONMAN_ERR_NO_RESOURCES,
-            "Insufficient resources to process request.");
-        return(-1);
-    }
+    l = lex_create(buf, proto_strs);
     while (!done) {
         tok = lex_next(l);
         switch(tok) {
         case CONMAN_TOK_HELLO:
-            done = parse_greeting(l, req);
+            parse_greeting(l, req);
             break;
         case LEX_EOF:
         case LEX_EOL:
@@ -205,11 +197,6 @@ static int recv_greeting(req_t *req)
 
     /*  Validate greeting.
      */
-    if (done == -1) {
-        send_rsp(req, CONMAN_ERR_NO_RESOURCES,
-            "Insufficient resources to process request.");
-        return(-1);
-    }
     if (!req->user) {
         send_rsp(req, CONMAN_ERR_BAD_REQUEST, 
             "Invalid greeting: no user specified");
@@ -229,11 +216,10 @@ static int recv_greeting(req_t *req)
 }
 
 
-static int parse_greeting(Lex l, req_t *req)
+static void parse_greeting(Lex l, req_t *req)
 {
 /*  Parses the "HELLO" command from the client:
  *    HELLO USER='<str>' TTY='<str>'
- *  Returns 0 on success, or -1 on error (ie, out of memory).
  */
     int done = 0;
     int tok;
@@ -246,8 +232,7 @@ static int parse_greeting(Lex l, req_t *req)
               && (*lex_text(l) != '\0')) {
                 if (req->user)
                     free(req->user);
-                if (!(req->user = lex_decode(strdup(lex_text(l)))))
-                    return(-1);
+                req->user = lex_decode(create_string(lex_text(l)));
             }
             break;
         case CONMAN_TOK_TTY:
@@ -255,8 +240,7 @@ static int parse_greeting(Lex l, req_t *req)
               && (*lex_text(l) != '\0')) {
                 if (req->tty)
                     free(req->tty);
-                if (!(req->tty = lex_decode(strdup(lex_text(l)))))
-                    return(-1);
+                req->tty = lex_decode(create_string(lex_text(l)));
             }
             break;
         case LEX_EOF:
@@ -267,7 +251,7 @@ static int parse_greeting(Lex l, req_t *req)
             break;
         }
     }
-    return(0);
+    return;
 }
 
 
@@ -296,25 +280,21 @@ static int recv_req(req_t *req)
 
     DPRINTF("Received request: %s", buf); /* xyzzy */
 
-    if (!(l = lex_create(buf, proto_strs))) {
-        send_rsp(req, CONMAN_ERR_NO_RESOURCES,
-            "Insufficient resources to process request.");
-        return(-1);
-    }
+    l = lex_create(buf, proto_strs);
     while (!done) {
         tok = lex_next(l);
         switch(tok) {
         case CONMAN_TOK_CONNECT:
             req->command = CONNECT;
-            done = parse_cmd_opts(l, req);
+            parse_cmd_opts(l, req);
             break;
         case CONMAN_TOK_MONITOR:
             req->command = MONITOR;
-            done = parse_cmd_opts(l, req);
+            parse_cmd_opts(l, req);
             break;
         case CONMAN_TOK_QUERY:
             req->command = QUERY;
-            done = parse_cmd_opts(l, req);
+            parse_cmd_opts(l, req);
             break;
         case LEX_EOF:
         case LEX_EOL:
@@ -326,19 +306,13 @@ static int recv_req(req_t *req)
     }
     lex_destroy(l);
 
-    if (done == -1) {
-        send_rsp(req, CONMAN_ERR_NO_RESOURCES,
-            "Insufficient resources to process request.");
-        return(-1);
-    }
     return(0);
 }
 
 
-static int parse_cmd_opts(Lex l, req_t *req)
+static void parse_cmd_opts(Lex l, req_t *req)
 {
 /*  Parses the command options for the given request.
- *  Returns 0 on success, or -1 on error (ie, out of memory).
  */
     int done = 0;
     int tok;
@@ -350,12 +324,8 @@ static int parse_cmd_opts(Lex l, req_t *req)
         case CONMAN_TOK_CONSOLE:
             if ((lex_next(l) == '=') && (lex_next(l) == LEX_STR)
               && (*lex_text(l) != '\0')) {
-                if (!(str = lex_decode(strdup(lex_text(l)))))
-                    return(-1);
-                if (!list_append(req->consoles, str)) {
-                    free(str);
-                    return(-1);
-                }
+                str = lex_decode(create_string(lex_text(l)));
+                list_append(req->consoles, str);
             }
             break;
         case CONMAN_TOK_OPTION:
@@ -380,7 +350,7 @@ static int parse_cmd_opts(Lex l, req_t *req)
             break;
         }
     }
-    return(0);
+    return;
 }
 
 
@@ -402,8 +372,7 @@ static int query_consoles(server_conf_t *conf, req_t *req)
      *    will only contain refs to objs contained in the conf->objs list.
      *    These objs will be destroyed when the conf->objs list is destroyed.
      */
-    if (!(matches = list_create(NULL)))
-        err_msg(0, "Out of memory");
+    matches = list_create(NULL);
 
     if (req->enableRegex)
         rc = query_consoles_via_regex(conf, req, matches);
@@ -437,27 +406,21 @@ static int query_consoles_via_globbing(
      */
     if (list_is_empty(req->consoles)) {
         p = create_string("*");
-        if (!list_append(req->consoles, p))
-            err_msg(0, "Out of memory");
+        list_append(req->consoles, p);
     }
-
-    if (!(i = list_iterator_create(req->consoles)))
-        err_msg(0, "Out of memory");
-    if (!(j = list_iterator_create(conf->objs)))
-        err_msg(0, "Out of memory");
 
     /*  Search objs for console names matching console patterns in the request.
      */
+    i = list_iterator_create(req->consoles);
+    j = list_iterator_create(conf->objs);
     while ((pat = list_next(i))) {
         list_iterator_reset(j);
         while ((obj = list_next(j))) {
             if (!is_console_obj(obj))
                 continue;
             if (!fnmatch(pat, obj->name, 0)
-              && !list_find_first(matches, (ListFindF) find_obj, obj)) {
-                if (!list_append(matches, obj))
-                    err_msg(0, "Out of memory");
-            }
+              && !list_find_first(matches, (ListFindF) find_obj, obj))
+                list_append(matches, obj);
         }
     }
     list_iterator_destroy(i);
@@ -483,14 +446,12 @@ static int query_consoles_via_regex(
      */
     if (list_is_empty(req->consoles)) {
         p = create_string(".*");
-        if (!list_append(req->consoles, p))
-            err_msg(0, "Out of memory");
+        list_append(req->consoles, p);
     }
 
     /*  Combine console patterns via alternation to create single regex.
      */
-    if (!(i = list_iterator_create(req->consoles)))
-        err_msg(0, "Out of memory");
+    i = list_iterator_create(req->consoles);
     strlcpy(buf, list_next(i), sizeof(buf));
     while ((p = list_next(i))) {
         strlcat(buf, "|", sizeof(buf));
@@ -509,19 +470,15 @@ static int query_consoles_via_regex(
         return(-1);
     }
 
-    if (!(i = list_iterator_create(conf->objs)))
-        err_msg(0, "Out of memory");
-
     /*  Search objs for console names matching console patterns in the request.
      */
+    i = list_iterator_create(conf->objs);
     while ((obj = list_next(i))) {
         if (!is_console_obj(obj))
             continue;
         if (!regexec(&rex, obj->name, 1, &match, 0)
-          && (match.rm_so == 0) && (match.rm_eo == strlen(obj->name))) {
-            if (!list_append(matches, obj))
-                err_msg(0, "Out of memory");
-        }
+          && (match.rm_so == 0) && (match.rm_eo == strlen(obj->name)))
+            list_append(matches, obj);
     }
     list_iterator_destroy(i);
     regfree(&rex);
@@ -568,17 +525,13 @@ static int check_too_many_consoles(req_t *req)
     if ((req->command == CONNECT) && (req->enableBroadcast))
         return(0);
 
-    if (!(i = list_iterator_create(req->consoles))) {
-        send_rsp(req, CONMAN_ERR_NO_RESOURCES,
-            "Insufficient resources to process request.");
-        return(-1);
-    }
     snprintf(buf, sizeof(buf), "Found %d matching consoles.",
         list_count(req->consoles));
     send_rsp(req, CONMAN_ERR_TOO_MANY_CONSOLES, buf);
 
     /*  FIX_ME? Replace with single write_n()?
      */
+    i = list_iterator_create(req->consoles);
     while ((obj = list_next(i))) {
         strlcpy(buf, obj->name, sizeof(buf));
         strlcat(buf, "\n", sizeof(buf));
@@ -615,15 +568,12 @@ static int check_busy_consoles(req_t *req)
     if (req->enableForce || req->enableJoin)
         return(0);
 
-    if (!(busy = list_create(NULL)))
-        err_msg(0, "Out of memory");
-    if (!(i = list_iterator_create(req->consoles)))
-        err_msg(0, "Out of memory");
+    busy = list_create(NULL);
+    i = list_iterator_create(req->consoles);
     while ((console = list_next(i))) {
         assert(is_console_obj(console));
         if (!list_is_empty(console->writers))
-            if (!list_append(busy, console))
-                err_msg(0, "Out of memory");
+            list_append(busy, console);
     }
     list_iterator_destroy(i);
 
@@ -646,8 +596,7 @@ static int check_busy_consoles(req_t *req)
      */
     while ((console = list_pop(busy))) {
 
-        if (!(i = list_iterator_create(console->writers)))
-            err_msg(0, "Out of memory");
+        i = list_iterator_create(console->writers);
         while ((writer = list_next(i))) {
 
             assert(is_client_obj(writer));
@@ -703,15 +652,13 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
         n = append_format_string(buf, sizeof(buf), "%s",
             proto_strs[LEX_UNTOK(CONMAN_TOK_OK)]);
 
-        if ((i = list_iterator_create(req->consoles))) {
-            while ((console = list_next(i))) {
-                n = strlcpy(tmp, console->name, sizeof(tmp));
-                assert(n >= 0 && n < sizeof(tmp));
-                n = append_format_string(buf, sizeof(buf), " %s='%s'",
-                    proto_strs[LEX_UNTOK(CONMAN_TOK_CONSOLE)], lex_encode(tmp));
-            }
-            list_iterator_destroy(i);
+        i = list_iterator_create(req->consoles);
+        while ((console = list_next(i))) {
+            n = strlcpy(tmp, console->name, sizeof(tmp));
+            n = append_format_string(buf, sizeof(buf), " %s='%s'",
+                proto_strs[LEX_UNTOK(CONMAN_TOK_CONSOLE)], lex_encode(tmp));
         }
+        list_iterator_destroy(i);
         n = append_format_string(buf, sizeof(buf), "\n");
     }
     else {
@@ -719,7 +666,6 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
      *  FIX_ME: Should all errors be logged here?
      */
         n = strlcpy(tmp, (errmsg ? errmsg : "Doh!"), sizeof(tmp));
-        assert(n >= 0 && n < sizeof(tmp));
         n = snprintf(buf, sizeof(buf), "%s %s=%d %s='%s'\n",
             proto_strs[LEX_UNTOK(CONMAN_TOK_ERROR)],
             proto_strs[LEX_UNTOK(CONMAN_TOK_CODE)], errnum,
@@ -820,8 +766,7 @@ static int perform_connect_cmd(req_t *req, server_conf_t *conf)
         /*
          *  Broadcast connection (W/O).
          */
-        if (!(i = list_iterator_create(req->consoles)))
-            err_msg(0, "Out of memory");
+        i = list_iterator_create(req->consoles);
         while ((console = list_next(i))) {
             assert(is_console_obj(console));
             link_objs(client, console);

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-str.c,v 1.4 2001/09/21 05:34:33 dun Exp $
+ *  $Id: util-str.c,v 1.5 2001/09/23 01:54:52 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util-str.h" for documentation on public functions.
@@ -33,7 +33,7 @@ char * create_string(const char *str)
     if (!str)
         return(NULL);
     if (!(p = strdup(str)))
-        err_msg(0, "Out of memory");
+        out_of_memory();
     return(p);
 }
 
@@ -53,7 +53,7 @@ char * create_format_string(const char *fmt, ...)
     else				/* C99 standard returns needed strlen */
         len++;				/* reserve space for terminating NUL */
     if (!(p = (char *) malloc(len)))
-        err_msg(0, "Out of memory");
+        out_of_memory();
     n = vsnprintf(p, len, fmt, vargs);
     va_end(vargs);
 
@@ -146,7 +146,7 @@ char * create_long_time_string(time_t t)
     const int len = 25;			/* MM/DD/YYYY HH:MM:SS ZONE + NUL */
 
     if (!(p = malloc(len)))
-        err_msg(0, "Out of memory");
+        out_of_memory();
 
     get_localtime(&t, &tm);
 
@@ -164,7 +164,7 @@ char * create_short_time_string(time_t t)
     const int len = 12;			/* MM/DD HH:MM + NUL */
 
     if (!(p = malloc(len)))
-        err_msg(0, "Out of memory");
+        out_of_memory();
 
     get_localtime(&t, &tm);
 

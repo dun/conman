@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.29 2001/09/21 05:52:05 dun Exp $
+ *  $Id: server.c,v 1.30 2001/09/23 01:54:52 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -198,8 +198,7 @@ static void display_configuration(server_conf_t *conf)
     obj_t *obj;
     int n = 0;
 
-    if (!(i = list_iterator_create(conf->objs)))
-        err_msg(0, "Out of memory");
+    i = list_iterator_create(conf->objs);
     while ((obj = list_next(i)))
         if (is_console_obj(obj))
             n++;
@@ -282,8 +281,7 @@ static void mux_io(server_conf_t *conf)
         return;
     }
 
-    if (!(i = list_iterator_create(conf->objs)))
-        err_msg(0, "Out of memory");
+    i = list_iterator_create(conf->objs);
 
     while (!done) {
 
@@ -420,7 +418,7 @@ static void accept_client(server_conf_t *conf)
      *  Note that the thread is responsible for freeing this memory.
      */
     if (!(args = malloc(sizeof(client_arg_t))))
-        err_msg(0, "Out of memory");
+        out_of_memory();
     args->sd = sd;
     args->conf = conf;
 

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.22 2001/09/20 23:36:54 dun Exp $
+ *  $Id: server-conf.c,v 1.23 2001/09/23 01:54:52 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -76,7 +76,7 @@ server_conf_t * create_server_conf(void)
     server_conf_t *conf;
 
     if (!(conf = malloc(sizeof(server_conf_t))))
-        err_msg(0, "Out of memory");
+        out_of_memory();
     conf->confFileName = create_string(DEFAULT_SERVER_CONF);
     conf->logDirName = NULL;
     conf->logFileName = NULL;
@@ -105,8 +105,7 @@ server_conf_t * create_server_conf(void)
      */
     conf->port = 0;
     conf->ld = -1;
-    if (!(conf->objs = list_create((ListDelF) destroy_obj)))
-        err_msg(0, "Out of memory");
+    conf->objs = list_create((ListDelF) destroy_obj);
     conf->enableKeepAlive = 1;
     conf->enableLoopBack = 0;
     conf->enableVerbose = 0;
@@ -238,8 +237,7 @@ void process_server_conf_file(server_conf_t *conf)
     assert(n == len);
     buf[len] = '\0';
 
-    if (!(l = lex_create(buf, server_conf_strs)))
-        err_msg(0, "Unable to create lexer");
+    l = lex_create(buf, server_conf_strs);
     while ((tok = lex_next(l)) != LEX_EOF) {
         switch(tok) {
         case SERVER_CONF_CONSOLE:

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.c,v 1.17 2001/09/06 21:55:01 dun Exp $
+ *  $Id: common.c,v 1.18 2001/09/23 01:54:52 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -45,14 +45,12 @@ char *proto_strs[] = {
 
 req_t * create_req(void)
 {
-/*  Creates a request struct.
- *  Returns the new struct, or NULL on error (ie, out of memory).
+/*  Creates and returns a request struct.
  */
     req_t *req;
 
-    if (!(req = malloc(sizeof(req_t)))) {
-        return(NULL);
-    }
+    if (!(req = malloc(sizeof(req_t))))
+        out_of_memory();
     req->sd = -1;
     req->user = NULL;
     req->tty = NULL;
@@ -60,10 +58,7 @@ req_t * create_req(void)
     req->host = NULL;
     req->ip = NULL;
     req->port = 0;
-    if (!(req->consoles = list_create((ListDelF) destroy_string))) {
-        free(req);
-        return(NULL);
-    }
+    req->consoles = list_create((ListDelF) destroy_string);
     req->command = NONE;
     req->enableBroadcast = 0;
     req->enableForce = 0;

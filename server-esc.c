@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-esc.c,v 1.12 2001/09/17 22:08:13 dun Exp $
+ *  $Id: server-esc.c,v 1.13 2001/09/23 01:54:52 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -95,8 +95,7 @@ static void perform_serial_break(obj_t *client)
 
     assert(is_client_obj(client));
 
-    if (!(i = list_iterator_create(client->readers)))
-        err_msg(0, "Out of memory");
+    i = list_iterator_create(client->readers);
     while ((console = list_next(i))) {
 
         assert(is_console_obj(console));
