@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-logfile.c,v 1.11.2.5 2003/10/01 23:22:10 dun Exp $
+ *  $Id: server-logfile.c,v 1.11.2.6 2003/10/04 02:00:22 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -165,6 +165,8 @@ int open_logfile_obj(obj_t *logfile, int gotTrunc)
     free(now);
     free(msg);
 
+    logfile->aux.logfile.lineState = CONMAN_LOG_LINE_INIT;
+
     DPRINTF((10, "Opened %s%slogfile \"%s\" for console [%s].\n",
         (logfile->aux.logfile.opts.enableSanitize ? "SANITIZED " : ""),
         (logfile->aux.logfile.opts.enableTimestamp ? "TIMESTAMPED " : ""),
@@ -239,30 +241,43 @@ int write_log_data(obj_t *log, const void *src, int len)
          *    lonely CR to prevent characters from being overwritten.
          */
         if (*p == '\r') {
-            if (log->aux.logfile.lineState == CONMAN_LOG_LINE_IN)
+            if (log->aux.logfile.lineState == CONMAN_LOG_LINE_DATA) {
                 log->aux.logfile.lineState = CONMAN_LOG_LINE_CR;
-            else
+            }
+            else if (log->aux.logfile.lineState == CONMAN_LOG_LINE_INIT) {
+                if (log->aux.logfile.opts.enableTimestamp)
+                    q += write_time_string(0, q, qLast - q);
+                log->aux.logfile.lineState = CONMAN_LOG_LINE_CR;
+            }
+            else {
                 ; /* ignore */
+            }
         }
         else if (*p == '\n') {
-            log->aux.logfile.lineState = CONMAN_LOG_LINE_LF;
+            if (  (log->aux.logfile.lineState == CONMAN_LOG_LINE_INIT)
+               || (log->aux.logfile.lineState == CONMAN_LOG_LINE_LF) ) {
+                if (log->aux.logfile.opts.enableTimestamp)
+                    q += write_time_string(0, q, qLast - q);
+            }
             *q++ = '\r';
             *q++ = '\n';
-            if (log->aux.logfile.opts.enableTimestamp)
-                q += write_time_string(0, q, qLast - q);
+            log->aux.logfile.lineState = CONMAN_LOG_LINE_LF;
         }
         else if (  (*p == '\0')
-                && (log->aux.logfile.lineState != CONMAN_LOG_LINE_IN) ) {
+                && (  (log->aux.logfile.lineState == CONMAN_LOG_LINE_CR)
+                   || (log->aux.logfile.lineState == CONMAN_LOG_LINE_LF) ) ) {
             ; /* ignore */
         }
         else {
             if (log->aux.logfile.lineState == CONMAN_LOG_LINE_CR) {
                 *q++ = '\r';
                 *q++ = '\n';
+            }
+            if (log->aux.logfile.lineState != CONMAN_LOG_LINE_DATA) {
                 if (log->aux.logfile.opts.enableTimestamp)
                     q += write_time_string(0, q, qLast - q);
             }
-            log->aux.logfile.lineState = CONMAN_LOG_LINE_IN;
+            log->aux.logfile.lineState = CONMAN_LOG_LINE_DATA;
 
             if (log->aux.logfile.opts.enableSanitize) {
 

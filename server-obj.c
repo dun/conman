@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-obj.c,v 1.70.2.5 2003/10/01 23:22:10 dun Exp $
+ *  $Id: server-obj.c,v 1.70.2.6 2003/10/04 02:00:22 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -186,7 +186,7 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name,
     }
     logfile = create_obj(conf, name, -1, CONMAN_OBJ_LOGFILE);
     logfile->aux.logfile.console = console;
-    logfile->aux.logfile.lineState = CONMAN_LOG_LINE_IN;
+    logfile->aux.logfile.lineState = CONMAN_LOG_LINE_INIT;
     logfile->aux.logfile.opts = *opts;
 
     if (   (logfile->aux.logfile.opts.enableSanitize)
@@ -1376,6 +1376,14 @@ int write_obj_data(obj_t *obj, const void *src, int len, int isInfo)
     assert(obj->bufOutPtr < &obj->buf[MAX_BUF_SIZE]);
 
     x_pthread_mutex_unlock(&obj->bufLock);
+
+    /*  If an informational message has been added to the log,
+     *    re-initialize the console log's newline state.
+     */
+    if (isInfo && is_logfile_obj(obj)) {
+        obj->aux.logfile.lineState = CONMAN_LOG_LINE_INIT;
+    }
+
     return(len);
 }
 

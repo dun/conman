@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.h,v 1.55.2.4 2003/10/01 23:22:10 dun Exp $
+ *  $Id: server.h,v 1.55.2.5 2003/10/04 02:00:22 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -83,7 +83,8 @@ typedef struct logfile_opt {            /* LOGFILE OBJ OPTIONS:              */
 } logopt_t;
 
 typedef enum logfile_line_state {       /* log CR/LF newline state (2 bits)  */
-    CONMAN_LOG_LINE_IN,
+    CONMAN_LOG_LINE_INIT,
+    CONMAN_LOG_LINE_DATA,
     CONMAN_LOG_LINE_CR,
     CONMAN_LOG_LINE_LF
 } log_line_state_t;

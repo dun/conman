@@ -1,4 +1,12 @@
+2003-10-03  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server-logfile.c, server-obj.c, server.h: Fixed newline timestamping
+	so that the timestamp is associated with the first character output on
+	the line instead of the preceding newline transition character.
+
 2003-10-01  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* : Released 0.1.8.7.
 
 	* client-tty.c, common.h, server-conf.c, server-esc.c,
 	server-logfile.c, server-obj.c, server.h, etc/conman.conf,
@@ -27,7 +35,7 @@
 2003-09-22  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* common.c, man/conman.1.in, man/conman.conf.5.in, man/conmand.8.in:
-	  Updated copyright.
+	Updated copyright.
 
 2003-07-24  Chris Dunlap  <cdunlap@llnl.gov>
 
