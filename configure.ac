@@ -3,7 +3,7 @@ dnl
 dnl ConMan AutoConf Config Jazz
 dnl   by Chris Dunlap <cdunlap@llnl.gov>
 dnl
-dnl $Id: configure.ac,v 1.9 2001/12/20 17:56:27 dun Exp $
+dnl $Id: configure.ac,v 1.10 2001/12/20 20:13:56 dun Exp $
 
 
 dnl Prologue.
@@ -38,7 +38,7 @@ AC_ARG_ENABLE(debug,
    esac]
 )
 if test "$debug" = yes; then
-  CFLAGS="${CFLAGS--ggdb -Wall}"
+  CFLAGS="${CFLAGS--g -Wall}"
 else
   CFLAGS="${CFLAGS--O3}"
   LDFLAGS="${LDFLAGS--s}"

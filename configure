@@ -985,7 +985,7 @@ echo "$as_me: error: bad value \"${enableval}\" for --enable-debug" >&2;}
 
 fi;
 if test "$debug" = yes; then
-  CFLAGS="${CFLAGS--ggdb -Wall}"
+  CFLAGS="${CFLAGS--g -Wall}"
 else
   CFLAGS="${CFLAGS--O3}"
   LDFLAGS="${LDFLAGS--s}"
