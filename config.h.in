@@ -27,9 +27,6 @@
 /* Define if you have the `strlcpy' function. */
 #undef HAVE_STRLCPY
 
-/* Define the canonical host alias. */
-#undef HOST_ALIAS
-
 /* Define the canonical host CPU type. */
 #undef HOST_CPU
 

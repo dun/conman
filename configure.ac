@@ -3,7 +3,7 @@ dnl
 dnl ConMan AutoConf Config Jazz
 dnl   by Chris Dunlap <cdunlap@llnl.gov>
 dnl
-dnl $Id: configure.ac,v 1.8 2001/12/16 05:42:39 dun Exp $
+dnl $Id: configure.ac,v 1.9 2001/12/20 17:56:27 dun Exp $
 
 
 dnl Prologue.
@@ -61,10 +61,6 @@ AC_DEFINE_UNQUOTED(HOST_OS, "$host_os",
 AC_SUBST(host_vendor)
 AC_DEFINE_UNQUOTED(HOST_VENDOR, "$host_vendor",
   [Define the canonical host vendor type.]
-)
-AC_SUBST(host_alias)
-AC_DEFINE_UNQUOTED(HOST_ALIAS, "$host_alias",
-  [Define the canonical host alias.]
 )
 
 
