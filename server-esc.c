@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-esc.c,v 1.8 2001/09/07 18:27:40 dun Exp $
+ *  $Id: server-esc.c,v 1.9 2001/09/13 20:36:44 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -131,7 +131,6 @@ static void perform_log_replay(obj_t *client)
     int len = sizeof(buf);
     unsigned char *p;
     int n, m;
-    int rc;
 
     assert(is_client_obj(client));
 
@@ -175,9 +174,7 @@ static void perform_log_replay(obj_t *client)
          */
         len -= 2*n - 2;
 
-        if ((rc = pthread_mutex_lock(&logfile->bufLock)) != 0)
-            err_msg(rc, "pthread_mutex_lock() failed for [%s]",
-                logfile->name);
+        lock_mutex(&logfile->bufLock);
 
         /*  Compute the number of bytes to replay.
          *  If the console's circular-buffer has not yet wrapped around,
@@ -204,9 +201,7 @@ static void perform_log_replay(obj_t *client)
             ptr += n;
         }
 
-        if ((rc = pthread_mutex_unlock(&logfile->bufLock)) != 0)
-            err_msg(rc, "pthread_mutex_unlock() failed for [%s]",
-                logfile->name);
+        unlock_mutex(&logfile->bufLock);
 
         /*  Must recompute 'len' since we already subtracted space reserved
          *    for this string.  We could get away with just sprintf() here.
@@ -227,18 +222,12 @@ static void perform_quiet_toggle(obj_t *client)
 {
 /*  Toggles whether informational messages are suppressed by the client.
  */
-    int rc;
-
     assert(is_client_obj(client));
-
-    if ((rc = pthread_mutex_lock(&client->bufLock)) != 0)
-        err_msg(rc, "pthread_mutex_lock() failed for [%s]", client->name);
-
+    lock_mutex(&client->bufLock);
     client->aux.client.req->enableQuiet ^= 1;
-    DPRINTF("Toggled quiet-mode for client [%s].\n", client->name);
+    unlock_mutex(&client->bufLock);
 
-    if ((rc = pthread_mutex_unlock(&client->bufLock)) != 0)
-        err_msg(rc, "pthread_mutex_unlock() failed for [%s]", client->name);
+    DPRINTF("Toggled quiet-mode for client [%s].\n", client->name);
     return;
 }
 
@@ -250,18 +239,12 @@ static void perform_suspend(obj_t *client)
  *    into its circular-buffer; if the client does not resume before
  *    the buffer wraps around, data will be lost.
  */
-    int rc;
     int gotSuspend;
 
     assert(is_client_obj(client));
-
-    if ((rc = pthread_mutex_lock(&client->bufLock)) != 0)
-        err_msg(rc, "pthread_mutex_lock() failed for [%s]", client->name);
-
+    lock_mutex(&client->bufLock);
     gotSuspend = client->aux.client.gotSuspend ^= 1;
-
-    if ((rc = pthread_mutex_unlock(&client->bufLock)) != 0)
-        err_msg(rc, "pthread_mutex_unlock() failed for [%s]", client->name);
+    unlock_mutex(&client->bufLock);
 
     if (gotSuspend)
         DPRINTF("Suspending output to client [%s].\n", client->name);

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-net.c,v 1.4 2001/09/07 14:10:54 dun Exp $
+ *  $Id: util-net.c,v 1.5 2001/09/13 20:36:44 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util-net.h" for documentation on public functions.
@@ -19,6 +19,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include "errors.h"
+#include "util.h"
 #include "util-str.h"
 #include "util-net.h"
 
@@ -28,7 +29,7 @@
 #endif /* !INET_ADDRSTRLEN */
 
 
-static pthread_mutex_t hostent_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t hostentLock = PTHREAD_MUTEX_INITIALIZER;
 
 
 static int copy_hostent(const struct hostent *src, char *dst, int len);
@@ -41,23 +42,18 @@ struct hostent * get_host_by_name(const char *name,
 /*  gethostbyname() is not thread-safe, and there is no frelling standard
  *    for gethostbyname_r() -- the arg list varies from system to system!
  */
-    int rc;
     struct hostent *hptr;
     int n = 0;
 
     assert(name);
     assert(buf);
 
-    if ((rc = pthread_mutex_lock(&hostent_lock)) != 0)
-        err_msg(rc, "pthread_mutex_lock() failed");
-
+    lock_mutex(&hostentLock);
     if ((hptr = gethostbyname(name)))
         n = copy_hostent(hptr, buf, buflen);
     if (h_err)
         *h_err = h_errno;
-
-    if ((rc = pthread_mutex_unlock(&hostent_lock)) != 0)
-        err_msg(rc, "pthread_mutex_unlock() failed");
+    unlock_mutex(&hostentLock);
 
     if (n < 0) {
         errno = ERANGE;
@@ -73,23 +69,18 @@ struct hostent * get_host_by_addr(const char *addr, int len, int type,
 /*  gethostbyaddr() is not thread-safe, and there is no frelling standard
  *    for gethostbyaddr_r() -- the arg list varies from system to system!
  */
-    int rc;
     struct hostent *hptr;
     int n = 0;
 
     assert(addr);
     assert(buf);
 
-    if ((rc = pthread_mutex_lock(&hostent_lock)) != 0)
-        err_msg(rc, "pthread_mutex_lock() failed");
-
+    lock_mutex(&hostentLock);
     if ((hptr = gethostbyaddr(addr, len, type)))
         n = copy_hostent(hptr, buf, buflen);
     if (h_err)
         *h_err = h_errno;
-
-    if ((rc = pthread_mutex_unlock(&hostent_lock)) != 0)
-        err_msg(rc, "pthread_mutex_unlock() failed");
+    unlock_mutex(&hostentLock);
 
     if (n < 0) {
         errno = ERANGE;

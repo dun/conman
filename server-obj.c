@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.38 2001/09/13 16:15:34 dun Exp $
+ *  $Id: server-obj.c,v 1.39 2001/09/13 20:36:44 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -60,7 +60,7 @@ obj_t * create_client_obj(server_conf_t *conf, req_t *req)
 
     client->aux.client.req = req;
     time(&client->aux.client.timeLastRead);
-    if (client->aux.client.timeLastRead == ((time_t) -1))
+    if (client->aux.client.timeLastRead == (time_t) -1)
         err_msg(errno, "time() failed -- What time is it?");
     client->aux.client.gotEscape = 0;
     client->aux.client.gotSuspend = 0;
@@ -326,7 +326,6 @@ static obj_t * create_obj(
  *    to the master objs list.
  */
     obj_t *obj;
-    int rc;
 
     assert(conf);
     assert(name);
@@ -338,8 +337,7 @@ static obj_t * create_obj(
     obj->name = create_string(name);
     obj->fd = fd;
     obj->bufInPtr = obj->bufOutPtr = obj->buf;
-    if ((rc = pthread_mutex_init(&obj->bufLock, NULL)) != 0)
-        err_msg(rc, "pthread_mutex_init() failed for [%s]", name);
+    init_mutex(&obj->bufLock);
     if (!(obj->readers = list_create(NULL)))
         err_msg(0, "Out of memory");
     if (!(obj->writers = list_create(NULL)))
@@ -363,8 +361,6 @@ void destroy_obj(obj_t *obj)
 /*  Destroys the object, closing the fd and freeing resources as needed.
  *  Note: This routine is ONLY called via the objs list destructor.
  */
-    int rc;
-
     if (!obj)
         return;
 
@@ -397,8 +393,7 @@ void destroy_obj(obj_t *obj)
             err_msg(errno, "close() failed on fd=%d", obj->fd);
         obj->fd = -1;
     }
-    if ((rc = pthread_mutex_destroy(&obj->bufLock)) != 0)
-        err_msg(rc, "pthread_mutex_destroy() failed for [%s]", obj->name);
+    destroy_mutex(&obj->bufLock);
     if (obj->readers)
         list_destroy(obj->readers);
     if (obj->writers)
@@ -671,7 +666,6 @@ int read_from_obj(obj_t *obj, fd_set *pWriteSet)
  */
     unsigned char buf[MAX_BUF_SIZE - 1];
     int n;
-    int rc;
     ListIterator i;
     obj_t *reader;
 
@@ -697,15 +691,11 @@ again:
     else {
         DPRINTF("Read %d bytes from [%s].\n", n, obj->name); /* xyzzy */
         if (is_client_obj(obj)) {
-
-            if ((rc = pthread_mutex_lock(&obj->bufLock)) != 0)
-                err_msg(rc, "pthread_mutex_lock() failed for [%s]", obj->name);
-            if (time(&obj->aux.client.timeLastRead) == ((time_t) -1))
+            lock_mutex(&obj->bufLock);
+            time(&obj->aux.client.timeLastRead);
+            if (obj->aux.client.timeLastRead == (time_t) -1)
                 err_msg(errno, "time() failed -- What time is it?");
-            if ((rc = pthread_mutex_unlock(&obj->bufLock)) != 0)
-                err_msg(rc, "pthread_mutex_unlock() failed for [%s]",
-                    obj->name);
-
+            unlock_mutex(&obj->bufLock);
             n = process_escape_chars(obj, buf, n);
         }
 
@@ -736,7 +726,6 @@ int write_obj_data(obj_t *obj, void *src, int len, int isInfo)
  *  Note that this routine can write at most (MAX_BUF_SIZE - 1) bytes
  *    of data into the object's circular-buffer.
  */
-    int rc;
     int avail;
     int n, m;
 
@@ -757,8 +746,7 @@ int write_obj_data(obj_t *obj, void *src, int len, int isInfo)
     if (len >= MAX_BUF_SIZE)
         len = MAX_BUF_SIZE - 1;
 
-    if ((rc = pthread_mutex_lock(&obj->bufLock)) != 0)
-        err_msg(rc, "pthread_mutex_lock() failed for [%s]", obj->name);
+    lock_mutex(&obj->bufLock);
 
     /*  Do nothing if this is an informational message
      *    and the client has requested not to be bothered.
@@ -835,9 +823,7 @@ int write_obj_data(obj_t *obj, void *src, int len, int isInfo)
     assert(obj->bufOutPtr < &obj->buf[MAX_BUF_SIZE]);
 
 end:
-    if ((rc = pthread_mutex_unlock(&obj->bufLock)) != 0)
-        err_msg(rc, "pthread_mutex_unlock() failed for [%s]", obj->name);
-
+    unlock_mutex(&obj->bufLock);
     return(len);
 }
 
@@ -847,15 +833,12 @@ int write_to_obj(obj_t *obj)
 /*  Writes data from the obj's circular-buffer out to its file descriptor.
  *  Returns 0 on success, or -1 if the obj is ready to be destroyed.
  */
-    int rc;
     int avail;
     int n;
     int isDead = 0;
 
     assert(obj->fd >= 0);
-
-    if ((rc = pthread_mutex_lock(&obj->bufLock)) != 0)
-        err_msg(rc, "pthread_mutex_lock() failed for [%s]", obj->name);
+    lock_mutex(&obj->bufLock);
 
     /*  Assert the buffer's input and output ptrs are valid upon entry.
      */
@@ -921,8 +904,6 @@ again:
     assert(obj->bufOutPtr >= obj->buf);
     assert(obj->bufOutPtr < &obj->buf[MAX_BUF_SIZE]);
 
-    if ((rc = pthread_mutex_unlock(&obj->bufLock)) != 0)
-        err_msg(rc, "pthread_mutex_unlock() failed for [%s]", obj->name);
-
+    unlock_mutex(&obj->bufLock);
     return(isDead ? -1 : 0);
 }

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.29 2001/09/07 18:27:41 dun Exp $
+ *  $Id: server-sock.c,v 1.30 2001/09/13 20:36:44 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -23,6 +23,7 @@
 #include "errors.h"
 #include "lex.h"
 #include "server.h"
+#include "util.h"
 #include "util-file.h"
 #include "util-net.h"
 #include "util-str.h"
@@ -605,7 +606,6 @@ static int check_busy_consoles(req_t *req)
     obj_t *writer;
     int gotBcast;
     char *tty;
-    int rc;
     time_t t;
     char *delta;
     char buf[MAX_LINE];
@@ -653,16 +653,11 @@ static int check_busy_consoles(req_t *req)
         while ((writer = list_next(i))) {
 
             assert(is_client_obj(writer));
-
-            if ((rc = pthread_mutex_lock(&writer->bufLock)) != 0)
-                err_msg(rc, "pthread_mutex_lock() failed for [%s]",
-                    writer->name);
+            lock_mutex(&writer->bufLock);
             t = writer->aux.client.timeLastRead;
             gotBcast = list_is_empty(writer->writers);
             tty = writer->aux.client.req->tty;
-            if ((rc = pthread_mutex_unlock(&writer->bufLock)) != 0)
-                err_msg(rc, "pthread_mutex_unlock() failed for [%s]",
-                    writer->name);
+            unlock_mutex(&writer->bufLock);
             delta = create_time_delta_string(t);
 
             snprintf(buf, sizeof(buf),
