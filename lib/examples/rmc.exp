@@ -1,0 +1,15 @@
+#!/usr/bin/expect --
+
+##
+# $Id: rmc.exp,v 1.1 2001/08/17 16:52:02 dun Exp $
+#   by Chris Dunlap <cdunlap@llnl.gov>
+##
+
+set env(PATH) "/bin:/usr/bin:/usr/local/bin"
+source /usr/lib/conman/conman.exp
+source /usr/lib/conman/alpha.exp
+log_user 0
+
+set cmd [lindex $argv 0]
+set consoles [lrange $argv 1 end]
+conman_run 256 $consoles alpha_do_rmc_cmd 1 $cmd
