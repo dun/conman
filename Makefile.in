@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 #
-# $Id: Makefile.in,v 1.11 2001/08/21 18:35:49 dun Exp $
+# $Id: Makefile.in,v 1.12 2001/08/21 18:44:43 dun Exp $
 ##
 
 PACKAGE=	@PACKAGE@
@@ -69,11 +69,13 @@ install: $(PROGS)
 clean:
 	-rm -f *.o *.a *~ \#* core *.core
 
-distclean: clean
-	-rm -f config.cache config.log config.status stamp-h Makefile.bak
-	-rm -f $(AC_OUTPUT)
+realclean: clean
 	-rm -f $(PROGS)
 	-rm -f *.tgz *.rpm
+
+distclean: realclean
+	-rm -f config.cache config.log config.status stamp-h Makefile.bak
+	-rm -f $(AC_OUTPUT)
 
 
 # AUTO-REMAKE OF AUTOCONF-RELATED TARGETS
@@ -111,7 +113,7 @@ rpm: $(PACKAGE)-$(VERSION).tgz
 	done; \
 	cp -p $(PACKAGE).spec $$tmp/SPECS; \
 	cp -p $(PACKAGE)-$(VERSION).tgz $$tmp/SOURCES; \
-	echo "creating $(PACKAGE)-$(VERSION) RPM"; \
+	echo "creating $(PACKAGE)-$(VERSION) rpm"; \
 	rpm --showrc | egrep "_(gpg|pgp)_name" >/dev/null && sign="--sign"; \
 	rpm -ba $$sign --quiet --define "_topdir $$tmp" \
 	  $$tmp/SPECS/$(PACKAGE).spec && \
