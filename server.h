@@ -2,7 +2,7 @@
  *  server.h
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server.h,v 1.6 2001/05/18 15:48:16 dun Exp $
+ *  $Id: server.h,v 1.7 2001/05/24 20:49:22 dun Exp $
 \******************************************************************************/
 
 
@@ -49,9 +49,9 @@ typedef union aux_obj {
 
 typedef struct base_obj {		/* BASE OBJ:                          */
     char            *name;		/*  obj name                          */
-    int              fd;		/*  file descriptor, -1 if inactive   */
+    int              fd;		/*  file descriptor                   */
     int              gotEOF;		/*  true if obj rcvd EOF on last read */
-    unsigned char    buf[MAX_BUF_SIZE];	/*  circ-buffer to be written to fd   */
+    unsigned char    buf[MAX_BUF_SIZE];	/*  circular-buf to be written to fd  */
     unsigned char   *bufInPtr;		/*  ptr for data written in to buf    */
     unsigned char   *bufOutPtr;		/*  ptr for data written out to fd    */
     pthread_mutex_t  bufLock;		/*  lock protecting access to buf     */
