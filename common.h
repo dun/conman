@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: common.h,v 1.38 2002/05/18 04:29:28 dun Exp $
+ *  $Id: common.h,v 1.39 2002/08/13 23:47:50 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -66,6 +66,7 @@
 #define ESC_CHAR                0xFF
 #define ESC_CHAR_BREAK          'B'
 #define ESC_CHAR_CLOSE          '.'
+#define ESC_CHAR_DEL            'D'     /* gnats:100 del char kludge */
 #define ESC_CHAR_FORCE          'F'
 #define ESC_CHAR_HELP           '?'
 #define ESC_CHAR_INFO           'I'

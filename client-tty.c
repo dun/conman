@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-tty.c,v 1.45 2002/05/16 18:54:20 dun Exp $
+ *  $Id: client-tty.c,v 1.46 2002/08/13 23:47:50 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -52,6 +52,7 @@ static int write_to_stdout(client_conf_t *conf);
 static int send_esc_seq(client_conf_t *conf, char c);
 static int perform_break_esc(client_conf_t *conf, char c);
 static int perform_close_esc(client_conf_t *conf, char c);
+static int perform_del_esc(client_conf_t *conf, char c);
 static int perform_force_esc(client_conf_t *conf, char c);
 static int perform_help_esc(client_conf_t *conf, char c);
 static int perform_info_esc(client_conf_t *conf, char c);
@@ -186,6 +187,8 @@ static int read_from_stdin(client_conf_t *conf)
             return(perform_break_esc(conf, c));
         case ESC_CHAR_CLOSE:
             return(perform_close_esc(conf, c));
+        case ESC_CHAR_DEL:              /* XXX: gnats:100 del char kludge */
+            return(perform_del_esc(conf, c));
         case ESC_CHAR_FORCE:
             return(perform_force_esc(conf, c));
         case ESC_CHAR_HELP:
@@ -329,6 +332,22 @@ static int perform_close_esc(client_conf_t *conf, char c)
 }
 
 
+static int perform_del_esc(client_conf_t *conf, char c)
+{
+/*  Transmits a DEL char to all writable consoles connected to the client.
+ *  This is somewhat necessary because some terminals remap the DEL key
+ *    (0x7f) into an ANSI escape character sequence (0x1b5b337e).
+ *  Returns 1 on success, or 0 if the socket connection is to be closed.
+ *
+ *  XXX: gnats:100 del char kludge
+ */
+    if (conf->req->command != CONMAN_CMD_CONNECT)
+        return(1);
+
+    return(send_esc_seq(conf, c));
+}
+
+
 static int perform_force_esc(client_conf_t *conf, char c)
 {
 /*  Changes a R/O session into a R/W session by forcibly stealing the console
@@ -375,6 +394,14 @@ static int perform_help_esc(client_conf_t *conf, char c)
         write_esc_char(ESC_CHAR_BREAK, tmp);
         n = append_format_string(buf, sizeof(buf),
             "  %2s%-2s -  Transmit a serial-break.\r\n", esc, tmp);
+    }
+
+    /*  XXX: gnats:100 del char kludge
+     */
+    if (conf->req->command == CONMAN_CMD_CONNECT) {
+        write_esc_char(ESC_CHAR_DEL, tmp);
+        n = append_format_string(buf, sizeof(buf),
+            "  %2s%-2s -  Transmit a DEL character.\r\n", esc, tmp);
     }
 
     if (conf->req->command == CONMAN_CMD_MONITOR) {

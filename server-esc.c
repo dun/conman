@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-esc.c,v 1.33 2002/07/15 23:22:52 dun Exp $
+ *  $Id: server-esc.c,v 1.34 2002/08/13 23:47:50 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -48,6 +48,7 @@
 
 
 static void perform_serial_break(obj_t *client);
+static void perform_del_char_seq(obj_t *client);
 static void perform_console_writer_linkage(obj_t *client);
 static void perform_log_replay(obj_t *client);
 static void perform_quiet_toggle(obj_t *client);
@@ -82,6 +83,9 @@ int process_client_escapes(obj_t *client, void *src, int len)
                 break;
             case ESC_CHAR_BREAK:
                 perform_serial_break(client);
+                break;
+            case ESC_CHAR_DEL:          /* XXX: gnats:100 del char kludge */
+                perform_del_char_seq(client);
                 break;
             case ESC_CHAR_FORCE:
                 client->aux.client.req->enableForce = 1;
@@ -154,6 +158,32 @@ static void perform_serial_break(obj_t *client)
         else if (is_telnet_obj(console)) {
             send_telnet_cmd(console, BREAK, -1);
         }
+    }
+    list_iterator_destroy(i);
+    return;
+}
+
+
+static void perform_del_char_seq(obj_t *client)
+{
+/*  Transmits a del char to each of the consoles written to by the client.
+ *
+ *  XXX: gnats:100 del char kludge
+ */
+    ListIterator i;
+    obj_t *console;
+    unsigned char del = 0x7F;
+
+    assert(is_client_obj(client));
+
+    i = list_iterator_create(client->readers);
+    while ((console = list_next(i))) {
+
+        assert(is_console_obj(console));
+        DPRINTF((5, "Performing DEL-char sequence on console [%s].\n",
+            console->name));
+
+        write_obj_data(console, &del, 1, 0);
     }
     list_iterator_destroy(i);
     return;
