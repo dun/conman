@@ -3,7 +3,7 @@ dnl
 dnl ConMan AutoConf Config Jazz
 dnl   by Chris Dunlap <cdunlap@llnl.gov>
 dnl
-dnl $Id: configure.ac,v 1.2 2001/09/21 21:14:21 dun Exp $
+dnl $Id: configure.ac,v 1.3 2001/09/22 21:32:52 dun Exp $
 
 
 dnl Prologue.
@@ -164,6 +164,13 @@ AC_CACHE_CHECK([for a sense of humor], ac_cv_humor, ac_cv_humor=yes)
 dnl Add defs to config.h.
 dnl
 AC_DEFINE(USE_PTHREADS, 1, [Define if using Pthreads.])
+
+AH_BOTTOM(
+[/* Override default out_of_memory() macro definition.
+ */
+#include "errors.h"
+#define out_of_memory() (err_msg(0, "Out of memory"), NULL)]
+)
 
 
 dnl Epilogue.

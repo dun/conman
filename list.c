@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: list.c,v 1.10 2001/09/21 21:25:17 dun Exp $
+ *  $Id: list.c,v 1.11 2001/09/22 21:32:52 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "list.h" for documentation on public functions.
@@ -23,8 +23,30 @@
 #include "list.h"
 
 
+/*******************\
+**  Out of Memory  **
+\*******************/
+
+#ifdef USE_OOMF
+#  undef out_of_memory
+   extern void * out_of_memory(void);
+#else /* !USE_OOMF */
+#  ifndef out_of_memory
+#    define out_of_memory() (NULL)
+#  endif /* !out_of_memory */
+#endif /* USE_OOMF */
+
+
+/***************\
+**  Constants  **
+\***************/
+
 #define LIST_MAGIC 0xCD
 
+
+/****************\
+**  Data Types  **
+\****************/
 
 struct listNode {
     void                 *data;		/* node's data                        */
@@ -54,9 +76,17 @@ struct list {
 typedef struct listNode * ListNode;
 
 
+/****************\
+**  Prototypes  **
+\****************/
+
 static void * list_node_create(List l, ListNode *pp, void *x);
 static void * list_node_destroy(List l, ListNode *pp);
 
+
+/************\
+**  Macros  **
+\************/
 
 #ifdef USE_PTHREADS
 
@@ -94,12 +124,16 @@ static void * list_node_destroy(List l, ListNode *pp);
 #endif /* USE_PTHREADS */
 
 
+/***************\
+**  Functions  **
+\***************/
+
 List list_create(ListDelF f)
 {
     List l;
 
     if (!(l = (List) malloc(sizeof(struct list))))
-        return(NULL);
+        return(out_of_memory());
     l->head = NULL;
     l->tail = &l->head;
     l->iNext = NULL;
@@ -364,7 +398,7 @@ ListIterator list_iterator_create(List l)
 
     assert(l);
     if (!(i = (ListIterator) malloc(sizeof(struct listIterator))))
-        return(NULL);
+        return(out_of_memory());
     i->list = l;
     list_mutex_lock(&l->mutex);
     assert(l->magic == LIST_MAGIC);
@@ -432,15 +466,16 @@ void * list_next(ListIterator i)
 
 void * list_insert(ListIterator i, void *x)
 {
+    void *v;
+
     assert(i);
     assert(x);
     assert(i->magic == LIST_MAGIC);
     list_mutex_lock(&i->list->mutex);
     assert(i->list->magic == LIST_MAGIC);
-    if (!list_node_create(i->list, i->prev, x))
-        x = NULL;
+    v = list_node_create(i->list, i->prev, x);
     list_mutex_unlock(&i->list->mutex);
-    return(x);
+    return(v);
 }
 
 
@@ -502,7 +537,7 @@ static void * list_node_create(List l, ListNode *pp, void *x)
     assert(pp);
     assert(x);
     if (!(p = (ListNode) malloc(sizeof(struct listNode))))
-        return(NULL);
+        return(out_of_memory());
     p->data = x;
     if (!(p->next = *pp))
         l->tail = &p->next;

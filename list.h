@@ -1,11 +1,23 @@
 /******************************************************************************\
- *  $Id: list.h,v 1.4 2001/05/24 20:56:08 dun Exp $
+ *  $Id: list.h,v 1.5 2001/09/22 21:32:52 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
 
 #ifndef _LIST_H
 #define _LIST_H
+
+
+/***********\
+**  Notes  **
+\***********/
+
+/*  When a memory allocation request fails, the list returns out_of_memory().
+ *  By default, this is a macro definition that returns NULL; this macro may
+ *  be redefined to invoke another routine instead.  Furthermore, if USE_OOMF
+ *  is defined, this macro will not be defined and the list will expect an
+ *  external Out-Of-Memory Function to be defined.
+ */
 
 
 /****************\
@@ -49,7 +61,7 @@ typedef int (*ListFindF)(void *x, void *key);
 
 List list_create(ListDelF f);
 /*
- *  Creates and returns a new empty list, or NULL if creation fails.
+ *  Creates and returns a new empty list, or out_of_memory() on failure.
  *  The deletion function (f) is used to deallocate memory used by items
  *    in the list; if this is NULL, memory associated with these items
  *    will not be freed when the list is destroyed.
@@ -82,13 +94,13 @@ int list_count(List l);
 void * list_append(List l, void *x);
 /*
  *  Inserts data (x) at the end of list (l).
- *  Returns the data's ptr, or NULL if insertion failed (ie, out of memory).
+ *  Returns the data's ptr, or out_of_memory() if insertion failed.
  */
 
 void * list_prepend(List l, void *x);
 /*
  *  Inserts data (x) at the beginning of list (l).
- *  Returns the data's ptr, or NULL if insertion failed (ie, out of memory).
+ *  Returns the data's ptr, or out_of_memory() if insertion failed.
  */
 
 void * list_find_first(List l, ListFindF f, void *key);
@@ -125,7 +137,7 @@ void list_sort(List l, ListCmpF f);
 void * list_push(List l, void *x);
 /*
  *  Pushes data (x) onto the top of stack (l).
- *  Returns the data's ptr, or NULL if insertion failed (ie, out of memory).
+ *  Returns the data's ptr, or out_of_memory() if insertion failed.
  */
 
 void * list_pop(List l);
@@ -149,7 +161,7 @@ void * list_peek(List l);
 void * list_enqueue(List l, void *x);
 /*
  *  Enqueues data (x) at the tail of queue (l).
- *  Returns the data's ptr, or NULL if insertion failed (ie, out of memory).
+ *  Returns the data's ptr, or out_of_memory() if insertion failed.
  */
 
 void * list_dequeue(List l);
@@ -166,7 +178,7 @@ void * list_dequeue(List l);
 ListIterator list_iterator_create(List l);
 /*
  *  Creates and returns a list iterator for non-destructively traversing
- *    list (l), or NULL if creation fails.
+ *    list (l), or out_of_memory() on failure.
  */
 
 void list_iterator_reset(ListIterator i);
@@ -194,7 +206,7 @@ void * list_insert(ListIterator i, void *x);
  *  Inserts data (x) immediately before the last item returned via list
  *    iterator (i); once the list iterator reaches the end of the list,
  *    insertion is made at the list's end.
- *  Returns the data's ptr, or NULL if insertion failed (ie, out of memory).
+ *  Returns the data's ptr, or out_of_memory() if insertion failed.
  */
 
 void * list_find(ListIterator i, ListFindF f, void *key);
