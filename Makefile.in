@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Makefile.in,v 1.54 2002/09/18 20:32:17 dun Exp $
+# $Id: Makefile.in,v 1.55 2002/09/27 03:23:19 dun Exp $
 ##
 
 PROJECT=	conman
@@ -31,7 +31,7 @@ AC_OUTPUT=	Makefile config.h conman.spec \
 
 CONF=		@CONMAN_CONF@
 PROGS=		conman conmand
-COMMON_OBJS1=	common.o fd.o list.o lex.o log.o str.o
+COMMON_OBJS1=	common.o fd.o list.o lex.o log.o str.o tty.o
 COMMON_OBJS2=	util.o util-net.o
 COMMON_OBJS=	$(COMMON_OBJS1) $(COMMON_OBJS2) @LIBOBJS@
 CLIENT_OBJS1=	client.o client-conf.o client-sock.o client-tty.o

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: common.h,v 1.41 2002/09/17 22:40:25 dun Exp $
+ *  $Id: common.h,v 1.42 2002/09/27 03:23:19 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -28,7 +28,6 @@
 #ifndef _COMMON_H
 #define _COMMON_H
 
-#include <termios.h>
 #include "lex.h"
 #include "list.h"
 
@@ -178,12 +177,6 @@ extern const char *conman_license;      /* defined in common.c */
 req_t * create_req(void);
 
 void destroy_req(req_t *req);
-
-void get_tty_mode(struct termios *tty, int fd);
-
-void set_tty_mode(struct termios *tty, int fd);
-
-void get_tty_raw(struct termios *tty, int fd);
 
 
 #endif /* !_COMMON_H */

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-obj.c,v 1.73 2002/09/18 20:32:17 dun Exp $
+ *  $Id: server-obj.c,v 1.74 2002/09/27 03:23:19 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -48,6 +48,7 @@
 #include "server.h"
 #include "str.h"
 #include "tselect.h"
+#include "tty.h"
 #include "util-net.h"
 #include "util.h"
 #include "wrapper.h"
@@ -259,10 +260,10 @@ obj_t * create_serial_obj(server_conf_t *conf, char *name,
     serial = create_obj(conf, name, fd, CONMAN_OBJ_SERIAL);
     serial->aux.serial.dev = str_create(dev);
     serial->aux.serial.logfile = NULL;
-    get_tty_mode(&serial->aux.serial.tty, fd);
-    get_tty_raw(&tty, fd);
+    tty_get_mode(fd, &serial->aux.serial.tty);
+    tty_get_mode_raw(fd, &tty);
     set_serial_opts(&tty, serial, opts);
-    set_tty_mode(&tty, fd);
+    tty_set_mode(fd, &tty);
 
     /*  Success!
      */
@@ -596,7 +597,7 @@ void destroy_obj(obj_t *obj)
                 obj->name);
         if (obj->aux.serial.dev)
             free(obj->aux.serial.dev);
-        set_tty_mode(&obj->aux.serial.tty, obj->fd);
+        tty_set_mode(obj->fd, &obj->aux.serial.tty);
         /*
          *  Do not destroy obj->aux.serial.logfile since it is only a ref.
          */

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-tty.c,v 1.48 2002/09/18 20:32:17 dun Exp $
+ *  $Id: client-tty.c,v 1.49 2002/09/27 03:23:19 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -43,6 +43,7 @@
 #include "fd.h"
 #include "log.h"
 #include "str.h"
+#include "tty.h"
 #include "util.h"
 
 
@@ -101,9 +102,9 @@ void connect_console(client_conf_t *conf)
     posix_signal(SIGTERM, exit_handler);
     posix_signal(SIGTSTP, SIG_DFL);
 
-    get_tty_mode(&conf->tty, STDIN_FILENO);
-    get_tty_raw(&tty, STDIN_FILENO);
-    set_tty_mode(&tty, STDIN_FILENO);
+    tty_get_mode(STDIN_FILENO, &conf->tty);
+    tty_get_mode_raw(STDIN_FILENO, &tty);
+    tty_set_mode(STDIN_FILENO, &tty);
 
     locally_display_status(conf, "opened");
 
@@ -140,7 +141,7 @@ void connect_console(client_conf_t *conf)
     if (!conf->isClosedByClient)
         locally_display_status(conf, "terminated by server");
 
-    set_tty_mode(&conf->tty, STDIN_FILENO);
+    tty_set_mode(STDIN_FILENO, &conf->tty);
     return;
 }
 
@@ -578,13 +579,13 @@ static int perform_suspend_esc(client_conf_t *conf, char c)
     if (!send_esc_seq(conf, c))
         return(0);
     locally_display_status(conf, "suspended");
-    set_tty_mode(&conf->tty, STDIN_FILENO);
+    tty_set_mode(STDIN_FILENO, &conf->tty);
 
     if (kill(getpid(), SIGTSTP) < 0)
         log_err(errno, "Unable to suspend client (pid %d)", (int) getpid());
 
-    get_tty_raw(&tty, STDIN_FILENO);
-    set_tty_mode(&tty, STDIN_FILENO);
+    tty_get_mode_raw(STDIN_FILENO, &tty);
+    tty_set_mode(STDIN_FILENO, &tty);
     locally_display_status(conf, "resumed");
     if (!send_esc_seq(conf, c))
         return(0);

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: common.c,v 1.31 2002/09/18 20:32:17 dun Exp $
+ *  $Id: common.c,v 1.32 2002/09/27 03:23:19 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -29,12 +29,10 @@
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
-#include <termios.h>
-#include <unistd.h>
 #include "common.h"
+#include "list.h"
 #include "log.h"
 #include "str.h"
 
@@ -130,74 +128,5 @@ void destroy_req(req_t *req)
         list_destroy(req->consoles);
 
     free(req);
-    return;
-}
-
-
-void get_tty_mode(struct termios *tty, int fd)
-{
-/*  Gets the tty values associated with 'fd' and stores them in 'tty'.
- */
-    assert(fd >= 0);
-    assert(tty != NULL);
-
-    if (!isatty(fd))
-        return;
-    if (tcgetattr(fd, tty) < 0)
-        log_err(errno, "tcgetattr() failed on fd=%d", fd);
-    return;
-}
-
-
-void set_tty_mode(struct termios *tty, int fd)
-{
-/*  Sets the tty values associated with 'fd' to those stored in 'tty'.
- */
-    assert(fd >= 0);
-    assert(tty != NULL);
-
-    if (!isatty(fd))
-        return;
-    if (tcsetattr(fd, TCSAFLUSH, tty) < 0)
-        log_err(errno, "tcgetattr() failed on fd=%d", fd);
-    return;
-}
-
-
-void get_tty_raw(struct termios *tty, int fd)
-{
-/*  Gets the tty values associated with 'fd' and stores them in 'tty',
- *    adjusting them to reflect the device is operating in "raw" mode.
- *  Note that the 'fd' device is not placed in raw mode by this call;
- *    to do so, invoke set_tty_mode() with the updated termios struct.
- */
-    assert(tty != NULL);
-
-    get_tty_mode(tty, fd);
-
-    tty->c_iflag = 0;
-    tty->c_oflag = 0;
-
-    /*  Set 8 bits/char.
-     */
-    tty->c_cflag &= ~CSIZE;
-    tty->c_cflag |= CS8;
-
-    /*  Disable parity checking.
-     */
-    tty->c_cflag &= ~PARENB;
-
-    /*  Ignore modem status lines for locally attached device.
-     */
-    tty->c_cflag |= CLOCAL;
-  
-    /*  Disable echo, canonical mode, extended input processing, signal chars.
-     */
-    tty->c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
-
-    /*  read() does not return until data is present (may block indefinitely).
-     */
-    tty->c_cc[VMIN] = 1;
-    tty->c_cc[VTIME] = 0;
     return;
 }
