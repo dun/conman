@@ -1,6 +1,6 @@
 2003-12-03  Chris Dunlap  <cdunlap@llnl.gov>
 
-        * Makefile.in, config.h.in, configure, configure.ac:
+        * Makefile.in, config.h.in, configure, configure.ac, conman.spec.in:
 	Updated to autoconf-2.57.  Enable tcp-wrappers by default if possible.
 	Added CPPFLAGS AC-substitution to support non-standard includes.
 
