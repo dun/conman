@@ -1,6 +1,9 @@
-2003-09-26  Chris Dunlap  <cdunlap@llnl.gov>
+2003-09-30  Chris Dunlap  <cdunlap@llnl.gov>
 
-	* : Released 0.1.8.7.
+	* server-logfile.c: Only ignore NULs on newline transition
+	when sanitizing console logs.
+
+2003-09-26  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server-logfile.c: Ignore NULs when sanitizing console logs.
 

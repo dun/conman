@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-logfile.c,v 1.11.2.3 2003/09/26 21:27:09 dun Exp $
+ *  $Id: server-logfile.c,v 1.11.2.4 2003/09/30 20:12:07 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -232,13 +232,15 @@ int write_log_data(obj_t *log, const void *src, int len)
         /*
          *  A newline state machine is used to properly sanitize CR/LF line
          *    terminations.  This is responsible for coalescing multiple CRs,
-         *    swapping LF/CR to CR/LF, prepending a CR to a lonely LF, and
-         *    appending a LF to a lonely CR to prevent characters from being
-         *    overwritten.
+         *    swapping LF/CR to CR/LF, transcribing CR/NUL to CR/LF,
+         *    prepending a CR to a lonely LF, and appending a LF to a
+         *    lonely CR to prevent characters from being overwritten.
          */
         if (*p == '\r') {
             if (log->aux.logfile.lineState == CONMAN_LOG_LINE_IN)
                 log->aux.logfile.lineState = CONMAN_LOG_LINE_CR;
+            else
+                ; /* ignore */
         }
         else if (*p == '\n') {
             log->aux.logfile.lineState = CONMAN_LOG_LINE_LF;
@@ -246,6 +248,10 @@ int write_log_data(obj_t *log, const void *src, int len)
             *q++ = '\n';
             if (log->aux.logfile.enableTimestamps)
                 q += write_time_string(0, q, qLast - q);
+        }
+        else if (  (*p == '\0')
+                && (log->aux.logfile.lineState != CONMAN_LOG_LINE_IN) ) {
+            ; /* ignore */
         }
         else {
             if (log->aux.logfile.lineState == CONMAN_LOG_LINE_CR) {
@@ -260,10 +266,7 @@ int write_log_data(obj_t *log, const void *src, int len)
 
                 int c = *p & 0x7F;      /* strip data to 7-bit ASCII */
 
-                if (c == 0x00) {        /* ASCII NUL */
-                    ;
-                }
-                else if (c < 0x20) {    /* ASCII ctrl-chars */
+                if (c < 0x20) {         /* ASCII ctrl-chars */
                     *q++ = (*p & 0x80) ? '~' : '^';
                     *q++ = c + '@';
                 }
