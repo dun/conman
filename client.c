@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client.c,v 1.6 2001/06/12 16:17:48 dun Exp $
+ *  $Id: client.c,v 1.7 2001/06/15 17:04:29 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -17,6 +17,11 @@
 int main(int argc, char *argv[])
 {
     client_conf_t *conf;
+
+    if (!isatty(STDIN_FILENO))
+        err_msg(0, "Standard Input is not a terminal device.");
+    if (!isatty(STDOUT_FILENO))
+        err_msg(0, "Standard Output is not a terminal device.");
 
     conf = create_client_conf();
     process_client_cmd_line(argc, argv, conf);

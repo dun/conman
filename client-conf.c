@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-conf.c,v 1.16 2001/06/15 15:54:36 dun Exp $
+ *  $Id: client-conf.c,v 1.17 2001/06/15 17:04:29 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -47,14 +47,16 @@ client_conf_t * create_client_conf(void)
     if ((p == NULL) || (passp == NULL) || (passp->pw_uid != uid))
         if (!(passp = getpwuid(uid)))
             err_msg(errno, "Unable to lookup user name for UID=%d", uid);
-    conf->req->user = create_string(passp->pw_name);
+    if (passp->pw_name && *passp->pw_name)
+        conf->req->user = create_string(passp->pw_name);
 
     /*  Where am I?
      */
     p = ttyname(STDIN_FILENO);
-    if (strstr(p, "/dev/") == p)
+    if (p && (strstr(p, "/dev/") == p))
         p += 5;
-    conf->req->tty = create_string(p);
+    if (p && *p)
+        conf->req->tty = create_string(p);
 
     /*  Must copy host string constant since it will eventually be free()'d.
      */

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-sock.c,v 1.12 2001/06/15 15:46:44 dun Exp $
+ *  $Id: client-sock.c,v 1.13 2001/06/15 17:04:29 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -62,22 +62,32 @@ void connect_to_server(client_conf_t *conf)
 int send_greeting(client_conf_t *conf)
 {
     char buf[MAX_SOCK_LINE];
+    char *ptr = buf;
+    int len = sizeof(buf) - 1;		/* reserve space for terminating \n */
     int n;
 
     assert(conf->req->sd >= 0);
-    assert(conf->req->user && *conf->req->user);
-    assert(conf->req->tty && *conf->req->tty);
+    assert(conf->req->user);
 
-    n = snprintf(buf, sizeof(buf), "%s %s='%s' %s='%s'\n",
+    n = snprintf(ptr, len, "%s %s='%s'",
         proto_strs[LEX_UNTOK(CONMAN_TOK_HELLO)],
-        proto_strs[LEX_UNTOK(CONMAN_TOK_USER)], lex_encode(conf->req->user),
-        proto_strs[LEX_UNTOK(CONMAN_TOK_TTY)], lex_encode(conf->req->tty));
+        proto_strs[LEX_UNTOK(CONMAN_TOK_USER)], lex_encode(conf->req->user));
+    if (n < 0 || n >= len)
+        goto overflow;
+    ptr += n;
+    len -= n;
 
-    if (n < 0 || n >= sizeof(buf)) {
-        conf->errnum = CONMAN_ERR_LOCAL;
-        conf->errmsg = create_string("Buffer overflow during send_greeting()");
-        return(-1);
+    if (conf->req->tty) {
+        n = snprintf(ptr, len, " %s='%s'",
+            proto_strs[LEX_UNTOK(CONMAN_TOK_TTY)], lex_encode(conf->req->tty));
+        if (n < 0 || n >= len)
+            goto overflow;
+        ptr += n;
+        len -= n;
     }
+
+    *ptr++ = '\n';
+    *ptr++ = '\0';
 
     if (write_n(conf->req->sd, buf, strlen(buf)) < 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
@@ -98,22 +108,24 @@ int send_greeting(client_conf_t *conf)
         return(-1);
     }
     return(0);
+
+overflow:
+    conf->errnum = CONMAN_ERR_LOCAL;
+    conf->errmsg = create_string("Overran request buffer for sending greeting");
+    return(-1);
 }
 
 
 int send_req(client_conf_t *conf)
 {
     char buf[MAX_SOCK_LINE];
+    char *ptr = buf;
+    int len = sizeof(buf) - 1;		/* reserve space for terminating \n */
     int n;
-    char *ptr;
-    int len;
     char *cmd;
     char *str;
 
     assert(conf->req->sd >= 0);
-
-    ptr = buf;
-    len = sizeof(buf) - 1;		/* reserve space for terminating \n */
 
     switch(conf->req->command) {
     case QUERY:
