@@ -1,4 +1,4 @@
-.\" $Id: conman.conf.5.in,v 1.5.2.6 2003/10/01 23:22:10 dun Exp $
+.\" $Id: conman.conf.5.in,v 1.5.2.7 2003/10/07 23:19:36 dun Exp $
 
 .TH CONMAN.CONF 5 "@DATE@" "@PROJECT@-@VERSION@" "LLNL"
 
@@ -100,8 +100,10 @@ logoptions include the following:
 characters into 7-bit printable characters.
 .br
 .sp
-\fBtimestamp\fR or \fBnotimestamp\fR - timestamped logs prepend each line with
-the current timestamp in "YYYY-MM-DD HH:MM:SS" format.
+\fBtimestamp\fR or \fBnotimestamp\fR - timestamped logs prepend each line
+of console output with a timestamp in "YYYY-MM-DD HH:MM:SS" format.  This
+timestamp is generated when the first character following the line break is
+output.
 .br
 .sp
 The default is "\fBnosanitize\fR,\fBnotimestamp\fR".

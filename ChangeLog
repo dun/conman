@@ -1,3 +1,7 @@
+2003-10-07  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* etc/conman.conf, man/conman.conf.5.in: Tweaked timestamp logopt docs.
+
 2003-10-03  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server-logfile.c, server-obj.c, server.h: Fixed newline timestamping
