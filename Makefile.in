@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 #
-# $Id: Makefile.in,v 1.5 2001/08/14 23:16:15 dun Exp $
+# $Id: Makefile.in,v 1.6 2001/08/17 21:24:13 dun Exp $
 ##
 
 PACKAGE=	@PACKAGE@
@@ -13,12 +13,18 @@ DEFS=		@DEFS@
 CFLAGS=		@CFLAGS@
 LDFLAGS=	@LDFLAGS@
 LIBS=		@LIBS@
-INSTALL=	@INSTALL@
 RANLIB=		@RANLIB@
+INSTALL=	@INSTALL@
 @SET_MAKE@
 COPTS=		$(CFLAGS) $(CPPFLAGS) $(DEFS)
 
-AC_OUTPUT=	Makefile config.h
+AC_OUTPUT=	Makefile config.h conman.spec
+
+prefix=		@prefix@
+exec_prefix=	@exec_prefix@
+bindir=		@bindir@
+sbindir=	@sbindir@
+libdir=		@libdir@
 
 PROGS=		conman conmand
 COMMON_OBJS=	common.o errors.o list.o lex.o util.o @LIBOBJS@
@@ -43,6 +49,19 @@ conmand: $(SERVER_OBJS)
 
 depend:
 	makedepend -Y -- $(COPTS) -- *.[ch] 2>/dev/null
+
+install:
+	mkdir -p $(DESTDIR)$(bindir)
+	$(INSTALL) conman $(DESTDIR)$(bindir)/
+	$(INSTALL) conmen $(DESTDIR)$(bindir)/
+	mkdir -p $(DESTDIR)$(sbindir)
+	$(INSTALL) conmand $(DESTDIR)$(sbindir)/
+	mkdir -p $(DESTDIR)/etc
+	$(INSTALL) -m 644 conman.conf $(DESTDIR)/etc
+	for f in `cd lib && find * -name "CVS" -prune -o -type f -print`; do \
+	  mkdir -p `dirname $(DESTDIR)$(libdir)/$(PACKAGE)/$$f`; \
+	  $(INSTALL) -m 644 lib/$$f $(DESTDIR)$(libdir)/$(PACKAGE)/$$f; \
+	done
 
 clean:
 	-rm -f *.o *.a *~ \#* core *.core

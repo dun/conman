@@ -3,7 +3,7 @@ dnl
 dnl ConMan AutoConf Config Jazz
 dnl   by Chris Dunlap <cdunlap@llnl.gov>
 dnl
-dnl $Id: configure.in,v 1.5 2001/08/14 23:18:05 dun Exp $
+dnl $Id: configure.in,v 1.6 2001/08/17 21:24:13 dun Exp $
 
 
 dnl Prologue.
@@ -11,6 +11,7 @@ dnl
 AC_INIT(common.h)
 AC_CONFIG_AUX_DIR(auxdir)
 AC_CONFIG_HEADER(config.h)
+AC_PREFIX_DEFAULT(/usr)
 
 
 dnl Read package and version info from VERSION.
@@ -28,7 +29,7 @@ dnl This must be done before AC_PROG_CC defines its own defaults.
 dnl
 AC_MSG_CHECKING(whether debugging is enabled)
 AC_ARG_ENABLE(debug,
-  [  --enable-debug          turn on debugging for development work],
+  AC_HELP_STRING([--enable-debug], [enable debugging for development work]),
   [case "${enableval}" in
     yes) debug=yes ;;
     no)  debug=no ;;
@@ -131,7 +132,7 @@ dnl Check for Gray Watson's Debug Malloc Library <http://dmalloc.com/>.
 dnl
 AC_MSG_CHECKING(whether to use the Debug Malloc Library)
 AC_ARG_WITH(dmalloc,
-  [  --with-dmalloc          use Gray Watson's dmalloc library],
+  AC_HELP_STRING([--with-dmalloc], [use Gray Watson's dmalloc library]),
   [case "${withval}" in
     yes) dmalloc=yes ;;
     no)  dmalloc=no ;;
@@ -170,4 +171,5 @@ dnl
 AC_OUTPUT_COMMANDS(echo "creating dependencies"; make depend >/dev/null)
 AC_OUTPUT([
   Makefile
+  conman.spec
 ])

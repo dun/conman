@@ -1,0 +1,48 @@
+# $Id: conman.spec.in,v 1.1 2001/08/17 21:24:13 dun Exp $
+
+%define name    @PACKAGE@
+%define version @VERSION@
+%define release 1
+
+Name: %name
+Version: %version
+Release: %release
+Summary: ConMan - Remote Console Management
+#URL: FOO
+Group: Applications/Communications
+Copyright: LLNL/Internal-Use-Only
+BuildRoot: %{_tmppath}/%{name}-%{version}
+
+Source0: %{name}-%{version}.tgz
+
+%description
+ConMan is currently available for LLNL internal use only.
+An unrestricted GPL release of ConMan is pending Review & Release.
+
+%prep
+%setup
+
+%build
+CFLAGS="$RPM_OPT_FLAGS" LDFLAGS="-s" ./configure --prefix=/usr
+make
+
+%install
+rm -rf "$RPM_BUILD_ROOT"
+mkdir -p "$RPM_BUILD_ROOT"
+DESTDIR="$RPM_BUILD_ROOT" make install
+
+%clean
+rm -rf "$RPM_BUILD_ROOT"
+
+%files
+%defattr(-,root,root,0755)
+%config(noreplace) /etc/conman.conf
+/usr/bin/conman
+/usr/bin/conmen
+/usr/sbin/conmand
+/usr/lib/conman/alpha.exp
+/usr/lib/conman/conman.exp
+/usr/lib/conman/examples/wtf.exp
+/usr/lib/conman/examples/mac.exp
+/usr/lib/conman/examples/rmc.exp
+/usr/lib/conman/examples/srm.exp
