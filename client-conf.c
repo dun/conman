@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-conf.c,v 1.30 2001/09/23 01:54:52 dun Exp $
+ *  $Id: client-conf.c,v 1.31 2001/10/08 03:57:55 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -205,7 +205,7 @@ static void read_consoles_from_file(List consoles, char *file)
         err_msg(errno, "Unable to stat \"%s\"", file);
     len = fdStat.st_size;
     if (!(buf = malloc(len + 1)))
-        err_msg(errno, "Unable to allocate memory for parsing \"%s\"", file);
+        out_of_memory();
     if ((n = read_n(fd, buf, len)) < 0)
         err_msg(errno, "Unable to read \"%s\"", file);
     assert(n == len);
