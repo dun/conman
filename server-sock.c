@@ -2,7 +2,7 @@
  *  server-sock.c  
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server-sock.c,v 1.6 2001/05/15 19:45:30 dun Exp $
+ *  $Id: server-sock.c,v 1.7 2001/05/18 15:45:29 dun Exp $
 \******************************************************************************/
 
 
@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <time.h>
 #include <unistd.h>
 #include "conman.h"
 #include "errors.h"
@@ -47,6 +48,8 @@ static int recv_req(req_t *req);
 static int parse_cmd_opts(Lex l, req_t *req);
 static int query_consoles(server_conf_t *conf, req_t *req);
 static int validate_req(req_t *req);
+static int check_too_many_consoles(req_t *req);
+static int check_busy_consoles(req_t *req);
 static int send_rsp(req_t *req, int errnum, char *errmsg);
 static void perform_query_cmd(req_t *req);
 static void perform_monitor_cmd(req_t *req, server_conf_t *conf);
@@ -237,6 +240,8 @@ static int recv_greeting(req_t *req)
         return(-1);
     }
 
+    DPRINTF("Received greeting: %s", buf);
+
     if (!(l = lex_create(buf, proto_strs))) {
         send_rsp(req, CONMAN_ERR_NO_RESOURCES,
             "Insufficient resources to process request.");
@@ -342,6 +347,8 @@ static int recv_req(req_t *req)
         log_msg(0, "Connection terminated by %s", req->ip);
         return(-1);
     }
+
+    DPRINTF("Received request: %s", buf);
 
     if (!(l = lex_create(buf, proto_strs))) {
         send_rsp(req, CONMAN_ERR_NO_RESOURCES,
@@ -522,6 +529,10 @@ static int query_consoles(server_conf_t *conf, req_t *req)
     list_iterator_destroy(i);
     regfree(&rex);
 
+    /*  Sort the resulting obj_t list.
+     */
+    list_sort(matches, (ListCmpF) compare_objs);
+
     /*  Replace original consoles-string list with regex-matched obj_t list.
      */
     list_destroy(req->consoles);
@@ -538,13 +549,129 @@ no_mem:
 
 static int validate_req(req_t *req)
 {
-    /*  FIX_ME: NOT_IMPLEMENTED_YET
-     */
     if (list_is_empty(req->consoles)) {
         send_rsp(req, CONMAN_ERR_NO_CONSOLES, "Found no matching consoles.");
         return(-1);
     }
+    if (check_too_many_consoles(req) < 0)
+        return(-1);
+    if (check_busy_consoles(req) < 0)
+        return(-1);
+
     return(0);
+}
+
+
+static int check_too_many_consoles(req_t *req)
+{
+    ListIterator i;
+    obj_t *obj;
+    char buf[MAX_SOCK_LINE];
+
+    assert(!list_is_empty(req->consoles));
+
+    if (req->command == QUERY)
+        return(0);
+    if (list_count(req->consoles) == 1)
+        return(0);
+    if ((req->command != MONITOR) && (req->enableBroadcast))
+        return(0);
+
+    if (!(i = list_iterator_create(req->consoles))) {
+        send_rsp(req, CONMAN_ERR_NO_RESOURCES,
+            "Insufficient resources to process request.");
+        return(-1);
+    }
+    snprintf(buf, sizeof(buf), "Found %d matching consoles.",
+        list_count(req->consoles));
+    send_rsp(req, CONMAN_ERR_TOO_MANY_CONSOLES, buf);
+
+    while ((obj = list_next(i))) {
+        strlcpy(buf, obj->name, sizeof(buf));
+        strlcat(buf, "\n", sizeof(buf));
+        if (write_n(req->sd, buf, strlen(buf)) < 0) {
+            log_msg(0, "Error writing to %s: %s", req->ip, strerror(errno));
+            break;
+        }
+    }
+    list_iterator_destroy(i);
+    return(-1);
+}
+
+
+static int check_busy_consoles(req_t *req)
+{
+    List busy = NULL;
+    ListIterator i = NULL;
+    obj_t *obj;
+    char buf[MAX_SOCK_LINE];
+    int rc;
+    time_t t;
+    char *delta;
+
+    assert(!list_is_empty(req->consoles));
+
+    if ((req->command == QUERY) || (req->command == MONITOR))
+        return(0);
+    if (req->enableForce)
+        return(0);
+
+    if (!(busy = list_create(NULL)))
+        goto err;
+    if (!(i = list_iterator_create(req->consoles)))
+        goto err;
+    while ((obj = list_next(i))) {
+        if (obj->writer != NULL)
+            if (!list_enqueue(busy, obj))
+                goto err;
+    }
+    list_iterator_destroy(i);
+    i = NULL;
+
+    if (list_is_empty(busy)) {
+        list_destroy(busy);
+        return(0);
+    }
+
+    snprintf(buf, sizeof(buf), "Found %d console%s already in use.",
+        list_count(busy), (list_count(busy) == 1) ? "" : "s");
+    send_rsp(req, CONMAN_ERR_BUSY_CONSOLES, buf);
+
+    while ((obj = list_dequeue(busy))) {
+
+        assert(obj->type == CONSOLE);
+        assert(obj->writer->type == SOCKET);
+
+        if ((rc = pthread_mutex_lock(&obj->writer->bufLock)) != 0)
+            err_msg(rc, "pthread_mutex_lock() failed for [%s]",
+                obj->writer->name);
+        t = obj->writer->aux.socket.timeLastRead;
+        if ((rc = pthread_mutex_unlock(&obj->writer->bufLock)) != 0)
+            err_msg(rc, "pthread_mutex_unlock() failed for [%s]",
+                obj->writer->name);
+
+        delta = create_time_delta_string(t);
+        snprintf(buf, sizeof(buf), "Console [%s] in use by <%s> (idle %s).\n",
+            obj->name, obj->writer->name, (delta ? delta : "???"));
+        if (delta)
+            free(delta);
+
+        if (write_n(req->sd, buf, strlen(buf)) < 0) {
+            log_msg(0, "Error writing to %s: %s", req->ip, strerror(errno));
+            break;
+        }
+    }
+    list_destroy(busy);
+    return(-1);
+
+err:
+    if (i)
+        list_iterator_destroy(i);
+    if (busy)
+        list_destroy(busy);
+    send_rsp(req, CONMAN_ERR_NO_RESOURCES,
+        "Insufficient resources to process request.");
+    return(-1);
 }
 
 
@@ -596,7 +723,6 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
         buf[MAX_SOCK_LINE-1] = '\0';
     }
 
-
     /*  Write response to socket.
      */
     if (write_n(req->sd, buf, strlen(buf)) < 0) {
@@ -617,12 +743,11 @@ static void perform_query_cmd(req_t *req)
  */
     ListIterator i;
     obj_t *obj;
-    char buf[MAX_BUF_SIZE];
+    char buf[MAX_SOCK_LINE];
 
     assert(req->sd >= 0);
     assert(req->command == QUERY);
-
-    list_sort(req->consoles, (ListCmpF) compare_objs);
+    assert(!list_is_empty(req->consoles));
 
     if (!(i = list_iterator_create(req->consoles))) {
         send_rsp(req, CONMAN_ERR_NO_RESOURCES,
@@ -639,7 +764,6 @@ static void perform_query_cmd(req_t *req)
             break;
         }
     }
-
     list_iterator_destroy(i);
 
     if (close(req->sd) < 0)
@@ -652,9 +776,30 @@ static void perform_query_cmd(req_t *req)
 
 static void perform_monitor_cmd(req_t *req, server_conf_t *conf)
 {
+    obj_t *socket;
+    obj_t *console;
+    char *str;
+
     assert(req->sd >= 0);
     assert(req->command == MONITOR);
+    assert(list_count(req->consoles) == 1);
 
+    console = list_dequeue(req->consoles);
+    socket = create_socket_obj(conf->objs, req->user, req->host, req->sd);
+    if (!socket) {
+        send_rsp(req, CONMAN_ERR_NO_RESOURCES,
+            "Insufficient resources to process request.");
+        return;
+    }
+    if (link_objs(console, socket) < 0) {
+        str = create_fmt_string("Unable to access console [%s].",
+            console->name);
+        unlink_obj(socket);		/* xyzzy */
+        send_rsp(req, CONMAN_ERR_NO_RESOURCES, str);
+        free(str);
+        return;
+    }
+    send_rsp(req, CONMAN_ERR_NONE, NULL);
     return;
 }
 
@@ -667,14 +812,19 @@ static void perform_connect_cmd(req_t *req, server_conf_t *conf)
     assert(req->sd >= 0);
     assert(req->command == CONNECT);
 
+    socket = create_socket_obj(conf->objs, req->user, req->host, req->sd);
+    if (!socket) {
+        send_rsp(req, CONMAN_ERR_NO_RESOURCES,
+            "Insufficient resources to process request.");
+        return;
+    }
     send_rsp(req, CONMAN_ERR_NONE, NULL);
 
-    console = list_pop(req->consoles);
-    socket = create_socket_obj(conf->objs, req->user, req->host, req->sd);
-    if (!socket)
-        return;
+    /* FIX_ME:  Support broadcast.
+     */
+    console = list_dequeue(req->consoles);
     if ((link_objs(socket, console) < 0) || (link_objs(console, socket) < 0)) {
-        destroy_obj(socket);
+        unlink_obj(socket);		/* xyzzy */
         return;
     }
     return;
