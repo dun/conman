@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-sock.c,v 1.47 2002/05/08 18:40:10 dun Exp $
+ *  $Id: server-sock.c,v 1.48 2002/05/09 08:19:14 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -750,7 +750,7 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
             proto_strs[LEX_UNTOK(CONMAN_TOK_ERROR)],
             proto_strs[LEX_UNTOK(CONMAN_TOK_CODE)], errnum,
             proto_strs[LEX_UNTOK(CONMAN_TOK_MESSAGE)], lex_encode(tmp));
-        log_msg(LOG_NOTICE, "Client <%s@%s:%d>: %s",
+        log_msg(LOG_NOTICE, "Client <%s@%s:%d> request failed: %s",
             req->user, req->fqdn, req->port, errmsg);
     }
 
@@ -758,7 +758,7 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
      */
     if ((n < 0) || (n >= sizeof(buf))) {
         log_msg(LOG_WARNING,
-            "Client <%s@%s:%d>: Terminated by buffer overrun",
+            "Client <%s@%s:%d> request terminated by buffer overrun",
             req->user, req->fqdn, req->port);
         return(-1);
     }
@@ -788,7 +788,7 @@ static int perform_query_cmd(req_t *req)
     assert(req->command == QUERY);
     assert(!list_is_empty(req->consoles));
 
-    log_msg(LOG_INFO, "Client <%s@%s:%d>: Issued query command",
+    log_msg(LOG_INFO, "Client <%s@%s:%d> issued query command",
         req->user, req->fqdn, req->port);
 
     if (send_rsp(req, CONMAN_ERR_NONE, NULL) < 0)
@@ -811,7 +811,7 @@ static int perform_monitor_cmd(req_t *req, server_conf_t *conf)
     assert(req->command == MONITOR);
     assert(list_count(req->consoles) == 1);
 
-    log_msg(LOG_INFO, "Client <%s@%s:%d>: Issued monitor command",
+    log_msg(LOG_INFO, "Client <%s@%s:%d> issued monitor command",
         req->user, req->fqdn, req->port);
 
     if (send_rsp(req, CONMAN_ERR_NONE, NULL) < 0)
@@ -840,7 +840,7 @@ static int perform_connect_cmd(req_t *req, server_conf_t *conf)
     assert(req->sd >= 0);
     assert(req->command == CONNECT);
 
-    log_msg(LOG_INFO, "Client <%s@%s:%d>: Issued connect command",
+    log_msg(LOG_INFO, "Client <%s@%s:%d> issued connect command",
         req->user, req->fqdn, req->port);
 
     if (send_rsp(req, CONMAN_ERR_NONE, NULL) < 0)
