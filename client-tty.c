@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-tty.c,v 1.34 2001/08/28 22:15:38 dun Exp $
+ *  $Id: client-tty.c,v 1.35 2001/09/06 21:55:33 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -20,6 +20,8 @@
 #include "client.h"
 #include "errors.h"
 #include "util.h"
+#include "util-file.h"
+#include "util-str.h"
 
 
 static void exit_handler(int signum);
@@ -53,12 +55,12 @@ void connect_console(client_conf_t *conf)
     if (!isatty(STDOUT_FILENO))
         err_msg(0, "Standard Output is not a terminal device.");
 
-    Signal(SIGHUP, SIG_IGN);
-    Signal(SIGINT, SIG_IGN);
-    Signal(SIGQUIT, SIG_IGN);
-    Signal(SIGPIPE, SIG_IGN);
-    Signal(SIGTSTP, SIG_DFL);
-    Signal(SIGTERM, exit_handler);
+    posix_signal(SIGHUP, SIG_IGN);
+    posix_signal(SIGINT, SIG_IGN);
+    posix_signal(SIGQUIT, SIG_IGN);
+    posix_signal(SIGPIPE, SIG_IGN);
+    posix_signal(SIGTSTP, SIG_DFL);
+    posix_signal(SIGTERM, exit_handler);
 
     get_tty_mode(&conf->tty, STDIN_FILENO);
     get_tty_raw(&tty, STDIN_FILENO);

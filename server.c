@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.19 2001/08/15 14:06:04 dun Exp $
+ *  $Id: server.c,v 1.20 2001/09/06 21:55:33 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -10,6 +10,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <netinet/in.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,6 +25,7 @@
 #include "list.h"
 #include "server.h"
 #include "util.h"
+#include "util-file.h"
 
 
 static int begin_daemonize(void);
@@ -45,10 +47,10 @@ int main(int argc, char *argv[])
 
     fd = begin_daemonize();
 
-    Signal(SIGHUP, SIG_IGN);
-    Signal(SIGPIPE, SIG_IGN);
-    Signal(SIGINT, exit_handler);
-    Signal(SIGTERM, exit_handler);
+    posix_signal(SIGHUP, SIG_IGN);
+    posix_signal(SIGPIPE, SIG_IGN);
+    posix_signal(SIGINT, exit_handler);
+    posix_signal(SIGTERM, exit_handler);
 
     conf = create_server_conf();
     process_server_cmd_line(argc, argv, conf);
@@ -129,7 +131,7 @@ static int begin_daemonize(void)
     /*  Ignore SIGHUP to keep child from terminating when
      *    the session leader (ie, the parent) terminates.
      */
-    Signal(SIGHUP, SIG_IGN);
+    posix_signal(SIGHUP, SIG_IGN);
 
     /*  Abdicate session leader position in order to guarantee
      *    daemon cannot automatically re-acquire a controlling tty.
