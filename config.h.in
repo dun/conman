@@ -1,29 +1,22 @@
 /* config.h.in.  Generated automatically from configure.in by autoheader.  */
 
-/* Define if your processor stores words with the most significant
-   byte first (like Motorola and SPARC, unlike Intel and VAX).  */
-#undef WORDS_BIGENDIAN
-
-/* Define if you have the inet_ntop function.  */
+/* Define if you have the `inet_ntop' function. */
 #undef HAVE_INET_NTOP
 
-/* Define if you have the inet_pton function.  */
+/* Define if you have the `inet_pton' function. */
 #undef HAVE_INET_PTON
 
-/* Define if you have the localtime_r function.  */
+/* Define if you have the `localtime_r' function. */
 #undef HAVE_LOCALTIME_R
 
-/* Define if you have the strlcat function.  */
+/* Define if you have the `strlcat' function. */
 #undef HAVE_STRLCAT
 
-/* Define if you have the strlcpy function.  */
+/* Define if you have the `strlcpy' function. */
 #undef HAVE_STRLCPY
 
-/* Define the package name. */
-#undef PACKAGE
-
-/* Define the package version. */
-#undef VERSION
+/* Define the canonical host alias. */
+#undef HOST_ALIAS
 
 /* Define the canonical host CPU type. */
 #undef HOST_CPU
@@ -34,12 +27,18 @@
 /* Define the canonical host vendor type. */
 #undef HOST_VENDOR
 
-/* Define the canonical host alias. */
-#undef HOST_ALIAS
-
 /* Define if you are building a production release. */
 #undef NDEBUG
+
+/* Define the package name. */
+#undef PACKAGE
 
 /* Define if list needs to be thread-safe. */
 #undef USE_THREAD_SAFE_LIST
 
+/* Define the package version. */
+#undef VERSION
+
+/* Define if your processor stores words with the most significant byte first
+   (like Motorola and SPARC, unlike Intel and VAX). */
+#undef WORDS_BIGENDIAN
