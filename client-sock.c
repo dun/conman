@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-sock.c,v 1.9 2001/05/29 23:45:24 dun Exp $
+ *  $Id: client-sock.c,v 1.10 2001/05/31 18:22:41 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -69,10 +69,13 @@ int send_greeting(client_conf_t *conf)
     int n;
 
     assert(conf->req->sd >= 0);
+    assert(conf->req->user && *conf->req->user);
+    assert(conf->req->tty && *conf->req->tty);
 
-    n = snprintf(buf, sizeof(buf), "%s %s='%s'\n",
+    n = snprintf(buf, sizeof(buf), "%s %s='%s' %s='%s'\n",
         proto_strs[LEX_UNTOK(CONMAN_TOK_HELLO)],
-        proto_strs[LEX_UNTOK(CONMAN_TOK_USER)], lex_encode(conf->req->user));
+        proto_strs[LEX_UNTOK(CONMAN_TOK_USER)], lex_encode(conf->req->user),
+        proto_strs[LEX_UNTOK(CONMAN_TOK_TTY)], lex_encode(conf->req->tty));
 
     if (n < 0 || n >= sizeof(buf)) {
         conf->errnum = CONMAN_ERR_LOCAL;

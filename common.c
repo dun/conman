@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.c,v 1.3 2001/05/29 23:45:24 dun Exp $
+ *  $Id: common.c,v 1.4 2001/05/31 18:20:19 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -31,6 +31,7 @@ char *proto_strs[] = {
     "CODE",
     "MESSAGE",
     "USER",
+    "TTY",
     "CONSOLE",
     "PROGRAM",
     "OPTION",
@@ -53,6 +54,7 @@ req_t * create_req(void)
     }
     req->sd = -1;
     req->user = NULL;
+    req->tty = NULL;
     req->host = NULL;
     req->ip = NULL;
     req->port = 0;
@@ -73,8 +75,6 @@ void destroy_req(req_t *req)
 {
 /*  Destroys a request struct.
  */
-    DPRINTF("Destroyed request <%s@%s:%d>.\n", req->user, req->host, req->port);
-
     if (!req)
         return;
 
@@ -85,6 +85,8 @@ void destroy_req(req_t *req)
     }
     if (req->user)
         free(req->user);
+    if (req->tty)
+        free(req->tty);
     if (req->host)
         free(req->host);
     if (req->ip)

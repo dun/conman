@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.h,v 1.1 2001/05/29 23:45:24 dun Exp $
+ *  $Id: common.h,v 1.2 2001/05/31 18:20:19 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -33,6 +33,7 @@ typedef enum cmd_type {
 typedef struct request {
     int    sd;				/* socket descriptor                  */
     char  *user;			/* login name of client user          */
+    char  *tty;				/* device name of client terminal     */
     char  *host;			/* remote hostname (or ip) string     */
     char  *ip;				/* remote ip addr string              */
     int    port;			/* remote port number                 */
@@ -73,6 +74,7 @@ enum proto_toks {
     CONMAN_TOK_CODE,
     CONMAN_TOK_MESSAGE,
     CONMAN_TOK_USER,
+    CONMAN_TOK_TTY,
     CONMAN_TOK_CONSOLE,
     CONMAN_TOK_PROGRAM,
     CONMAN_TOK_OPTION,
