@@ -1,7 +1,7 @@
 #!/usr/bin/expect --
 
 ##
-# $Id: boot_alpha.exp,v 1.4 2001/08/23 17:59:42 dun Exp $
+# $Id: boot_alpha.exp,v 1.5 2001/08/23 20:31:16 dun Exp $
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
 
@@ -45,7 +45,8 @@ conman_run 128 "-j $argv" pre_boot_alpha
 
 foreach console $consoles {
   send_user "Booting $console.\n"
-  conman_run 1 "-j $console" alpha_do_srm_cmd 0 "boot" 10
+  conman_run 1 "-j $console" alpha_do_srm_cmd 0 "boot" 20
+  sleep 10
 }
 
 exit 0
