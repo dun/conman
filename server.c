@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.12 2001/06/12 19:55:27 dun Exp $
+ *  $Id: server.c,v 1.13 2001/06/18 17:27:17 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -148,7 +148,7 @@ static void create_listen_socket(server_conf_t *conf)
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     if (setsockopt(ld, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0)
-        err_msg(errno, "setsockopt() failed");
+        err_msg(errno, "setsockopt(REUSEADDR) failed");
 
     if (bind(ld, (struct sockaddr *) &addr, sizeof(addr)) < 0)
         err_msg(errno, "bind() failed");
@@ -260,6 +260,7 @@ static void accept_client(server_conf_t *conf)
  *    receive an EAGAIN/EWOULDBLOCK on the accept() and terminate, but still...
  */
     int sd;
+    const int on = 1;
     client_arg_t *args;
     int rc;
     pthread_t tid;
@@ -274,6 +275,9 @@ static void accept_client(server_conf_t *conf)
         err_msg(errno, "accept() failed");
     }
     DPRINTF("Accepted new client on fd=%d.\n", sd);
+
+    if (setsockopt(sd, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on)) < 0)
+        err_msg(errno, "setsockopt(KEEPALIVE) failed");
 
     /*  Create a tmp struct to hold two args to pass to the thread.
      *  Note that the thread is responsible for freeing this memory.
