@@ -2,7 +2,7 @@
  *  list.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: list.c,v 1.4 2001/05/14 15:30:04 dun Exp $
+ *  $Id: list.c,v 1.5 2001/05/22 16:25:59 dun Exp $
  ******************************************************************************
  *  Refer to "list.h" for documentation on public functions.
 \******************************************************************************/
@@ -311,6 +311,20 @@ void * list_pop(List l)
     LIST_LOCK(&l->mutex);
     assert(l->magic == LIST_MAGIC);
     v = list_node_destroy(l, &l->head);
+    LIST_UNLOCK(&l->mutex);
+    return(v);
+}
+
+
+void * list_peek(List l)
+{
+    void *v = NULL;
+
+    assert(l);
+    LIST_LOCK(&l->mutex);
+    assert(l->magic == LIST_MAGIC);
+    if (l->head)
+        v = l->head->data;
     LIST_UNLOCK(&l->mutex);
     return(v);
 }

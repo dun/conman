@@ -2,7 +2,7 @@
  *  list.h
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: list.h,v 1.2 2001/05/14 15:30:05 dun Exp $
+ *  $Id: list.h,v 1.3 2001/05/22 16:25:59 dun Exp $
 \******************************************************************************/
 
 
@@ -134,6 +134,13 @@ void * list_pop(List l);
 /*
  *  Pops the data item at the top of the stack (l).
  *  Returns the data's ptr, or NULL if the stack is empty.
+ */
+
+void * list_peek(List l);
+/*
+ *  Peeks at the data item at the top of the stack (or head of the queue) (l).
+ *  Returns the data's ptr, or NULL if the stack (or queue) is empty.
+ *  Note: The item is not removed from the list.
  */
 
 
