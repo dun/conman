@@ -1,4 +1,4 @@
-.\" $Id: conman.conf.5.in,v 1.6 2002/09/09 22:48:26 dun Exp $
+.\" $Id: conman.conf.5.in,v 1.7 2002/09/14 04:16:55 dun Exp $
 
 .TH CONMAN.CONF 5 "@DATE@" "@PROJECT@-@VERSION@" "LLNL"
 
@@ -35,7 +35,7 @@ pathname is not specified, the file's location is relative to \fBlogdir\fR
 does not already exist.  The filename may optionally be followed by a comma
 and a minimum priority at which messages will be logged.  Refer to
 \fBsyslog.conf\fR(5) for a list of priorities.  The default priority is
-\fBinfo\fR.  If this keyword is used in conjunction with the \fBsyslog\fR
+\fBnotice\fR.  If this keyword is used in conjunction with the \fBsyslog\fR
 keyword, messages will be sent to both locations.
 .TP
 \fBloopback\fR \fB=\fR (\fBon\fR|\fBoff\fR)

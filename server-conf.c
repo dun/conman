@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-conf.c,v 1.54 2002/05/20 17:02:33 dun Exp $
+ *  $Id: server-conf.c,v 1.55 2002/09/14 04:16:44 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -180,7 +180,7 @@ server_conf_t * create_server_conf(void)
     conf->logDirName = NULL;
     conf->logFileName = NULL;
     conf->logFilePtr = NULL;
-    conf->logFileLevel = LOG_INFO;
+    conf->logFileLevel = LOG_NOTICE;
     conf->pidFileName = NULL;
     conf->resetCmd = NULL;
     conf->syslogFacility = -1;
