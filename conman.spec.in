@@ -1,4 +1,4 @@
-# $Id: conman.spec.in,v 1.18 2002/05/11 23:41:05 dun Exp $
+# $Id: conman.spec.in,v 1.19 2002/05/11 23:43:40 dun Exp $
 
 Name:		@PROJECT@
 Version:	@VERSION@
@@ -25,6 +25,7 @@ Its features include:
     broadcast (W/O) modes of console access
   - allowing clients to join or steal console "write" privileges
   - executing Expect scripts across multiple consoles in parallel
+
 %prep
 %setup
 
