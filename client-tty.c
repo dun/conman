@@ -2,7 +2,7 @@
  *  client-tty.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: client-tty.c,v 1.8 2001/05/21 23:31:45 dun Exp $
+ *  $Id: client-tty.c,v 1.9 2001/05/23 17:24:04 dun Exp $
 \******************************************************************************/
 
 
@@ -26,7 +26,7 @@
 
 #define ESC_CHAR_CLOSE		'.'
 #define ESC_CHAR_HELP		'?'
-#define ESC_CHAR_SUSPEND	''
+#define ESC_CHAR_SUSPEND	'Z'
 
 
 static void exit_handler(int signum);
@@ -38,6 +38,7 @@ static void perform_close_esc(client_conf_t *conf, char c);
 static void perform_help_esc(client_conf_t *conf, char c);
 static void perform_suspend_esc(client_conf_t *conf, char c);
 static void locally_echo_esc(char e, char c);
+static void display_connection_msg(client_conf_t *conf, char *msg);
 
 
 static int done = 0;
@@ -49,7 +50,6 @@ void connect_console(client_conf_t *conf)
  */
     fd_set rset, rsetBak;
     int n;
-    char *str;
 
     assert(conf->sd >= 0);
     assert((conf->command == CONNECT) || (conf->command == MONITOR));
@@ -63,10 +63,7 @@ void connect_console(client_conf_t *conf)
 
     set_raw_tty_mode(STDIN_FILENO, &conf->term);
 
-    str = create_fmt_string("ConMan: Connected.\r\n");
-    if (write_n(STDOUT_FILENO, str, strlen(str)) < 0)
-        err_msg(errno, "write(%d) failed", STDOUT_FILENO);
-    free(str);
+    display_connection_msg(conf, "opened");
 
     FD_ZERO(&rsetBak);
     FD_SET(STDIN_FILENO, &rsetBak);
@@ -97,13 +94,8 @@ void connect_console(client_conf_t *conf)
         err_msg(errno, "close(%d) failed", conf->sd);
     conf->sd = -1;
 
-    if (!conf->closedByClient) {
-        str = create_fmt_string("\r\nConMan: Connection"
-            " terminated by peer.\r\n");
-        if (write_n(STDOUT_FILENO, str, strlen(str)) < 0)
-            err_msg(errno, "write(%d) failed", STDOUT_FILENO);
-        free(str);
-    }
+    if (!conf->closedByClient)
+        display_connection_msg(conf, "terminated by peer");
 
     restore_tty_mode(STDIN_FILENO, &conf->term);
     return;
@@ -268,14 +260,9 @@ static void perform_close_esc(client_conf_t *conf, char c)
 {
 /*  Perform a client-initiated close.
  */
-    char *str;
-
     locally_echo_esc(conf->escapeChar, c);
 
-    str = create_fmt_string("\r\nConMan: Connection closed.\r\n");
-    if (write_n(STDOUT_FILENO, str, strlen(str)) < 0)
-        err_msg(errno, "write(%d) failed", STDOUT_FILENO);
-    free(str);
+    display_connection_msg(conf, "closed");
 
     if (shutdown(conf->sd, SHUT_WR) < 0)
         err_msg(errno, "shutdown(%d) failed", conf->sd);
@@ -331,10 +318,15 @@ static void perform_suspend_esc(client_conf_t *conf, char c)
  */
     locally_echo_esc(conf->escapeChar, c);
 
+    display_connection_msg(conf, "suspended");
     restore_tty_mode(STDIN_FILENO, &conf->term);
+
     if (kill(getpid(), SIGTSTP) < 0)
         err_msg(errno, "Unable to suspend client (pid %d)", getpid());
+
     set_raw_tty_mode(STDIN_FILENO, &conf->term);
+    display_connection_msg(conf, "resumed");
+
     return;
 }
 
@@ -388,4 +380,51 @@ char * write_esc_char(char c, char *p)
 
     *p = '\0';				/* DO NOT advance ptr here */
     return(p);
+}
+
+
+static void display_connection_msg(client_conf_t *conf, char *msg)
+{
+/*  Displays (msg) regarding the state of the console connection.
+ */
+    char buf[MAX_LINE];
+    char *ptr = buf;
+    int len = sizeof(buf);
+    int n;
+    int overflow = 0;
+
+    assert ((conf->command == CONNECT) || (conf->command == MONITOR));
+
+    if (!strcmp(msg, "terminated by peer")) {
+        n = snprintf(ptr, len, "\r\n");
+        if (n < 0 || n >= len)
+            overflow = 1;
+        else
+            ptr += n, len -= n;
+    }
+    if (!overflow) {
+
+        if (!conf->enableBroadcast) {
+            assert(list_count(conf->consoles) == 1);
+            n = snprintf(ptr, len, "%s Connection to console [%s] %s.\r\n",
+                CONMAN_MSG_PREFIX, (char *) list_peek(conf->consoles), msg);
+        }
+        else {
+            int count = list_count(conf->consoles);
+            n = snprintf(ptr, len, "%s Broadcast to %d console%s %s.\r\n",
+                CONMAN_MSG_PREFIX, count, (count == 1 ? "" : "s"), msg);
+        }
+        if (n < 0 || n >= len)
+            overflow = 1;
+        else
+            ptr += n, len -= n;
+    }
+
+    if (overflow) {
+        ptr = buf + sizeof(buf) - 3;
+        snprintf(ptr, 3, "\r\n");
+    }
+    if (write_n(STDOUT_FILENO, buf, strlen(buf)) < 0)
+        err_msg(errno, "write(%d) failed", STDOUT_FILENO);
+    return;
 }

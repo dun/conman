@@ -2,7 +2,7 @@
  *  client-conf.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: client-conf.c,v 1.7 2001/05/18 16:48:16 dun Exp $
+ *  $Id: client-conf.c,v 1.8 2001/05/23 17:24:04 dun Exp $
 \******************************************************************************/
 
 
@@ -209,7 +209,8 @@ void open_client_log(client_conf_t *conf)
         err_msg(errno, "Unable to open logfile [%s]", conf->log);
 
     now = create_time_string(0);
-    str = create_fmt_string("\r\nConMan: Log started %s.\r\n", now);
+    str = create_fmt_string("\r\n%s Log started %s.\r\n",
+        CONMAN_MSG_PREFIX, now);
     if (write_n(conf->ld, str, strlen(str)) < 0)
         err_msg(errno, "write(%d) failed", conf->ld);
     free(now);
@@ -228,7 +229,8 @@ void close_client_log(client_conf_t *conf)
     assert(conf->ld >= 0);
 
     now = create_time_string(0);
-    str = create_fmt_string("\r\nConMan: Log finished %s.\r\n", now);
+    str = create_fmt_string("\r\n%s Log finished %s.\r\n",
+        CONMAN_MSG_PREFIX, now);
     if (write_n(conf->ld, str, strlen(str)) < 0)
         err_msg(errno, "write(%d) failed", conf->ld);
     free(now);
