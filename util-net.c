@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-net.c,v 1.11 2001/12/27 20:24:19 dun Exp $
+ *  $Id: util-net.c,v 1.12 2002/01/14 17:10:13 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util-net.h" for documentation on public functions.
@@ -16,6 +16,7 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
 #include "errors.h"
