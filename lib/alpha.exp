@@ -2,7 +2,7 @@
 # Alpha Library Functions
 #   or Alien Life Form (ALF)
 ##
-# $Id: alpha.exp,v 1.1 2001/08/17 16:51:54 dun Exp $
+# $Id: alpha.exp,v 1.2 2001/08/21 21:43:29 dun Exp $
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
 
@@ -95,7 +95,7 @@ proc alpha_is_at_srm {spawn_id output_id console {tmout 3}} {
 }
 
 
-proc alpha_do_srm_cmd {spawn_id output_id console echo cmd} {
+proc alpha_do_srm_cmd {spawn_id output_id console echo cmd {timeout 10}} {
 #
 # Executes the SRM 'cmd' on the console session associated with 'spawn_id'.
 #   If 'echo' is non-zero, output will be sent to the user via 'output_id'.
@@ -105,13 +105,15 @@ proc alpha_do_srm_cmd {spawn_id output_id console echo cmd} {
     return 0
   }
   set status 1
-  set timeout 10
   exp_send -- "$cmd\r"
   expect -gl "^$cmd\r\n" {
     exp_continue -continue_timer	;# expect the cmd just sent
-  } -nocase -gl "(^\[^\r]*jumping to bootstrap code\[^\r]*)\r\n" {
+  } -nocase -re "(^\[^\r]*jumping to bootstrap code\[^\r]*)\r\n" {
     if {$echo} {exp_send -i $output_id "$expect_out(1,string)\n"}
     return 1				;# success for "boot" cmd
+  } -nocase -re "(^\[^\r]*received bootp packet\[^\r]*)\r\n" {
+    if {$echo} {exp_send -i $output_id "$expect_out(1,string)\n"}
+    return 1				;# success for "boot" cmd via BOOTP
   } -nocase -re "(^\[^\r]*(bad value|invalid|no such command)\[^\r]*)\r\n" {
     if {$echo} {exp_send -i $output_id "$expect_out(1,string)\n"}
     set status 0
