@@ -2,7 +2,7 @@
 # Makefile Include for RPM Construction
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Make-rpm.mk,v 1.12 2001/12/10 16:52:36 dun Exp $
+# $Id: Make-rpm.mk,v 1.13 2001/12/10 17:35:17 dun Exp $
 ##
 # REQUIREMENTS:
 # - requires project to be under CVS version control
@@ -93,6 +93,7 @@ rpm-internal: tar-internal
 	sed -e "s/^\([ 	]*Name:\).*/\1 $$pkg/i" \
 	    -e "s/^\([ 	]*Version:\).*/\1 $$ver/i" \
 	    -e "s/^\([ 	]*Release:\).*/\1 $$rel/i" \
+	    -e "s/^\([ 	]*Source0?:\).*/\1 $$name.tgz/i" \
 	    <$$spec >$$tmp/SPECS/$$pkg.spec; \
 	if ! test -s $$tmp/SPECS/$$pkg.spec; then \
 	  echo "ERROR: Cannot create $$pkg.spec (tag=$$tag)" 1>&2; exit 1; fi; \
