@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-tty.c,v 1.2 2001/08/28 23:12:17 dun Exp $
+ *  $Id: server-tty.c,v 1.3 2001/09/07 18:27:41 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -74,24 +74,24 @@ static speed_t int_to_bps(int val);
 static const char * parity_to_str(int parity);
 
 
-void set_serial_opts(struct termios *tty, obj_t *console, char *str)
+void set_serial_opts(struct termios *tty, obj_t *serial, char *str)
 {
 /*  Sets serial device options specified by the string 'str' for the
- *    'tty' terminal settings associated with the 'console' object.
+ *    'tty' terminal settings associated with the 'serial' object.
  *  Updates the 'tty' struct as appropriate.
  */
     serial_opts_t opts;
 
     assert(tty);
-    assert(console);
-    assert(console->type == CONSOLE);
+    assert(serial);
+    assert(is_serial_obj(serial));
 
     opts.bps = DEFAULT_SERIAL_BPS;
     opts.databits = DEFAULT_SERIAL_DATABITS;
     opts.parity = DEFAULT_SERIAL_PARITY;
     opts.stopbits = DEFAULT_SERIAL_STOPBITS;
 
-    parse_serial_opts(&opts, console->name, str);
+    parse_serial_opts(&opts, serial->name, str);
     assert(opts.bps > 0);
     assert((opts.databits >= 5) && (opts.databits <= 8));
     assert((opts.parity >= 0) && (opts.parity <= 2));
@@ -99,10 +99,10 @@ void set_serial_opts(struct termios *tty, obj_t *console, char *str)
 
     if (cfsetispeed(tty, opts.bps) < 0)
         err_msg(errno, "Unable to set [%s] input baud rate to %d",
-            console->name, opts.bps);
+            serial->name, opts.bps);
     if (cfsetospeed(tty, opts.bps) < 0)
         err_msg(errno, "Unable to set [%s] output baud rate to %d",
-            console->name, opts.bps);
+            serial->name, opts.bps);
 
     tty->c_cflag &= ~CSIZE;
     if (opts.databits == 5) {
@@ -137,7 +137,7 @@ void set_serial_opts(struct termios *tty, obj_t *console, char *str)
     }
 
     DPRINTF("Setting [%s] dev=%s to %d,%d%s%d.\n",
-        console->name, console->aux.console.dev, bps_to_int(opts.bps),
+        serial->name, serial->aux.serial.dev, bps_to_int(opts.bps),
         opts.databits, parity_to_str(opts.parity), opts.stopbits);
     return;
 }

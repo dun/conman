@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.28 2001/09/06 21:55:19 dun Exp $
+ *  $Id: server-sock.c,v 1.29 2001/09/07 18:27:41 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -452,7 +452,7 @@ static int query_consoles_via_globbing(
     while ((pat = list_next(i))) {
         list_iterator_reset(j);
         while ((obj = list_next(j))) {
-            if (obj->type != CONSOLE)
+            if (!is_console_obj(obj))
                 continue;
             if (!fnmatch(pat, obj->name, 0)
               && !list_find_first(matches, (ListFindF) find_obj, obj)) {
@@ -516,7 +516,7 @@ static int query_consoles_via_regex(
     /*  Search objs for console names matching console patterns in the request.
      */
     while ((obj = list_next(i))) {
-        if (obj->type != CONSOLE)
+        if (!is_console_obj(obj))
             continue;
         if (!regexec(&rex, obj->name, 1, &match, 0)
           && (match.rm_so == 0) && (match.rm_eo == strlen(obj->name))) {
@@ -622,7 +622,7 @@ static int check_busy_consoles(req_t *req)
     if (!(i = list_iterator_create(req->consoles)))
         err_msg(0, "Out of memory");
     while ((console = list_next(i))) {
-        assert(console->type == CONSOLE);
+        assert(is_console_obj(console));
         if (!list_is_empty(console->writers))
             if (!list_append(busy, console))
                 err_msg(0, "Out of memory");
@@ -652,7 +652,7 @@ static int check_busy_consoles(req_t *req)
             err_msg(0, "Out of memory");
         while ((writer = list_next(i))) {
 
-            assert(writer->type == CLIENT);
+            assert(is_client_obj(writer));
 
             if ((rc = pthread_mutex_lock(&writer->bufLock)) != 0)
                 err_msg(rc, "pthread_mutex_lock() failed for [%s]",
@@ -789,7 +789,7 @@ static int perform_monitor_cmd(req_t *req, server_conf_t *conf)
         return(-1);
     client = create_client_obj(conf, req);
     console = list_peek(req->consoles);
-    assert(console->type == CONSOLE);
+    assert(is_console_obj(console));
     link_objs(console, client);
     return(0);
 }
@@ -819,7 +819,7 @@ static int perform_connect_cmd(req_t *req, server_conf_t *conf)
          *  Unicast connection (R/W).
          */
         console = list_peek(req->consoles);
-        assert(console->type == CONSOLE);
+        assert(is_console_obj(console));
         link_objs(client, console);
         link_objs(console, client);
     }
@@ -830,7 +830,7 @@ static int perform_connect_cmd(req_t *req, server_conf_t *conf)
         if (!(i = list_iterator_create(req->consoles)))
             err_msg(0, "Out of memory");
         while ((console = list_next(i))) {
-            assert(console->type == CONSOLE);
+            assert(is_console_obj(console));
             link_objs(client, console);
         }
         list_iterator_destroy(i);

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.18 2001/09/06 22:37:38 dun Exp $
+ *  $Id: server-conf.c,v 1.19 2001/09/07 18:27:40 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -426,7 +426,7 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
             lex_next(l);
     }
     else {
-        if (!(console = create_console_obj(conf, name, dev, opts))) {
+        if (!(console = create_serial_obj(conf, name, dev, opts))) {
             log_msg(0, "%s:%d: Console [%s] removed from the configuration.",
                 conf->confFileName, line, name);
         }

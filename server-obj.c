@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.36 2001/09/06 22:37:38 dun Exp $
+ *  $Id: server-obj.c,v 1.37 2001/09/07 18:27:40 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -34,7 +34,108 @@ static char * find_trailing_int_str(char *str);
 static void unlink_objs_helper(obj_t *src, obj_t *dst);
 
 
-obj_t * create_console_obj(
+obj_t * create_client_obj(server_conf_t *conf, req_t *req)
+{
+/*  Creates a new client object and adds it to the master objs list.
+ *    Note: the socket is open and set for non-blocking I/O.
+ *  Returns the new object.
+ */
+    char name[MAX_LINE];
+    obj_t *client;
+
+    assert(conf);
+    assert(req);
+    assert(req->sd >= 0);
+    assert(req->user && *req->user);
+    assert(req->host && *req->host);
+
+    set_descriptor_nonblocking(req->sd);
+
+    snprintf(name, sizeof(name), "%s@%s:%d", req->user, req->host, req->port);
+    name[sizeof(name) - 1] = '\0';
+    client = create_obj(conf, name, req->sd, CLIENT);
+
+    client->aux.client.req = req;
+    time(&client->aux.client.timeLastRead);
+    if (client->aux.client.timeLastRead == ((time_t) -1))
+        err_msg(errno, "time() failed -- What time is it?");
+    client->aux.client.gotEscape = 0;
+    client->aux.client.gotSuspend = 0;
+
+    return(client);
+}
+
+
+obj_t * create_logfile_obj(server_conf_t *conf, char *name, obj_t *console)
+{
+/*  Creates a new logfile object and adds it to the master objs list.
+ *    Note: the logfile is open and set for non-blocking I/O.
+ *  Returns the new object, or NULL on error.
+ */
+    ListIterator i;
+    obj_t *logfile;
+    int flags;
+    int fd = -1;
+    char *now, *msg;
+
+    assert(conf);
+    assert(name && *name);
+    assert(console);
+
+    /*  Check for duplicate logfile names.
+     *  While the write-lock will protect against two separate daemons
+     *    using the same logfile, it will not protect against two logfile
+     *    objects within the same daemon process using the same filename.
+     *    So that check is performed here.
+     */
+    if (!(i = list_iterator_create(conf->objs)))
+        err_msg(0, "Out of memory");
+    while ((logfile = list_next(i))) {
+        if (!is_logfile_obj(logfile))
+            continue;
+        if (!strcmp(logfile->name, name)) {
+            log_msg(0, "Ignoring duplicate logfile name \"%s\".", name);
+            break;
+        }
+    }
+    list_iterator_destroy(i);
+    if (logfile != NULL)
+        goto err;
+
+    flags = O_WRONLY | O_CREAT | O_APPEND | O_NONBLOCK;
+    if (conf->enableZeroLogs)
+        flags |= O_TRUNC;
+    if ((fd = open(name, flags, S_IRUSR | S_IWUSR)) < 0) {
+        log_msg(0, "Unable to open logfile \"%s\": %s.", name, strerror(errno));
+        goto err;
+    }
+    if (get_write_lock(fd) < 0) {
+        log_msg(0, "Unable to lock \"%s\".", name);
+        goto err;
+    }
+
+    logfile = create_obj(conf, name, fd, LOGFILE);
+    logfile->aux.logfile.console = create_string(console->name);
+    console->aux.serial.logfile = logfile;
+
+    now = create_long_time_string(0);
+    msg = create_format_string("%sConsole [%s] log started at %s%s",
+        CONMAN_MSG_PREFIX, console->name, now, CONMAN_MSG_SUFFIX);
+    write_obj_data(logfile, msg, strlen(msg), 0);
+    free(now);
+    free(msg);
+
+    return(logfile);
+
+err:
+    if (fd >= 0)
+        if (close(fd) < 0)
+            err_msg(errno, "close() failed on fd=%d", fd);
+    return(NULL);
+}
+
+
+obj_t * create_serial_obj(
     server_conf_t *conf, char *name, char *dev, char *opts)
 {
 /*  Creates a new console object and adds it to the master objs list.
@@ -59,13 +160,11 @@ obj_t * create_console_obj(
     if (!(i = list_iterator_create(conf->objs)))
         err_msg(0, "Out of memory");
     while ((console = list_next(i))) {
-        if (console->type != CONSOLE)
-            continue;
-        if (!strcmp(console->name, name)) {
+        if (is_console_obj(console) && !strcmp(console->name, name)) {
             log_msg(0, "Ignoring duplicate console name \"%s\".", name);
             break;
         }
-        if (!strcmp(console->aux.console.dev, dev)) {
+        if (is_serial_obj(console) && !strcmp(console->aux.serial.dev, dev)) {
             log_msg(0, "Ignoring duplicate device name \"%s\".", dev);
             break;
         }
@@ -100,10 +199,10 @@ obj_t * create_console_obj(
      *  This is because the settings do not change until the obj is destroyed,
      *    at which time the termios is reverted back to its initial state.
      */
-    console = create_obj(conf, name, fd, CONSOLE);
-    console->aux.console.dev = create_string(dev);
-    console->aux.console.logfile = NULL;
-    get_tty_mode(&console->aux.console.tty, fd);
+    console = create_obj(conf, name, fd, SERIAL);
+    console->aux.serial.dev = create_string(dev);
+    console->aux.serial.logfile = NULL;
+    get_tty_mode(&console->aux.serial.tty, fd);
     get_tty_raw(&tty, fd);
     set_serial_opts(&tty, console, opts);
     set_tty_mode(&tty, fd);
@@ -115,107 +214,6 @@ err:
         if (close(fd) < 0)
             err_msg(errno, "close() failed on fd=%d", fd);
     return(NULL);
-}
-
-
-obj_t * create_logfile_obj(server_conf_t *conf, char *name, obj_t *console)
-{
-/*  Creates a new logfile object and adds it to the master objs list.
- *    Note: the logfile is open and set for non-blocking I/O.
- *  Returns the new object, or NULL on error.
- */
-    ListIterator i;
-    obj_t *logfile;
-    int flags;
-    int fd = -1;
-    char *now, *msg;
-
-    assert(conf);
-    assert(name && *name);
-    assert(console);
-
-    /*  Check for duplicate logfile names.
-     *  While the write-lock will protect against two separate daemons
-     *    using the same logfile, it will not protect against two logfile
-     *    objects within the same daemon process using the same filename.
-     *    So that check is performed here.
-     */
-    if (!(i = list_iterator_create(conf->objs)))
-        err_msg(0, "Out of memory");
-    while ((logfile = list_next(i))) {
-        if (logfile->type != LOGFILE)
-            continue;
-        if (!strcmp(logfile->name, name)) {
-            log_msg(0, "Ignoring duplicate logfile name \"%s\".", name);
-            break;
-        }
-    }
-    list_iterator_destroy(i);
-    if (logfile != NULL)
-        goto err;
-
-    flags = O_WRONLY | O_CREAT | O_APPEND | O_NONBLOCK;
-    if (conf->enableZeroLogs)
-        flags |= O_TRUNC;
-    if ((fd = open(name, flags, S_IRUSR | S_IWUSR)) < 0) {
-        log_msg(0, "Unable to open logfile \"%s\": %s.", name, strerror(errno));
-        goto err;
-    }
-    if (get_write_lock(fd) < 0) {
-        log_msg(0, "Unable to lock \"%s\".", name);
-        goto err;
-    }
-
-    logfile = create_obj(conf, name, fd, LOGFILE);
-    logfile->aux.logfile.console = create_string(console->name);
-    console->aux.console.logfile = logfile;
-
-    now = create_long_time_string(0);
-    msg = create_format_string("%sConsole [%s] log started at %s%s",
-        CONMAN_MSG_PREFIX, console->name, now, CONMAN_MSG_SUFFIX);
-    write_obj_data(logfile, msg, strlen(msg), 0);
-    free(now);
-    free(msg);
-
-    return(logfile);
-
-err:
-    if (fd >= 0)
-        if (close(fd) < 0)
-            err_msg(errno, "close() failed on fd=%d", fd);
-    return(NULL);
-}
-
-
-obj_t * create_client_obj(server_conf_t *conf, req_t *req)
-{
-/*  Creates a new client object and adds it to the master objs list.
- *    Note: the socket is open and set for non-blocking I/O.
- *  Returns the new object.
- */
-    char name[MAX_LINE];
-    obj_t *client;
-
-    assert(conf);
-    assert(req);
-    assert(req->sd >= 0);
-    assert(req->user && *req->user);
-    assert(req->host && *req->host);
-
-    set_descriptor_nonblocking(req->sd);
-
-    snprintf(name, sizeof(name), "%s@%s:%d", req->user, req->host, req->port);
-    name[sizeof(name) - 1] = '\0';
-    client = create_obj(conf, name, req->sd, CLIENT);
-
-    client->aux.client.req = req;
-    time(&client->aux.client.timeLastRead);
-    if (client->aux.client.timeLastRead == ((time_t) -1))
-        err_msg(errno, "time() failed -- What time is it?");
-    client->aux.client.gotEscape = 0;
-    client->aux.client.gotSuspend = 0;
-
-    return(client);
 }
 
 
@@ -231,7 +229,7 @@ static obj_t * create_obj(
     assert(conf);
     assert(name);
     assert(fd >= 0);
-    assert(type == CONSOLE || type == LOGFILE || type == CLIENT);
+    assert(type==CLIENT || type==LOGFILE || type==SERIAL || type==TELNET);
 
     if (!(obj = malloc(sizeof(obj_t))))
         err_msg(0, "Out of memory");
@@ -276,7 +274,7 @@ void destroy_obj(obj_t *obj)
  *
  *  assert(obj->bufInPtr == obj->bufOutPtr); */
 
-    if (obj->type == CONSOLE) {
+    if (is_serial_obj(obj)) {
         /*
          *  According to the UNIX Programming FAQ v1.37
          *    <http://www.faqs.org/faqs/unix-faq/programmer/faq/>
@@ -290,7 +288,7 @@ void destroy_obj(obj_t *obj)
         if (tcflush(obj->fd, TCIOFLUSH) < 0)
             err_msg(errno, "Unable to flush tty device for console [%s]",
                 obj->name);
-        set_tty_mode(&obj->aux.console.tty, obj->fd);
+        set_tty_mode(&obj->aux.serial.tty, obj->fd);
     }
     if (obj->fd >= 0) {
         if (close(obj->fd) < 0)
@@ -305,15 +303,6 @@ void destroy_obj(obj_t *obj)
         list_destroy(obj->writers);
 
     switch(obj->type) {
-    case CONSOLE:
-        if (obj->aux.console.dev)
-            free(obj->aux.console.dev);
-        /* Do not destroy obj->aux.console.logfile since it is only a ref. */
-        break;
-    case LOGFILE:
-        if (obj->aux.logfile.console)
-            free(obj->aux.logfile.console);
-        break;
     case CLIENT:
         if (obj->aux.client.req) {
         /*
@@ -322,6 +311,20 @@ void destroy_obj(obj_t *obj)
             obj->aux.client.req->sd = -1;
             destroy_req(obj->aux.client.req);
         }
+        break;
+    case LOGFILE:
+        if (obj->aux.logfile.console)
+            free(obj->aux.logfile.console);
+        break;
+    case SERIAL:
+        if (obj->aux.serial.dev)
+            free(obj->aux.serial.dev);
+        /* Do not destroy obj->aux.serial.logfile since it is only a ref. */
+        break;
+    case TELNET:
+        /*
+         *  NOT_IMPLEMENTED_YET
+         */
         break;
     default:
         err_msg(0, "Invalid object (%d) at %s:%d",
@@ -413,9 +416,9 @@ void link_objs(obj_t *src, obj_t *dst)
      *    display a warning if the request is to be joined
      *    or steal the console if the request is to be forced.
      */
-    if ((dst->type == CONSOLE) && (!list_is_empty(dst->writers))) {
+    if (is_console_obj(dst) && !list_is_empty(dst->writers)) {
 
-        assert(src->type == CLIENT);
+        assert(is_client_obj(src));
         gotBcast = list_count(src->aux.client.req->consoles) > 1;
         gotForce = src->aux.client.req->enableForce;
         gotJoin = src->aux.client.req->enableJoin;
@@ -437,7 +440,7 @@ void link_objs(obj_t *src, obj_t *dst)
         if (!(i = list_iterator_create(dst->writers)))
             err_msg(0, "Out of memory");
         while ((writer = list_next(i))) {
-            assert(writer->type == CLIENT);
+            assert(is_client_obj(writer));
             write_obj_data(writer, buf, strlen(buf), 1);
             if (gotForce)
                 unlink_objs(dst, writer);
@@ -490,9 +493,9 @@ static void unlink_objs_helper(obj_t *src, obj_t *dst)
     if (list_find_first(src->writers, (ListFindF) find_obj, dst))
         DPRINTF("Removing [%s] from [%s] writers.\n", dst->name, src->name);
     n = list_delete_all(src->writers, (ListFindF) find_obj, dst);
-    if ((n > 0) && (src->type == CONSOLE) && (!list_is_empty(src->writers))) {
+    if ((n > 0) && is_console_obj(src) && !list_is_empty(src->writers)) {
 
-        assert(dst->type == CLIENT);
+        assert(is_client_obj(dst));
         now = create_short_time_string(0);
         tty = dst->aux.client.req->tty;
         snprintf(buf, sizeof(buf),
@@ -506,7 +509,7 @@ static void unlink_objs_helper(obj_t *src, obj_t *dst)
         if (!(i = list_iterator_create(src->writers)))
             err_msg(0, "Out of memory");
         while ((writer = list_next(i))) {
-            assert(writer->type == CLIENT);
+            assert(is_client_obj(writer));
             write_obj_data(writer, buf, strlen(buf), 1);
         }
         list_iterator_destroy(i);
@@ -515,8 +518,9 @@ static void unlink_objs_helper(obj_t *src, obj_t *dst)
     /*  If client has been unlinked from all readers and writers,
      *    set flag to ensure no additional data is written into the buffer.
      */
-    if ((src->type == CLIENT)
-      && list_is_empty(src->readers) && list_is_empty(src->writers))
+    if ( is_client_obj(src)
+      && list_is_empty(src->readers)
+      && list_is_empty(src->writers) )
         src->gotEOF = 1;
 
     return;
@@ -592,7 +596,7 @@ again:
     }
     else {
         DPRINTF("Read %d bytes from [%s].\n", n, obj->name); /* xyzzy */
-        if (obj->type == CLIENT) {
+        if (is_client_obj(obj)) {
 
             if ((rc = pthread_mutex_lock(&obj->bufLock)) != 0)
                 err_msg(rc, "pthread_mutex_lock() failed for [%s]", obj->name);
@@ -659,7 +663,7 @@ int write_obj_data(obj_t *obj, void *src, int len, int isInfo)
     /*  Do nothing if this is an informational message
      *    and the client has requested not to be bothered.
      */
-    if (isInfo && (obj->type == CLIENT) && (obj->aux.client.req->enableQuiet))
+    if (isInfo && is_client_obj(obj) && obj->aux.client.req->enableQuiet)
         goto end;
 
     /*  Assert the buffer's input and output ptrs are valid upon entry.
@@ -715,7 +719,7 @@ int write_obj_data(obj_t *obj, void *src, int len, int isInfo)
     /*  Check to see if any data in circular-buffer was overwritten.
      */
     if (len > avail) {
-        if ((obj->type != CLIENT) || (!obj->aux.client.gotSuspend))
+        if (!is_client_obj(obj) || !obj->aux.client.gotSuspend)
             log_msg(10, "Overwrote %d bytes in buffer for %s.",
                 len-avail, obj->name);
         obj->bufOutPtr = obj->bufInPtr + 1;
@@ -767,7 +771,7 @@ int write_to_obj(obj_t *obj)
      *  If the object is suspended, no data is written out to its fd.
      *  Note that if (bufInPtr == bufOutPtr), the obj's buffer is empty.
      */
-    if ((obj->type == CLIENT) && (obj->aux.client.gotSuspend)) {
+    if (is_client_obj(obj) && obj->aux.client.gotSuspend) {
         avail = 0;
     }
     else if (obj->bufInPtr >= obj->bufOutPtr) {

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.25 2001/08/28 22:16:17 dun Exp $
+ *  $Id: server.h,v 1.26 2001/09/07 18:27:41 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -8,19 +8,30 @@
 #define _SERVER_H
 
 
+#include <netinet/in.h>			/* for struct sockaddr_in             */
 #include <pthread.h>
 #include <sys/types.h>
-#include <termios.h>
-#include <time.h>
+#include <termios.h>			/* for struct termios                 */
+#include <time.h>			/* for time_t                         */
 #include "common.h"
 #include "list.h"
 
 
 enum obj_type {				/* bit-field limited to 4 values      */
     CLIENT,
-    CONSOLE,
     LOGFILE,
+    SERIAL,
+    TELNET,
 };
+
+typedef struct sockaddr_in sockaddr_t;
+
+typedef enum telnet_state_type {	/* bit-field limited to 4 values      */
+    CONN_NONE,
+    CONN_DOWN,
+    CONN_PENDING,
+    CONN_UP,
+} telnet_state_t;
 
 typedef struct client_obj {		/* CLIENT AUX OBJ DATA:               */
     req_t           *req;		/*  client request info               */
@@ -29,20 +40,27 @@ typedef struct client_obj {		/* CLIENT AUX OBJ DATA:               */
     unsigned         gotSuspend:1;	/*  true if suspending client output  */
 } client_obj_t;
 
-typedef struct console_obj {		/* CONSOLE AUX OBJ DATA:              */
-    char            *dev;		/*  console device name               */
-    struct base_obj *logfile;		/*  log obj ref for console output    */
-    struct termios   tty;		/*  saved cooked tty mode             */
-} console_obj_t;
-
 typedef struct logfile_obj {		/* LOGFILE AUX OBJ DATA:              */
     char            *console;		/*  name of console being logged      */
 } logfile_obj_t;
 
+typedef struct serial_obj {		/* SERIAL AUX OBJ DATA:               */
+    char            *dev;		/*  local serial device name          */
+    struct base_obj *logfile;		/*  log obj ref for console output    */
+    struct termios   tty;		/*  saved cooked tty mode             */
+} serial_obj_t;
+
+typedef struct telnet_obj {		/* TELNET AUX OBJ DATA:               */
+    sockaddr_t       saddr;		/*  n/w address of terminal server    */
+    struct base_obj *logfile;		/*  log obj ref for console output    */
+    telnet_state_t   state:2;		/*  state of network connection       */
+} telnet_obj_t;
+
 typedef union aux_obj {
     client_obj_t     client;
-    console_obj_t    console;
     logfile_obj_t    logfile;
+    serial_obj_t     serial;
+    telnet_obj_t     telnet;
 } aux_obj_t;
 
 typedef struct base_obj {		/* BASE OBJ:                          */
@@ -81,6 +99,13 @@ typedef struct client_args {
 } client_arg_t;
 
 
+#define is_client_obj(OBJ)   (OBJ->type == CLIENT)
+#define is_logfile_obj(OBJ)  (OBJ->type == LOGFILE)
+#define is_serial_obj(OBJ)   (OBJ->type == SERIAL)
+#define is_telnet_obj(OBJ)   (OBJ->type == TELNET)
+#define is_console_obj(OBJ) ((OBJ->type == SERIAL) || (OBJ->type == TELNET))
+
+
 /*******************\
 **  server-conf.c  **
 \*******************/
@@ -105,12 +130,12 @@ int process_escape_chars(obj_t *client, void *src, int len);
 **  server-obj.c  **
 \******************/
 
-obj_t * create_console_obj(
-    server_conf_t *conf, char *name, char *dev, char *opts);
+obj_t * create_client_obj(server_conf_t *conf, req_t *req);
 
 obj_t * create_logfile_obj(server_conf_t *conf, char *name, obj_t *console);
 
-obj_t * create_client_obj(server_conf_t *conf, req_t *req);
+obj_t * create_serial_obj(
+    server_conf_t *conf, char *name, char *dev, char *opts);
 
 void destroy_obj(obj_t *obj);
 
@@ -142,7 +167,7 @@ void process_client(client_arg_t *args);
 **  server-tty.c  **
 \*******************/
 
-void set_serial_opts(struct termios *tty, obj_t *console, char *str);
+void set_serial_opts(struct termios *tty, obj_t *serial, char *str);
 
 
 #endif /* !_SERVER_H */

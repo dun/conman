@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.21 2001/09/06 22:37:38 dun Exp $
+ *  $Id: server.c,v 1.22 2001/09/07 18:27:41 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -199,7 +199,7 @@ static void display_configuration(server_conf_t *conf)
     if (!(i = list_iterator_create(conf->objs)))
         err_msg(0, "Out of memory");
     while ((obj = list_next(i)))
-        if (obj->type == CONSOLE)
+        if (is_console_obj(obj))
             n++;
     list_iterator_destroy(i);
 
@@ -295,12 +295,12 @@ static void mux_io(server_conf_t *conf)
             if (obj->fd < 0) {
                 continue;
             }
-            if ((obj->type == CONSOLE) || (obj->type == CLIENT)) {
+            if (is_console_obj(obj) || is_client_obj(obj)) {
                 FD_SET(obj->fd, &rset);
                 maxfd = MAX(maxfd, obj->fd);
             }
             if (((obj->bufInPtr != obj->bufOutPtr) || (obj->gotEOF))
-              && ((obj->type != CLIENT) || (!obj->aux.client.gotSuspend))) {
+              && ((!is_client_obj(obj)) || (!obj->aux.client.gotSuspend))) {
                 FD_SET(obj->fd, &wset);
                 maxfd = MAX(maxfd, obj->fd);
             }

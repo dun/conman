@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-esc.c,v 1.7 2001/08/14 23:18:36 dun Exp $
+ *  $Id: server-esc.c,v 1.8 2001/09/07 18:27:40 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -35,7 +35,7 @@ int process_escape_chars(obj_t *client, void *src, int len)
     const unsigned char *last = (unsigned char *) src + len;
     unsigned char *p, *q;
 
-    assert(client->type == CLIENT);
+    assert(is_client_obj(client));
     assert(client->fd >= 0);
 
     if (!src || len <= 0)
@@ -87,15 +87,25 @@ static void perform_serial_break(obj_t *client)
     ListIterator i;
     obj_t *console;
 
-    assert(client->type == CLIENT);
+    assert(is_client_obj(client));
+
     if (!(i = list_iterator_create(client->readers)))
         err_msg(0, "Out of memory");
     while ((console = list_next(i))) {
-        assert(console->type == CONSOLE);
+
+        assert(is_console_obj(console));
         DPRINTF("Performing serial-break on console [%s].\n", console->name);
-        if (tcsendbreak(console->fd, 0) < 0)
-            err_msg(errno, "tcsendbreak() failed for console [%s]",
-                console->name);
+
+        if (is_serial_obj(console)) {
+            if (tcsendbreak(console->fd, 0) < 0)
+                err_msg(errno, "tcsendbreak() failed for console [%s]",
+                    console->name);
+        }
+        else if (is_telnet_obj(console)) {
+            /*
+             *  NOT_IMPLEMENTED_YET
+             */
+        }
     }
     list_iterator_destroy(i);
     return;
@@ -123,7 +133,7 @@ static void perform_log_replay(obj_t *client)
     int n, m;
     int rc;
 
-    assert(client->type == CLIENT);
+    assert(is_client_obj(client));
 
     /*  Broadcast sessions are "write-only", so the log-replay is a no-op.
      */
@@ -134,8 +144,11 @@ static void perform_log_replay(obj_t *client)
      */
     assert(list_count(client->writers) == 1);
     console = list_peek(client->writers);
-    assert(console->type == CONSOLE);
-    logfile = console->aux.console.logfile;
+    assert(is_console_obj(console));
+    if (is_serial_obj(console))
+        logfile = console->aux.serial.logfile;
+    else if (is_telnet_obj(console))
+        logfile = console->aux.telnet.logfile;
 
     if (!logfile) {
         n = snprintf(ptr, len, "%sConsole [%s] is not being logged%s",
@@ -147,7 +160,7 @@ static void perform_log_replay(obj_t *client)
         }
     }
     else {
-        assert(logfile->type == LOGFILE);
+        assert(is_logfile_obj(logfile));
         n = snprintf(ptr, len, "%sBegin log replay of console [%s]%s",
             CONMAN_MSG_PREFIX, console->name, CONMAN_MSG_SUFFIX);
         if ((n < 0) || (n >= len) || (sizeof(buf) <= 2*n - 2)) {
@@ -216,7 +229,7 @@ static void perform_quiet_toggle(obj_t *client)
  */
     int rc;
 
-    assert(client->type == CLIENT);
+    assert(is_client_obj(client));
 
     if ((rc = pthread_mutex_lock(&client->bufLock)) != 0)
         err_msg(rc, "pthread_mutex_lock() failed for [%s]", client->name);
@@ -240,7 +253,7 @@ static void perform_suspend(obj_t *client)
     int rc;
     int gotSuspend;
 
-    assert(client->type == CLIENT);
+    assert(is_client_obj(client));
 
     if ((rc = pthread_mutex_lock(&client->bufLock)) != 0)
         err_msg(rc, "pthread_mutex_lock() failed for [%s]", client->name);
