@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 #
-# $Id: Makefile.in,v 1.22 2001/08/28 22:16:17 dun Exp $
+# $Id: Makefile.in,v 1.23 2001/09/06 21:52:12 dun Exp $
 ##
 
 PACKAGE=	@PACKAGE@
@@ -30,7 +30,9 @@ sbindir=	@sbindir@
 libdir=		@libdir@
 
 PROGS=		conman conmand
-COMMON_OBJS=	common.o errors.o list.o lex.o util.o @LIBOBJS@
+COMMON_OBJS1=	common.o errors.o list.o lex.o
+COMMON_OBJS2=	util.o util-file.o util-net.o util-str.o
+COMMON_OBJS=	$(COMMON_OBJS1) $(COMMON_OBJS2) @LIBOBJS@
 CLIENT_OBJS=	client.o client-conf.o client-sock.o client-tty.o $(COMMON_OBJS)
 SERVER_OBJS1=	server.o server-conf.o server-esc.o server-obj.o server-sock.o
 SERVER_OBJS2=	server-tty.o
@@ -102,23 +104,27 @@ rpm tar:
 	if test -z "$(VERSION)"; then \
 	  echo "ERROR: Undefined VERSION macro definition" 1>&2; exit 0; fi; \
 	test -z "$$tag" && tag=`echo $(PACKAGE)-$(VERSION) | tr '.' '-'`; \
-	ver=`cvs co -r $$tag -p $(PACKAGE)/VERSION 2>/dev/null | \
+	ver=`cvs -Q co -r $$tag -p $(PACKAGE)/VERSION | \
 	  sed -ne 's/.*-\(.*\)/\1/p'`; \
+	test -z "$$rel" && rel=1; \
 	if test -z "$$ver"; then \
 	  echo "ERROR: Cannot determine VERSION (tag=$$tag)" 1>&2; exit 0; fi; \
-	$(MAKE) -s $@-internal tag=$$tag ver=$$ver
+	$(MAKE) -s $@-internal tag=$$tag ver=$$ver rel=$$rel
 
-rpm-internal:
+rpm-internal: tar-internal
 	@test -z "$$tag" -o -z "$$ver" && exit 1; \
-	$(MAKE) tar-internal || exit 0; \
 	tmp=$${TMPDIR-/tmp}/tmp-$(PACKAGE)-$$$$; \
+	tar=$(PACKAGE)-$$ver.tgz; \
 	for d in BUILD RPMS SOURCES SPECS SRPMS TMP; do \
 	  $(mkinstalldirs) $$tmp/$$d >/dev/null; \
 	done; \
-	cp -p $(PACKAGE)-$$ver.tgz $$tmp/SOURCES; \
-	cvs co -r $$tag -p $(PACKAGE)/$(PACKAGE).spec.in 2>/dev/null | \
-	  sed -e "s/\@PACKAGE\@/$(PACKAGE)/" -e "s/\@VERSION\@/$$ver/" \
-	  >$$tmp/SPECS/$(PACKAGE).spec; \
+	cp -p $$tar $$tmp/SOURCES; \
+	(cvs -Q co -r $$tag -p $(PACKAGE)/$(PACKAGE).spec.in || \
+	  cvs -Q co -r $$tag -p $(PACKAGE)/$(PACKAGE).spec) | \
+	  sed -e "s/^\(%define name\).*/\1    $(PACKAGE)/i" \
+	    -e "s/^\(%define version\).*/\1 $$ver/i" \
+	    -e "s/^\(%define release\).*/\1 $$rel/i" \
+	    >$$tmp/SPECS/$(PACKAGE).spec; \
 	if ! test -s $$tmp/SPECS/$(PACKAGE).spec; then \
 	  echo "ERROR: No $(PACKAGE).spec file (tag=$$tag)" 1>&2; \
 	  rm -rf $$tmp; exit 0; fi; \
@@ -135,11 +141,15 @@ tar-internal:
 	tmp=$${TMPDIR-/tmp}/tmp-$(PACKAGE)-$$$$; \
 	name=$(PACKAGE)-$$ver; \
 	dir=$$tmp/$$name; \
-	echo "creating $$name.tgz (tag=$$tag)"; \
+	tar=$$name.tgz; \
+	rm -f $$tar; \
+	echo "creating $$tar (tag=$$tag)"; \
 	$(mkinstalldirs) $$tmp >/dev/null; \
-	cvs export -r $$tag -d $$dir $(PACKAGE) >/dev/null && \
-	  (cd $$tmp; tar cf - $$name) | gzip -c9 > $(top_srcdir)/$$name.tgz; \
-	rm -rf $$tmp
+	(cd $$tmp; cvs -Q export -r $$tag -d $$name $(PACKAGE)) && \
+	  (cd $$tmp; tar cf - $$name) | gzip -c9 > $(top_srcdir)/$$tar; \
+	rm -rf $$tmp; \
+	if ! test -f $$tar; then \
+	  echo "ERROR: Unable to create $$tar." 1>&2; exit 1; fi; \
 
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
