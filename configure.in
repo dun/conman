@@ -3,7 +3,7 @@ dnl
 dnl ConMan AutoConf Config Jazz
 dnl   by Chris Dunlap <cdunlap@llnl.gov>
 dnl
-dnl $Id: configure.in,v 1.1 2001/05/04 15:26:40 dun Exp $
+dnl $Id: configure.in,v 1.2 2001/05/14 15:31:24 dun Exp $
 
 
 dnl Preamble:  We, the directives of the autoconf file,
@@ -115,6 +115,11 @@ AC_MSG_RESULT($debug)
 dnl Check for random silliness.
 dnl
 AC_CACHE_CHECK([for a sense of humor], ac_cv_humor, ac_cv_humor=yes)
+
+
+dnl Add defs to config.h.
+dnl
+AC_DEFINE(USE_THREAD_SAFE_LIST, 1, [Define if list needs to be thread-safe.])
 
 
 dnl Epilogue.

@@ -37,3 +37,6 @@
 /* Define if you are building a production release. */
 #undef NDEBUG
 
+/* Define if list needs to be thread-safe. */
+#undef USE_THREAD_SAFE_LIST
+
