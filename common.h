@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.h,v 1.14 2001/08/14 23:17:20 dun Exp $
+ *  $Id: common.h,v 1.15 2001/08/17 01:52:16 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -12,10 +12,9 @@
 
 
 #define DEFAULT_CONMAN_HOST	"127.0.0.1"
-#define DEFAULT_CONMAN_PORT	7890
+#define DEFAULT_CONMAN_PORT	"7890"
 #define DEFAULT_SERVER_CONF	"/etc/conman.conf"
 #define DEFAULT_CLIENT_ESCAPE	'&'
-#define DEFAULT_CONSOLE_BAUD	9600
 
 #define CONMAN_MSG_PREFIX	"\r\n<ConMan> "
 #define CONMAN_MSG_SUFFIX	".\r\n"

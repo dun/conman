@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-conf.c,v 1.26 2001/08/15 22:22:23 dun Exp $
+ *  $Id: client-conf.c,v 1.27 2001/08/17 01:52:16 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -61,7 +61,7 @@ client_conf_t * create_client_conf(void)
     /*  Must copy host string constant since it will eventually be free()'d.
      */
     conf->req->host = create_string(DEFAULT_CONMAN_HOST);
-    conf->req->port = DEFAULT_CONMAN_PORT;
+    conf->req->port = atoi(DEFAULT_CONMAN_PORT);
     conf->req->command = CONNECT;
 
     conf->escapeChar = DEFAULT_CLIENT_ESCAPE;
@@ -196,7 +196,7 @@ static void display_client_help(char *prog)
     printf("\n");
     printf("  -b        Broadcast (write-only) to multiple consoles.\n");
     printf("  -d HOST   Specify server destination."
-        " (default: %s:%d).\n", DEFAULT_CONMAN_HOST, DEFAULT_CONMAN_PORT);
+        " (default: %s:%d).\n", DEFAULT_CONMAN_HOST, atoi(DEFAULT_CONMAN_PORT));
     printf("  -e CHAR   Set escape character (default: '%s').\n", esc);
     printf("  -f        Force connection (console stealing).\n");
     printf("  -h        Display this help.\n");
