@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.33 2001/08/28 22:15:51 dun Exp $
+ *  $Id: server-obj.c,v 1.34 2001/09/01 20:17:02 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -9,6 +9,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include <assert.h>
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
@@ -27,6 +28,7 @@
 
 static obj_t * create_obj(
     server_conf_t *conf, char *name, int fd, enum obj_type type);
+static char * find_trailing_int_str(char *str);
 static void unlink_objs_helper(obj_t *src, obj_t *dst);
 
 
@@ -269,8 +271,8 @@ void destroy_obj(obj_t *obj)
     assert(obj->fd >= 0);
 /*
  *  FIX_ME? Ensure obj buf is flushed (if not suspended) before destruction.
- */
-/*  assert(obj->bufInPtr == obj->bufOutPtr); */
+ *
+ *  assert(obj->bufInPtr == obj->bufOutPtr); */
 
     if (obj->type == CONSOLE) {
         /*
@@ -337,16 +339,45 @@ int compare_objs(obj_t *obj1, obj_t *obj2)
 {
 /*  Used by list_sort() to compare the name of (obj1) to that of (obj2).
  */
-    char *x, *y;
+    char *s1, *s2;
+    char *i1, *i2;
 
     assert(obj1);
     assert(obj2);
+    assert(obj1->name);
+    assert(obj2->name);
 
-    x = obj1->name;
-    y = obj2->name;
-    while (*x && *x == *y)
-        x++, y++;
-    return(*x - *y);
+    s1 = obj1->name;
+    s2 = obj2->name;
+    i1 = find_trailing_int_str(s1);
+    i2 = find_trailing_int_str(s2);
+
+    while (*s1) {
+        if ((s1 == i1) && (s2 == i2))
+            return(atoi(i1) - atoi(i2));
+        else if (*s1 == *s2)
+            s1++, s2++;
+        else
+            break;
+    }
+    return(*s1 - *s2);
+}
+
+
+static char * find_trailing_int_str(char *str)
+{
+/*  Searches string 'str' for a trailing integer.
+ *  Returns a ptr to the start of the integer; o/w, returns NULL.
+ */
+    char *p, *q;
+
+    for (p=str, q=NULL; p && *p; p++) {
+        if (!isdigit(*p))
+            q = NULL;
+        else if (!q)
+            q = p;
+    }
+    return(q);
 }
 
 
@@ -355,6 +386,9 @@ int find_obj(obj_t *obj, obj_t *key)
 /*  Used by list_find_first() and list_delete_all() to locate
  *    the object specified by (key) within the list.
  */
+    assert(obj);
+    assert(key);
+
     return(obj == key);
 }
 
