@@ -2,7 +2,7 @@
 # Makefile Include for RPM Construction
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Make-rpm.mk,v 1.6 2001/12/05 00:58:22 dun Exp $
+# $Id: Make-rpm.mk,v 1.7 2001/12/05 04:23:47 dun Exp $
 ##
 # NOTES:
 # - requires PACKAGE and VERSION macro definitions to be defined
@@ -58,14 +58,15 @@ rpm-internal: tar-internal
 	@test -z "$$cvs" -o -z "$$mkdir" && exit 1; \
 	test -z "$$tag" -o -z "$$ver" -o -z "$$rel" && exit 1; \
 	tmp=$${TMPDIR-/tmp}/tmp-$$pkg-$$$$; \
+	log=$$tmp/TMP/rpm.log; \
 	tar=$$pkg-$$ver.tgz; \
 	for d in BUILD RPMS SOURCES SPECS SRPMS TMP; do \
 	  if ! $$mkdir $$tmp/$$d >/dev/null; then \
 	    echo "ERROR: Cannot create \"$$tmp/$$d\" dir." 1>&2; exit 1; fi; \
 	done; \
 	cp -p $$tar $$tmp/SOURCES; \
-	($$cvs -Q co -r $$tag -p $$pkg/$$pkg.spec.in || \
-	  $$cvs -Q co -r $$tag -p $$pkg/$$pkg.spec) | \
+	(test -f $$pkg.spec.in && $$cvs -Q co -r $$tag -p $$pkg/$$pkg.spec.in \
+	  || $$cvs -Q co -r $$tag -p $$pkg/$$pkg.spec) | \
 	  sed -e "s/^\([ 	]*Name:\).*/\1 $$pkg/i" \
 	    -e "s/^\([ 	]*Version:\).*/\1 $$ver/i" \
 	    -e "s/^\([ 	]*Release:\).*/\1 $$rel/i" \
@@ -76,9 +77,10 @@ rpm-internal: tar-internal
 	echo "creating $$pkg-$$ver*rpm (tag=$$tag)"; \
 	rpm --showrc | egrep "_(gpg|pgp)_name" >/dev/null && sign="--sign"; \
 	rpm -ba --define "_tmppath $$tmp/TMP" --define "_topdir $$tmp" \
-	  $$sign --quiet $$tmp/SPECS/$$pkg.spec && \
-	    cp -p $$tmp/RPMS/*/$$pkg-$$ver*.*.rpm \
-	      $$tmp/SRPMS/$$pkg-$$ver*.src.rpm .; \
+	  $$sign --quiet $$tmp/SPECS/$$pkg.spec >$$log 2>&1 \
+	    && cp -p $$tmp/RPMS/*/$$pkg-$$ver*.*.rpm \
+	      $$tmp/SRPMS/$$pkg-$$ver*.src.rpm . \
+	    || cat $$log; \
 	rm -rf $$tmp
 
 tar-internal:
