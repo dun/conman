@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: lex.c,v 1.9 2001/09/23 00:46:06 dun Exp $
+ *  $Id: lex.c,v 1.10 2001/09/24 17:26:54 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "lex.h" for documentation on public functions.
@@ -88,7 +88,7 @@ Lex lex_create(void *buf, char *toks[])
     l->prev = 0;
     l->line = 0;
     l->gotEOL = 1;
-    l->magic = LEX_MAGIC;
+    assert(l->magic = LEX_MAGIC);	/* set magic via assert abuse */
     return(l);
 }
 
@@ -98,7 +98,7 @@ void lex_destroy(Lex l)
     assert(l);
     assert(l->magic == LEX_MAGIC);
 
-    l->magic = 0;
+    assert(l->magic = 1);		/* clear magic via assert abuse */
     free(l);
     return;
 }
