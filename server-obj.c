@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.52 2001/12/19 23:51:27 dun Exp $
+ *  $Id: server-obj.c,v 1.53 2001/12/20 01:42:34 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -452,6 +452,9 @@ int connect_telnet_obj(obj_t *telnet)
         set_fd_nonblocking(telnet->fd);
         set_fd_closed_on_exec(telnet->fd);
 
+        DPRINTF("Connecting to <%s:%d> for [%s].\n",
+            telnet->aux.telnet.host, telnet->aux.telnet.port, telnet->name);
+
         if (connect(telnet->fd, (struct sockaddr *) &telnet->aux.telnet.saddr,
           sizeof(telnet->aux.telnet.saddr)) < 0) {
             if (errno == EINPROGRESS) {
@@ -488,6 +491,13 @@ int connect_telnet_obj(obj_t *telnet)
         if (rc < 0)
             err = errno;
         if (err) {
+            /*
+             *  On some systems (eg, Tru64), the close() of a socket
+             *    that failed to connect() will return with an error of
+             *    "invalid argument".  So close & ignore the return code here.
+             */
+            close(telnet->fd);		/* ignore return code */
+            telnet->fd = -1;
             disconnect_telnet_obj(telnet);
             return(-1);
         }
@@ -542,6 +552,9 @@ void disconnect_telnet_obj(obj_t *telnet)
 
     assert(telnet != NULL);
     assert(is_telnet_obj(telnet));
+
+    DPRINTF("Disconnecting from <%s:%d> for [%s].\n",
+        telnet->aux.telnet.host, telnet->aux.telnet.port, telnet->name);
 
     if (telnet->aux.telnet.timer >= 0) {
         untimeout(telnet->aux.telnet.timer);
