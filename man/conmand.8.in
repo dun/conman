@@ -1,4 +1,4 @@
-.\" $Id: conmand.8.in,v 1.4 2002/05/15 04:27:38 dun Exp $
+.\" $Id: conmand.8.in,v 1.5 2002/05/16 04:53:49 dun Exp $
 
 .TH CONMAND 8 "@DATE@" "@PROJECT@-@VERSION@" "LLNL"
 
@@ -56,8 +56,8 @@ The client/server communications are not yet encrypted.
 
 .SH NOTES
 If the configuration file is modified while the daemon is running,
-the '\fB-k\fR' and '\fB-r\fR' options will be unable to identify the daemon
-process.  As a result, the appropriate signal will have to be sent to the
+the '\fB-k\fR' and '\fB-r\fR' options may be unable to identify the daemon
+process.  Consequently, the appropriate signal may need to be sent to the
 daemon manually.
 
 .SH AUTHOR
