@@ -1,4 +1,4 @@
-.\" $Id: conman.1.in,v 1.4.2.2 2003/09/26 18:05:29 dun Exp $
+.\" $Id: conman.1.in,v 1.4.2.3 2003/10/01 23:22:10 dun Exp $
 
 .TH CONMAN 1 "@DATE@" "@PROJECT@-@VERSION@" "LLNL"
 
@@ -121,10 +121,6 @@ Toggle quiet-mode to display/suppress informational messages.
 .B &R
 Reset the node associated with this console.  This escape requires a
 "resetcmd" to be specified in the \fBconmand\fR configuration.
-.TP
-.B &T
-Toggle newline timestamping in the console log.  This escape requires the
-console device to have logging enabled in the \fBconmand\fR configuration.
 .TP
 .B &Z
 Suspend the client.

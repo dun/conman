@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.h,v 1.55.2.3 2003/09/26 18:05:29 dun Exp $
+ *  $Id: server.h,v 1.55.2.4 2003/10/01 23:22:10 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -39,17 +39,18 @@
 #include "list.h"
 
 
-#define DEFAULT_LOGOPT_SANITIZE 0
+#define DEFAULT_LOGOPT_SANITIZE         0
+#define DEFAULT_LOGOPT_TIMESTAMP        0
 
-#define DEFAULT_SEROPT_BPS      B9600
-#define DEFAULT_SEROPT_DATABITS 8
-#define DEFAULT_SEROPT_PARITY   0
-#define DEFAULT_SEROPT_STOPBITS 1
+#define DEFAULT_SEROPT_BPS              B9600
+#define DEFAULT_SEROPT_DATABITS         8
+#define DEFAULT_SEROPT_PARITY           0
+#define DEFAULT_SEROPT_STOPBITS         1
 
-#define RESET_CMD_TIMEOUT       60
+#define RESET_CMD_TIMEOUT               60
 
-#define TELNET_MIN_TIMEOUT      15
-#define TELNET_MAX_TIMEOUT      1800
+#define TELNET_MIN_TIMEOUT              15
+#define TELNET_MAX_TIMEOUT              1800
 
 
 /*  Under Solaris and Tru64, NTELOPTS is only defined when TELOPTS is defined.
@@ -78,6 +79,7 @@ typedef struct client_obj {             /* CLIENT AUX OBJ DATA:              */
 
 typedef struct logfile_opt {            /* LOGFILE OBJ OPTIONS:              */
     unsigned         enableSanitize:1;  /*  true if logfile being sanitized  */
+    unsigned         enableTimestamp:1; /*  true if timestamping each line   */
 } logopt_t;
 
 typedef enum logfile_line_state {       /* log CR/LF newline state (2 bits)  */
@@ -90,9 +92,7 @@ typedef struct logfile_obj {            /* LOGFILE AUX OBJ DATA:             */
     struct base_obj *console;           /*  con obj ref for name expansion   */
     char            *fmtName;           /*  name with conversion specifiers  */
     logopt_t         opts;              /*  local options                    */
-    unsigned         enableProcCheck:1; /*  true if recomputing proc flag    */
-    unsigned         enableProcessing:1;/*  true if input processing req'd   */
-    unsigned         enableTimestamps:1;/*  true if timestamping each line   */
+    unsigned         gotProcessing:1;   /*  true if input processing req'd   */
     unsigned         lineState:2;       /*  log_line_state_t CR/LF state     */
 } logfile_obj_t;
 
@@ -271,8 +271,8 @@ int send_telnet_cmd(obj_t *telnet, int cmd, int opt);
 **  server-logfile.c  **
 \**********************/
 
-int parse_logfile_opts(
-    logopt_t *opts, const char *str, char *errbuf, int errlen);
+int parse_logfile_opts(logopt_t *opts, const char *str,
+    const char *conf, int line, char *errbuf, int errlen);
 
 int open_logfile_obj(obj_t *logfile, int gotTrunc);
 

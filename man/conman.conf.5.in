@@ -1,4 +1,4 @@
-.\" $Id: conman.conf.5.in,v 1.5.2.5 2003/09/22 18:41:22 dun Exp $
+.\" $Id: conman.conf.5.in,v 1.5.2.6 2003/10/01 23:22:10 dun Exp $
 
 .TH CONMAN.CONF 5 "@DATE@" "@PROJECT@-@VERSION@" "LLNL"
 
@@ -88,17 +88,27 @@ SPECIFICATIONS\fR) and must contain either '\fB%N\fR' or '\fB%D\fR'.
 If an absolute pathname is not given, the file's location is relative to
 \fBlogdir\fR (assuming it has been previously defined).
 .TP
-\fBlogopts\fR \fB=\fR "(\fBsanitize\fR|\fBnosanitize\fR)"
+\fBlogopts\fR \fB=\fR "(\fBsanitize\fR|\fBnosanitize\fR),(\fBtimestamp\fR|\fBnotimestamp\fR)"
 Specifies global options for the console log files.  These options can be
-overridden on an individual basis by specifying the \fBCONSOLE\fR
-\fBlogopts\fR keyword.  The valid logoptions are \fBsanitize\fR and
-\fBnosanitize\fR; sanitized log files convert non-printable characters into
-7-bit printable characters.  This also affects the output of the client's
-log-replay escape.  The default is \fBnosanitize\fR.
+overridden on an per-console basis by specifying the \fBCONSOLE\fR
+\fBlogopts\fR keyword.  Note that options affecting the output of the console's
+logfile also affect the output of the console's log-replay escape.  The valid
+logoptions include the following:
+.br
+.sp
+\fBsanitize\fR or \fBnosanitize\fR - sanitized log files convert non-printable
+characters into 7-bit printable characters.
+.br
+.sp
+\fBtimestamp\fR or \fBnotimestamp\fR - timestamped logs prepend each line with
+the current timestamp in "YYYY-MM-DD HH:MM:SS" format.
+.br
+.sp
+The default is "\fBnosanitize\fR,\fBnotimestamp\fR".
 .TP
 \fBseropts\fR \fB=\fR "\fIbps\fR[,\fIdatabits\fR[\fIparity\fR[\fIstopbits\fR]]]"
 Specifies global options for local serial devices.  These options can be
-overridden on an individual basis by specifying the \fBCONSOLE\fR
+overridden on an per-console basis by specifying the \fBCONSOLE\fR
 \fBseropts\fR keyword.
 .br
 .sp

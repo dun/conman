@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-logfile.c,v 1.11.2.4 2003/09/30 20:12:07 dun Exp $
+ *  $Id: server-logfile.c,v 1.11.2.5 2003/10/01 23:22:10 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -36,14 +36,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include "common.h"
 #include "log.h"
 #include "server.h"
 #include "util-file.h"
 #include "util-str.h"
 
 
-int parse_logfile_opts(
-    logopt_t *opts, const char *str, char *errbuf, int errlen)
+int parse_logfile_opts(logopt_t *opts, const char *str,
+    const char *conf, int line, char *errbuf, int errlen)
 {
 /*  Parses 'str' for logfile device options 'opts'.
  *    The 'opts' struct should be initialized to a default value.
@@ -52,6 +53,9 @@ int parse_logfile_opts(
  *    (writing an error message into 'errbuf' if defined).
  */
     logopt_t optsTmp;
+    char buf[MAX_LINE];
+    const char * const separators = " \t\n.,;";
+    char *tok;
 
     assert(opts != NULL);
 
@@ -65,17 +69,32 @@ int parse_logfile_opts(
             snprintf(errbuf, errlen, "encountered empty options string");
         return(-1);
     }
-
-    if (!strcasecmp(str, "sanitize"))
-        optsTmp.enableSanitize = 1;
-    else if (!strcasecmp(str, "nosanitize"))
-        optsTmp.enableSanitize = 0;
-    else {
+    /*  Since strtok() modifies its string, we need to create a working copy.
+     */
+    if (strlcpy(buf, str, sizeof(buf)) >= sizeof(buf)) {
         if ((errbuf != NULL) && (errlen > 0))
-            snprintf(errbuf, errlen, "expected 'SANITIZE' or 'NOSANITIZE'");
+            snprintf(errbuf, errlen, "logopt string exceeded buffer size");
         return(-1);
     }
-
+    /*  Parse the string.
+     */
+    tok = strtok(buf, separators);
+    while (tok != NULL) {
+        if (!strcasecmp(tok, "sanitize"))
+            optsTmp.enableSanitize = 1;
+        else if (!strcasecmp(tok, "nosanitize"))
+            optsTmp.enableSanitize = 0;
+        else if (!strcasecmp(tok, "timestamp"))
+            optsTmp.enableTimestamp = 1;
+        else if (!strcasecmp(tok, "notimestamp"))
+            optsTmp.enableTimestamp = 0;
+        else {
+            log_msg(LOG_ERR,
+                "CONFIG[%s:%d]: ignoring unrecognized token '%s'",
+                conf, line, tok);
+        }
+        tok = strtok(NULL, separators);
+    }
     *opts = optsTmp;
     return(0);
 }
@@ -146,8 +165,9 @@ int open_logfile_obj(obj_t *logfile, int gotTrunc)
     free(now);
     free(msg);
 
-    DPRINTF((10, "Opened %slogfile \"%s\" for console [%s].\n",
-        (logfile->aux.logfile.opts.enableSanitize ? "SANE " : ""),
+    DPRINTF((10, "Opened %s%slogfile \"%s\" for console [%s].\n",
+        (logfile->aux.logfile.opts.enableSanitize ? "SANITIZED " : ""),
+        (logfile->aux.logfile.opts.enableTimestamp ? "TIMESTAMPED " : ""),
         logfile->name, logfile->aux.logfile.console->name));
     return(0);
 }
@@ -204,26 +224,8 @@ int write_log_data(obj_t *log, const void *src, int len)
     /*  If no additional processing is needed, listen to Biff Tannen:
      *    "make like a tree and get outta here".
      */
-    if (!log->aux.logfile.enableProcessing) {
+    if (!log->aux.logfile.gotProcessing) {
         return(write_obj_data(log, src, len, 0));
-    }
-    /*  If the enableProcCheck flag is set,
-     *    recompute whether additional processing is needed.
-     *  This check is placed inside the processing enabled block in order
-     *    to eliminate testing this flag when log processing is not enabled.
-     */
-    if (log->aux.logfile.enableProcCheck) {
-        log->aux.logfile.enableProcCheck = 0;
-        log->aux.logfile.enableProcessing =
-            log->aux.logfile.opts.enableSanitize
-            || log->aux.logfile.enableTimestamps;
-        DPRINTF((10, "Set processing=%d for [%s] log \"%s\".\n",
-            log->aux.logfile.enableProcessing,
-            log->aux.logfile.console->name, log->name));
-        if (!log->aux.logfile.enableProcessing) {
-            log->aux.logfile.lineState = CONMAN_LOG_LINE_IN;
-            return(write_obj_data(log, src, len, 0));
-        }
     }
     DPRINTF((15, "Processing %d bytes for [%s] log \"%s\".\n",
         len, log->aux.logfile.console->name, log->name));
@@ -246,7 +248,7 @@ int write_log_data(obj_t *log, const void *src, int len)
             log->aux.logfile.lineState = CONMAN_LOG_LINE_LF;
             *q++ = '\r';
             *q++ = '\n';
-            if (log->aux.logfile.enableTimestamps)
+            if (log->aux.logfile.opts.enableTimestamp)
                 q += write_time_string(0, q, qLast - q);
         }
         else if (  (*p == '\0')
@@ -257,7 +259,7 @@ int write_log_data(obj_t *log, const void *src, int len)
             if (log->aux.logfile.lineState == CONMAN_LOG_LINE_CR) {
                 *q++ = '\r';
                 *q++ = '\n';
-                if (log->aux.logfile.enableTimestamps)
+                if (log->aux.logfile.opts.enableTimestamp)
                     q += write_time_string(0, q, qLast - q);
             }
             log->aux.logfile.lineState = CONMAN_LOG_LINE_IN;

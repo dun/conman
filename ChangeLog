@@ -1,3 +1,11 @@
+2003-10-01  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* client-tty.c, common.h, server-conf.c, server-esc.c,
+	server-logfile.c, server-obj.c, server.h, etc/conman.conf,
+	man/conman.1.in, man/conman.conf.5.in: Changed console log newline
+	timestamping from '&T' client escape toggle to configuration file
+	'logopt' setting {gnats:296}.
+
 2003-09-30  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server-logfile.c: Only ignore NULs on newline transition

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: common.h,v 1.40.2.2 2003/09/26 18:05:29 dun Exp $
+ *  $Id: common.h,v 1.40.2.3 2003/10/01 23:22:10 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -72,8 +72,7 @@
 #define ESC_CHAR_HELP           '?'
 #define ESC_CHAR_INFO           'I'
 #define ESC_CHAR_JOIN           'J'
-#define ESC_CHAR_LOG_REPLAY     'L'
-#define ESC_CHAR_LOG_TIMESTAMP  'T'
+#define ESC_CHAR_REPLAY         'L'
 #define ESC_CHAR_MONITOR        'M'
 #define ESC_CHAR_QUIET          'Q'
 #define ESC_CHAR_RESET          'R'

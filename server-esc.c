@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-esc.c,v 1.34.2.3 2003/09/26 18:05:29 dun Exp $
+ *  $Id: server-esc.c,v 1.34.2.4 2003/10/01 23:22:10 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -51,7 +51,6 @@ static void perform_serial_break(obj_t *client);
 static void perform_del_char_seq(obj_t *client);
 static void perform_console_writer_linkage(obj_t *client);
 static void perform_log_replay(obj_t *client);
-static void perform_log_timestamp(obj_t *client);
 static void perform_quiet_toggle(obj_t *client);
 static void perform_reset(obj_t *client);
 static void perform_suspend(obj_t *client);
@@ -98,11 +97,8 @@ int process_client_escapes(obj_t *client, void *src, int len)
                 client->aux.client.req->enableJoin = 1;
                 perform_console_writer_linkage(client);
                 break;
-            case ESC_CHAR_LOG_REPLAY:
+            case ESC_CHAR_REPLAY:
                 perform_log_replay(client);
-                break;
-            case ESC_CHAR_LOG_TIMESTAMP:
-                perform_log_timestamp(client);
                 break;
             case ESC_CHAR_MONITOR:
                 client->aux.client.req->enableForce = 0;
@@ -336,48 +332,6 @@ static void perform_log_replay(obj_t *client)
 
     DPRINTF((5, "Performing log replay on console [%s].\n", console->name));
     write_obj_data(client, buf, ptr - buf, 0);
-    return;
-}
-
-
-static void perform_log_timestamp(obj_t *client)
-{
-/*  Toggles newline timestamping in the logs of the corresponding consoles.
- */
-    ListIterator i;
-    obj_t *console;
-    obj_t *logfile;
-    const char *op;
-    char *str;
-
-    assert(is_client_obj(client));
-
-    i = list_iterator_create(client->readers);
-    while ((console = list_next(i))) {
-
-        assert(is_console_obj(console));
-        logfile = get_console_logfile_obj(console);
-
-        if (!logfile) {
-            str = create_format_string(
-                "%sConsole [%s] is not being logged -- cannot timestamp%s",
-                CONMAN_MSG_PREFIX, console->name, CONMAN_MSG_SUFFIX);
-        }
-        else {
-            assert(is_logfile_obj(logfile));
-            logfile->aux.logfile.enableTimestamps ^= 1;
-            logfile->aux.logfile.enableProcessing = 1;
-            logfile->aux.logfile.enableProcCheck = 1;
-            op = (logfile->aux.logfile.enableTimestamps)
-                ? "enabled" : "disabled";
-            DPRINTF((5, "Timestamping %s for log [%s].\n", op, logfile->name));
-            str = create_format_string("%sConsole [%s] timestamping %s%s",
-                CONMAN_MSG_PREFIX, console->name, op, CONMAN_MSG_SUFFIX);
-        }
-        write_obj_data(client, str, strlen(str), 1);
-        free(str);
-    }
-    list_iterator_destroy(i);
     return;
 }
 

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-conf.c,v 1.54.2.3 2003/07/24 22:43:34 dun Exp $
+ *  $Id: server-conf.c,v 1.54.2.4 2003/10/01 23:22:10 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -220,6 +220,7 @@ server_conf_t * create_server_conf(int argc, char *argv[])
     conf->objs = list_create((ListDelF) destroy_obj);
     conf->globalLogName = NULL;
     conf->globalLogopts.enableSanitize = DEFAULT_LOGOPT_SANITIZE;
+    conf->globalLogopts.enableTimestamp = DEFAULT_LOGOPT_TIMESTAMP;
     conf->globalSeropts.bps = DEFAULT_SEROPT_BPS;
     conf->globalSeropts.databits = DEFAULT_SEROPT_DATABITS;
     conf->globalSeropts.parity = DEFAULT_SEROPT_PARITY;
@@ -633,7 +634,8 @@ static void parse_console_directive(server_conf_t *conf, Lex l)
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else
-                parse_logfile_opts(&logopts, lex_text(l), err, sizeof(err));
+                parse_logfile_opts(&logopts, lex_text(l),
+                    conf->confFileName, lex_line(l), err, sizeof(err));
             break;
 
         case SERVER_CONF_SEROPTS:
@@ -766,7 +768,7 @@ static void parse_global_directive(server_conf_t *conf, Lex l)
                     server_conf_strs[LEX_UNTOK(tok)]);
             else
                 parse_logfile_opts(&conf->globalLogopts, lex_text(l),
-                    err, sizeof(err));
+                    conf->confFileName, lex_line(l), err, sizeof(err));
             break;
 
         case SERVER_CONF_SEROPTS:

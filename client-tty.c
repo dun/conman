@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-tty.c,v 1.46.2.1 2003/09/26 18:05:29 dun Exp $
+ *  $Id: client-tty.c,v 1.46.2.2 2003/10/01 23:22:10 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -62,7 +62,6 @@ static int perform_monitor_esc(client_conf_t *conf, char c);
 static int perform_quiet_esc(client_conf_t *conf, char c);
 static int perform_reset_esc(client_conf_t *conf, char c);
 static int perform_suspend_esc(client_conf_t *conf, char c);
-static int perform_timestamp_esc(client_conf_t *conf, char c);
 static void locally_echo_esc(char e, char c);
 static void locally_display_status(client_conf_t *conf, char *msg);
 
@@ -198,10 +197,8 @@ static int read_from_stdin(client_conf_t *conf)
             return(perform_info_esc(conf, c));
         case ESC_CHAR_JOIN:
             return(perform_join_esc(conf, c));
-        case ESC_CHAR_LOG_REPLAY:
+        case ESC_CHAR_REPLAY:
             return(perform_log_replay_esc(conf, c));
-        case ESC_CHAR_LOG_TIMESTAMP:
-            return(perform_timestamp_esc(conf, c));
         case ESC_CHAR_MONITOR:
             return(perform_monitor_esc(conf, c));
         case ESC_CHAR_QUIET:
@@ -428,7 +425,7 @@ static int perform_help_esc(client_conf_t *conf, char c)
     /*  FIXME: Only display this option if the console is being logged.
      */
     if (!conf->req->enableBroadcast) {
-        write_esc_char(ESC_CHAR_LOG_REPLAY, tmp);
+        write_esc_char(ESC_CHAR_REPLAY, tmp);
         n = append_format_string(buf, sizeof(buf),
             "  %2s%-2s -  Replay up to the last %d bytes of the log.\r\n",
             esc, tmp, CONMAN_REPLAY_LEN);
@@ -456,17 +453,6 @@ static int perform_help_esc(client_conf_t *conf, char c)
         n = append_format_string(buf, sizeof(buf), "  %2s%-2s -  "
             "Reset node%s associated with this console.\r\n", esc, tmp,
             (list_count(conf->req->consoles) == 1 ? "" : "s"));
-    }
-
-    /*  FIXME: Once a control channel exists for client-server comms,
-     *    change the "toggle" verbage to either "enable" or "disable".
-     *    Also, only display this option if the console is being logged.
-     */
-    if (conf->req->command == CONMAN_CMD_CONNECT) {
-        write_esc_char(ESC_CHAR_LOG_TIMESTAMP, tmp);
-        n = append_format_string(buf, sizeof(buf),
-            "  %2s%-2s -  Toggle newline timestamping in the log.\r\n",
-            esc, tmp);
     }
 
     write_esc_char(ESC_CHAR_SUSPEND, tmp);
@@ -606,18 +592,6 @@ static int perform_suspend_esc(client_conf_t *conf, char c)
     if (!send_esc_seq(conf, c))
         return(0);
     return(1);
-}
-
-
-static int perform_timestamp_esc(client_conf_t *conf, char c)
-{
-/*  Toggles newline timestamping on the corresponding writable console log(s).
- *  Returns 1 on success, or 0 if the socket connection is to be closed.
- */
-    if (conf->req->command != CONMAN_CMD_CONNECT)
-        return(1);
-
-    return(send_esc_seq(conf, c));
 }
 
 

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-obj.c,v 1.70.2.4 2003/09/26 18:05:29 dun Exp $
+ *  $Id: server-obj.c,v 1.70.2.5 2003/10/01 23:22:10 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -186,15 +186,14 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name,
     }
     logfile = create_obj(conf, name, -1, CONMAN_OBJ_LOGFILE);
     logfile->aux.logfile.console = console;
-    logfile->aux.logfile.enableTimestamps = 0;
     logfile->aux.logfile.lineState = CONMAN_LOG_LINE_IN;
     logfile->aux.logfile.opts = *opts;
-    /*
-     *  Initialize both ProcCheck and Processing flags as enabled.
-     *    This will force the Processing flag to be set by write_log_data().
-     */
-    logfile->aux.logfile.enableProcCheck = 1;
-    logfile->aux.logfile.enableProcessing = 1;
+
+    if (   (logfile->aux.logfile.opts.enableSanitize)
+        || (logfile->aux.logfile.opts.enableTimestamp) )
+        logfile->aux.logfile.gotProcessing = 1;
+    else
+        logfile->aux.logfile.gotProcessing = 0;
 
     if (strchr(name, '%'))
         logfile->aux.logfile.fmtName = create_string(name);
