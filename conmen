@@ -1,0 +1,100 @@
+#!/usr/bin/env perl
+
+##
+#  $Id: conmen,v 1.1 2001/06/14 22:21:31 dun Exp $
+#    by Chris Dunlap <cdunlap@llnl.gov>
+##
+#  ConMen is a wrapper to aid in ConMan broadcast sessions.
+#  It spawns an xterm for each of the selected consoles
+#    and uses the current tty as the broadcast window.
+#  All of the spawned xterm clients are terminated when the
+#    broadcast window session is closed.
+##
+
+use Getopt::Std;
+
+
+$SIG{'TERM'} = signal_handler;
+
+$ENV{DISPLAY}
+    or die("ERROR: DISPLAY is not set.\n");
+!system("which conman 1>/dev/null 2>&1")
+    or die("ERROR: conman not found in PATH.\n");
+!system("which xterm 1>/dev/null 2>&1")
+    or die("ERROR: xterm not found in PATH.\n");
+
+$help = `conman -h`;
+($def_dst) = ($help =~ /-d .* \(default: ([^\)]*)\)/);
+($def_esc) = ($help =~ /-e .* \(default: ([^\)]*)\)/);
+
+if (!@ARGV || !getopts('d:e:fhjrV') || $opt_h) {
+    print_usage();
+}
+
+($opt_f + $opt_j + $opt_r <= 1)
+    or die("ERROR: Only one mode [fjr] can be specified.\n");
+
+if ($opt_V) {
+    exec("conman -V");
+}
+if ($opt_d) {
+    $server = "-d $opt_d";
+}
+if ($opt_e) {
+    $escape = "-e $opt_e";
+}
+
+if ($opt_f) {
+    $mode = "-f";
+} elsif ($opt_j) {
+    $mode = "-j";
+} elsif ($opt_r) {
+    $mode = "-r";
+} else {
+    $mode = "-r";
+}
+
+foreach (@ARGV) {
+    $_ = "'$_'";
+}
+$patterns = join(" ", @ARGV);
+chomp(@consoles = `conman -q $server $patterns`);
+
+if (@consoles == 0) {
+    exit(1);
+}
+if (@consoles == 1) {
+    exec("conman $server $escape $mode $consoles[0]");
+}
+foreach (@consoles) {
+    $name = "\"ConMan: $_\"";
+    system("xterm -T $name -n $name -e conman $server $escape $mode $_ &");
+}
+sleep(1);
+system("conman $server $escape -bj $patterns");
+kill('TERM', -getpid);
+
+exit(0);
+
+
+sub print_usage
+{
+    ($prog) = ($0 =~ m|(?:.*/)?([^/]*)|);
+    print("Usage: $prog [-d <host>] [-e <char>] [-hfjrV] <console(s)>\n");
+    print("\n");
+    print("  -h        Display this help.\n");
+    print("  -d HOST   Specify location of server (default: $def_dst).\n");
+    print("  -e CHAR   Set escape character (default: $def_esc).\n");
+    print("  -f        Force connections (stealing consoles).\n");
+    print("  -j        Join connections (sharing consoles).\n");
+    print("  -r        Monitor connections (read-only).\n");
+    print("  -V        Display version information.\n");
+    print("\n");
+    exit(0);
+}
+
+
+sub signal_handler
+{
+    exit(0);
+}
