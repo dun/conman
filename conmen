@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ##
-#  $Id: conmen,v 1.4 2001/06/15 22:56:53 dun Exp $
+#  $Id: conmen,v 1.5 2001/06/15 23:57:35 dun Exp $
 #    by Chris Dunlap <cdunlap@llnl.gov>
 ##
 #  ConMen is a wrapper to aid in ConMan broadcast sessions.
@@ -32,11 +32,8 @@ if (!@ARGV || !getopts('d:e:fg:hjmV') || $opt_h) {
 }
 
 ($opt_f + $opt_j + $opt_m <= 1)
-    or die("ERROR: Only one mode [fjr] can be specified.\n");
-
-if ($opt_V) {
-    exec("conman -V");
-}
+    or die("ERROR: Only one mode [fjm] can be specified.\n");
+exec("conman -V") if ($opt_V);
 
 $conman = "conman";
 $conman .= " -d \'$opt_d\'" if ($opt_d);
