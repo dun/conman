@@ -2,7 +2,7 @@
 # Makefile Include for RPM Construction
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Make-rpm.mk,v 1.16 2002/02/08 23:25:01 dun Exp $
+# $Id: Make-rpm.mk,v 1.17 2002/05/09 08:48:19 dun Exp $
 ##
 # REQUIREMENTS:
 # - requires project to be under CVS version control
@@ -113,7 +113,8 @@ rpm-internal: tar-internal
 	    <$$spec >$$tmp/SPECS/$$proj.spec; \
 	if ! test -s $$tmp/SPECS/$$proj.spec; then \
 	  echo "ERROR: Cannot create $$proj.spec." 1>&2; exit 1; fi; \
-	rpm --showrc | egrep "_(gpg|pgp)_nam" >/dev/null && sign="--sign"; \
+	rpm --showrc | egrep "[[:space:]]_(gpg|pgp)_name[[:space:]]" \
+	  >/dev/null && sign="--sign"; \
 	if ! rpm -ba --define "_tmppath $$tmp/TMP" --define "_topdir $$tmp" \
 	  $$sign --quiet $$tmp/SPECS/$$proj.spec >$$tmp/rpm.log 2>&1; then \
 	    cat $$tmp/rpm.log; exit 1; fi; \
