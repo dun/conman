@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 #
-# $Id: Makefile.in,v 1.26 2001/09/25 20:48:51 dun Exp $
+# $Id: Makefile.in,v 1.27 2001/10/06 05:15:47 dun Exp $
 ##
 
 PACKAGE=	@PACKAGE@
@@ -103,13 +103,14 @@ rpm tar:
 	  echo "ERROR: Undefined PACKAGE macro definition" 1>&2; exit 0; fi; \
 	if test -z "$(VERSION)"; then \
 	  echo "ERROR: Undefined VERSION macro definition" 1>&2; exit 0; fi; \
+	test -f CVS/Root && cvs="cvs -d `cat CVS/Root`" || cvs=cvs; \
 	test -z "$$tag" && tag=`echo $(PACKAGE)-$(VERSION) | tr '.' '-'`; \
-	ver=`cvs -Q co -r $$tag -p $(PACKAGE)/VERSION | \
+	ver=`$$cvs -Q co -r $$tag -p $(PACKAGE)/VERSION | \
 	  sed -ne 's/.*-\(.*\)/\1/p'`; \
 	test -z "$$rel" && rel=1; \
 	if test -z "$$ver"; then \
 	  echo "ERROR: Cannot determine VERSION (tag=$$tag)" 1>&2; exit 0; fi; \
-	$(MAKE) -s $@-internal tag=$$tag ver=$$ver rel=$$rel
+	$(MAKE) -s $@-internal cvs="$$cvs" tag="$$tag" ver="$$ver" rel="$$rel"
 
 rpm-internal: tar-internal
 	@test -z "$$tag" -o -z "$$ver" && exit 1; \
@@ -119,8 +120,8 @@ rpm-internal: tar-internal
 	  $(mkinstalldirs) $$tmp/$$d >/dev/null; \
 	done; \
 	cp -p $$tar $$tmp/SOURCES; \
-	(cvs -Q co -r $$tag -p $(PACKAGE)/$(PACKAGE).spec.in || \
-	  cvs -Q co -r $$tag -p $(PACKAGE)/$(PACKAGE).spec) | \
+	($$cvs -Q co -r $$tag -p $(PACKAGE)/$(PACKAGE).spec.in || \
+	  $$cvs -Q co -r $$tag -p $(PACKAGE)/$(PACKAGE).spec) | \
 	  sed -e "s/^\(%define name\).*/\1    $(PACKAGE)/i" \
 	    -e "s/^\(%define version\).*/\1 $$ver/i" \
 	    -e "s/^\(%define release\).*/\1 $$rel/i" \
@@ -145,7 +146,7 @@ tar-internal:
 	rm -f $$tar; \
 	echo "creating $$tar (tag=$$tag)"; \
 	$(mkinstalldirs) $$tmp >/dev/null; \
-	(cd $$tmp; cvs -Q export -r $$tag -d $$name $(PACKAGE)) && \
+	(cd $$tmp; $$cvs -Q export -r $$tag -d $$name $(PACKAGE)) && \
 	  (cd $$tmp; tar cf - $$name) | gzip -c9 > $(top_srcdir)/$$tar; \
 	rm -rf $$tmp; \
 	if ! test -f $$tar; then \
