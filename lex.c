@@ -2,7 +2,7 @@
  *  lex.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: lex.c,v 1.4 2001/05/11 15:28:58 dun Exp $
+ *  $Id: lex.c,v 1.5 2001/05/11 17:39:17 dun Exp $
  ******************************************************************************
  *  Refer to "lex.h" for documentation on public functions.
 \******************************************************************************/
@@ -16,6 +16,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "lex.h"
 
 
