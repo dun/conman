@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.10 2001/06/15 15:46:44 dun Exp $
+ *  $Id: server-conf.c,v 1.11 2001/07/06 19:29:43 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -92,11 +92,9 @@ void process_server_cmd_line(int argc, char *argv[], server_conf_t *conf)
 {
     int c;
 
-    opterr = 1;
+    opterr = 0;
     while ((c = getopt(argc, argv, "c:hV")) != -1) {
         switch(c) {
-        case '?':			/* invalid option */
-            exit(1);
         case 'h':
             display_server_help(argv[0]);
             exit(0);
@@ -108,9 +106,12 @@ void process_server_cmd_line(int argc, char *argv[], server_conf_t *conf)
                 free(conf->filename);
             conf->filename = create_string(optarg);
             break;
+        case '?':			/* invalid option */
+            fprintf(stderr, "ERROR: Invalid option \"%c\".\n", optopt);
+            exit(1);
         default:
-            printf("%s: option not implemented -- %c\n", argv[0], c);
-            break;
+            fprintf(stderr, "ERROR: Option \"%c\" not implemented.\n", c);
+            exit(1);
         }
     }
     return;

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-conf.c,v 1.18 2001/06/18 21:32:07 dun Exp $
+ *  $Id: client-conf.c,v 1.19 2001/07/06 19:29:43 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -103,11 +103,9 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
     int i;
     char *str;
 
-    opterr = 1;
+    opterr = 0;
     while ((c = getopt(argc, argv, "bd:e:fhjl:mqrx:vV")) != -1) {
         switch(c) {
-        case '?':			/* invalid option */
-            exit(1);
         case 'h':
             display_client_help(argv[0]);
             exit(0);
@@ -160,9 +158,12 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
         case 'v':
             conf->enableVerbose = 1;
             break;
+        case '?':			/* invalid option */
+            fprintf(stderr, "ERROR: Invalid option \"%c\".\n", optopt);
+            exit(1);
         default:
-            printf("%s: option not implemented -- %c\n", argv[0], c);
-            break;
+            fprintf(stderr, "ERROR: Option \"%c\" not implemented.\n", c);
+            exit(1);
         }
     }
 
