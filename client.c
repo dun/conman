@@ -2,7 +2,7 @@
  *  client.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: client.c,v 1.2 2001/05/09 22:21:01 dun Exp $
+ *  $Id: client.c,v 1.3 2001/05/21 22:52:39 dun Exp $
 \******************************************************************************/
 
 
@@ -35,7 +35,9 @@ int main(int argc, char *argv[])
         display_error(conf);
     else if (recv_rsp(conf) < 0)
         display_error(conf);
-    else if ((conf->command == QUERY) || (conf->command == EXECUTE))
+    else if (conf->command == QUERY)
+        display_consoles(conf, STDOUT_FILENO);
+    else if (conf->command == EXECUTE)
         display_data(conf, STDOUT_FILENO);
     else if ((conf->command == CONNECT) || (conf->command == MONITOR))
         connect_console(conf);

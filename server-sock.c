@@ -2,7 +2,7 @@
  *  server-sock.c  
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server-sock.c,v 1.8 2001/05/18 18:19:37 dun Exp $
+ *  $Id: server-sock.c,v 1.9 2001/05/21 22:52:39 dun Exp $
 \******************************************************************************/
 
 
@@ -497,13 +497,13 @@ static int query_consoles(server_conf_t *conf, req_t *req)
         if (regerror(rc, &rex, buf, sizeof(buf)) > sizeof(buf))
             log_msg(10, "Buffer overflow during regerror()");
         regfree(&rex);
-        send_rsp(req, CONMAN_ERR_BAD_REGEX, lex_encode(buf));
+        send_rsp(req, CONMAN_ERR_BAD_REGEX, buf);
         return(-1);
     }
 
     /*  Search objs for consoles matching the regex.
      *  The NULL destructor is used here because the matches list will
-     *    only contain copies of objs contained in the conf->objs list.
+     *    only contain references to objs contained in the conf->objs list.
      *    These objs will be destroyed when the conf->objs list is destroyed.
      */
     if (!(matches = list_create(NULL))) {
@@ -518,8 +518,9 @@ static int query_consoles(server_conf_t *conf, req_t *req)
     while ((obj = list_next(i))) {
         if (obj->type != CONSOLE)
             continue;
-        if (!regexec(&rex, obj->name, 1, &match, 0) &&
-          (match.rm_so == 0) && (match.rm_eo == strlen(obj->name))) {
+        if (!regexec(&rex, obj->name, 1, &match, 0)
+          && (match.rm_so == 0)
+          && (match.rm_eo == strlen(obj->name))) {
             if (!list_append(matches, obj)) {
                 list_iterator_destroy(i);
                 list_destroy(matches);
@@ -624,7 +625,7 @@ static int check_busy_consoles(req_t *req)
         goto err;
     while ((obj = list_next(i))) {
         if (obj->writer != NULL)
-            if (!list_enqueue(busy, obj))
+            if (!list_append(busy, obj))
                 goto err;
     }
     list_iterator_destroy(i);
@@ -639,7 +640,10 @@ static int check_busy_consoles(req_t *req)
         list_count(busy), (list_count(busy) == 1) ? "" : "s");
     send_rsp(req, CONMAN_ERR_BUSY_CONSOLES, buf);
 
-    while ((obj = list_dequeue(busy))) {
+    /*  Note: the "busy" list contains object references,
+     *    so they DO NOT get destroyed here when removed from the list.
+     */
+    while ((obj = list_pop(busy))) {
 
         assert(obj->type == CONSOLE);
         assert(obj->writer->type == SOCKET);
@@ -681,48 +685,63 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
 {
 /*  Sends a response to the given request (req).
  *  If the request is valid and there are no errors,
- *    errnum = CONMAN_ERR_NONE and an OK response is sent.
+ *    errnum = CONMAN_ERR_NONE and an "OK" response is sent.
  *  Otherwise, (errnum) identifies the err_type enumeration (in conman.h)
- *    and errmsg is a string describing the error in more detail.
- *  Note that errmsg may not contain single-quote chars.
+ *    and (errmsg) is a string describing the error in more detail.
  *  Returns 0 if the response is sent OK, or -1 on error.
  */
     char buf[MAX_SOCK_LINE];
+    char tmp[MAX_LINE];			/* tmp buffer for lex-encoding strs */
     int n;
 
     assert(req->sd >= 0);
     assert(errnum >= 0);
-    assert(errmsg == NULL || strchr(errmsg, '\'') == NULL);
 
-    /*  Create response message.
-     */
     if (errnum == CONMAN_ERR_NONE) {
-        n = snprintf(buf, sizeof(buf), "%s\n",
+
+        char *ptr = buf;
+        int len = sizeof(buf) - 2;	/* reserve space for trailing "\n\0" */
+        ListIterator i;
+        obj_t *console;
+
+        n = snprintf(buf, sizeof(buf), "%s",
             proto_strs[LEX_UNTOK(CONMAN_TOK_OK)]);
+        assert(n >= 0 && n < len);
+        ptr += n;
+        len -= n;
+
+        /*  Note: if buf[] is overflowed by console strings,
+         *    a valid rsp will still be sent to the client,
+         *    but some console named may be omitted.
+         */
+        if ((i = list_iterator_create(req->consoles))) {
+            while ((console = list_next(i))) {
+                n = strlcpy(tmp, console->name, sizeof(tmp));
+                assert(n >= 0 && n < sizeof(tmp));
+                n = snprintf(ptr, len, " %s='%s'",
+                    proto_strs[LEX_UNTOK(CONMAN_TOK_CONSOLE)], lex_encode(tmp));
+                if (n < 0 || n >= len)
+                    break;
+                ptr += n;
+                len -= n;
+            }
+            list_iterator_destroy(i);
+        }
+
+        *ptr++ = '\n';
+        *ptr++ = '\0';
     }
     else {
     /*
      *  FIX_ME? Should all errors be logged?
-     *
-     *  Note that errmsg cannot be lex_encode()'d here
-     *    because it may be a string constant.
      */
+        n = strlcpy(tmp, (errmsg ? errmsg : "Doh!"), sizeof(tmp));
+        assert(n >= 0 && n < sizeof(tmp));
         n = snprintf(buf, sizeof(buf), "%s %s=%d %s='%s'\n",
             proto_strs[LEX_UNTOK(CONMAN_TOK_ERROR)],
             proto_strs[LEX_UNTOK(CONMAN_TOK_CODE)], errnum,
-            proto_strs[LEX_UNTOK(CONMAN_TOK_MESSAGE)],
-            (errmsg ? errmsg : "Doh!"));
-    }
-
-    /*  Ensure response is properly terminated.
-     *  If the buffer was overrun, it should be due to an insanely-long
-     *    errmsg string.  As such, we'll need to add the closing quote.
-     */
-    if (n < 0 || n >= sizeof(buf)) {
-        log_msg(10, "Buffer overflow during send_rsp() for %s", req->ip);
-        buf[MAX_SOCK_LINE-3] = '"';
-        buf[MAX_SOCK_LINE-2] = '\n';
-        buf[MAX_SOCK_LINE-1] = '\0';
+            proto_strs[LEX_UNTOK(CONMAN_TOK_MESSAGE)], lex_encode(tmp));
+        assert(n >= 0 && n < sizeof(buf));
     }
 
     /*  Write response to socket.
@@ -732,6 +751,7 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
         return(-1);
     }
 
+    DPRINTF("Sent response: %s", buf);
     return(0);
 }
 
@@ -743,30 +763,11 @@ static void perform_query_cmd(req_t *req)
  *  Since this cmd is processed entirely by this thread,
  *    the client socket connection is closed once it is finished.
  */
-    ListIterator i;
-    obj_t *obj;
-    char buf[MAX_SOCK_LINE];
-
     assert(req->sd >= 0);
     assert(req->command == QUERY);
     assert(!list_is_empty(req->consoles));
 
-    if (!(i = list_iterator_create(req->consoles))) {
-        send_rsp(req, CONMAN_ERR_NO_RESOURCES,
-            "Insufficient resources to process request.");
-        return;
-    }
     send_rsp(req, CONMAN_ERR_NONE, NULL);
-
-    while ((obj = list_next(i))) {
-        strlcpy(buf, obj->name, sizeof(buf));
-        strlcat(buf, "\n", sizeof(buf));
-        if (write_n(req->sd, buf, strlen(buf)) < 0) {
-            log_msg(0, "Error writing to %s: %s", req->ip, strerror(errno));
-            break;
-        }
-    }
-    list_iterator_destroy(i);
 
     if (close(req->sd) < 0)
         err_msg(errno, "close(%d) failed", req->sd);
@@ -786,7 +787,7 @@ static void perform_monitor_cmd(req_t *req, server_conf_t *conf)
     assert(req->command == MONITOR);
     assert(list_count(req->consoles) == 1);
 
-    console = list_dequeue(req->consoles);
+    console = list_pop(req->consoles);
     socket = create_socket_obj(conf->objs, req->user, req->host, req->sd);
     if (!socket) {
         send_rsp(req, CONMAN_ERR_NO_RESOURCES,
@@ -824,7 +825,7 @@ static void perform_connect_cmd(req_t *req, server_conf_t *conf)
 
     /* FIX_ME:  Support broadcast.
      */
-    console = list_dequeue(req->consoles);
+    console = list_pop(req->consoles);
     if ((link_objs(socket, console) < 0) || (link_objs(console, socket) < 0)) {
         unlink_obj(socket);		/* xyzzy */
         return;

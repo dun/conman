@@ -2,7 +2,7 @@
  *  client.h
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: client.h,v 1.4 2001/05/14 22:02:29 dun Exp $
+ *  $Id: client.h,v 1.5 2001/05/21 22:52:39 dun Exp $
 \******************************************************************************/
 
 
@@ -64,6 +64,8 @@ int recv_rsp(client_conf_t *conf);
 void display_error(client_conf_t *conf);
 
 void display_data(client_conf_t *conf, int fd);
+
+void display_consoles(client_conf_t *conf, int fd);
 
 
 /******************\

@@ -2,7 +2,7 @@
  *  client-sock.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: client-sock.c,v 1.6 2001/05/18 15:25:55 dun Exp $
+ *  $Id: client-sock.c,v 1.7 2001/05/21 22:52:39 dun Exp $
 \******************************************************************************/
 
 
@@ -29,6 +29,7 @@
 #include "util.h"
 
 
+static void parse_rsp_ok(Lex l, client_conf_t *conf);
 static void parse_rsp_err(Lex l, client_conf_t *conf);
 
 
@@ -111,7 +112,6 @@ int send_req(client_conf_t *conf)
     int len;
     char *cmd;
     char *str;
-    ListIterator li;
 
     assert(conf->sd >= 0);
 
@@ -174,11 +174,13 @@ int send_req(client_conf_t *conf)
         }
     }
 
-    if (!(li = list_iterator_create(conf->consoles)))
-        err_msg(0, "Out of memory");
-    while ((str = list_next(li))) {
+    /*  Empty the consoles list here because it will be filled in
+     *    with the actual console names in recv_rsp().
+     */
+    while ((str = list_pop(conf->consoles))) {
         n = snprintf(ptr, len, " %s='%s'",
             proto_strs[LEX_UNTOK(CONMAN_TOK_CONSOLE)], lex_encode(str));
+        free(str);
         if (n < 0 || n >= len) {
             n = -1;
             break;
@@ -186,7 +188,6 @@ int send_req(client_conf_t *conf)
         ptr += n;
         len -= n;
     }
-    list_iterator_destroy(li);
     if (n < 0)
         goto overflow;
 
@@ -254,6 +255,7 @@ int recv_rsp(client_conf_t *conf)
         tok = lex_next(l);
         switch(tok) {
         case CONMAN_TOK_OK:		/* OK, so ignore rest of line */
+            parse_rsp_ok(l, conf);
             done = 1;
             break;
         case CONMAN_TOK_ERROR:
@@ -279,6 +281,34 @@ int recv_rsp(client_conf_t *conf)
             "Received invalid reponse from [%s:%d]", conf->dhost, conf->dport);
     }
     return(-1);
+}
+
+
+static void parse_rsp_ok(Lex l, client_conf_t *conf)
+{
+    int tok;
+    int done = 0;
+    char *str;
+
+    while (!done) {
+        tok = lex_next(l);
+        switch (tok) {
+        case CONMAN_TOK_CONSOLE:
+            if ((lex_next(l) == '=') && (lex_next(l) == LEX_STR)) {
+                if ((str = lex_decode(create_string(lex_text(l)))))
+                    if (!list_append(conf->consoles, str))
+                        err_msg(0, "Out of memory");
+            }
+            break;
+        case LEX_EOF:
+        case LEX_EOL:
+            done = 1;
+            break;
+        default:
+            break;			/* ignore unrecognized tokens */
+        }
+    }
+    return;
 }
 
 
@@ -374,5 +404,29 @@ void display_data(client_conf_t *conf, int fd)
             if (write_n(conf->ld, buf, n) < 0)
                 err_msg(errno, "write(%d) failed", conf->ld);
     }
+    return;
+}
+
+
+void display_consoles(client_conf_t *conf, int fd)
+{
+    ListIterator i;
+    char *p;
+    char buf[MAX_LINE];
+    int n;
+
+    if (!(i = list_iterator_create(conf->consoles)))
+        err_msg(0, "Out of memory");
+    while ((p = list_next(i))) {
+        n = snprintf(buf, sizeof(buf), "%s\n", p);
+        if (n < 0 || n >= sizeof(buf))
+            err_msg(0, "Buffer overflow");
+        if (write_n(fd, buf, n) < 0)
+            err_msg(errno, "write(%d) failed", fd);
+        if (conf->ld >= 0)
+            if (write_n(conf->ld, buf, n) < 0)
+                err_msg(errno, "write(%d) failed", conf->ld);
+    }
+    list_iterator_destroy(i);
     return;
 }
