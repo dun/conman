@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.10 2001/05/29 23:45:25 dun Exp $
+ *  $Id: server-obj.c,v 1.11 2001/05/31 18:24:13 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -27,6 +27,7 @@
 static obj_t * create_obj(enum obj_type type, List objs, char *name, int fd);
 static void set_raw_console_mode(obj_t *obj);
 static void restore_console_mode(obj_t *obj);
+static void unlink_objs_helper(obj_t *src, obj_t *dst);
 static void parse_buf_for_control(obj_t *obj, void *src, int *pLen);
 
 
@@ -54,7 +55,7 @@ obj_t * create_console_obj(List objs, char *name, char *dev,
         return(NULL);
     }
     if (!isatty(fd)) {
-        log_msg(0, "Console [%s] is not a TTY device", name);
+        log_msg(0, "Console %s is not a TTY device", name);
         if (close(fd) < 0)
             err_msg(errno, "close(%d) failed", fd);
         return(NULL);
@@ -96,8 +97,8 @@ obj_t * create_logfile_obj(List objs, char *logfile, char *console)
     obj = create_obj(LOGFILE, objs, logfile, fd);
     obj->aux.logfile.console = create_string(console);
 
-    now = create_time_string(0);
-    msg = create_fmt_string("\r\n%s Console [%s] log started %s.\r\n",
+    now = create_date_time_string(0);
+    msg = create_fmt_string("\r\n%s Console %s log started at %s.\r\n",
         CONMAN_MSG_PREFIX, console, now);
     write_obj_data(obj, msg, strlen(msg));
     free(now);
@@ -119,12 +120,12 @@ obj_t * create_socket_obj(List objs, req_t *req)
     assert(objs);
     assert(req);
     assert(req->sd >= 0);
-    assert(req->user);
-    assert(req->host);
+    assert(req->user && *req->user);
+    assert(req->host && *req->host);
 
     set_descriptor_nonblocking(req->sd);
 
-    snprintf(name, sizeof(name), "%s@%s", req->user, req->host);
+    snprintf(name, sizeof(name), "%s@%s:%d", req->user, req->host, req->port);
     name[sizeof(name) - 1] = '\0';
     obj = create_obj(SOCKET, objs, name, req->sd);
 
@@ -147,9 +148,9 @@ static obj_t * create_obj(enum obj_type type, List objs, char *name, int fd)
     int rc;
 
     assert(type == CONSOLE || type == LOGFILE || type == SOCKET);
+    assert(objs);
     assert(name);
     assert(fd >= 0);
-    assert(objs);
 
     /*  FIX_ME? Ensure name not already in use by another obj of same type
      */
@@ -163,8 +164,9 @@ static obj_t * create_obj(enum obj_type type, List objs, char *name, int fd)
     obj->bufInPtr = obj->bufOutPtr = obj->buf;
     if ((rc = pthread_mutex_init(&obj->bufLock, NULL)) != 0)
         err_msg(rc, "pthread_mutex_init() failed for [%s]", name);
-    obj->writer = NULL;
     if (!(obj->readers = list_create(NULL)))
+        err_msg(0, "Out of memory");
+    if (!(obj->writers = list_create(NULL)))
         err_msg(0, "Out of memory");
     obj->type = type;
 
@@ -205,6 +207,8 @@ void destroy_obj(obj_t *obj)
         err_msg(rc, "pthread_mutex_destroy() failed for [%s]", obj->name);
     if (obj->readers)
         list_destroy(obj->readers);
+    if (obj->writers)
+        list_destroy(obj->writers);
 
     switch(obj->type) {
     case CONSOLE:
@@ -321,8 +325,8 @@ int compare_objs(obj_t *obj1, obj_t *obj2)
 
 int find_obj(obj_t *obj, obj_t *key)
 {
-/*  Used by list_find_first() to locate the object
- *    specified by (key) within the list.
+/*  Used by list_find_first() and list_delete_all() to locate
+ *    the object specified by (key) within the list.
  */
     return(obj == key);
 }
@@ -330,84 +334,150 @@ int find_obj(obj_t *obj, obj_t *key)
 
 void link_objs(obj_t *src, obj_t *dst)
 {
-/*  Creates a link such that data read from (src) is copied to (dst).
+/*  Creates a link so data read from (src) is copied to (dst).
  */
-    char *now, *str;
+    ListIterator i;
+    char *now;
+    obj_t *writer;
+    int gotBcast, gotForce, gotJoin;
+    char buf[MAX_LINE];
 
     assert(src->fd >= 0);
     assert(dst->fd >= 0);
 
-    /*  If the dst console is already in R/W use by another client, steal it.
+    /*  If the dst console already has writers,
+     *    display a warning if the request is to be joined
+     *    or steal the console if the request is to be forced.
      */
-    if (dst->writer != NULL) {
+    if ((dst->type == CONSOLE) && (!list_is_empty(dst->writers))) {
+
         assert(src->type == SOCKET);
-        assert(dst->type == CONSOLE);
-        assert(dst->writer->type == SOCKET);
+        gotBcast = list_count(src->aux.socket.req->consoles) > 1;
+        gotForce = src->aux.socket.req->enableForce;
+        gotJoin = src->aux.socket.req->enableJoin;
+        assert(gotForce ^ gotJoin);
+
         now = create_time_string(0);
-        str = create_fmt_string("\r\n%s Console [%s] stolen by <%s>"
-            " %s.\r\n", CONMAN_MSG_PREFIX, dst->name, src->name, now);
-        write_obj_data(dst->writer, str, strlen(str));
+        snprintf(buf, sizeof(buf),
+            "\r\n%s Console %s %s%s by %s@%s%s%s at %s.\r\n",
+            CONMAN_MSG_PREFIX, dst->name,
+            (gotJoin ? "joined" : "stolen"), (gotBcast ? " for B/C" : ""),
+            src->aux.socket.req->user, src->aux.socket.req->host,
+            (src->aux.socket.req->tty ? " on " : ""),
+            (src->aux.socket.req->tty ? src->aux.socket.req->tty : ""), now);
         free(now);
-        free(str);
-        unlink_obj(dst->writer);
-    }
+        buf[sizeof(buf) - 2] = '\n';
+        buf[sizeof(buf) - 1] = '\0';
+        write_obj_data(src, buf, strlen(buf));
 
-    /*  Create link where src writes to dst.
-     */
-    dst->writer = src;
-    assert(!list_find_first(src->readers, (ListFindF) find_obj, dst));
-    if (!list_append(src->readers, dst))
-        err_msg(0, "Out of memory");
-
-    DPRINTF("Linked [%s] reads to [%s] writes.\n",
-        src->name, dst->name);
-    return;
-}
-
-
-void unlink_obj(obj_t *obj)
-{
-/*  Destroys all links associated with (obj).
- */
-    ListIterator i;
-    obj_t *reader;
-
-    assert(obj->fd >= 0);
-
-    /*  Set flag to ensure no additional data is written into the buffer.
-     */
-    obj->gotEOF = 1;
-
-    /*  Remove link between my writer and me.
-     */
-    if (obj->writer != NULL) {
-        if (!(i = list_iterator_create(obj->writer->readers)))
+        if (!(i = list_iterator_create(dst->writers)))
             err_msg(0, "Out of memory");
-        while ((reader = list_next(i))) {
-            if (reader == obj) {
-                DPRINTF("Removing(1) [%s] from [%s] readers.\n",
-                    obj->name, obj->writer->name);
-                list_delete(i);
-                obj->writer = NULL;
-                break;
-            }
+        while ((writer = list_next(i))) {
+            assert(writer->type == SOCKET);
+            write_obj_data(writer, buf, strlen(buf));
+            if (gotForce)
+                unlink_objs(dst, writer);
         }
         list_iterator_destroy(i);
     }
 
-    /*  Remove link between each of my readers and me.
-    /*  Note: the "readers" list contains object references,
-     *    so they DO NOT get destroyed here when removed from the list.
+    /*  Create link from src reads to dst writes.
      */
-    while ((reader = list_pop(obj->readers))) {
-        if (reader->writer == obj) {
-            DPRINTF("Removing(2) [%s] from [%s] readers.\n",
-                reader->name, obj->name);
-            reader->writer = NULL;
+    assert(!list_find_first(src->readers, (ListFindF) find_obj, dst));
+    if (!list_append(src->readers, dst))
+        err_msg(0, "Out of memory");
+    assert(!list_find_first(dst->writers, (ListFindF) find_obj, src));
+    if (!list_append(dst->writers, src))
+        err_msg(0, "Out of memory");
+
+    DPRINTF("Linked [%s] reads to [%s] writes.\n", src->name, dst->name);
+    return;
+}
+
+
+void unlink_objs(obj_t *obj1, obj_t *obj2)
+{
+/*  Destroys all links between (obj1) and (obj2).
+ */
+    assert(obj1->fd >= 0);
+    assert(obj2->fd >= 0);
+
+    unlink_objs_helper(obj1, obj2);
+    unlink_objs_helper(obj2, obj1);
+    DPRINTF("Unlinked objects [%s] and [%s].\n", obj1->name, obj2->name);
+    return;
+}
+
+
+static void unlink_objs_helper(obj_t *src, obj_t *dst)
+{
+    int n;
+    ListIterator i;
+    obj_t *writer;
+    char *now;
+    char buf[MAX_LINE];
+
+    if (list_find_first(src->readers, (ListFindF) find_obj, dst))
+        DPRINTF("Removing [%s] from [%s] readers.\n", dst->name, src->name);
+    list_delete_all(src->readers, (ListFindF) find_obj, dst);
+    if (list_find_first(src->writers, (ListFindF) find_obj, dst))
+        DPRINTF("Removing [%s] from [%s] writers.\n", dst->name, src->name);
+    n = list_delete_all(src->writers, (ListFindF) find_obj, dst);
+    if ((n > 0) && (src->type == CONSOLE) && (!list_is_empty(src->writers))) {
+
+        assert(dst->type == SOCKET);
+        now = create_time_string(0);
+        snprintf(buf, sizeof(buf),
+            "\r\n%s Console %s departed by %s@%s%s%s at %s.\r\n",
+            CONMAN_MSG_PREFIX, src->name,
+            dst->aux.socket.req->user, dst->aux.socket.req->host,
+            (dst->aux.socket.req->tty ? " on " : ""),
+            (dst->aux.socket.req->tty ? dst->aux.socket.req->tty : ""), now);
+        free(now);
+        buf[sizeof(buf) - 2] = '\n';
+        buf[sizeof(buf) - 1] = '\0';
+
+        if (!(i = list_iterator_create(src->writers)))
+            err_msg(0, "Out of memory");
+        while ((writer = list_next(i))) {
+            assert(writer->type == SOCKET);
+            write_obj_data(writer, buf, strlen(buf));
         }
+        list_iterator_destroy(i);
     }
 
-    DPRINTF("Unlinked object [%s].\n", obj->name);
+    /*  If socket has been unlinked from all readers and writers,
+     *    set flag to ensure no additional data is written into the buffer.
+     */
+    if ((src->type == SOCKET)
+      && list_is_empty(src->readers) && list_is_empty(src->writers))
+        src->gotEOF = 1;
+
+    return;
+}
+
+
+void shutdown_obj(obj_t *obj)
+{
+    ListIterator i;
+    obj_t *reader;
+    obj_t *writer;
+
+    assert(obj->fd >= 0);
+
+    if (!(i = list_iterator_create(obj->readers)))
+        err_msg(0, "Out of memory");
+    while ((reader = list_next(i)))
+        unlink_objs(obj, reader);
+    list_iterator_destroy(i);
+
+    if (!(i = list_iterator_create(obj->writers)))
+        err_msg(0, "Out of memory");
+    while ((writer = list_next(i)))
+        unlink_objs(obj, writer);
+    list_iterator_destroy(i);
+
+    DPRINTF("Shutdown object [%s].\n", obj->name);
     return;
 }
 
@@ -442,7 +512,7 @@ again:
                 obj->fd, obj->name);
     }
     else if (n == 0) {
-        unlink_obj(obj);
+        shutdown_obj(obj);
         FD_SET(obj->fd, pWriteSet);	/* ensure buffer is flushed if needed */
     }
     else {
@@ -501,6 +571,14 @@ int write_obj_data(obj_t *obj, void *src, int len)
 
     if (!src || len <= 0)
         return(0);
+
+    /*  If the obj's gotEOF flag is set,
+     *    no more data can be written into its buffer.
+     */
+    if (obj->gotEOF) {
+        DPRINTF("Attempted to write into [%s] after EOF.\n", obj->name);
+        return(0);
+    }
 
     /*  An obj's circular-buffer is empty when (bufInPtr == bufOutPtr).
      *    Thus, it can hold at most (MAX_BUF_SIZE - 1) bytes of data.

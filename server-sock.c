@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.14 2001/05/29 23:45:25 dun Exp $
+ *  $Id: server-sock.c,v 1.15 2001/05/31 18:24:13 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -155,9 +155,6 @@ static int recv_greeting(req_t *req)
 
     assert(req->sd >= 0);
 
-    /*  Read greeting (ie, first line of request):
-     *    HELLO USER='<str>'
-     */
     if ((n = read_line(req->sd, buf, sizeof(buf))) < 0) {
         log_msg(0, "Error reading greeting from %s: %s",
             req->ip, strerror(errno));
@@ -222,7 +219,7 @@ static int recv_greeting(req_t *req)
 static int parse_greeting(Lex l, req_t *req)
 {
 /*  Parses the "HELLO" command from the client:
- *    HELLO USER='<str>'
+ *    HELLO USER='<str>' TTY='<str>'
  *  Returns 0 on success, or -1 on error (ie, out of memory).
  */
     int done = 0;
@@ -237,6 +234,15 @@ static int parse_greeting(Lex l, req_t *req)
                 if (req->user)
                     free(req->user);
                 if (!(req->user = lex_decode(strdup(lex_text(l)))))
+                    return(-1);
+            }
+            break;
+        case CONMAN_TOK_TTY:
+            if ((lex_next(l) == '=') && (lex_next(l) == LEX_STR)
+              && (*lex_text(l) != '\0')) {
+                if (req->tty)
+                    free(req->tty);
+                if (!(req->tty = lex_decode(strdup(lex_text(l)))))
                     return(-1);
             }
             break;
@@ -549,13 +555,16 @@ static int check_busy_consoles(req_t *req)
  *    that are currently busy (unless the force or join option is enabled).
  *  Returns 0 if the request is valid, or -1 on error.
  */
-    List busy = NULL;
-    ListIterator i = NULL;
-    obj_t *obj;
-    char buf[MAX_SOCK_LINE];
+    List busy;
+    ListIterator i;
+    obj_t *console;
+    obj_t *writer;
+    int gotBcast;
+    char *tty;
     int rc;
     time_t t;
     char *delta;
+    char buf[MAX_LINE];
 
     assert(!list_is_empty(req->consoles));
 
@@ -565,16 +574,16 @@ static int check_busy_consoles(req_t *req)
         return(0);
 
     if (!(busy = list_create(NULL)))
-        goto err;
+        err_msg(0, "Out of memory");
     if (!(i = list_iterator_create(req->consoles)))
-        goto err;
-    while ((obj = list_next(i))) {
-        if (obj->writer != NULL)
-            if (!list_append(busy, obj))
-                goto err;
+        err_msg(0, "Out of memory");
+    while ((console = list_next(i))) {
+        assert(console->type == CONSOLE);
+        if (!list_is_empty(console->writers))
+            if (!list_append(busy, console))
+                err_msg(0, "Out of memory");
     }
     list_iterator_destroy(i);
-    i = NULL;
 
     if (list_is_empty(busy)) {
         list_destroy(busy);
@@ -588,43 +597,42 @@ static int check_busy_consoles(req_t *req)
     /*  Note: the "busy" list contains object references,
      *    so they DO NOT get destroyed here when removed from the list.
      */
-    while ((obj = list_pop(busy))) {
+    while ((console = list_pop(busy))) {
 
-        assert(obj->type == CONSOLE);
-        assert(obj->writer->type == SOCKET);
+        if (!(i = list_iterator_create(console->writers)))
+            err_msg(0, "Out of memory");
+        while ((writer = list_next(i))) {
 
-        if ((rc = pthread_mutex_lock(&obj->writer->bufLock)) != 0)
-            err_msg(rc, "pthread_mutex_lock() failed for [%s]",
-                obj->writer->name);
-        t = obj->writer->aux.socket.timeLastRead;
-        if ((rc = pthread_mutex_unlock(&obj->writer->bufLock)) != 0)
-            err_msg(rc, "pthread_mutex_unlock() failed for [%s]",
-                obj->writer->name);
+            assert(writer->type == SOCKET);
 
-        delta = create_time_delta_string(t);
-        /*
-         *  FIX_ME: Inconsistent use of socket name as <%s>?
-         */
-        snprintf(buf, sizeof(buf), "Console [%s] in use by <%s> (idle %s).\n",
-            obj->name, obj->writer->name, (delta ? delta : "???"));
-        if (delta)
-            free(delta);
+            if ((rc = pthread_mutex_lock(&writer->bufLock)) != 0)
+                err_msg(rc, "pthread_mutex_lock() failed for [%s]",
+                    writer->name);
+            t = writer->aux.socket.timeLastRead;
+            gotBcast = list_is_empty(writer->writers);
+            tty = writer->aux.socket.req->tty;
+            if ((rc = pthread_mutex_unlock(&writer->bufLock)) != 0)
+                err_msg(rc, "pthread_mutex_unlock() failed for [%s]",
+                    writer->name);
+            delta = create_time_delta_string(t);
 
-        if (write_n(req->sd, buf, strlen(buf)) < 0) {
-            log_msg(0, "Error writing to %s: %s", req->ip, strerror(errno));
-            break;
+            snprintf(buf, sizeof(buf),
+                "Console %s open %s by %s@%s%s%s (idle %s).\n",
+                console->name, (gotBcast ? "B/C" : "R/W"),
+                writer->aux.socket.req->user, writer->aux.socket.req->host,
+                (tty ? " on " : ""), (tty ? tty : ""), (delta ? delta : "???"));
+            buf[sizeof(buf) - 2] = '\n';
+            buf[sizeof(buf) - 1] = '\0';
+            if (delta)
+                free(delta);
+            if (write_n(req->sd, buf, strlen(buf)) < 0) {
+                log_msg(0, "Error writing to %s: %s", req->ip, strerror(errno));
+                break;
+            }
         }
+        list_iterator_destroy(i);
     }
     list_destroy(busy);
-    return(-1);
-
-err:
-    if (i)
-        list_iterator_destroy(i);
-    if (busy)
-        list_destroy(busy);
-    send_rsp(req, CONMAN_ERR_NO_RESOURCES,
-        "Insufficient resources to process request.");
     return(-1);
 }
 
@@ -751,8 +759,6 @@ static void perform_connect_cmd(req_t *req, server_conf_t *conf)
     obj_t *socket;
     obj_t *console;
     ListIterator i;
-    char buf[MAX_LINE];
-    int n;
 
     assert(req->sd >= 0);
     assert(req->command == CONNECT);
@@ -762,37 +768,24 @@ static void perform_connect_cmd(req_t *req, server_conf_t *conf)
 
     if (list_count(req->consoles) == 1) {
         /*
-         *  Unicast connection.
+         *  Unicast connection (R/W).
          */
         console = list_peek(req->consoles);
+        assert(console->type == CONSOLE);
         link_objs(socket, console);
         link_objs(console, socket);
     }
     else {
         /*
-         *  Broadcast connection.
+         *  Broadcast connection (W/O).
          */
         if (!(i = list_iterator_create(req->consoles)))
             err_msg(0, "Out of memory");
         while ((console = list_next(i))) {
             assert(console->type == CONSOLE);
-            n = snprintf(buf, sizeof(buf),
-                "\r\n%s Broadcast for console [%s] opened for <%s@%s>.\r\n",
-                CONMAN_MSG_PREFIX, console->name, req->user, req->host);
-            assert(n >= 0 && n < sizeof(buf));
-            if (console->writer) {
-                assert(console->writer->type == SOCKET);
-                write_obj_data(console->writer, buf, strlen(buf));
-            }
+            link_objs(socket, console);
         }
         list_iterator_destroy(i);
-
-        /*  Move the req->consoles objs list to socket->readers.
-         *    Once moved, req->consoles must be set to NULL in order
-         *    to prevent destroy_req() from destroying the list.
-         */
-        socket->readers = req->consoles;
-        req->consoles = NULL;
     }
     return;
 }

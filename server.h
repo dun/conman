@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.11 2001/05/29 23:45:25 dun Exp $
+ *  $Id: server.h,v 1.12 2001/05/31 18:24:13 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -54,8 +54,8 @@ typedef struct base_obj {		/* BASE OBJ:                          */
     unsigned char   *bufInPtr;		/*  ptr for data written in to buf    */
     unsigned char   *bufOutPtr;		/*  ptr for data written out to fd    */
     pthread_mutex_t  bufLock;		/*  lock protecting access to buf     */
-    struct base_obj *writer;		/*  obj that writes to me             */
     List             readers;		/*  list of objs that i write to      */
+    List             writers;		/*  list of objs that write to me     */
     enum obj_type    type;		/*  type of auxxiliary obj            */
     aux_obj_t        aux;		/*  auxiliary obj data                */
 } obj_t;
@@ -105,7 +105,9 @@ int find_obj(obj_t *obj, obj_t *key);
 
 void link_objs(obj_t *src, obj_t *dst);
 
-void unlink_obj(obj_t *obj);
+void unlink_objs(obj_t *obj1, obj_t *obj2);
+
+void shutdown_obj(obj_t *obj);
 
 void read_from_obj(obj_t *obj, fd_set *pWriteSet);
 
