@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.17 2001/08/14 23:18:59 dun Exp $
+ *  $Id: server.c,v 1.18 2001/08/15 13:25:57 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -26,8 +26,8 @@
 #include "util.h"
 
 
-static void background_process(void);
-static void silence_process(void);
+static int begin_daemonize(void);
+static void end_daemonize(int fd);
 static void display_configuration(server_conf_t *conf);
 static void exit_handler(int signum);
 static void create_listen_socket(server_conf_t *conf);
@@ -40,9 +40,15 @@ static int done = 0;
 
 int main(int argc, char *argv[])
 {
+    int fd;
     server_conf_t *conf;
 
-    background_process();
+    fd = begin_daemonize();
+
+    Signal(SIGHUP, SIG_IGN);
+    Signal(SIGPIPE, SIG_IGN);
+    Signal(SIGINT, exit_handler);
+    Signal(SIGTERM, exit_handler);
 
     conf = create_server_conf();
     process_server_cmd_line(argc, argv, conf);
@@ -54,14 +60,9 @@ int main(int argc, char *argv[])
     if (conf->enableVerbose)
         display_configuration(conf);
 
-    Signal(SIGHUP, SIG_IGN);
-    Signal(SIGPIPE, SIG_IGN);
-    Signal(SIGINT, exit_handler);
-    Signal(SIGTERM, exit_handler);
-
     create_listen_socket(conf);
 
-    silence_process();
+    end_daemonize(fd);
 
     mux_io(conf);
 
@@ -71,15 +72,17 @@ int main(int argc, char *argv[])
 }
 
 
-static void background_process(void)
+static int begin_daemonize(void)
 {
     struct rlimit limit;
+    int fdPair[2];
     pid_t pid;
+    char c;
 
 #ifndef NDEBUG
     /*  Do not execute routine during DEBUG.
      */
-    return;
+    return(-1);
 #endif /* !NDEBUG */
 
     /*  Clear file mode creation mask.
@@ -93,13 +96,29 @@ static void background_process(void)
     if (setrlimit(RLIMIT_CORE, &limit) < 0)
         err_msg(errno, "Unable to prevent creation of core file");
 
+    /*  Create pipe for IPC so parent process will wait to terminate until
+     *    signaled by grandchild process.  This allows messages written to
+     *    stdout/stderr by the grandchild to be properly displayed before
+     *    the parent process returns control to the shell.
+     */
+    if (pipe(fdPair) < 0)
+        err_msg(errno, "Unable to create pipe");
+
     /*  Automatically background the process and
      *    ensure child is not a process group leader.
      */
-    if ((pid = fork()) < 0)
+    if ((pid = fork()) < 0) {
         err_msg(errno, "Unable to create child process");
-    else if (pid > 0)
+    }
+    else if (pid > 0) {
+        if (close(fdPair[1]) < 0)
+            err_msg(errno, "Unable to close write-pipe in parent");
+        if (read(fdPair[0], &c, 1) < 0)
+            err_msg(errno, "Read failed while awaiting EOF from grandchild");
         exit(0);
+    }
+    if (close(fdPair[0]) < 0)
+        err_msg(errno, "Unable to close read-pipe in child");
 
     /*  Become a session leader and process group leader
      *    with no controlling tty.
@@ -107,24 +126,26 @@ static void background_process(void)
     if (setsid() < 0)
         err_msg(errno, "Unable to disassociate controlling tty");
 
-    /*  Abdicate session leader position in order to guarantee
-     *    daemon cannot automatically re-acquire a controlling tty.
-     *  And ignore SIGHUP to keep child from terminating when
+    /*  Ignore SIGHUP to keep child from terminating when
      *    the session leader (ie, the parent) terminates.
      */
     Signal(SIGHUP, SIG_IGN);
+
+    /*  Abdicate session leader position in order to guarantee
+     *    daemon cannot automatically re-acquire a controlling tty.
+     */
     if ((pid = fork()) < 0)
         err_msg(errno, "Unable to create grandchild process");
     else if (pid > 0)
         exit(0);
 
-    return;
+    return(fdPair[1]);
 }
 
 
-static void silence_process(void)
+static void end_daemonize(int fd)
 {
-    int devnull;
+    int devNull;
 
 #ifndef NDEBUG
     /*  Do not execute routine during DEBUG.
@@ -132,18 +153,28 @@ static void silence_process(void)
     return;
 #endif /* !NDEBUG */
 
+    /*  Ensure process does not keep a directory in use.
+     */
+    if (chdir("/") < 0)
+        err_msg(errno, "Unable to change to root directory");
+
     /*  Discard data to/from stdin, stdout, and stderr.
      */
-    if ((devnull = open("/dev/null", O_RDWR)) < 0)
-        err_msg(errno, "Unable to open '/dev/null'");
-    if (dup2(devnull, STDIN_FILENO) < 0)
-        err_msg(errno, "Unable to dup '/dev/null' onto stdin");
-    if (dup2(devnull, STDOUT_FILENO) < 0)
-        err_msg(errno, "Unable to dup '/dev/null' onto stdout");
-    if (dup2(devnull, STDERR_FILENO) < 0)
-        err_msg(errno, "Unable to dup '/dev/null' onto stderr");
-    if (close(devnull) < 0)
-        err_msg(errno, "Unable to close '/dev/null'");
+    if ((devNull = open("/dev/null", O_RDWR)) < 0)
+        err_msg(errno, "Unable to open \"/dev/null\"");
+    if (dup2(devNull, STDIN_FILENO) < 0)
+        err_msg(errno, "Unable to dup \"/dev/null\" onto stdin");
+    if (dup2(devNull, STDOUT_FILENO) < 0)
+        err_msg(errno, "Unable to dup \"/dev/null\" onto stdout");
+    if (dup2(devNull, STDERR_FILENO) < 0)
+        err_msg(errno, "Unable to dup \"/dev/null\" onto stderr");
+    if (close(devNull) < 0)
+        err_msg(errno, "Unable to close \"/dev/null\"");
+
+    /*  Signal grandparent process to terminate.
+     */
+    if ((fd >= 0) && (close(fd) < 0))
+        err_msg(errno, "Unable to close write-pipe in grandchild");
 
     return;
 }
@@ -174,7 +205,8 @@ static void display_configuration(server_conf_t *conf)
     printf("Listening on port %d.\n", conf->port);
     printf("Monitoring %d console%s.\n", n, ((n==1) ? "" : "s"));
     printf("Options:");
-    if (!conf->enableKeepAlive && !conf->enableZeroLogs
+    if (!conf->enableKeepAlive
+      && !conf->enableZeroLogs
       && !conf->enableLoopBack) {
         printf(" None");
     }
@@ -187,6 +219,9 @@ static void display_configuration(server_conf_t *conf)
             printf(" ZeroLogs");
     }
     printf("\n");
+
+    if (fflush(stdout) < 0)
+        err_msg(errno, "Unable to flush standard output");
 
     return;
 }
