@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-file.h,v 1.2 2001/10/08 04:02:37 dun Exp $
+ *  $Id: util-file.h,v 1.3 2001/12/30 04:24:59 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -12,6 +12,7 @@
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
+#include <sys/types.h>
 #include <unistd.h>
 
 
