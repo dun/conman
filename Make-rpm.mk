@@ -2,7 +2,7 @@
 # Makefile Include for RPM Construction
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Make-rpm.mk,v 1.17 2002/05/09 08:48:19 dun Exp $
+# $Id: Make-rpm.mk,v 1.18 2002/05/18 03:58:50 dun Exp $
 ##
 # REQUIREMENTS:
 # - requires project to be under CVS version control
@@ -70,7 +70,7 @@ tar rpm:
 	  echo "ERROR: Cannot create \"$$tmp\" dir." 1>&2; exit 1; fi; \
 	test -f CVS/Root && cvs="cvs -d `cat CVS/Root`" || cvs="cvs"; \
 	echo "Fetching $$proj from CVS (tag=$$tag) ..."; \
-	(cd $$tmp; $$cvs -Q export -r $$tag $$proj) || exit 1; \
+	(cd $$tmp; $$cvs -Q export -kv -r $$tag $$proj) || exit 1; \
 	meta=$$tmp/$$proj/META; \
 	if test ! -f "$$meta"; then \
 	  echo "ERROR: Cannot find $$proj metadata in CVS." 1>&2; exit 1; fi; \
