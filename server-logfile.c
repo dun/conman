@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-logfile.c,v 1.11.2.2 2003/09/26 18:05:29 dun Exp $
+ *  $Id: server-logfile.c,v 1.11.2.3 2003/09/26 21:27:09 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -260,7 +260,10 @@ int write_log_data(obj_t *log, const void *src, int len)
 
                 int c = *p & 0x7F;      /* strip data to 7-bit ASCII */
 
-                if (c < 0x20) {         /* ASCII ctrl-chars */
+                if (c == 0x00) {        /* ASCII NUL */
+                    ;
+                }
+                else if (c < 0x20) {    /* ASCII ctrl-chars */
                     *q++ = (*p & 0x80) ? '~' : '^';
                     *q++ = c + '@';
                 }
