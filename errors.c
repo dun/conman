@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: errors.c,v 1.5 2001/05/29 23:45:25 dun Exp $
+ *  $Id: errors.c,v 1.6 2001/08/14 23:16:47 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "errors.h" for documentation on public functions.
@@ -7,7 +7,7 @@
 
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
 #include <errno.h>
@@ -19,7 +19,7 @@
 
 
 #ifndef MAX_LINE
-#define MAX_LINE 1024
+#  define MAX_LINE 1024
 #endif /* !MAX_LINE */
 
 
@@ -49,6 +49,8 @@ void log_msg(int level, const char *fmt, ...)
 
 void err_msg(int errnum, const char *fmt, ...)
 {
+/*  FIX_ME: Replace snprintf()'s with append_format_string().
+ */
     char buf[MAX_LINE];
     char *ptr;
     int len;

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: errors.h,v 1.4 2001/06/14 23:47:26 dun Exp $
+ *  $Id: errors.h,v 1.5 2001/08/14 23:16:47 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -9,7 +9,7 @@
 
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
 #include <stdio.h>
@@ -23,14 +23,14 @@
  *      preceded with the file name and line number.
  */
 #ifndef NDEBUG
-#define DPRINTF(fmt, args...) \
-  do { fprintf(stderr, fmt , ## args); } while (0)
-#define LDPRINTF(fmt, args...) \
-  do { fprintf(stderr, "%s:%d: " fmt, __FILE__, __LINE__ , ## args); } while (0)
+#  define DPRINTF(fmt, args...) \
+     do { fprintf(stderr, fmt , ## args); } while (0)
+#  define LDPRINTF(fmt, args...) \
+     do { fprintf(stderr, "%s:%d: " fmt, __FILE__, __LINE__ , ## args); } while (0)
 #else /* NDEBUG */
-#define DPRINTF(fmt, args...)
-#define LDPRINTF(fmt, args...)
-#endif /* NDEBUG */
+#  define DPRINTF(fmt, args...)
+#  define LDPRINTF(fmt, args...)
+#endif /* !NDEBUG */
 
 
 int open_msg_log(char *filename);
@@ -61,9 +61,9 @@ void err_msg(int errnum, const char *fmt, ...);
  */
 
 #ifndef NDEBUG
-#define err_msg(num, fmt, args...) \
-  err_msg(num, "%s:%d: " fmt, __FILE__, __LINE__ , ## args)
-#endif /* NDEBUG */
+#  define err_msg(num, fmt, args...) \
+     err_msg(num, "%s:%d: " fmt, __FILE__, __LINE__ , ## args)
+#endif /* !NDEBUG */
 
 
 #endif /* !_ERRORS_H */

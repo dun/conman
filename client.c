@@ -1,11 +1,11 @@
 /******************************************************************************\
- *  $Id: client.c,v 1.9 2001/07/31 17:13:21 dun Exp $
+ *  $Id: client.c,v 1.10 2001/08/14 23:16:47 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
 #include <unistd.h>

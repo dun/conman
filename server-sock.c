@@ -1,11 +1,11 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.25 2001/08/07 22:01:13 dun Exp $
+ *  $Id: server-sock.c,v 1.26 2001/08/14 23:16:47 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
 #include <arpa/inet.h>
@@ -211,14 +211,12 @@ static int recv_greeting(req_t *req)
             "Invalid greeting: no user specified");
         return(-1);
     }
-#ifdef NDEBUG
-    if (strcmp(req->ip, "127.0.0.1")) {
-        send_rsp(req, CONMAN_ERR_AUTHENTICATE,
-            "Authentication required (but not yet implemented)");
-        return(-1);
-    }
-#endif /* NDEBUG */
-
+/*  if (strcmp(req->ip, "127.0.0.1")) {
+ *      send_rsp(req, CONMAN_ERR_AUTHENTICATE,
+ *          "Authentication required (but not yet implemented)");
+ *      return(-1);
+ *  }
+ */
     DPRINTF("Received request from <%s@%s>.\n", req->user, req->host);
 
     /*  Send response to greeting.

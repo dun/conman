@@ -1,11 +1,11 @@
 /******************************************************************************\
- *  $Id: client-conf.c,v 1.24 2001/08/06 18:35:39 dun Exp $
+ *  $Id: client-conf.c,v 1.25 2001/08/14 23:16:47 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
 #include <assert.h>
@@ -65,12 +65,12 @@ client_conf_t * create_client_conf(void)
     conf->req->command = CONNECT;
 
     conf->escapeChar = DEFAULT_CLIENT_ESCAPE;
-    conf->enableVerbose = 0;
     conf->log = NULL;
     conf->logd = -1;
-    conf->closedByClient = 0;
     conf->errnum = CONMAN_ERR_NONE;
     conf->errmsg = NULL;
+    conf->enableVerbose = 0;
+    conf->isClosedByClient = 0;
 
     return(conf);
 }
@@ -106,12 +106,6 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
     opterr = 0;
     while ((c = getopt(argc, argv, "bd:e:fhjl:mqQrvV")) != -1) {
         switch(c) {
-        case 'h':
-            display_client_help(argv[0]);
-            exit(0);
-        case 'V':
-            printf("%s-%s%s\n", PACKAGE, VERSION, DEBUG_STRING);
-            exit(0);
         case 'b':
             conf->req->enableBroadcast = 1;
             break;
@@ -131,6 +125,9 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
             conf->req->enableForce = 1;
             conf->req->enableJoin = 0;
             break;
+        case 'h':
+            display_client_help(argv[0]);
+            exit(0);
         case 'j':
             conf->req->enableForce = 0;
             conf->req->enableJoin = 1;
@@ -155,6 +152,9 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
         case 'v':
             conf->enableVerbose = 1;
             break;
+        case 'V':
+            printf("%s-%s%s\n", PACKAGE, VERSION, FEATURES);
+            exit(0);
         case '?':			/* invalid option */
             fprintf(stderr, "ERROR: Invalid option \"%c\".\n", optopt);
             exit(1);
@@ -181,12 +181,12 @@ static void display_client_help(char *prog)
 
     printf("Usage: %s [OPTIONS] <console(s)>\n", prog);
     printf("\n");
-    printf("  -h        Display this help.\n");
     printf("  -b        Broadcast (write-only) to multiple consoles.\n");
     printf("  -d HOST   Specify server destination."
         " (default: %s:%d).\n", DEFAULT_CONMAN_HOST, DEFAULT_CONMAN_PORT);
     printf("  -e CHAR   Set escape character (default: '%s').\n", esc);
     printf("  -f        Force connection (console stealing).\n");
+    printf("  -h        Display this help.\n");
     printf("  -j        Join connection (console sharing).\n");
     printf("  -l FILE   Log connection output to file.\n");
     printf("  -m        Monitor connection (read-only).\n");

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: list.c,v 1.7 2001/05/24 20:56:08 dun Exp $
+ *  $Id: list.c,v 1.8 2001/08/14 23:16:47 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "list.h" for documentation on public functions.
@@ -7,12 +7,12 @@
 
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
 #ifdef USE_THREAD_SAFE_LIST
-#include <errno.h>
-#include <pthread.h>
+#  include <errno.h>
+#  include <pthread.h>
 #endif /* USE_THREAD_SAFE_LIST */
 
 #include <assert.h>
@@ -59,33 +59,36 @@ static void * list_node_destroy(List l, ListNode *pp);
 
 #ifdef USE_THREAD_SAFE_LIST
 
-#define LIST_INIT(mutex)                                                       \
-    do {                                                                       \
-        if ((errno = pthread_mutex_init(mutex, NULL)) != 0)                    \
-            perror("ERROR: pthread_mutex_init() failed"), exit(1);             \
-    } while (0)
-#define LIST_LOCK(mutex)                                                       \
-    do {                                                                       \
-        if ((errno = pthread_mutex_lock(mutex)) != 0)                          \
-            perror("ERROR: pthread_mutex_lock() failed"), exit(1);             \
-    } while (0)
-#define LIST_UNLOCK(mutex)                                                     \
-    do {                                                                       \
-        if ((errno = pthread_mutex_unlock(mutex)) != 0)                        \
-            perror("ERROR: pthread_mutex_unlock() failed"), exit(1);           \
-    } while (0)
-#define LIST_DESTROY(mutex)                                                    \
-    do {                                                                       \
-        if ((errno = pthread_mutex_destroy(mutex)) != 0)                       \
-            perror("ERROR: pthread_mutex_destroy() failed"), exit(1);          \
-    } while (0)
+#  define LIST_INIT(mutex)                                                     \
+     do {                                                                      \
+         if ((errno = pthread_mutex_init(mutex, NULL)) != 0)                   \
+             perror("ERROR: pthread_mutex_init() failed"), exit(1);            \
+     } while (0)
+
+#  define LIST_LOCK(mutex)                                                     \
+     do {                                                                      \
+         if ((errno = pthread_mutex_lock(mutex)) != 0)                         \
+             perror("ERROR: pthread_mutex_lock() failed"), exit(1);            \
+     } while (0)
+
+#  define LIST_UNLOCK(mutex)                                                   \
+     do {                                                                      \
+         if ((errno = pthread_mutex_unlock(mutex)) != 0)                       \
+             perror("ERROR: pthread_mutex_unlock() failed"), exit(1);          \
+     } while (0)
+
+#  define LIST_DESTROY(mutex)                                                  \
+     do {                                                                      \
+         if ((errno = pthread_mutex_destroy(mutex)) != 0)                      \
+             perror("ERROR: pthread_mutex_destroy() failed"), exit(1);         \
+     } while (0)
 
 #else /* !USE_THREAD_SAFE_LIST */
 
-#define LIST_INIT(mutex)
-#define LIST_LOCK(mutex)
-#define LIST_UNLOCK(mutex)
-#define LIST_DESTROY(mutex)
+#  define LIST_INIT(mutex)
+#  define LIST_LOCK(mutex)
+#  define LIST_UNLOCK(mutex)
+#  define LIST_DESTROY(mutex)
 
 #endif /* USE_THREAD_SAFE_LIST */
 

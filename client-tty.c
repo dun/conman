@@ -1,11 +1,11 @@
 /******************************************************************************\
- *  $Id: client-tty.c,v 1.29 2001/08/07 22:01:13 dun Exp $
+ *  $Id: client-tty.c,v 1.30 2001/08/14 23:16:47 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
 #include <assert.h>
@@ -94,7 +94,7 @@ void connect_console(client_conf_t *conf)
         err_msg(errno, "close() failed on fd=%d", conf->req->sd);
     conf->req->sd = -1;
 
-    if (!conf->closedByClient)
+    if (!conf->isClosedByClient)
         locally_display_status(conf, "terminated by peer");
 
     restore_tty_mode(STDIN_FILENO, &conf->term);
@@ -313,7 +313,7 @@ static int perform_close_esc(client_conf_t *conf, char c)
     if (shutdown(conf->req->sd, SHUT_WR) < 0)
         err_msg(errno, "shutdown() failed on fd=%d", conf->req->sd);
 
-    conf->closedByClient = 1;
+    conf->isClosedByClient = 1;
     return(1);
 }
 

@@ -1,11 +1,11 @@
 /******************************************************************************\
- *  $Id: common.c,v 1.12 2001/08/06 19:47:16 dun Exp $
+ *  $Id: common.c,v 1.13 2001/08/14 23:16:47 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
 #include <errno.h>
@@ -58,16 +58,16 @@ req_t * create_req(void)
     req->host = NULL;
     req->ip = NULL;
     req->port = 0;
+    if (!(req->consoles = list_create((ListDelF) destroy_string))) {
+        free(req);
+        return(NULL);
+    }
     req->command = NONE;
     req->enableBroadcast = 0;
     req->enableForce = 0;
     req->enableJoin = 0;
     req->enableQuiet = 0;
     req->enableRegex = 0;
-    if (!(req->consoles = list_create((ListDelF) destroy_string))) {
-        free(req);
-        return(NULL);
-    }
     return(req);
 }
 

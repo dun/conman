@@ -1,11 +1,11 @@
 /******************************************************************************\
- *  $Id: client-sock.c,v 1.18 2001/08/07 22:01:13 dun Exp $
+ *  $Id: client-sock.c,v 1.19 2001/08/14 23:16:47 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
 #include <assert.h>
@@ -88,7 +88,7 @@ int send_greeting(client_conf_t *conf)
     if (write_n(conf->req->sd, buf, strlen(buf)) < 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
         conf->errmsg = create_format_string(
-            "Cannot send greeting to [%s:%d]: %s",
+            "Unable to send greeting to [%s:%d]: %s",
             conf->req->host, conf->req->port, strerror(errno));
         return(-1);
     }
@@ -217,7 +217,7 @@ int recv_rsp(client_conf_t *conf)
     if ((n = read_line(conf->req->sd, buf, sizeof(buf))) < 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
         conf->errmsg = create_format_string(
-            "Cannot read response from [%s:%d]: %s",
+            "Unable to read response from [%s:%d]: %s",
             conf->req->host, conf->req->port, strerror(errno));
         return(-1);
     }
