@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.h,v 1.22 2001/10/08 04:02:37 dun Exp $
+ *  $Id: common.h,v 1.23 2001/12/14 21:14:01 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -55,6 +55,10 @@
 #endif /* WITH_DMALLOC */
 
 #define FEATURES (FEATURE_DEBUG FEATURE_DMALLOC)
+
+#ifndef HAVE_SOCKLEN_T
+typedef unsigned int socklen_t;		/* socklen_t is defined in Posix.1g */
+#endif /* !HAVE_SOCKLEN_T */
 
 
 typedef enum cmd_type {			/* bit-field limited to 8 values      */

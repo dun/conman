@@ -3,7 +3,7 @@ dnl
 dnl ConMan AutoConf Config Jazz
 dnl   by Chris Dunlap <cdunlap@llnl.gov>
 dnl
-dnl $Id: configure.ac,v 1.5 2001/12/13 21:25:07 dun Exp $
+dnl $Id: configure.ac,v 1.6 2001/12/14 21:14:01 dun Exp $
 
 
 dnl Prologue.
@@ -95,6 +95,7 @@ dnl
 
 dnl Check for typedefs.
 dnl
+AC_CHECK_TYPES(socklen_t, [], [], [#include <sys/socket.h>])
 
 
 dnl Check for structures.
