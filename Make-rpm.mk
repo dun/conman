@@ -2,7 +2,7 @@
 # Makefile Include for RPM Construction
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Make-rpm.mk,v 1.19 2002/05/18 23:56:03 dun Exp $
+# $Id: Make-rpm.mk,v 1.20 2002/08/16 00:18:29 dun Exp $
 ##
 # REQUIREMENTS:
 # - requires project to be under CVS version control
@@ -37,7 +37,7 @@
 # - if RELEASE is not specified in the META file when using a "HEAD" tag,
 #     a "rev" can be specified on the cmdline (eg, make rpm tag=HEAD rev=2);
 #     o/w, the RPM release is set to 1
-# - CVS "HEAD" releases have a release number of the form "YYYYMMDDHHMM".
+# - CVS "HEAD" releases have a release number of the form "YYMMDDHHMM".
 # - CVS "BASE" tag is not supported
 # - RPM will be signed with a PGP/GPG key if one is specified in ~/.rpmmacros
 ##
@@ -76,7 +76,7 @@ tar rpm:
 	  echo "ERROR: PROJECT does not match metadata." 1>&2; exit 1; fi; \
 	ver=`perl -ne 'print,exit if s/^\s*VERSION:\s*(\S*).*/\1/i' $$meta`; \
 	rel=`perl -ne 'print,exit if s/^\s*RELEASE:\s*(\S*).*/\1/i' $$meta`; \
-	test "$$tag" = "HEAD" && rel="`date +%Y%m%d%H%M`"; \
+	test "$$tag" = "HEAD" && rel="`date +%y%m%d%H%M`"; \
 	if test -n "$$rel"; then pkg=$$proj-$$ver-$$rel; \
 	  else pkg=$$proj-$$ver; test -n "$$rev" -a "$$tag" = "HEAD" \
 	    && rel="$$rev" || rel="1"; fi; \
