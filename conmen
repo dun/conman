@@ -1,15 +1,37 @@
 #!/usr/bin/env perl
 
-##
-#  $Id: conmen,v 1.10 2001/12/30 20:08:54 dun Exp $
-#    by Chris Dunlap <cdunlap@llnl.gov>
-##
-#  This is a wrapper to aid in ConMan broadcast sessions.
-#  It spawns an xterm for each of the selected consoles
-#    and uses the current tty as the broadcast window.
-#  All of the spawned xterm clients are terminated when the
-#    broadcast window session is closed.
-##
+#******************************************************************************
+# ConMen: a wrapper to aid in ConMan broadcast sessions.
+#******************************************************************************
+# $Id: conmen,v 1.11 2002/03/31 01:06:07 dun Exp $
+#******************************************************************************
+# Copyright (C) 2001-2002 The Regents of the University of California.
+# Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
+# Written by Chris Dunlap <cdunlap@llnl.gov>.
+# UCRL-CODE-2002-009.
+# 
+# This file is part of ConMan, a remote console management program.
+# For details, see <http://www.llnl.gov/linux/conman.html>.
+# 
+# ConMan is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free
+# Software Foundation; either version 2 of the License, or (at your option)
+# any later version.
+# 
+# ConMan is distributed in the hope that it will be useful, but WITHOUT ANY
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+# details.
+# 
+# You should have received a copy of the GNU General Public License along
+# with ConMan; if not, write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA.
+#******************************************************************************
+# ConMen spawns an xterm for each of the selected consoles
+#   and uses the current tty as the broadcast window.
+# All of the spawned xterm clients are terminated when the
+#   broadcast window session is closed.
+#******************************************************************************
 
 use Getopt::Std;
 
