@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util.c,v 1.13 2001/08/14 23:19:19 dun Exp $
+ *  $Id: util.c,v 1.14 2001/09/06 21:19:26 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util.h" for documentation on public functions.
@@ -37,6 +37,8 @@
 
 static int get_file_lock(int fd, int cmd, int type);
 static pid_t test_file_lock(int fd, int type);
+static int copy_hostent(const struct hostent *src, char *dst, int len);
+static int verify_hostent(const struct hostent *src, const struct hostent *dst);
 
 
 char * create_string(const char *str)
@@ -109,6 +111,38 @@ size_t append_format_string(char *dst, size_t size, const char *fmt, ...)
         return(-1);
     }
     return(lenOrig + n);
+}
+
+
+int substitute_string(char *dst, size_t dstlen, char *src, char c, char *sub)
+{
+    char *p, *q;
+    int n, m;
+
+    assert(dst);
+    if (!dstlen || !src)
+        return(0);
+
+    for (p=src, q=dst, n=dstlen; n>0 && p && *p; p++) {
+        if (*p != c) {
+            *q++ = *p;
+            n--;
+        }
+        else if (sub) {
+            m = strlcpy(q, sub, n);
+            q += m;
+            n -= m;
+        }
+    }
+
+    if (n > 0) {
+        *q = '\0';
+        return(dstlen - n);
+    }
+    else {
+        dst[dstlen - 1] = '\0';
+        return(-1);
+    }
 }
 
 
@@ -410,33 +444,253 @@ ssize_t read_line(int fd, void *buf, size_t maxlen)
 }
 
 
-char * get_hostname_by_addr(void *addr, char *buf, int len)
+struct hostent * get_host_by_name(const char *name,
+    char *buf, int buflen, int *h_err)
 {
-    static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+/*  gethostbyname() is not thread-safe, and there is no frelling standard
+ *    for gethostbyname_r() -- the arg list varies from system to system!
+ */
     int rc;
-    struct hostent *hostp;
+    static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+    struct hostent *hptr;
+    int n = 0;
 
-    assert(addr);
-    assert(buf);
-    assert(len > 0);
     if ((rc = pthread_mutex_lock(&lock)) != 0)
         err_msg(rc, "pthread_mutex_lock() failed");
 
-    /*  gethostbyaddr() is not thread-safe, so it is protected by a mutex.
-     *  This assumes no other concurrent thread will be calling gethostbyaddr().
-     */
-    hostp = gethostbyaddr((const char *) addr, sizeof(struct in_addr), AF_INET);
-    if (hostp != NULL)
-        strlcpy(buf, hostp->h_name, len);
+    if ((hptr = gethostbyname(name)))
+        n = copy_hostent(hptr, buf, buflen);
+    else if (h_err)
+        *h_err = h_errno;
 
     if ((rc = pthread_mutex_unlock(&lock)) != 0)
         err_msg(rc, "pthread_mutex_unlock() failed");
 
-    return(hostp != NULL ? buf : NULL);
+    if (n < 0) {
+        errno = ERANGE;
+        return(NULL);
+    }
+    return(hptr ? (struct hostent *) buf : NULL);
 }
 
 
-SigFunc * Signal(int signum, SigFunc *f)
+struct hostent * get_host_by_addr(const char *addr, int len, int type,
+    char *buf, int buflen, int *h_err)
+{
+/*  gethostbyaddr() is not thread-safe, and there is no frelling standard
+ *    for gethostbyaddr_r() -- the arg list varies from system to system!
+ */
+    int rc;
+    static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+    struct hostent *hptr;
+    int n = 0;
+
+    if ((rc = pthread_mutex_lock(&lock)) != 0)
+        err_msg(rc, "pthread_mutex_lock() failed");
+
+    if ((hptr = gethostbyaddr(addr, len, type)))
+        n = copy_hostent(hptr, buf, buflen);
+    else if (h_err)
+        *h_err = h_errno;
+
+    if ((rc = pthread_mutex_unlock(&lock)) != 0)
+        err_msg(rc, "pthread_mutex_unlock() failed");
+
+    if (n < 0) {
+        errno = ERANGE;
+        return(NULL);
+    }
+    return(hptr ? (struct hostent *) buf : NULL);
+}
+
+
+const char * host_strerror(int h_err)
+{
+    if (h_err == HOST_NOT_FOUND)
+        return("Unknown host");
+    else if (h_err == TRY_AGAIN)
+        return("Transient host name lookup failure");
+    else if (h_err == NO_RECOVERY)
+        return("Unknown server error");
+    else if ((h_err == NO_ADDRESS) || (h_errno == NO_DATA))
+        return("No address associated with name");
+    return("Unknown error");
+}
+
+
+int host_name_to_addr4(const char *name, struct in_addr *addr)
+{
+    struct hostent *hptr;
+    unsigned char buf[HOSTENT_SIZE];
+
+    assert(name);
+    assert(addr);
+
+    if (!(hptr = get_host_by_name(name, buf, sizeof(buf), NULL)))
+        return(-1);
+    if (hptr->h_length > 4) {
+        errno = ERANGE;
+        return(-1);
+    }
+    memcpy(addr, hptr->h_addr_list[0], hptr->h_length);
+    return(0);
+}
+
+
+char * host_addr4_to_name(const struct in_addr *addr, char *name, int len)
+{
+    struct hostent *hptr;
+    unsigned char buf[HOSTENT_SIZE];
+
+    assert(addr);
+    assert(name);
+
+    if (!(hptr = get_host_by_addr((char *) addr, 4, AF_INET,
+      buf, sizeof(buf), NULL)))
+        return(NULL);
+    if (strlen(hptr->h_name) >= len) {
+        errno = ERANGE;
+        return(NULL);
+    }
+    strcpy(name, hptr->h_name);
+    return(name);
+}
+
+
+char * host_name_to_cname(const char *src, char *dst, int len)
+{
+    struct hostent *hptr;
+    unsigned char buf[HOSTENT_SIZE];
+    struct in_addr addr;
+
+    assert(src);
+    assert(dst);
+
+    if (!(hptr = get_host_by_name(src, buf, sizeof(buf), NULL)))
+        return(NULL);
+    /*
+     *  If 'src' is an ip-addr string, it will simply be copied to h_name.
+     *    So, we need to perform a reverse query based on the in_addr
+     *    in order to obtain the canonical name of the host.
+     *  Besides, this additional query helps protect against DNS spoofing.
+     */
+    memcpy(&addr, hptr->h_addr_list[0], hptr->h_length);
+    if (!(hptr = get_host_by_addr((char *) &addr, 4, AF_INET,
+      buf, sizeof(buf), NULL)))
+        return(NULL);
+    if (strlen(hptr->h_name) >= len) {
+        errno = ERANGE;
+        return(NULL);
+    }
+    strcpy(dst, hptr->h_name);
+    return(dst);
+}
+
+
+static int copy_hostent(const struct hostent *src, char *dst, int len)
+{
+/*  Copies the (src) hostent struct (and all of its associated data)
+ *    into the buffer (dst) of length (len).
+ *  Returns 0 if the copy is successful, or -1 if the length of the buffer
+ *    is not large enough to hold the result.
+ */
+    struct hostent *hptr;
+    char *buf;
+    int n;
+    char **p, **q;
+
+    assert(src);
+    assert(dst);
+
+    hptr = (struct hostent *) dst;
+    buf = dst + sizeof(struct hostent);
+    if ((len -= sizeof(struct hostent)) < 0)
+        return(-1);
+    hptr->h_addrtype = src->h_addrtype;
+    hptr->h_length = src->h_length;
+
+    /*  Copy h_name string.
+     */
+    hptr->h_name = buf;
+    n = strlcpy(buf, src->h_name, len);
+    buf += n + 1;			/* allow for trailing NUL char */
+    if ((len -= n + 1) < 0)
+        return(-1);
+
+    /*  Reserve space for h_aliases[].
+     */
+    hptr->h_aliases = (char **) buf;
+    for (p=src->h_aliases, q=hptr->h_aliases; *p; p++, q++) {;}
+    buf = (char *) (q + 1);		/* allow for terminating NULL */
+    if ((len -= buf - (char *) hptr->h_aliases) < 0)
+        return(-1);
+
+    /*  Copy h_aliases[] strings.
+     */
+    for (p=src->h_aliases, q=hptr->h_aliases; *p; p++, q++) {
+        n = strlcpy(buf, *p, len);
+        *q = buf;
+        buf += n + 1;			/* allow for trailing NUL char */
+        if ((len -= n + 1) < 0)
+            return(-1);
+    }
+    *q = NULL;
+
+    /*  Reserve space for h_addr_list[].
+     */
+    hptr->h_addr_list = (char **) buf;
+    for (p=src->h_addr_list, q=hptr->h_addr_list; *p; p++, q++) {;}
+    buf = (char *) (q + 1);		/* allow for terminating NULL */
+    if ((len -= buf - (char *) hptr->h_addr_list) < 0)
+        return(-1);
+
+    /*  Copy h_addr_list[] in_addr structs.
+     */
+    for (p=src->h_addr_list, q=hptr->h_addr_list; *p; p++, q++) {
+        if ((len -= src->h_length) < 0)
+            return(-1);
+        memcpy(buf, *p, src->h_length);
+        *q = buf;
+        buf += src->h_length;
+    }
+    *q = NULL;
+
+    assert(verify_hostent(src, (struct hostent *) dst) >= 0);
+    return(0);
+}
+
+
+static int verify_hostent(const struct hostent *src, const struct hostent *dst)
+{
+/*  Verifies that the src hostent struct has been successfully copied into dst.
+ *  Returns 0 if the copy is good; o/w, returns -1.
+ */
+    char **p, **q;
+
+    assert(src);
+    assert(dst);
+
+    if (!dst->h_name)
+        return(-1);
+    if (src->h_name == dst->h_name)
+        return(-1);
+    if (strcmp(src->h_name, dst->h_name))
+        return(-1);
+    if (src->h_addrtype != dst->h_addrtype)
+        return(-1);
+    if (src->h_length != dst->h_length)
+        return(-1);
+    for (p=src->h_aliases, q=dst->h_aliases; *p; p++, q++)
+        if ((!q) || (p == q) || (strcmp(*p, *q)))
+            return(-1);
+    for (p=src->h_addr_list, q=dst->h_addr_list; *p; p++, q++)
+        if ((!q) || (p == q) || (memcmp(*p, *q, src->h_length)))
+            return(-1);
+    return(0);
+}
+
+
+SigFunc * posix_signal(int signum, SigFunc *f)
 {
 /*  A wrapper for the historical signal() function to do things the Posix way.
  *  cf. Stevens UNPv1 figure 5.6.
