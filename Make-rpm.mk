@@ -2,7 +2,7 @@
 # Makefile Include for RPM Construction
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Make-rpm.mk,v 1.8 2001/12/05 18:51:14 dun Exp $
+# $Id: Make-rpm.mk,v 1.9 2001/12/05 19:02:58 dun Exp $
 ##
 # REQUIREMENTS:
 # - requires project to be under CVS version control
@@ -48,8 +48,11 @@ rpm tar:
 	test -n "$(mkinstalldirs)" && mkdir="$(mkinstalldirs)" \
 	  || mkdir="mkdir -p"; \
 	test -z "$$tag" && tag=`echo $$pkg-$$ver | tr '.' '-'`; \
-	ver=`$$cvs -Q co -r $$tag -p $$pkg/VERSION | \
-	  sed -ne 's/.*-\(.*\)/\1/p'`; \
+	info=`$$cvs -Q co -r $$tag -p $$pkg/VERSION`; \
+	pkg=`echo "$$info" | sed -ne 's/^\(.*\)-\(.*\)/\1/p'`; \
+	if test "$$pkg" != "$(PACKAGE)"; then \
+	  echo "ERROR: Cannot determine PACKAGE (tag=$$tag)" 1>&2; exit 0; fi; \
+	ver=`echo "$$info" | sed -ne 's/^\(.*\)-\(.*\)/\2/p'`; \
 	if test -z "$$ver"; then \
 	  echo "ERROR: Cannot determine VERSION (tag=$$tag)" 1>&2; exit 0; fi; \
 	test "$$tag" = "HEAD" -o "$$tag" = "BASE" && ver="$$ver+"; \
