@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.54 2001/12/27 01:16:35 dun Exp $
+ *  $Id: server-obj.c,v 1.55 2001/12/27 20:10:50 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -16,7 +16,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <sys/stat.h>
 #include <termios.h>
 #include <time.h>
 #include <unistd.h>
@@ -109,7 +108,8 @@ obj_t * create_client_obj(server_conf_t *conf, req_t *req)
 }
 
 
-obj_t * create_logfile_obj(server_conf_t *conf, char *name, obj_t *console)
+obj_t * create_logfile_obj(
+    server_conf_t *conf, char *name, obj_t *console, logopt_t *opts)
 {
 /*  Creates a new logfile object and adds it to the master objs list.
  *    Note: the logfile is open and set for non-blocking I/O.
@@ -121,6 +121,7 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name, obj_t *console)
     assert(conf != NULL);
     assert((name != NULL) && (name[0] != '\0'));
     assert(console != NULL);
+    assert(opts != NULL);
 
     /*  Check for duplicate logfile names.
      *  While the write-lock will protect against two separate daemons
@@ -143,6 +144,8 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name, obj_t *console)
 
     logfile = create_obj(conf, name, -1, LOGFILE);
     logfile->aux.logfile.consoleName = create_string(console->name);
+    logfile->aux.logfile.gotSanitizedCR = 0;
+    logfile->aux.logfile.opts = *opts;
     if (is_serial_obj(console))
         console->aux.serial.logfile = logfile;
     else if (is_telnet_obj(console))
@@ -157,111 +160,8 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name, obj_t *console)
 }
 
 
-int open_logfile_obj(obj_t *logfile, int gotTrunc)
-{
-/*  (Re)opens the specified 'logfile' obj; the logfile will be truncated
- *    if 'gotTrunc' is true (ie, non-zero).
- *  Returns 0 if the logfile is successfully opened; o/w, returns -1.
- */
-    int flags;
-    char *now, *msg;
-
-    assert(logfile != NULL);
-    assert(is_logfile_obj(logfile));
-    assert(logfile->name != NULL);
-    assert(logfile->aux.logfile.consoleName != NULL);
-
-    if (logfile->fd >= 0) {
-        if (close(logfile->fd) < 0)	/* log err and continue */
-            log_msg(0, "Unable to close logfile \"%s\": %s.",
-                logfile->name, strerror(errno));
-        logfile->fd = -1;
-    }
-
-    flags = O_WRONLY | O_CREAT | O_APPEND | O_NONBLOCK;
-    if (gotTrunc)
-        flags |= O_TRUNC;
-    if ((logfile->fd = open(logfile->name, flags, S_IRUSR | S_IWUSR)) < 0) {
-        log_msg(0, "Unable to open logfile \"%s\": %s.",
-            logfile->name, strerror(errno));
-        return(-1);
-    }
-    if (get_write_lock(logfile->fd) < 0) {
-        log_msg(0, "Unable to lock \"%s\".", logfile->name);
-        close(logfile->fd);		/* ignore err on close() */
-        logfile->fd = -1;
-        return(-1);
-    }
-    set_fd_nonblocking(logfile->fd);	/* redundant, just playing it safe */
-    set_fd_closed_on_exec(logfile->fd);
-
-    now = create_long_time_string(0);
-    msg = create_format_string("%sConsole [%s] log opened at %s%s",
-        CONMAN_MSG_PREFIX, logfile->aux.logfile.consoleName, now,
-        CONMAN_MSG_SUFFIX);
-    write_obj_data(logfile, msg, strlen(msg), 0);
-    free(now);
-    free(msg);
-
-    DPRINTF("Opened logfile \"%s\" for console [%s].\n",
-        logfile->name, logfile->aux.logfile.consoleName);
-    return(0);
-}
-
-
-obj_t * get_console_logfile_obj(obj_t *console)
-{
-/*  Returns a ptr to the logfile obj associated with 'console'
- *    if one exists and is currently active; o/w, returns NULL.
- */
-    obj_t *logfile;
-
-    assert(console != NULL);
-    assert(is_console_obj(console));
-
-    if (is_serial_obj(console))
-        logfile = console->aux.serial.logfile;
-    else if (is_telnet_obj(console))
-        logfile = console->aux.telnet.logfile;
-    else
-        err_msg(0, "INTERNAL: Unrecognized console [%s] type=%d",
-            console->name, console->type);
-
-    if (!logfile || (logfile->fd < 0))
-        return(NULL);
-    return(logfile);
-}
-
-
-void notify_console_objs(obj_t *console, char *msg)
-{
-/*  Notifies all readers & writers of (console) with the informational (msg).
- *  If an obj is both a reader and a writer, it will only be notified once.
- */
-    ListIterator i;
-    obj_t *obj;
-
-    assert(is_console_obj(console));
-
-    if (!msg || !strlen(msg))
-        return;
-
-    i = list_iterator_create(console->readers);
-    while ((obj = list_next(i)))
-        write_obj_data(obj, msg, strlen(msg), 1);
-    list_iterator_destroy(i);
-
-    i = list_iterator_create(console->writers);
-    while ((obj = list_next(i)))
-        if (!list_find_first(console->readers, (ListFindF) find_obj, obj))
-            write_obj_data(obj, msg, strlen(msg), 1);
-    list_iterator_destroy(i);
-    return;
-}
-
-
 obj_t * create_serial_obj(
-    server_conf_t *conf, char *name, char *dev, char *opts)
+    server_conf_t *conf, char *name, char *dev, seropt_t *opts)
 {
 /*  Creates a new serial device object and adds it to the master objs list.
  *    Note: the console is open and set for non-blocking I/O.
@@ -275,6 +175,7 @@ obj_t * create_serial_obj(
     assert(conf != NULL);
     assert((name != NULL) && (name[0] != '\0'));
     assert((dev != NULL) && (dev[0] != '\0'));
+    assert(opts != NULL);
 
     /*  Check for duplicate console and device names.
      *  While the write-lock will protect against two separate daemons
@@ -320,9 +221,11 @@ obj_t * create_serial_obj(
     set_fd_closed_on_exec(fd);
 
     /*  Note that while the initial state of the console dev's termios
-     *    are saved, the settings derived from the 'opts' string are not.
-     *  This is because the settings do not change until the obj is destroyed,
-     *    at which time the termios is reverted back to its initial state.
+     *    are saved, the 'opts' settings are not.  This is because the
+     *    settings do not change until the obj is destroyed, at which time
+     *    the termios is reverted back to its initial state.
+     *  Also note that these local opts will need to be saved in the serial obj
+     *    in order to support true server reconfiguration.  But not today.
      */
     serial = create_obj(conf, name, fd, SERIAL);
     serial->aux.serial.dev = create_string(dev);
@@ -759,6 +662,33 @@ int find_obj(obj_t *obj, obj_t *key)
 }
 
 
+void notify_console_objs(obj_t *console, char *msg)
+{
+/*  Notifies all readers & writers of (console) with the informational (msg).
+ *  If an obj is both a reader and a writer, it will only be notified once.
+ */
+    ListIterator i;
+    obj_t *obj;
+
+    assert(is_console_obj(console));
+
+    if (!msg || !strlen(msg))
+        return;
+
+    i = list_iterator_create(console->readers);
+    while ((obj = list_next(i)))
+        write_obj_data(obj, msg, strlen(msg), 1);
+    list_iterator_destroy(i);
+
+    i = list_iterator_create(console->writers);
+    while ((obj = list_next(i)))
+        if (!list_find_first(console->readers, (ListFindF) find_obj, obj))
+            write_obj_data(obj, msg, strlen(msg), 1);
+    list_iterator_destroy(i);
+    return;
+}
+
+
 void link_objs(obj_t *src, obj_t *dst)
 {
 /*  Creates a link so data read from (src) is written to (dst).
@@ -972,10 +902,13 @@ int read_from_obj(obj_t *obj, fd_set *pWriteSet)
  *    select()'d on the next list iteration in mux_io()'s outer-loop.
  *  An obj's circular-buffer is empty when (bufInPtr == bufOutPtr).
  *    Thus, it can hold at most (MAX_BUF_SIZE - 1) bytes of data.
- *    This routine's internal buffer is set accordingly.
+ *  But if the obj is a logfile that is being sanitized, its data can
+ *    grow by up to a factor of two; this places a limit on the amount
+ *    of data read by this routine at ((MAX_BUF_SIZE / 2) - 1) bytes.
+ *  This routine's internal buffer is set accordingly.
  */
-    unsigned char buf[MAX_BUF_SIZE - 1];
-    int n;
+    unsigned char buf[(MAX_BUF_SIZE / 2) - 1];
+    int n, m;
     ListIterator i;
     obj_t *reader;
 
@@ -1028,7 +961,12 @@ again:
                  *    no more data can be written into its buffer.
                  */
                 if (!reader->gotEOF) {
-                    if (write_obj_data(reader, buf, n, 0) > 0)
+                    if (is_logfile_obj(reader)
+                      && reader->aux.logfile.opts.enableSanitize)
+                        m = write_sanitized_log_data(reader, buf, n);
+                    else
+                        m = write_obj_data(reader, buf, n, 0);
+                    if (m > 0)
                         FD_SET(reader->fd, pWriteSet);
                 }
             }
@@ -1045,6 +983,7 @@ int write_obj_data(obj_t *obj, void *src, int len, int isInfo)
  *    circular-buffer.  If (isInfo) is true, the data is considered
  *    an informational message which a client may suppress.
  *  Returns the number of bytes written.
+ *
  *  Note that this routine can write at most (MAX_BUF_SIZE - 1) bytes
  *    of data into the object's circular-buffer.
  */

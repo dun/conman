@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.33 2001/12/22 01:08:46 dun Exp $
+ *  $Id: server-conf.c,v 1.34 2001/12/27 20:10:50 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -30,18 +30,20 @@
 enum server_conf_toks {
     SERVER_CONF_CONSOLE = LEX_TOK_OFFSET,
     SERVER_CONF_DEV,
+    SERVER_CONF_GLOBAL,
     SERVER_CONF_KEEPALIVE,
     SERVER_CONF_LOG,
     SERVER_CONF_LOGDIR,
     SERVER_CONF_LOGFILE,
+    SERVER_CONF_LOGOPTS,
     SERVER_CONF_LOOPBACK,
     SERVER_CONF_NAME,
     SERVER_CONF_OFF,
     SERVER_CONF_ON,
-    SERVER_CONF_OPTS,
     SERVER_CONF_PIDFILE,
     SERVER_CONF_PORT,
     SERVER_CONF_RESETCMD,
+    SERVER_CONF_SEROPTS,
     SERVER_CONF_SERVER,
     SERVER_CONF_TCPWRAPPERS,
     SERVER_CONF_TIMESTAMP,
@@ -50,18 +52,20 @@ enum server_conf_toks {
 static char *server_conf_strs[] = {
     "CONSOLE",
     "DEV",
+    "GLOBAL",
     "KEEPALIVE",
     "LOG",
     "LOGDIR",
     "LOGFILE",
+    "LOGOPTS",
     "LOOPBACK",
     "NAME",
     "OFF",
     "ON",
-    "OPTS",
     "PIDFILE",
     "PORT",
     "RESETCMD",
+    "SEROPTS",
     "SERVER",
     "TCPWRAPPERS",
     "TIMESTAMP",
@@ -72,6 +76,7 @@ static char *server_conf_strs[] = {
 static void display_server_help(char *prog);
 static void signal_daemon(server_conf_t *conf, int signum);
 static void parse_console_directive(Lex l, server_conf_t *conf);
+static void parse_global_directive(Lex l, server_conf_t *conf);
 static void parse_server_directive(Lex l, server_conf_t *conf);
 
 
@@ -114,6 +119,11 @@ server_conf_t * create_server_conf(void)
     conf->port = 0;
     conf->ld = -1;
     conf->objs = list_create((ListDelF) destroy_obj);
+    conf->logopts.enableSanitize = DEFAULT_LOGOPT_SANITIZE;
+    conf->seropts.bps = DEFAULT_SEROPT_BPS;
+    conf->seropts.databits = DEFAULT_SEROPT_DATABITS;
+    conf->seropts.parity = DEFAULT_SEROPT_PARITY;
+    conf->seropts.stopbits = DEFAULT_SEROPT_STOPBITS;
     conf->enableKeepAlive = 1;
     conf->enableLoopBack = 0;
     conf->enableTCPWrap = 0;
@@ -256,6 +266,9 @@ void process_server_conf_file(server_conf_t *conf)
         case SERVER_CONF_CONSOLE:
             parse_console_directive(l, conf);
             break;
+        case SERVER_CONF_GLOBAL:
+            parse_global_directive(l, conf);
+            break;
         case SERVER_CONF_SERVER:
             parse_server_directive(l, conf);
             break;
@@ -353,7 +366,7 @@ static void signal_daemon(server_conf_t *conf, int signum)
     else {
         if (kill(pid, signum) < 0) {
             printf("ERROR: Unable to send signal=%d to pid %d: %s.\n",
-                signum, pid, strerror(errno));
+                signum, (int) pid, strerror(errno));
             gotError = 1;
         }
         else if (conf->enableVerbose) {
@@ -375,7 +388,8 @@ static void signal_daemon(server_conf_t *conf, int signum)
 
 static void parse_console_directive(Lex l, server_conf_t *conf)
 {
-/*  CONSOLE NAME="<str>" DEV="<file>" [LOG="<file>"] [OPTS="<str>"]
+/*  CONSOLE NAME="<str>" DEV="<file>" [LOG="<file>"] \
+ *    [LOGOPTS="<str>"] [SEROPTS="<str>"]
  */
     char *directive;			/* name of directive being parsed */
     int line;				/* line number where directive begins */
@@ -385,13 +399,19 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
     char name[MAX_LINE] = "";
     char dev[MAX_LINE] = "";
     char log[MAX_LINE] = "";
-    char opts[MAX_LINE] = "";
     char *p;
     obj_t *console;
     obj_t *logfile;
+    logopt_t logopts;
+    seropt_t seropts;
 
     directive = server_conf_strs[LEX_UNTOK(lex_prev(l))];
     line = lex_line(l);
+
+    /*  Set options to global values which may be overridden.
+     */
+    logopts = conf->logopts;
+    seropts = conf->seropts;
 
     while (!done && !*err) {
         tok = lex_next(l);
@@ -433,7 +453,7 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
                 strlcpy(log, lex_text(l), MAX_LINE);
             break;
 
-        case SERVER_CONF_OPTS:
+        case SERVER_CONF_LOGOPTS:
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
@@ -441,7 +461,18 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             else
-                strlcpy(opts, lex_text(l), MAX_LINE);
+                parse_logfile_opts(&logopts, lex_text(l), err, sizeof(err));
+            break;
+
+        case SERVER_CONF_SEROPTS:
+            if (lex_next(l) != '=')
+                snprintf(err, sizeof(err), "expected '=' after %s keyword",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            else if (lex_next(l) != LEX_STR)
+                snprintf(err, sizeof(err), "expected STRING for %s value",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            else
+                parse_serial_opts(&seropts, lex_text(l), err, sizeof(err));
             break;
 
         case LEX_EOF:
@@ -476,7 +507,7 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
             log_msg(0, "%s:%d: Console [%s] removed from the configuration.",
                 conf->confFileName, line, name);
     }
-    else if (!(console = create_serial_obj(conf, name, dev, opts))) {
+    else if (!(console = create_serial_obj(conf, name, dev, &seropts))) {
             log_msg(0, "%s:%d: Console [%s] removed from the configuration.",
                 conf->confFileName, line, name);
     }
@@ -487,11 +518,73 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
             log_msg(0, "%s:%d: Console [%s] cannot log to \"%s\": "
                 "%c-expansion failed.", conf->confFileName, line,
                 console->name, log, DEFAULT_CONFIG_ESCAPE);
-        else if (!(logfile = create_logfile_obj(conf, name, console)))
+        else if (!(logfile = create_logfile_obj(conf, name, console, &logopts)))
             log_msg(0, "%s:%d: Console [%s] cannot log to \"%s\".",
                 conf->confFileName, line, console->name, name);
         else
             link_objs(console, logfile);
+    }
+    return;
+}
+
+
+static void parse_global_directive(Lex l, server_conf_t *conf)
+{
+    char *directive;			/* name of directive being parsed */
+    int tok;
+    int done = 0;
+    char err[MAX_LINE] = "";
+
+    directive = server_conf_strs[LEX_UNTOK(lex_prev(l))];
+
+    while (!done && !*err) {
+        tok = lex_next(l);
+        switch(tok) {
+
+        case SERVER_CONF_LOGOPTS:
+            if (lex_next(l) != '=')
+                snprintf(err, sizeof(err), "expected '=' after %s keyword",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            else if (lex_next(l) != LEX_STR)
+                snprintf(err, sizeof(err), "expected STRING for %s value",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            else
+                parse_logfile_opts(&conf->logopts, lex_text(l),
+                    err, sizeof(err));
+            break;
+
+        case SERVER_CONF_SEROPTS:
+            if (lex_next(l) != '=')
+                snprintf(err, sizeof(err), "expected '=' after %s keyword",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            else if (lex_next(l) != LEX_STR)
+                snprintf(err, sizeof(err), "expected STRING for %s value",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            else
+                parse_serial_opts(&conf->seropts, lex_text(l),
+                    err, sizeof(err));
+            break;
+
+        case LEX_EOF:
+        case LEX_EOL:
+            done = 1;
+            break;
+
+        case LEX_ERR:
+            snprintf(err, sizeof(err), "unmatched quote");
+            break;
+
+        default:
+            snprintf(err, sizeof(err), "unrecognized token '%s'", lex_text(l));
+            break;
+        }
+    }
+
+    if (*err) {
+        fprintf(stderr, "ERROR: %s:%d: %s.\n",
+            conf->confFileName, lex_line(l), err);
+        while (lex_prev(l) != LEX_EOL && lex_prev(l) != LEX_EOF)
+            lex_next(l);
     }
     return;
 }

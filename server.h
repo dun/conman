@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.40 2001/12/20 22:00:32 dun Exp $
+ *  $Id: server.h,v 1.41 2001/12/27 20:10:50 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -12,11 +12,18 @@
 #include <netinet/in.h>			/* for struct sockaddr_in             */
 #include <pthread.h>
 #include <sys/types.h>
-#include <termios.h>			/* for struct termios                 */
+#include <termios.h>			/* for struct termios, speed_t        */
 #include <time.h>			/* for time_t                         */
 #include "common.h"
 #include "list.h"
 
+
+#define DEFAULT_LOGOPT_SANITIZE	0
+
+#define DEFAULT_SEROPT_BPS	B9600
+#define DEFAULT_SEROPT_DATABITS	8
+#define DEFAULT_SEROPT_PARITY	0
+#define DEFAULT_SEROPT_STOPBITS	1
 
 #define RESET_CMD_TIMEOUT	60
 
@@ -41,6 +48,36 @@ enum obj_type {				/* bit-field limited to 4 values      */
     TELNET,
 };
 
+typedef struct client_obj {		/* CLIENT AUX OBJ DATA:               */
+    req_t           *req;		/*  client request info               */
+    time_t           timeLastRead;	/*  time last data was read from fd   */
+    unsigned         gotEscape:1;	/*  true if last char rcvd was an esc */
+    unsigned         gotSuspend:1;	/*  true if suspending client output  */
+} client_obj_t;
+
+typedef struct logfile_opt {		/* LOGFILE OBJ OPTIONS:               */
+    unsigned         enableSanitize:1;	/*  true if logfile being sanitized   */
+} logopt_t;
+
+typedef struct logfile_obj {		/* LOGFILE AUX OBJ DATA:              */
+    char            *consoleName;	/*  name of console being logged      */
+    logopt_t         opts;		/*  local options                     */
+    unsigned         gotSanitizedCR:1;	/*  true if last sane char was a CR   */
+} logfile_obj_t;
+
+typedef struct serial_opt {		/* SERIAL OBJ OPTIONS:                */
+    speed_t          bps;		/*  bps def for cfset*speed()         */
+    int              databits;		/*  databits (5-8)                    */
+    int              parity;		/*  parity (0=NONE,1=ODD,2=EVEN)      */
+    int              stopbits;		/*  stopbits (1-2)                    */
+} seropt_t;
+
+typedef struct serial_obj {		/* SERIAL AUX OBJ DATA:               */
+    char            *dev;		/*  local serial device name          */
+    struct base_obj *logfile;		/*  log obj ref for console replay    */
+    struct termios   tty;		/*  saved cooked tty mode             */
+} serial_obj_t;
+
 typedef struct sockaddr_in sockaddr_t;
 
 typedef enum telnet_connect_state {	/* bit-field limited to 4 values      */
@@ -58,23 +95,6 @@ typedef enum telnet_option_state {	/* rfc1143 Telnet Q-Method opt state  */
     TELOPT_WANT_YES_EMP,
     TELOPT_WANT_YES_OPP,
 } telopt_state_t;
-
-typedef struct client_obj {		/* CLIENT AUX OBJ DATA:               */
-    req_t           *req;		/*  client request info               */
-    time_t           timeLastRead;	/*  time last data was read from fd   */
-    unsigned         gotEscape:1;	/*  true if last char rcvd was an esc */
-    unsigned         gotSuspend:1;	/*  true if suspending client output  */
-} client_obj_t;
-
-typedef struct logfile_obj {		/* LOGFILE AUX OBJ DATA:              */
-    char            *consoleName;	/*  name of console being logged      */
-} logfile_obj_t;
-
-typedef struct serial_obj {		/* SERIAL AUX OBJ DATA:               */
-    char            *dev;		/*  local serial device name          */
-    struct base_obj *logfile;		/*  log obj ref for console replay    */
-    struct termios   tty;		/*  saved cooked tty mode             */
-} serial_obj_t;
 
 typedef struct telnet_obj {		/* TELNET AUX OBJ DATA:               */
     char            *host;		/*  remote telnetd host name (or ip)  */
@@ -124,6 +144,8 @@ typedef struct server_conf {
     int              port;		/* port number on which to listen     */
     int              ld;		/* listening socket descriptor        */
     List             objs;		/* list of all server obj_t's         */
+    logopt_t         logopts;		/* global options for logfile objects */
+    seropt_t         seropts;		/* global options for serial objects  */
     unsigned         enableKeepAlive:1;	/* true if using TCP keep-alive       */
     unsigned         enableLoopBack:1;	/* true if only listening on loopback */
     unsigned         enableTCPWrap:1;	/* true if TCP-Wrappers is enabled    */
@@ -210,22 +232,31 @@ int process_telnet_escapes(obj_t *telnet, void *src, int len);
 int send_telnet_cmd(obj_t *telnet, int cmd, int opt);
 
 
+/**********************\
+**  server-logfile.c  **
+\**********************/
+
+int parse_logfile_opts(
+    logopt_t *opts, const char *str, char *errbuf, int errlen);
+
+int open_logfile_obj(obj_t *logfile, int gotTrunc);
+
+obj_t * get_console_logfile_obj(obj_t *console);
+
+int write_sanitized_log_data(obj_t *log, const void *src, int len);
+
+
 /******************\
 **  server-obj.c  **
 \******************/
 
 obj_t * create_client_obj(server_conf_t *conf, req_t *req);
 
-obj_t * create_logfile_obj(server_conf_t *conf, char *name, obj_t *console);
-
-int open_logfile_obj(obj_t *logfile, int gotTrunc);
-
-obj_t * get_console_logfile_obj(obj_t *console);
-
-void notify_console_objs(obj_t *console, char *msg);
+obj_t * create_logfile_obj(
+    server_conf_t *conf, char *name, obj_t *console, logopt_t *opts);
 
 obj_t * create_serial_obj(
-    server_conf_t *conf, char *name, char *dev, char *opts);
+    server_conf_t *conf, char *name, char *dev, seropt_t *opts);
 
 obj_t * create_telnet_obj(
     server_conf_t *conf, char *name, char *host, int port);
@@ -240,6 +271,8 @@ int compare_objs(obj_t *obj1, obj_t *obj2);
 
 int find_obj(obj_t *obj, obj_t *key);
 
+void notify_console_objs(obj_t *console, char *msg);
+
 void link_objs(obj_t *src, obj_t *dst);
 
 void unlink_obj(obj_t *obj);
@@ -253,18 +286,21 @@ int write_obj_data(obj_t *obj, void *src, int len, int isInfo);
 int write_to_obj(obj_t *obj);
 
 
+/*********************\
+**  server-serial.c  **
+\*********************/
+
+int parse_serial_opts(
+    seropt_t *opts, const char *str, char *errbuf, int errlen);
+
+void set_serial_opts(struct termios *tty, obj_t *serial, seropt_t *opts);
+
+
 /*******************\
 **  server-sock.c  **
 \*******************/
 
 void process_client(client_arg_t *args);
-
-
-/*******************\
-**  server-tty.c  **
-\*******************/
-
-void set_serial_opts(struct termios *tty, obj_t *serial, char *str);
 
 
 #endif /* !_SERVER_H */
