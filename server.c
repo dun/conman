@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.32 2001/09/27 01:26:00 dun Exp $
+ *  $Id: server.c,v 1.33 2001/09/27 23:35:11 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -209,9 +209,7 @@ static void display_configuration(server_conf_t *conf)
     list_iterator_destroy(i);
 
     printf("Starting ConMan daemon %s (pid %d).\n", VERSION, (int) getpid());
-    printf("Configuration \"%s\".\n", conf->confFileName);
-    printf("Listening on port %d.\n", conf->port);
-    printf("Monitoring %d console%s.\n", n, ((n==1) ? "" : "s"));
+    printf("Configuration: %s\n", conf->confFileName);
     printf("Options:");
     if (!conf->enableKeepAlive
       && !conf->enableZeroLogs
@@ -229,6 +227,8 @@ static void display_configuration(server_conf_t *conf)
             printf(" ZeroLogs");
     }
     printf("\n");
+    printf("Listening on port %d.\n", conf->port);
+    printf("Monitoring %d console%s.\n", n, ((n==1) ? "" : "s"));
 
     if (fflush(stdout) < 0)
         err_msg(errno, "Unable to flush standard output");
