@@ -3,7 +3,7 @@ dnl
 dnl ConMan AutoConf Config Jazz
 dnl   by Chris Dunlap <cdunlap@llnl.gov>
 dnl
-dnl $Id: configure.ac,v 1.15 2002/03/29 05:55:01 dun Exp $
+dnl $Id: configure.ac,v 1.16 2002/03/29 16:46:50 dun Exp $
 
 
 dnl Prologue.
@@ -41,7 +41,7 @@ AC_ARG_ENABLE(debug,
 if test "$debug" = yes; then
   CFLAGS="${CFLAGS--g -Wall}"
 else
-  CFLAGS="${CFLAGS--O3}"
+  CFLAGS="${CFLAGS--O}"
   LDFLAGS="${LDFLAGS--s}"
   AC_DEFINE(NDEBUG, 1, [Define if you are building a production release.])
 fi

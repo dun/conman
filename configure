@@ -990,7 +990,7 @@ fi;
 if test "$debug" = yes; then
   CFLAGS="${CFLAGS--g -Wall}"
 else
-  CFLAGS="${CFLAGS--O3}"
+  CFLAGS="${CFLAGS--O}"
   LDFLAGS="${LDFLAGS--s}"
 
 cat >>confdefs.h <<\EOF
