@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.c,v 1.16 2001/08/28 22:15:38 dun Exp $
+ *  $Id: common.c,v 1.17 2001/09/06 21:55:01 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -15,7 +15,7 @@
 #include <unistd.h>
 #include "common.h"
 #include "errors.h"
-#include "util.h"
+#include "util-str.h"
 
 
 char *proto_strs[] = {

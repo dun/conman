@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.34 2001/09/01 20:17:02 dun Exp $
+ *  $Id: server-obj.c,v 1.35 2001/09/06 21:55:01 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -24,6 +24,8 @@
 #include "list.h"
 #include "server.h"
 #include "util.h"
+#include "util-file.h"
+#include "util-str.h"
 
 
 static obj_t * create_obj(

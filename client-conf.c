@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-conf.c,v 1.28 2001/08/27 21:01:15 dun Exp $
+ *  $Id: client-conf.c,v 1.29 2001/09/06 21:55:01 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -23,7 +23,8 @@
 #include "errors.h"
 #include "lex.h"
 #include "list.h"
-#include "util.h"
+#include "util-file.h"
+#include "util-str.h"
 
 
 static void read_consoles_from_file(List consoles, char *file);
@@ -174,7 +175,7 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
 
         char *p, *q;
 
-        /*  Process comma-separated console list in order to appease Jim.  :)
+        /*  Process comma-separated console lists in order to appease Jim.  :)
          */
         p = argv[i];
         while (p) {

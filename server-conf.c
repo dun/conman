@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.16 2001/08/17 01:52:39 dun Exp $
+ *  $Id: server-conf.c,v 1.17 2001/09/06 21:55:01 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -23,7 +23,8 @@
 #include "lex.h"
 #include "list.h"
 #include "server.h"
-#include "util.h"
+#include "util-file.h"
+#include "util-str.h"
 
 
 enum server_conf_toks {
