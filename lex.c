@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: lex.c,v 1.17 2002/03/29 05:39:52 dun Exp $
+ *  $Id: lex.c,v 1.18 2002/05/09 08:27:33 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -82,7 +82,9 @@ struct lexer_state {
 **  Prototypes  **
 \****************/
 
+#ifndef NDEBUG
 static int validate_sorted_tokens(char *toks[]);
+#endif /* !NDEBUG */
 static int lookup_token(char *str, char *toks[], int numtoks);
 
 
@@ -269,6 +271,7 @@ static int xstrcasecmp(const char *s1, const char *s2)
 #endif /* !HAVE_STRCASECMP */
 
 
+#ifndef NDEBUG
 static int validate_sorted_tokens(char *toks[])
 {
 /*  Determines whether the NULL-terminated array of strings (toks) is sorted.
@@ -285,6 +288,7 @@ static int validate_sorted_tokens(char *toks[])
     }
     return(0);
 }
+#endif /* !NDEBUG */
 
 
 static int lookup_token(char *str, char *toks[], int numtoks)

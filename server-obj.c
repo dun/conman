@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-obj.c,v 1.65 2002/05/08 06:12:19 dun Exp $
+ *  $Id: server-obj.c,v 1.66 2002/05/09 08:27:33 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -57,7 +57,9 @@ static obj_t * create_obj(
     server_conf_t *conf, char *name, int fd, enum obj_type type);
 static void reset_telnet_delay(obj_t *telnet);
 static char * find_trailing_int_str(char *str);
+#ifndef NDEBUG
 static int validate_obj_links(obj_t *obj);
+#endif /* !NDEBUG */
 
 
 static obj_t * create_obj(
@@ -869,6 +871,7 @@ void unlink_obj(obj_t *obj)
 }
 
 
+#ifndef NDEBUG
 static int validate_obj_links(obj_t *obj)
 {
 /*  Validates the readers and writers lists are successfully linked
@@ -904,6 +907,7 @@ static int validate_obj_links(obj_t *obj)
 
     return(gotError ? -1 : 0);
 }
+#endif /* !NDEBUG */
 
 
 int shutdown_obj(obj_t *obj)

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.c,v 1.49 2002/05/08 06:12:19 dun Exp $
+ *  $Id: server.c,v 1.50 2002/05/09 08:27:33 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -56,8 +56,10 @@
 #include "wrapper.h"
 
 
+#ifdef NDEBUG
 static int begin_daemonize(void);
 static void end_daemonize(int fd);
+#endif /* NDEBUG */
 static void display_configuration(server_conf_t *conf);
 static void exit_handler(int signum);
 static void sig_chld_handler(int signum);
@@ -124,6 +126,7 @@ int main(int argc, char *argv[])
 }
 
 
+#ifdef NDEBUG
 static int begin_daemonize(void)
 {
 /*  Begins the daemonization of the process.
@@ -192,8 +195,10 @@ static int begin_daemonize(void)
 
     return(fdPair[1]);
 }
+#endif /* NDEBUG */
 
 
+#ifdef NDEBUG
 static void end_daemonize(int fd)
 {
 /*  Completes the daemonization of the process,
@@ -226,6 +231,7 @@ static void end_daemonize(int fd)
 
     return;
 }
+#endif /* NDEBUG */
 
 
 static void exit_handler(int signum)

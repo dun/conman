@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: util-net.c,v 1.17 2002/05/08 06:12:19 dun Exp $
+ *  $Id: util-net.c,v 1.18 2002/05/09 08:27:33 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -54,8 +54,10 @@ static pthread_mutex_t hostentLock = PTHREAD_MUTEX_INITIALIZER;
 
 
 static int copy_hostent(const struct hostent *src, char *dst, int len);
+#ifndef NDEBUG
 static int validate_hostent_copy(
     const struct hostent *src, const struct hostent *dst);
+#endif /* !NDEBUG */
 
 
 struct hostent * get_host_by_name(const char *name,
@@ -271,6 +273,7 @@ static int copy_hostent(const struct hostent *src, char *buf, int len)
 }
 
 
+#ifndef NDEBUG
 static int validate_hostent_copy(
     const struct hostent *src, const struct hostent *dst)
 {
@@ -300,6 +303,7 @@ static int validate_hostent_copy(
             return(-1);
     return(0);
 }
+#endif /* !NDEBUG */
 
 
 #ifndef HAVE_INET_PTON

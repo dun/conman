@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-serial.c,v 1.5 2002/05/08 00:10:55 dun Exp $
+ *  $Id: server-serial.c,v 1.6 2002/05/09 08:27:33 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -76,9 +76,11 @@ static bps_tag_t bps_table[] = {        /* values are in increasing order */
 };
 
 
-static int bps_to_int(speed_t bps);
 static speed_t int_to_bps(int val);
+#ifndef NDEBUG
+static int bps_to_int(speed_t bps);
 static const char * parity_to_str(int parity);
+#endif /* !NDEBUG */
 
 
 int parse_serial_opts(
@@ -165,21 +167,6 @@ int parse_serial_opts(
 }
 
 
-static int bps_to_int(speed_t bps)
-{
-/*  Converts a 'bps' speed_t into its numeric value.
- *  Returns 0 if 'bps' does not correspond to any values in the table.
- */
-    bps_tag_t *tag;
-
-    for (tag=bps_table; tag->val > 0; tag++) {
-        if (tag->bps == bps)
-            return(tag->val);
-    }
-    return(0);
-}
-
-
 static speed_t int_to_bps(int val)
 {
 /*  Converts a numeric value 'val' into a bps speed_t,
@@ -198,6 +185,24 @@ static speed_t int_to_bps(int val)
 }
 
 
+#ifndef NDEBUG
+static int bps_to_int(speed_t bps)
+{
+/*  Converts a 'bps' speed_t into its numeric value.
+ *  Returns 0 if 'bps' does not correspond to any values in the table.
+ */
+    bps_tag_t *tag;
+
+    for (tag=bps_table; tag->val > 0; tag++) {
+        if (tag->bps == bps)
+            return(tag->val);
+    }
+    return(0);
+}
+#endif /* !NDEBUG */
+
+
+#ifndef NDEBUG
 static const char * parity_to_str(int parity)
 {
 /*  Returns a constant string denoting the specified 'parity' value.
@@ -209,6 +214,7 @@ static const char * parity_to_str(int parity)
     else /* (parity == 0) */
         return("N");
 }
+#endif /* !NDEBUG */
 
 
 void set_serial_opts(struct termios *tty, obj_t *serial, seropt_t *opts)
