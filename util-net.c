@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-net.c,v 1.7 2001/09/20 23:12:32 dun Exp $
+ *  $Id: util-net.c,v 1.8 2001/09/20 23:35:17 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util-net.h" for documentation on public functions.
@@ -75,12 +75,12 @@ struct hostent * get_host_by_addr(const char *addr, int len, int type,
     assert(addr);
     assert(buf);
 
-    x_pthread_mutex_unlock(&hostentLock);
+    x_pthread_mutex_lock(&hostentLock);
     if ((hptr = gethostbyaddr(addr, len, type)))
         n = copy_hostent(hptr, buf, buflen);
     if (h_err)
         *h_err = h_errno;
-    x_pthread_mutex_lock(&hostentLock);
+    x_pthread_mutex_unlock(&hostentLock);
 
     if (n < 0) {
         errno = ERANGE;
