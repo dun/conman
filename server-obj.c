@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.41 2001/09/16 23:44:44 dun Exp $
+ *  $Id: server-obj.c,v 1.42 2001/09/17 16:20:17 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -238,7 +238,8 @@ obj_t * create_telnet_obj(
     struct sockaddr_in saddr;
     int sd = -1;
     const int on = 1;
-    telnet_state_t state;
+    telcon_state_t conState;
+    int n;
 
     assert(conf);
     assert(name && *name);
@@ -272,7 +273,7 @@ obj_t * create_telnet_obj(
         if (is_telnet_obj(console) && !memcmp(
           &saddr, &console->aux.telnet.saddr, sizeof(struct sockaddr_in))) {
             log_msg(0, "Ignoring duplicate terminal server \"%s:%d\".",
-              host, port);
+                host, port);
             break;
         }
     }
@@ -296,18 +297,21 @@ again:
             log_msg(errno, "Unable to connect to [%s:%d]", host, port);
             goto err;
         }
-        state = CONN_PENDING;
+        conState = TELCON_PENDING;
         DPRINTF("Console [%s] is PENDING.\n", name);
     }
     else {
-        state = CONN_UP;
+        conState = TELCON_UP;
         DPRINTF("Console [%s] is UP.\n", name);
     }
 
     console = create_obj(conf, name, sd, TELNET);
     console->aux.telnet.saddr = saddr;
     console->aux.telnet.logfile = NULL;
-    console->aux.telnet.state = state;
+    console->aux.telnet.iac = -1;
+    console->aux.telnet.conState = conState;
+    for (n=0; n<NTELOPTS; n++)
+        console->aux.telnet.optState[n] = TELOPT_NO;
 
     return(console);
 
@@ -671,7 +675,7 @@ int read_from_obj(obj_t *obj, fd_set *pWriteSet)
 
     assert(obj->fd >= 0);
 
-    if (is_telnet_obj(obj) && obj->aux.telnet.state != CONN_UP)
+    if (is_telnet_obj(obj) && obj->aux.telnet.conState != TELCON_UP)
         return(0);
 
 again:
@@ -866,7 +870,7 @@ int write_to_obj(obj_t *obj)
     if (is_client_obj(obj) && obj->aux.client.gotSuspend) {
         avail = 0;
     }
-    else if (is_telnet_obj(obj) && obj->aux.telnet.state != CONN_UP) {
+    else if (is_telnet_obj(obj) && obj->aux.telnet.conState != TELCON_UP) {
         avail = 0;
     }
     else if (obj->bufInPtr >= obj->bufOutPtr) {

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.28 2001/09/16 23:44:44 dun Exp $
+ *  $Id: server.h,v 1.29 2001/09/17 16:20:17 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -8,6 +8,7 @@
 #define _SERVER_H
 
 
+#include <arpa/telnet.h>
 #include <netinet/in.h>			/* for struct sockaddr_in             */
 #include <pthread.h>
 #include <sys/types.h>
@@ -26,12 +27,21 @@ enum obj_type {				/* bit-field limited to 4 values      */
 
 typedef struct sockaddr_in sockaddr_t;
 
-typedef enum telnet_state_type {	/* bit-field limited to 4 values      */
-    CONN_NONE,
-    CONN_DOWN,
-    CONN_PENDING,
-    CONN_UP,
-} telnet_state_t;
+typedef enum telnet_connect_state {	/* bit-field limited to 4 values      */
+    TELCON_NONE,
+    TELCON_DOWN,
+    TELCON_PENDING,
+    TELCON_UP,
+} telcon_state_t;
+
+typedef enum telnet_option_state {	/* rfc1143 Telnet Q-Method opt state  */
+    TELOPT_NO,
+    TELOPT_YES,
+    TELOPT_WANT_NO_EMP,
+    TELOPT_WANT_NO_OPP,
+    TELOPT_WANT_YES_EMP,
+    TELOPT_WANT_YES_OPP,
+} telopt_state_t;
 
 typedef struct client_obj {		/* CLIENT AUX OBJ DATA:               */
     req_t           *req;		/*  client request info               */
@@ -53,7 +63,9 @@ typedef struct serial_obj {		/* SERIAL AUX OBJ DATA:               */
 typedef struct telnet_obj {		/* TELNET AUX OBJ DATA:               */
     sockaddr_t       saddr;		/*  n/w address of terminal server    */
     struct base_obj *logfile;		/*  log obj ref for console output    */
-    telnet_state_t   state:2;		/*  state of network connection       */
+    int              iac;		/*  -1, or last char if in IAC seq    */
+    telcon_state_t   conState:2;	/*  state of network connection       */
+    unsigned char    optState[NTELOPTS];/*  rfc1143 Q-Method option state     */
 } telnet_obj_t;
 
 typedef union aux_obj {

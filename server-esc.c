@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-esc.c,v 1.10 2001/09/16 23:44:44 dun Exp $
+ *  $Id: server-esc.c,v 1.11 2001/09/17 16:20:17 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -8,6 +8,10 @@
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
+#define TELCMDS
+#define TELOPTS
+
+#include <arpa/telnet.h>
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
@@ -23,6 +27,8 @@ static void perform_serial_break(obj_t *client);
 static void perform_log_replay(obj_t *client);
 static void perform_quiet_toggle(obj_t *client);
 static void perform_suspend(obj_t *client);
+static void send_telnet_cmd(obj_t *telnet, int cmd, int opt);
+static void process_telnet_cmd(obj_t *telnet, int cmd, int opt);
 
 
 int process_client_escapes(obj_t *client, void *src, int len)
@@ -43,7 +49,6 @@ int process_client_escapes(obj_t *client, void *src, int len)
         return(0);
 
     for (p=q=src; p<last; p++) {
-
         if (client->aux.client.gotEscape) {
             client->aux.client.gotEscape = 0;
             switch (*p) {
@@ -81,33 +86,6 @@ int process_client_escapes(obj_t *client, void *src, int len)
 }
 
 
-int process_telnet_escapes(obj_t *telnet, void *src, int len)
-{
-/*  Processes the buffer (src) of length (len) received from
- *    a terminal server for escape character sequences.
- *  Escape characters are removed (unstuffed) from the buffer
- *    and immediately processed.
- *  Returns the new length of the modified buffer.
- */
-    const unsigned char *last = (unsigned char *) src + len;
-    unsigned char *p, *q;
-
-    assert(is_telnet_obj(telnet));
-    assert(telnet->fd >= 0);
-    assert(telnet->aux.telnet.state == CONN_UP);
-
-    if (!src || len <= 0)
-        return(0);
-
-    fprintf(stderr, "* ");
-    for (p=q=src; p<last; p++) {
-        fprintf(stderr, "%02x ", *p);
-    }
-    fprintf(stderr, "\n");
-    return(len);
-}
-
-
 static void perform_serial_break(obj_t *client)
 {
 /*  Transmits a serial-break to each of the consoles written to by the client.
@@ -130,9 +108,7 @@ static void perform_serial_break(obj_t *client)
                     console->name);
         }
         else if (is_telnet_obj(console)) {
-            /*
-             *  NOT_IMPLEMENTED_YET
-             */
+            send_telnet_cmd(console, BREAK, -1);
         }
     }
     list_iterator_destroy(i);
@@ -274,9 +250,133 @@ static void perform_suspend(obj_t *client)
     gotSuspend = client->aux.client.gotSuspend ^= 1;
     x_pthread_mutex_unlock(&client->bufLock);
 
-    if (gotSuspend)
-        DPRINTF("Suspending output to client [%s].\n", client->name);
-    else
-        DPRINTF("Resuming output to client [%s].\n", client->name);
+    DPRINTF("%s output to client [%s].\n",
+        (gotSuspend ? "Suspending" : "Resuming"), client->name);
+    return;
+}
+
+
+int process_telnet_escapes(obj_t *telnet, void *src, int len)
+{
+/*  Processes the buffer (src) of length (len) received from
+ *    a terminal server for IAC escape character sequences.
+ *  Escape characters are removed (unstuffed) from the buffer
+ *    and immediately processed.
+ *  Returns the new length of the modified buffer.
+ */
+    const unsigned char *last = (unsigned char *) src + len;
+    unsigned char *p, *q;
+
+    assert(is_telnet_obj(telnet));
+    assert(telnet->fd >= 0);
+    assert(telnet->aux.telnet.conState == TELCON_UP);
+
+    if (!src || len <= 0)
+        return(0);
+
+    for (p=q=src; p<last; p++) {
+        switch(telnet->aux.telnet.iac) {
+        case -1:
+            if (*p == IAC)
+                telnet->aux.telnet.iac = *p;
+            else
+                *q++ = *p;
+            break;
+        case IAC:
+            if (!TELCMD_OK(*p)) {
+                log_msg(0, "Received invalid telnet cmd %#.2x for console [%s]",
+                    *p, telnet->name);
+                telnet->aux.telnet.iac = -1;
+                continue;
+            }
+            switch (*p) {
+            case IAC:
+                telnet->aux.telnet.iac = -1;
+                *q++ = *p;
+                break;
+            case DONT:
+            case DO:
+            case WONT:
+            case WILL:
+            case SB:
+                telnet->aux.telnet.iac = *p;
+                break;
+            default:
+                log_msg(10, "Ignoring telnet %s cmd for console [%s]",
+                    telcmds[*p - TELCMD_FIRST], telnet->name);
+                telnet->aux.telnet.iac = -1;
+                break;
+            }
+            break;
+        case DONT:
+        case DO:
+        case WONT:
+        case WILL:
+            if (!TELOPT_OK(*p)) {
+                log_msg(0, "Received invalid telnet opt %#.2x for console [%s]",
+                    *p, telnet->name);
+                telnet->aux.telnet.iac = -1;
+                continue;
+            }
+            process_telnet_cmd(telnet, telnet->aux.telnet.iac, *p);
+            telnet->aux.telnet.iac = -1;
+            break;
+        case SB:
+            /*
+             *  Ignore subnegotiation opts.  Consume bytes until IAC SE.
+             */
+            if (*p == IAC)
+                telnet->aux.telnet.iac = *p;
+            break;
+        default:
+            err_msg(0, "Reached invalid state %#.2x%.2x for console [%s]",
+                telnet->aux.telnet.iac, *p, telnet->name);
+            break;
+        }
+    }
+
+    assert((q >= (unsigned char *) src) && (q <= p));
+    len = q - (unsigned char *) src;
+    return(len);
+}
+
+
+static void send_telnet_cmd(obj_t *telnet, int cmd, int opt)
+{
+    unsigned char buf[3];
+    unsigned char *p = buf;
+
+    assert(is_telnet_obj(telnet));
+    assert(telnet->fd >= 0);
+    assert(telnet->aux.telnet.conState == TELCON_UP);
+    assert(cmd > 0);
+
+    *p++ = IAC;
+    if (!TELCMD_OK(cmd))
+        err_msg(0, "Invalid telnet cmd=%#.2x for console [%s]",
+            cmd, telnet->name);
+    *p++ = cmd;
+    if ((cmd == DONT) || (cmd == DO) || (cmd == WONT) || (cmd == WILL)) {
+        if (!TELOPT_OK(opt))
+            err_msg(0, "Invalid telnet %s opt=%#.2x for console [%s]",
+                telcmds[cmd - TELCMD_FIRST], opt, telnet->name);
+        *p++ = opt;
+    }
+
+    assert((p > buf) && ((p - buf) <= sizeof(buf)));
+    DPRINTF("Sending telnet %s%s%s cmd to console [%s].\n",
+        telcmds[cmd - TELCMD_FIRST], ((p - buf > 2) ? " " : ""),
+        ((p - buf > 2) ? telopts[opt - TELOPT_FIRST] : ""), telnet->name);
+    write_obj_data(telnet, buf, p - buf, 0);
+    return;
+}
+
+
+static void process_telnet_cmd(obj_t *telnet, int cmd, int opt)
+{
+    assert(is_telnet_obj(telnet));
+    assert(telnet->fd >= 0);
+    assert(telnet->aux.telnet.conState == TELCON_UP);
+
     return;
 }

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.24 2001/09/16 23:45:05 dun Exp $
+ *  $Id: server.c,v 1.25 2001/09/17 16:20:17 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -306,7 +306,7 @@ static void mux_io(server_conf_t *conf)
                 maxfd = MAX(maxfd, obj->fd);
             }
             else if (is_telnet_obj(obj)
-              && obj->aux.telnet.state == CONN_PENDING) {
+              && obj->aux.telnet.conState == TELCON_PENDING) {
                 FD_SET(obj->fd, &wset);
                 maxfd = MAX(maxfd, obj->fd);
             }
@@ -349,7 +349,7 @@ static void mux_io(server_conf_t *conf)
             /*  Did the non-blocking connect complete successfully?
              *    (cf. Stevens UNPv1 15.3 p409)
              */
-            if ((is_telnet_obj(obj) && obj->aux.telnet.state == CONN_PENDING)
+            if ((is_telnet_obj(obj) && obj->aux.telnet.conState==TELCON_PENDING)
               && (FD_ISSET(obj->fd, &rset) || FD_ISSET(obj->fd, &wset))) {
                 int err = 0;
                 int len = sizeof(err);
@@ -363,7 +363,7 @@ static void mux_io(server_conf_t *conf)
                     err = errno;
                 if (err) {
                     x_pthread_mutex_lock(&obj->bufLock);
-                    obj->aux.telnet.state = CONN_DOWN;
+                    obj->aux.telnet.conState = TELCON_DOWN;
                     x_pthread_mutex_unlock(&obj->bufLock);
                     DPRINTF("Console [%s] is DOWN.\n", obj->name);
                     log_msg(0, "Unable to open console [%s]: %s.",
@@ -371,7 +371,7 @@ static void mux_io(server_conf_t *conf)
                 }
                 else {
                     x_pthread_mutex_lock(&obj->bufLock);
-                    obj->aux.telnet.state = CONN_UP;
+                    obj->aux.telnet.conState = TELCON_UP;
                     x_pthread_mutex_unlock(&obj->bufLock);
                     DPRINTF("Console [%s] is UP.\n", obj->name);
                 }
