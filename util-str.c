@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-str.c,v 1.3 2001/09/16 23:45:05 dun Exp $
+ *  $Id: util-str.c,v 1.4 2001/09/21 05:34:33 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util-str.h" for documentation on public functions.
@@ -161,14 +161,14 @@ char * create_short_time_string(time_t t)
 {
     char *p;
     struct tm tm;
-    const int len = 6;			/* HH:MM + NUL */
+    const int len = 12;			/* MM/DD HH:MM + NUL */
 
     if (!(p = malloc(len)))
         err_msg(0, "Out of memory");
 
     get_localtime(&t, &tm);
 
-    if (strftime(p, len, "%H:%M", &tm) == 0)
+    if (strftime(p, len, "%m/%d %H:%M", &tm) == 0)
         err_msg(0, "strftime() failed");
 
     return(p);
