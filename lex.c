@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: lex.c,v 1.8 2001/08/14 23:18:15 dun Exp $
+ *  $Id: lex.c,v 1.9 2001/09/23 00:46:06 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "lex.h" for documentation on public functions.
@@ -18,12 +18,30 @@
 #include "lex.h"
 
 
-#ifndef MIN
-#  define MIN(x,y) (((x) <= (y)) ? (x) : (y))
-#endif /* !MIN */
+/*******************\
+**  Out of Memory  **
+\*******************/
+
+#ifdef USE_OOMF
+#  undef out_of_memory
+   extern void * out_of_memory(void);
+#else /* !USE_OOMF */
+#  ifndef out_of_memory
+#    define out_of_memory() (NULL)
+#  endif /* !out_of_memory */
+#endif /* USE_OOMF */
+
+
+/***************\
+**  Constants  **
+\***************/
 
 #define LEX_MAGIC 0xCD
 
+
+/****************\
+**  Data Types  **
+\****************/
 
 struct lexer_state {
     char           *pos;		/* current ptr in buffer              */
@@ -36,8 +54,25 @@ struct lexer_state {
 };
 
 
+/****************\
+**  Prototypes  **
+\****************/
+
 static int lookup_token(char *str, char *toks[]);
 
+
+/************\
+**  Macros  **
+\************/
+
+#ifndef MIN
+#  define MIN(x,y) (((x) <= (y)) ? (x) : (y))
+#endif /* !MIN */
+
+
+/***************\
+**  Functions  **
+\***************/
 
 Lex lex_create(void *buf, char *toks[])
 {
@@ -46,7 +81,7 @@ Lex lex_create(void *buf, char *toks[])
     assert(buf);
 
     if (!(l = (Lex) malloc(sizeof(struct lexer_state))))
-        return(NULL);
+        return(out_of_memory());
     l->pos = buf;
     l->toks = toks;
     l->text[0] = '\0';

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: lex.h,v 1.4 2001/05/24 20:56:08 dun Exp $
+ *  $Id: lex.h,v 1.5 2001/09/23 00:46:06 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -25,6 +25,18 @@
 \******************************************************************************/
 
 
+/***********\
+**  Notes  **
+\***********/
+
+/*  When a memory allocation request fails, the lexer returns out_of_memory().
+ *  By default, this is a macro definition that returns NULL; this macro may
+ *  be redefined to invoke another routine instead.  Furthermore, if USE_OOMF
+ *  is defined, this macro will not be defined and the lexer will expect an
+ *  external Out-Of-Memory Function to be defined.
+ */
+
+
 /***************\
 **  Constants  **
 \***************/
@@ -41,6 +53,16 @@ enum common_tokens {
 };
 
 
+/****************\
+**  Data Types  **
+\****************/
+
+typedef struct lexer_state *Lex;
+/*
+ *  Lex opaque data type.
+ */
+
+
 /************\
 **  Macros  **
 \************/
@@ -55,23 +77,13 @@ enum common_tokens {
  */
 
 
-/****************\
-**  Data Types  **
-\****************/
-
-typedef struct lexer_state *Lex;
-/*
- *  Lex opaque data type.
- */
-
-
 /**********************\
 **  Lexing Functions  **
 \**********************/
 
 Lex lex_create(void *buf, char *toks[]);
 /*
- *  Creates and returns a new lexer, or NULL if creation fails.
+ *  Creates and returns a new lexer, or out_of_memory() on failure.
  *  The text to be lexed is specified by the NUL-terminated buffer (buf);
  *    this buffer WILL NOT be modified by the lexer.
  *  The NULL-terminated array of strings (toks) defines the set of tokens
