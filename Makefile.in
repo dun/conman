@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Makefile.in,v 1.42 2001/12/30 01:39:23 dun Exp $
+# $Id: Makefile.in,v 1.43 2002/01/02 17:17:19 dun Exp $
 ##
 
 PROJECT=	conman
@@ -96,7 +96,7 @@ depend:
 	-makedepend -Y -- $(COPTS) -- *.[ch] 2>/dev/null
 
 tags: $(PROGS)
-	-ctags -R
+	-ctags * 2>/dev/null
 
 include Make-rpm.mk
 
