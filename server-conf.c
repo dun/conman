@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.13 2001/08/14 23:18:27 dun Exp $
+ *  $Id: server-conf.c,v 1.14 2001/08/15 00:48:19 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -310,7 +310,8 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
 {
 /*  CONSOLE NAME="<str>" DEV="<str>" [LOG=<str>] [RST=<str>] [BPS=<int>]
  */
-    char *directive;
+    char *directive;			/* name of directive being parsed */
+    int line;				/* line number where directive begins */
     int tok;
     int done = 0;
     char err[MAX_LINE] = "";
@@ -322,6 +323,7 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
     obj_t *logfile;
 
     directive = server_conf_strs[LEX_UNTOK(lex_prev(l))];
+    line = lex_line(l);
 
     while (!done && !*err) {
         tok = lex_next(l);
@@ -391,13 +393,15 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
             lex_next(l);
     }
     else {
-        if (!(console = create_console_obj(conf->objs, name, dev, bps)))
-            log_msg(0, "Console [%s] removed from the configuration.", name);
+        if (!(console = create_console_obj(conf->objs, name, dev, bps))) {
+            log_msg(0, "%s:%d: Console [%s] removed from the configuration.",
+                conf->filename, line, name);
+        }
         else if (*log) {
             if (!(logfile = create_logfile_obj(
               conf->objs, log, console, conf->enableZeroLogs)))
-                log_msg(0, "Console [%s] cannot be logged to \"%s\".",
-                    name, log);
+                log_msg(0, "%s:%d: Console [%s] cannot log to \"%s\".",
+                    conf->filename, line, name, log);
             else
                 link_objs(console, logfile);
         }
