@@ -2,7 +2,7 @@
  *  client-sock.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: client-sock.c,v 1.4 2001/05/14 22:01:59 dun Exp $
+ *  $Id: client-sock.c,v 1.5 2001/05/15 23:53:05 dun Exp $
 \******************************************************************************/
 
 
@@ -34,8 +34,6 @@ static void parse_rsp_err(Lex l, client_conf_t *conf);
 
 void connect_to_server(client_conf_t *conf)
 {
-/*  FIX_ME: Disable Nagle algorithm.
- */
     int sd;
     struct sockaddr_in addr;
     struct hostent *hostp;
@@ -157,7 +155,7 @@ int send_req(client_conf_t *conf)
 
     if ((conf->command == CONNECT) || (conf->command == EXECUTE)) {
         if (conf->enableForce) {
-            n = snprintf(ptr, len, " %s='%s'",
+            n = snprintf(ptr, len, " %s=%s",
                 proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
                 proto_strs[LEX_UNTOK(CONMAN_TOK_FORCE)]);
             if (n < 0 || n >= len)
@@ -166,7 +164,7 @@ int send_req(client_conf_t *conf)
             len -= n;
         }
         if (conf->enableBroadcast) {
-            n = snprintf(ptr, len, " %s='%s'",
+            n = snprintf(ptr, len, " %s=%s",
                 proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
                 proto_strs[LEX_UNTOK(CONMAN_TOK_BROADCAST)]);
             if (n < 0 || n >= len)
