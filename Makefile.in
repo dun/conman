@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 #
-# $Id: Makefile.in,v 1.8 2001/08/21 00:39:41 dun Exp $
+# $Id: Makefile.in,v 1.9 2001/08/21 00:47:59 dun Exp $
 ##
 
 PACKAGE=	@PACKAGE@
@@ -103,6 +103,7 @@ $(PACKAGE)-$(VERSION).tgz:
 rpm: $(PACKAGE)-$(VERSION).tgz
 	@cwd="`/bin/pwd`"; \
 	tmp="$${TMPDIR-/tmp}/tmp-$(PACKAGE)-$$$$"; \
+	test -f $(PACKAGE)-$(VERSION).tgz || exit 1; \
 	for d in BUILD RPMS SOURCES SPECS SRPMS; do \
 	  $(mkinstalldirs) $$tmp/$$d >/dev/null; \
 	done; \
