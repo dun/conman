@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.30 2001/09/13 20:36:44 dun Exp $
+ *  $Id: server-sock.c,v 1.31 2001/09/16 23:45:05 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -23,10 +23,10 @@
 #include "errors.h"
 #include "lex.h"
 #include "server.h"
-#include "util.h"
 #include "util-file.h"
 #include "util-net.h"
 #include "util-str.h"
+#include "wrapper.h"
 
 
 static void resolve_req_addr(req_t *req, int sd);
@@ -56,7 +56,6 @@ void process_client(client_arg_t *args)
  *  The MONITOR and CONNECT cmds are setup and then placed
  *    in the conf->objs list to be handled by mux_io().
  */
-    int rc;
     int sd;
     server_conf_t *conf;
     req_t *req;
@@ -71,8 +70,7 @@ void process_client(client_arg_t *args)
 
     DPRINTF("Processing new client.\n");
 
-    if ((rc = pthread_detach(pthread_self())) != 0)
-        err_msg(rc, "pthread_detach() failed");
+    x_pthread_detach(pthread_self());
 
     if (!(req = create_req())) {
         if (close(sd) < 0)
@@ -653,11 +651,11 @@ static int check_busy_consoles(req_t *req)
         while ((writer = list_next(i))) {
 
             assert(is_client_obj(writer));
-            lock_mutex(&writer->bufLock);
+            x_pthread_mutex_lock(&writer->bufLock);
             t = writer->aux.client.timeLastRead;
             gotBcast = list_is_empty(writer->writers);
             tty = writer->aux.client.req->tty;
-            unlock_mutex(&writer->bufLock);
+            x_pthread_mutex_unlock(&writer->bufLock);
             delta = create_time_delta_string(t);
 
             snprintf(buf, sizeof(buf),

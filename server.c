@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.23 2001/09/13 16:15:34 dun Exp $
+ *  $Id: server.c,v 1.24 2001/09/16 23:45:05 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -26,6 +26,7 @@
 #include "server.h"
 #include "util.h"
 #include "util-file.h"
+#include "wrapper.h"
 
 
 static int begin_daemonize(void);
@@ -304,7 +305,8 @@ static void mux_io(server_conf_t *conf)
                 FD_SET(obj->fd, &wset);
                 maxfd = MAX(maxfd, obj->fd);
             }
-            if (is_telnet_obj(obj) && obj->aux.telnet.state == CONN_PENDING) {
+            else if (is_telnet_obj(obj)
+              && obj->aux.telnet.state == CONN_PENDING) {
                 FD_SET(obj->fd, &wset);
                 maxfd = MAX(maxfd, obj->fd);
             }
@@ -360,13 +362,17 @@ static void mux_io(server_conf_t *conf)
                 if (rc < 0)
                     err = errno;
                 if (err) {
+                    x_pthread_mutex_lock(&obj->bufLock);
                     obj->aux.telnet.state = CONN_DOWN;
+                    x_pthread_mutex_unlock(&obj->bufLock);
                     DPRINTF("Console [%s] is DOWN.\n", obj->name);
                     log_msg(0, "Unable to open console [%s]: %s.",
                         obj->name, strerror(errno));
                 }
                 else {
+                    x_pthread_mutex_lock(&obj->bufLock);
                     obj->aux.telnet.state = CONN_UP;
+                    x_pthread_mutex_unlock(&obj->bufLock);
                     DPRINTF("Console [%s] is UP.\n", obj->name);
                 }
                 continue;

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-net.c,v 1.5 2001/09/13 20:36:44 dun Exp $
+ *  $Id: util-net.c,v 1.6 2001/09/16 23:45:05 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util-net.h" for documentation on public functions.
@@ -19,9 +19,9 @@
 #include <string.h>
 #include <sys/socket.h>
 #include "errors.h"
-#include "util.h"
 #include "util-str.h"
 #include "util-net.h"
+#include "wrapper.h"
 
 
 #ifndef INET_ADDRSTRLEN
@@ -48,12 +48,12 @@ struct hostent * get_host_by_name(const char *name,
     assert(name);
     assert(buf);
 
-    lock_mutex(&hostentLock);
+    x_pthread_mutex_lock(&hostentLock);
     if ((hptr = gethostbyname(name)))
         n = copy_hostent(hptr, buf, buflen);
     if (h_err)
         *h_err = h_errno;
-    unlock_mutex(&hostentLock);
+    x_pthread_mutex_unlock(&hostentLock);
 
     if (n < 0) {
         errno = ERANGE;
@@ -75,12 +75,12 @@ struct hostent * get_host_by_addr(const char *addr, int len, int type,
     assert(addr);
     assert(buf);
 
-    lock_mutex(&hostentLock);
+    x_pthread_mutex_unlock(&hostentLock);
     if ((hptr = gethostbyaddr(addr, len, type)))
         n = copy_hostent(hptr, buf, buflen);
     if (h_err)
         *h_err = h_errno;
-    unlock_mutex(&hostentLock);
+    x_pthread_mutex_lock(&hostentLock);
 
     if (n < 0) {
         errno = ERANGE;

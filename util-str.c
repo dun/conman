@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-str.c,v 1.2 2001/09/13 20:36:31 dun Exp $
+ *  $Id: util-str.c,v 1.3 2001/09/16 23:45:05 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util-str.h" for documentation on public functions.
@@ -20,6 +20,7 @@
 #include <time.h>
 #include "errors.h"
 #include "util-str.h"
+#include "wrapper.h"
 
 
 #define MAX_STR_SIZE 1024
@@ -181,8 +182,8 @@ char * create_time_delta_string(time_t t)
     int years, weeks, days, hours, minutes, seconds;
     char buf[25];
 
-    if (time(&now) == ((time_t) -1))
-        err_msg(errno, "time() failed -- What time is it?");
+    if (time(&now) == (time_t) -1)
+        err_msg(errno, "time() failed");
     n = difftime(now, t);
     assert(n >= 0);
 
@@ -233,18 +234,18 @@ struct tm * get_localtime(time_t *tPtr, struct tm *tmPtr)
 
     if (*tPtr == 0) {
         if (time(tPtr) == (time_t) -1)
-            err_msg(errno, "time() failed -- What time is it?");
+            err_msg(errno, "time() failed");
     }
 
 #ifndef HAVE_LOCALTIME_R
 
     /*  localtime() is not thread-safe, so it is protected by a mutex.
      */
-    lock_mutex(&localtimeLock);
+    x_pthread_mutex_lock(&localtimeLock);
     if (!(tmTmpPtr = localtime(tPtr)))
         err_msg(errno, "localtime() failed");
     *tmPtr = *tmTmpPtr;
-    unlock_mutex(&localtimeLock);
+    x_pthread_mutex_unlock(&localtimeLock);
 
 #else /* HAVE_LOCALTIME_R */
 
