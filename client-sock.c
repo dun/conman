@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-sock.c,v 1.35 2002/05/16 18:54:20 dun Exp $
+ *  $Id: client-sock.c,v 1.36 2002/09/09 22:49:51 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -61,7 +61,7 @@ int connect_to_server(client_conf_t *conf)
     assert(conf->req->host != NULL);
     assert(conf->req->port > 0);
 
-    if ((sd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    if ((sd = socket(PF_INET, SOCK_STREAM, 0)) < 0)
         log_err(errno, "Unable to create socket");
 
     memset(&saddr, 0, sizeof(saddr));

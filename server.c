@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.c,v 1.61 2002/09/09 22:48:16 dun Exp $
+ *  $Id: server.c,v 1.62 2002/09/09 22:49:52 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -415,7 +415,7 @@ static void create_listen_socket(server_conf_t *conf)
     struct sockaddr_in addr;
     const int on = 1;
 
-    if ((ld = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    if ((ld = socket(PF_INET, SOCK_STREAM, 0)) < 0)
         log_err(errno, "Unable to create listening socket");
 
     set_fd_nonblocking(ld);

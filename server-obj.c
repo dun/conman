@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-obj.c,v 1.70 2002/05/19 03:13:51 dun Exp $
+ *  $Id: server-obj.c,v 1.71 2002/09/09 22:49:51 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -377,7 +377,7 @@ int connect_telnet_obj(obj_t *telnet)
         /*
          *  Initiate a non-blocking connection attempt.
          */
-        if ((telnet->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+        if ((telnet->fd = socket(PF_INET, SOCK_STREAM, 0)) < 0)
             log_err(0, "Unable to create socket for [%s]", telnet->name);
         if (setsockopt(telnet->fd, SOL_SOCKET, SO_OOBINLINE,
           (const void *) &on, sizeof(on)) < 0)
