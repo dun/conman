@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.29 2001/12/14 07:43:03 dun Exp $
+ *  $Id: server-conf.c,v 1.30 2001/12/16 05:42:39 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -189,7 +189,7 @@ void process_server_cmd_line(int argc, char *argv[], server_conf_t *conf)
             conf->enableVerbose = 1;
             break;
         case 'V':
-            printf("%s-%s%s\n", PROJECT, VERSION, FEATURES);
+            printf("%s-%s%s\n", PROJECT, VERSION, SERVER_FEATURES);
             exit(0);
         case 'z':
             conf->enableZeroLogs = 1;

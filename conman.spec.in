@@ -1,4 +1,4 @@
-# $Id: conman.spec.in,v 1.11 2001/12/12 20:10:33 dun Exp $
+# $Id: conman.spec.in,v 1.12 2001/12/16 05:42:39 dun Exp $
 
 Name:    @PACKAGE@
 Version: @VERSION@
@@ -22,7 +22,8 @@ An unrestricted GPL release of ConMan is pending Review & Release.
 
 %build
 test -n "$RPM_ENABLE_DEBUG" && DEBUG="--enable-debug"
-CFLAGS="$RPM_OPT_FLAGS" LDFLAGS="-s" ./configure --prefix=/usr $DEBUG
+CFLAGS="$RPM_OPT_FLAGS" LDFLAGS="-s" ./configure --prefix=/usr $DEBUG \
+  --with-tcp-wrappers
 make
 
 %install

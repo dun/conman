@@ -3,7 +3,7 @@ dnl
 dnl ConMan AutoConf Config Jazz
 dnl   by Chris Dunlap <cdunlap@llnl.gov>
 dnl
-dnl $Id: configure.ac,v 1.7 2001/12/15 14:33:49 dun Exp $
+dnl $Id: configure.ac,v 1.8 2001/12/16 05:42:39 dun Exp $
 
 
 dnl Prologue.
@@ -143,10 +143,10 @@ AC_ARG_WITH(dmalloc,
 )
 AC_MSG_RESULT(${dmalloc-no})
 if test "$dmalloc" = yes; then
-  AC_CHECK_LIB(dmalloc, main,
+  AC_HAVE_LIBRARY(dmalloc,
     [AC_DEFINE_UNQUOTED(WITH_DMALLOC, 1,
       [Define if using the debug malloc library.])
-    LIBS="$LIBS -ldmalloc"],
+    LIBS="-ldmalloc $LIBS"],
     [dmalloc=no]
   )
 fi
@@ -155,6 +155,35 @@ AH_BOTTOM(
 #  include <dmalloc.h>
 #endif /* WITH_DMALLOC */]
 )
+
+
+dnl Check for TCP Wrappers.
+dnl
+AC_MSG_CHECKING(whether to use TCP Wrappers)
+AC_ARG_WITH(tcp-wrappers,
+  AC_HELP_STRING([--with-tcp-wrappers], [use Wietse Venema's TCP Wrappers]),
+  [case "${withval}" in
+    yes) tcp_wrappers=yes ;;
+    no)  tcp_wrappers=no ;;
+    *)   AC_MSG_RESULT(doh!)
+         AC_MSG_ERROR([bad value "${withval}" for --with-tcp-wrappers]) ;;
+   esac]
+)
+AC_MSG_RESULT(${tcp_wrappers=no})
+if test "$tcp_wrappers" = yes; then
+  AC_CHECK_LIB(wrap, main,
+    [AC_DEFINE_UNQUOTED(WITH_TCP_WRAPPERS, 1,
+      [Define if using TCP Wrappers.])
+    LIBS="-lwrap $LIBS"],
+    [tcp_wrappers=no]
+  )
+  dnl
+  dnl If libnsl is already getting linked, there's no reason to do it again.
+  dnl
+  if test "$ac_cv_lib_nsl_inet_addr" != yes; then
+    AC_CHECK_LIB(nsl, yp_get_default_domain)
+  fi
+fi
 
 
 dnl Check for random silliness.

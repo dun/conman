@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-conf.c,v 1.32 2001/12/12 18:36:28 dun Exp $
+ *  $Id: client-conf.c,v 1.33 2001/12/16 05:42:39 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -159,7 +159,7 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
             conf->enableVerbose = 1;
             break;
         case 'V':
-            printf("%s-%s%s\n", PROJECT, VERSION, FEATURES);
+            printf("%s-%s%s\n", PROJECT, VERSION, CLIENT_FEATURES);
             exit(0);
         case '?':			/* invalid option */
             fprintf(stderr, "ERROR: Invalid option \"%c\".\n", optopt);

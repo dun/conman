@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.h,v 1.23 2001/12/14 21:14:01 dun Exp $
+ *  $Id: common.h,v 1.24 2001/12/16 05:42:39 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -17,6 +17,10 @@
 #define DEFAULT_SERVER_CONF	"/etc/conman.conf"
 #define DEFAULT_CLIENT_ESCAPE	'&'
 #define DEFAULT_CONFIG_ESCAPE	'&'
+
+/*  Name of daemon for TCP Wrappers.
+ */
+#define CONMAN_DAEMON_NAME	"conmand"
 
 #define CONMAN_MSG_PREFIX	"\r\n<ConMan> "
 #define CONMAN_MSG_SUFFIX	".\r\n"
@@ -54,10 +58,17 @@
 #  define FEATURE_DMALLOC ""
 #endif /* WITH_DMALLOC */
 
-#define FEATURES (FEATURE_DEBUG FEATURE_DMALLOC)
+#ifdef WITH_TCP_WRAPPERS
+#  define FEATURE_TCP_WRAPPERS " TCP-WRAPPERS"
+#else
+#  define FEATURE_TCP_WRAPPERS ""
+#endif /* WITH_TCP_WRAPPERS */
+
+#define CLIENT_FEATURES (FEATURE_DEBUG FEATURE_DMALLOC)
+#define SERVER_FEATURES (FEATURE_DEBUG FEATURE_DMALLOC FEATURE_TCP_WRAPPERS)
 
 #ifndef HAVE_SOCKLEN_T
-typedef unsigned int socklen_t;		/* socklen_t is defined in Posix.1g */
+typedef unsigned int socklen_t;		/* socklen_t is defined in Posix.1g   */
 #endif /* !HAVE_SOCKLEN_T */
 
 

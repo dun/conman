@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.37 2001/12/14 07:43:04 dun Exp $
+ *  $Id: server-sock.c,v 1.38 2001/12/16 05:42:39 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -29,7 +29,20 @@
 #include "wrapper.h"
 
 
-static void resolve_req_addr(req_t *req, int sd);
+#ifdef WITH_TCP_WRAPPERS
+/*
+ *  TCP Wrappers support.
+ */
+#include <syslog.h>
+#include <tcpd.h>
+extern int hosts_ctl(
+  char *daemon, char *client_name, char *client_addr, char *client_user);
+int allow_severity = LOG_INFO;		/* logging level for accepted reqs */
+int deny_severity = LOG_WARNING;	/* logging level for rejected reqs */
+#endif /* WITH_TCP_WRAPPERS */
+
+
+static int resolve_addr(req_t *req, int sd);
 static int recv_greeting(req_t *req);
 static void parse_greeting(Lex l, req_t *req);
 static int recv_req(req_t *req);
@@ -74,8 +87,9 @@ void process_client(client_arg_t *args)
     x_pthread_detach(pthread_self());
 
     req = create_req();
-    resolve_req_addr(req, sd);
 
+    if (resolve_addr(req, sd) < 0)
+        goto err;
     if (recv_greeting(req) < 0)
         goto err;
     if (recv_req(req) < 0)
@@ -118,15 +132,17 @@ err:
 }
 
 
-static void resolve_req_addr(req_t *req, int sd)
+static int resolve_addr(req_t *req, int sd)
 {
 /*  Resolves the network information associated with the
  *    peer at the other end of the socket connection.
+ *  Returns 0 if the remote client address is valid, or -1 on error.
  */
     struct sockaddr_in addr;
     socklen_t addrlen = sizeof(addr);
     char buf[MAX_LINE];
     char *p;
+    int gotHostName = 0;
 
     assert(sd >= 0);
 
@@ -140,10 +156,11 @@ static void resolve_req_addr(req_t *req, int sd)
     /*
      *  Attempt to resolve IP address.  If it succeeds, buf contains
      *    host string; if it fails, buf is unchanged with IP addr string.
-     *    Either way, copy buf to prevents having to code everything as
+     *    Either way, copy buf to prevent having to code everything as
      *    (req->host ? req->host : req->ip).
      */
     if ((host_addr4_to_name(&addr.sin_addr, buf, sizeof(buf)))) {
+        gotHostName = 1;
         req->fqdn = create_string(buf);
         if ((p = strchr(buf, '.')))
             *p = '\0';
@@ -153,7 +170,20 @@ static void resolve_req_addr(req_t *req, int sd)
         req->fqdn = create_string(buf);
         req->host = create_string(buf);
     }
-    return;
+
+#ifdef WITH_TCP_WRAPPERS
+    /*
+     *  Check via TCP Wrappers.
+     */
+    if (hosts_ctl(CONMAN_DAEMON_NAME,
+      (gotHostName ? req->fqdn : STRING_UNKNOWN),
+      req->ip, STRING_UNKNOWN) == 0) {
+        log_msg(0, "TCP Wrappers rejected connection from %s.", req->fqdn);
+        return(-1);
+    }
+#endif /* WITH_TCP_WRAPPERS */
+
+    return(0);
 }
 
 
