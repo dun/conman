@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: util-str.c,v 1.14 2002/05/12 19:20:29 dun Exp $
+ *  $Id: util-str.c,v 1.15 2002/05/18 23:13:04 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -163,14 +163,14 @@ char * create_long_time_string(time_t t)
 {
     char *p;
     struct tm tm;
-    const int len = 25;                 /* MM/DD/YYYY HH:MM:SS ZONE + NUL */
+    const int len = 25;                 /* YYYY-MM-DD HH:MM:SS ZONE + NUL */
 
     if (!(p = malloc(len)))
         out_of_memory();
 
     get_localtime(&t, &tm);
 
-    if (strftime(p, len, "%m/%d/%Y %H:%M:%S %Z", &tm) == 0)
+    if (strftime(p, len, "%Y-%m-%d %H:%M:%S %Z", &tm) == 0)
         log_err(0, "strftime() failed");
 
     return(p);
@@ -181,14 +181,14 @@ char * create_short_time_string(time_t t)
 {
     char *p;
     struct tm tm;
-    const int len = 12;                 /* MM/DD HH:MM + NUL */
+    const int len = 12;                 /* MM-DD HH:MM + NUL */
 
     if (!(p = malloc(len)))
         out_of_memory();
 
     get_localtime(&t, &tm);
 
-    if (strftime(p, len, "%m/%d %H:%M", &tm) == 0)
+    if (strftime(p, len, "%m-%d %H:%M", &tm) == 0)
         log_err(0, "strftime() failed");
 
     return(p);
