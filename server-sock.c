@@ -2,7 +2,7 @@
  *  server-sock.c  
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server-sock.c,v 1.9 2001/05/21 22:52:39 dun Exp $
+ *  $Id: server-sock.c,v 1.10 2001/05/24 20:50:29 dun Exp $
 \******************************************************************************/
 
 
@@ -29,8 +29,9 @@
 
 typedef struct request {
     int    sd;				/* client socket descriptor           */
+    int    port;			/* port number in use by client host  */
     char  *ip;				/* ip addr string of client           */
-    char  *host;			/* name of client host, or NULL       */
+    char  *host;			/* name of client host or ip addr str */
     char  *user;			/* name of client user                */
     cmd_t  command;			/* command to perform for client      */
     int    enableBroadcast;		/* true if b-casting to many consoles */
@@ -69,9 +70,6 @@ void process_client(client_arg_t *args)
     int rc;
     int sd;
     server_conf_t *conf;
-    struct sockaddr_in addr;
-    socklen_t addrlen = sizeof(addr);
-    char buf[MAX_LINE];
     req_t *req;
 
     assert(args);
@@ -84,27 +82,10 @@ void process_client(client_arg_t *args)
     if ((rc = pthread_detach(pthread_self())) != 0)
         err_msg(rc, "pthread_detach() failed");
 
-    if (getpeername(sd, &addr, &addrlen) < 0)
-        err_msg(errno, "getpeername() failed");
-
-    if (!inet_ntop(AF_INET, &addr.sin_addr, buf, sizeof(buf))) {
-        err_msg(errno, "inet_ntop() failed");
-    }
     if (!(req = create_req(sd))) {
-        log_msg(0, "Request from %s terminated: out of memory", buf);
         if (close(sd) < 0)
             err_msg(errno, "close(%d) failed", sd);
         return;
-    }
-    if (!(req->ip = strdup(buf))) {
-        log_msg(0, "Request from %s terminated: out of memory", buf);
-        goto err;
-    }
-    if (get_hostname_via_addr(&addr.sin_addr, buf, sizeof(buf))) {
-        if (!(req->host = strdup(buf))) {
-            log_msg(0, "Request from %s terminated: out of memory", buf);
-            goto err;
-        }
     }
 
     if (recv_greeting(req) < 0)
@@ -162,14 +143,24 @@ static req_t * create_req(int sd)
  *  Returns the new struct, or NULL or error.
  */
     req_t *req;
+    struct sockaddr_in addr;
+    socklen_t addrlen = sizeof(addr);
+    char buf[MAX_LINE];
 
     assert(sd >= 0);
 
-    if (!(req = malloc(sizeof(req_t))))
+    if (getpeername(sd, &addr, &addrlen) < 0)
+        err_msg(errno, "getpeername() failed");
+
+    if (!inet_ntop(AF_INET, &addr.sin_addr, buf, sizeof(buf)))
+        err_msg(errno, "inet_ntop() failed");
+
+    if (!(req = malloc(sizeof(req_t)))) {
+        log_msg(0, "Request from %s terminated: out of memory", buf);
         return(NULL);
+    }
+
     req->sd = sd;
-    req->ip = NULL;
-    req->host = NULL;
     req->user = NULL;
     req->command = NONE;
     req->enableBroadcast = 0;
@@ -183,11 +174,28 @@ static req_t * create_req(int sd)
      *    list of strings will be destroyed when query_consoles()
      *    replaces it with a list of console objects.
      */
-    if (!(req->consoles = list_create((ListDelF) destroy_string))) {
-        free(req);
-        return(NULL);
-    }
+    if (!(req->consoles = list_create((ListDelF) destroy_string)))
+        goto err;
+
+    req->port = ntohs(addr.sin_port);
+    if (!(req->ip = strdup(buf)))
+        goto err;
+
+    /*  Attempt to resolve IP address.  If it succeeds, buf contains
+     *    host string.  If it fails, buf is unchanged with IP addr string.
+     *    Either way, copy buf to prevents having to code everything as
+     *    (req->host ? req->host : req->ip).
+     */
+    get_hostname_via_addr(&addr.sin_addr, buf, sizeof(buf));
+    if (!(req->host = strdup(buf)))
+        goto err;
+
     return(req);
+
+err:
+    destroy_req(req);
+    log_msg(0, "Request from %s terminated: out of memory", buf);
+    return(NULL);
 }
 
 
@@ -197,7 +205,7 @@ static void destroy_req(req_t *req)
  *  The client's socket connection is not shutdown here
  *    since it may be further handled by mux_io().
  */
-    DPRINTF("Destroyed request from %s.\n", (req->host ? req->host : req->ip));
+    DPRINTF("Destroyed request from %s.\n", req->host);
 
     if (req->ip)
         free(req->ip);
@@ -207,7 +215,8 @@ static void destroy_req(req_t *req)
         free(req->user);
     if (req->program)
         free(req->program);
-    list_destroy(req->consoles);
+    if (req->consoles)
+        list_destroy(req->consoles);
     free(req);
     return;
 }
@@ -283,8 +292,7 @@ static int recv_greeting(req_t *req)
     }
 #endif /* NDEBUG */
 
-    DPRINTF("Received request from <%s@%s>.\n",
-        req->user, (req->host ? req->host : req->ip));
+    DPRINTF("Received request from <%s@%s>.\n", req->user, req->host);
 
     /*  Send response to greeting.
      */
@@ -577,7 +585,8 @@ static int check_too_many_consoles(req_t *req)
         return(0);
     if (list_count(req->consoles) == 1)
         return(0);
-    if ((req->command != MONITOR) && (req->enableBroadcast))
+    if (((req->command == CONNECT) || (req->command == EXECUTE))
+      && (req->enableBroadcast))
         return(0);
 
     if (!(i = list_iterator_create(req->consoles))) {
@@ -589,6 +598,8 @@ static int check_too_many_consoles(req_t *req)
         list_count(req->consoles));
     send_rsp(req, CONMAN_ERR_TOO_MANY_CONSOLES, buf);
 
+    /*  FIX_ME? Replace with single write_n()?
+     */
     while ((obj = list_next(i))) {
         strlcpy(buf, obj->name, sizeof(buf));
         strlcat(buf, "\n", sizeof(buf));
@@ -781,28 +792,20 @@ static void perform_monitor_cmd(req_t *req, server_conf_t *conf)
 {
     obj_t *socket;
     obj_t *console;
-    char *str;
 
     assert(req->sd >= 0);
     assert(req->command == MONITOR);
     assert(list_count(req->consoles) == 1);
 
-    console = list_pop(req->consoles);
+    console = list_peek(req->consoles);
     socket = create_socket_obj(conf->objs, req->user, req->host, req->sd);
     if (!socket) {
         send_rsp(req, CONMAN_ERR_NO_RESOURCES,
             "Insufficient resources to process request.");
         return;
     }
-    if (link_objs(console, socket) < 0) {
-        str = create_fmt_string("Unable to access console [%s].",
-            console->name);
-        unlink_obj(socket);		/* xyzzy */
-        send_rsp(req, CONMAN_ERR_NO_RESOURCES, str);
-        free(str);
-        return;
-    }
     send_rsp(req, CONMAN_ERR_NONE, NULL);
+    link_objs(console, socket);
     return;
 }
 
@@ -811,6 +814,9 @@ static void perform_connect_cmd(req_t *req, server_conf_t *conf)
 {
     obj_t *socket;
     obj_t *console;
+    ListIterator i;
+    char buf[MAX_LINE];
+    int n;
 
     assert(req->sd >= 0);
     assert(req->command == CONNECT);
@@ -823,12 +829,39 @@ static void perform_connect_cmd(req_t *req, server_conf_t *conf)
     }
     send_rsp(req, CONMAN_ERR_NONE, NULL);
 
-    /* FIX_ME:  Support broadcast.
-     */
-    console = list_pop(req->consoles);
-    if ((link_objs(socket, console) < 0) || (link_objs(console, socket) < 0)) {
-        unlink_obj(socket);		/* xyzzy */
-        return;
+    if (list_count(req->consoles) == 1) {
+        /*
+         *  Unicast connection.
+         */
+        console = list_peek(req->consoles);
+        link_objs(socket, console);
+        link_objs(console, socket);
+    }
+    else {
+        /*
+         *  Broadcast connection.
+         */
+        if (!(i = list_iterator_create(req->consoles)))
+            err_msg(0, "Out of memory");
+        while ((console = list_next(i))) {
+            assert(console->type == CONSOLE);
+            n = snprintf(buf, sizeof(buf),
+                "\r\n%s Broadcast for console [%s] opened for <%s@%s>.\r\n",
+                CONMAN_MSG_PREFIX, console->name, req->user, req->host);
+            assert(n >= 0 && n < sizeof(buf));
+            if (console->writer) {
+                assert(console->writer->type == SOCKET);
+                write_obj_data(console->writer, buf, strlen(buf));
+            }
+        }
+        list_iterator_destroy(i);
+
+        /*  Move the req->consoles objs list to socket->readers.
+         *    Once moved, req->consoles must be set to NULL in order
+         *    to prevent destroy_request() from destroying the list.
+         */
+        socket->readers = req->consoles;
+        req->consoles = NULL;
     }
     return;
 }
@@ -836,11 +869,11 @@ static void perform_connect_cmd(req_t *req, server_conf_t *conf)
 
 static void perform_execute_cmd(req_t *req, server_conf_t *conf)
 {
-    /*  FIX_ME: NOT_IMPLEMENTED_YET
-     */
-
     assert(req->sd >= 0);
     assert(req->command == EXECUTE);
+
+    /*  FIX_ME: NOT_IMPLEMENTED_YET
+     */
 
     return;
 }
