@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-tty.c,v 1.16 2001/06/08 20:31:15 dun Exp $
+ *  $Id: client-tty.c,v 1.17 2001/06/08 20:51:09 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -329,7 +329,7 @@ static void perform_help_esc(client_conf_t *conf, char c)
         "  %2s%-2s -  Terminate the connection.\r\n"
         "  %2s%-2s -  Send the escape character by typing it twice.\r\n"
         "  %2s%-2s -  Transmit a serial-break.\r\n"
-        "  %2s%-2s -  Replay the last %d bytes of the log.\r\n"
+        "  %2s%-2s -  Replay up to the last %d bytes of the log.\r\n"
         "  %2s%-2s -  Suspend the client.\r\n",
         escChar, escHelp, escChar, escClose, escChar, escChar,
         escChar, escBreak, escChar, escLog, CONMAN_REPLAY_LEN,
