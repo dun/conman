@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-sock.c,v 1.19 2001/08/14 23:16:47 dun Exp $
+ *  $Id: client-sock.c,v 1.20 2001/09/06 21:55:19 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -10,7 +10,7 @@
 
 #include <assert.h>
 #include <errno.h>
-#include <netdb.h>
+#include <netinet/in.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -20,7 +20,9 @@
 #include "client.h"
 #include "errors.h"
 #include "lex.h"
-#include "util.h"
+#include "util-file.h"
+#include "util-net.h"
+#include "util-str.h"
 
 
 static void parse_rsp_ok(Lex l, client_conf_t *conf);
@@ -31,7 +33,8 @@ void connect_to_server(client_conf_t *conf)
 {
     int sd;
     struct sockaddr_in addr;
-    struct hostent *hostp;
+    char buf[MAX_LINE];
+    char *p;
 
     assert(conf->req->host);
     assert(conf->req->port > 0);
@@ -42,17 +45,22 @@ void connect_to_server(client_conf_t *conf)
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_port = htons(conf->req->port);
+    if (host_name_to_addr4(conf->req->host, &addr.sin_addr) < 0)
+        err_msg(0, "Unable to resolve hostname [%s]", conf->req->host);
 
-    /*  Note: gethostbyname() is not thread-safe, but that's OK here.
-     */
-    if (!(hostp = gethostbyname(conf->req->host)))
-        err_msg(0, "Unable to resolve host [%s]: %s",
-            conf->req->host, hstrerror(h_errno));
-    memcpy(&addr.sin_addr.s_addr, hostp->h_addr, hostp->h_length);
+    if (host_name_to_cname(conf->req->host, buf, sizeof(buf)) == NULL)
+        conf->req->fqdn = create_string(conf->req->host);
+    else {
+        conf->req->fqdn = create_string(buf);
+        free(conf->req->host);
+        if ((p = strchr(buf, '.')))
+            *p = '\0';
+        conf->req->host = create_string(buf);
+    }
 
     if (connect(sd, (struct sockaddr *) &addr, sizeof(addr)) < 0)
         err_msg(errno, "Unable to connect to [%s:%d]",
-            conf->req->host, conf->req->port);
+            conf->req->fqdn, conf->req->port);
 
     conf->req->sd = sd;
     return;
@@ -89,7 +97,7 @@ int send_greeting(client_conf_t *conf)
         conf->errnum = CONMAN_ERR_LOCAL;
         conf->errmsg = create_format_string(
             "Unable to send greeting to [%s:%d]: %s",
-            conf->req->host, conf->req->port, strerror(errno));
+            conf->req->fqdn, conf->req->port, strerror(errno));
         return(-1);
     }
 
@@ -184,7 +192,7 @@ int send_req(client_conf_t *conf)
         conf->errnum = CONMAN_ERR_LOCAL;
         conf->errmsg = create_format_string(
             "Unable to send greeting to [%s:%d]: %s",
-            conf->req->host, conf->req->port, strerror(errno));
+            conf->req->fqdn, conf->req->port, strerror(errno));
         return(-1);
     }
 
@@ -196,7 +204,7 @@ int send_req(client_conf_t *conf)
             conf->errnum = CONMAN_ERR_LOCAL;
             conf->errmsg = create_format_string(
                 "Unable to close write-half of connection to [%s:%d]: %s",
-                conf->req->host, conf->req->port, strerror(errno));
+                conf->req->fqdn, conf->req->port, strerror(errno));
             return(-1);
         }
     }
@@ -218,13 +226,13 @@ int recv_rsp(client_conf_t *conf)
         conf->errnum = CONMAN_ERR_LOCAL;
         conf->errmsg = create_format_string(
             "Unable to read response from [%s:%d]: %s",
-            conf->req->host, conf->req->port, strerror(errno));
+            conf->req->fqdn, conf->req->port, strerror(errno));
         return(-1);
     }
     else if (n == 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
         conf->errmsg = create_format_string("Connection terminated by [%s:%d]",
-            conf->req->host, conf->req->port);
+            conf->req->fqdn, conf->req->port);
         return(-1);
     }
 
@@ -258,7 +266,7 @@ int recv_rsp(client_conf_t *conf)
     if (conf->errnum == CONMAN_ERR_NONE) {
         conf->errnum = CONMAN_ERR_LOCAL;
         conf->errmsg = create_format_string("Received invalid reponse from"
-            " [%s:%d]", conf->req->host, conf->req->port);
+            " [%s:%d]", conf->req->fqdn, conf->req->port);
     }
     return(-1);
 }

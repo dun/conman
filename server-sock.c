@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.27 2001/08/17 01:52:58 dun Exp $
+ *  $Id: server-sock.c,v 1.28 2001/09/06 21:55:19 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -23,7 +23,9 @@
 #include "errors.h"
 #include "lex.h"
 #include "server.h"
-#include "util.h"
+#include "util-file.h"
+#include "util-net.h"
+#include "util-str.h"
 
 
 static void resolve_req_addr(req_t *req, int sd);
@@ -58,6 +60,9 @@ void process_client(client_arg_t *args)
     server_conf_t *conf;
     req_t *req;
 
+    /*  Free the tmp struct that was created by accept_client()
+     *    in order to pass multiple args to this thread.
+     */
     assert(args);
     sd = args->sd;
     conf = args->conf;
@@ -138,7 +143,7 @@ static void resolve_req_addr(req_t *req, int sd)
      *    Either way, copy buf to prevents having to code everything as
      *    (req->host ? req->host : req->ip).
      */
-    if ((get_hostname_by_addr(&addr.sin_addr, buf, sizeof(buf)))) {
+    if ((host_addr4_to_name(&addr.sin_addr, buf, sizeof(buf)))) {
         req->fqdn = create_string(buf);
         if ((p = strchr(buf, '.')))
             *p = '\0';
