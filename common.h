@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.h,v 1.17 2001/08/17 23:32:35 dun Exp $
+ *  $Id: common.h,v 1.18 2001/08/28 22:15:38 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -126,11 +126,11 @@ req_t * create_req(void);
 
 void destroy_req(req_t *req);
 
-void get_tty_mode(int fd, struct termios *tty);
+void get_tty_mode(struct termios *tty, int fd);
 
-void set_tty_mode(int fd, struct termios *tty);
+void set_tty_mode(struct termios *tty, int fd);
 
-void get_tty_raw(int fd, struct termios *tty);
+void get_tty_raw(struct termios *tty, int fd);
 
 
 #endif /* !_COMMON_H */

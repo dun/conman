@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-tty.c,v 1.33 2001/08/17 23:32:35 dun Exp $
+ *  $Id: client-tty.c,v 1.34 2001/08/28 22:15:38 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -60,9 +60,9 @@ void connect_console(client_conf_t *conf)
     Signal(SIGTSTP, SIG_DFL);
     Signal(SIGTERM, exit_handler);
 
-    get_tty_mode(STDIN_FILENO, &conf->tty);
-    get_tty_raw(STDIN_FILENO, &tty);
-    set_tty_mode(STDIN_FILENO, &tty);
+    get_tty_mode(&conf->tty, STDIN_FILENO);
+    get_tty_raw(&tty, STDIN_FILENO);
+    set_tty_mode(&tty, STDIN_FILENO);
 
     locally_display_status(conf, "opened");
 
@@ -98,7 +98,7 @@ void connect_console(client_conf_t *conf)
     if (!conf->isClosedByClient)
         locally_display_status(conf, "terminated by peer");
 
-    set_tty_mode(STDIN_FILENO, &conf->tty);
+    set_tty_mode(&conf->tty, STDIN_FILENO);
     return;
 }
 
@@ -370,13 +370,13 @@ static int perform_suspend_esc(client_conf_t *conf, char c)
     if (!send_esc_seq(conf, c))
         return(0);
     locally_display_status(conf, "suspended");
-    set_tty_mode(STDIN_FILENO, &conf->tty);
+    set_tty_mode(&conf->tty, STDIN_FILENO);
 
     if (kill(getpid(), SIGTSTP) < 0)
         err_msg(errno, "Unable to suspend client (pid %d)", getpid());
 
-    get_tty_raw(STDIN_FILENO, &tty);
-    set_tty_mode(STDIN_FILENO, &tty);
+    get_tty_raw(&tty, STDIN_FILENO);
+    set_tty_mode(&tty, STDIN_FILENO);
     locally_display_status(conf, "resumed");
     if (!send_esc_seq(conf, c))
         return(0);
