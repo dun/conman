@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.8 2001/05/24 20:56:08 dun Exp $
+ *  $Id: server.h,v 1.9 2001/05/24 21:15:41 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -94,7 +94,7 @@ obj_t * create_console_obj(List objs, char *name, char *dev,
 
 obj_t * create_logfile_obj(List objs, char *logfile, char *console);
 
-obj_t * create_socket_obj(List objs, char *user, char *host, int sd);
+obj_t * create_socket_obj(List objs, char *user, char *ip, int port, int sd);
 
 void destroy_obj(obj_t *obj);
 

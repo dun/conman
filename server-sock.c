@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.11 2001/05/24 20:56:08 dun Exp $
+ *  $Id: server-sock.c,v 1.12 2001/05/24 21:15:41 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -796,7 +796,8 @@ static void perform_monitor_cmd(req_t *req, server_conf_t *conf)
     assert(list_count(req->consoles) == 1);
 
     console = list_peek(req->consoles);
-    socket = create_socket_obj(conf->objs, req->user, req->host, req->sd);
+    socket = create_socket_obj(
+        conf->objs, req->user, req->ip, req->port, req->sd);
     if (!socket) {
         send_rsp(req, CONMAN_ERR_NO_RESOURCES,
             "Insufficient resources to process request.");
@@ -819,7 +820,8 @@ static void perform_connect_cmd(req_t *req, server_conf_t *conf)
     assert(req->sd >= 0);
     assert(req->command == CONNECT);
 
-    socket = create_socket_obj(conf->objs, req->user, req->host, req->sd);
+    socket = create_socket_obj(
+        conf->objs, req->user, req->ip, req->port, req->sd);
     if (!socket) {
         send_rsp(req, CONMAN_ERR_NO_RESOURCES,
             "Insufficient resources to process request.");

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.7 2001/05/24 20:56:08 dun Exp $
+ *  $Id: server-obj.c,v 1.8 2001/05/24 21:15:41 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -106,25 +106,26 @@ obj_t * create_logfile_obj(List objs, char *logfile, char *console)
 }
 
 
-obj_t * create_socket_obj(List objs, char *user, char *host, int sd)
+obj_t * create_socket_obj(List objs, char *user, char *ip, int port, int sd)
 {
 /*  Creates a new socket object and adds it to the master (objs) list.
  *    Note: the socket is open and set for non-blocking I/O.
  *  Returns the new object, or NULL on error.
  */
-    char *name;
+    char name[MAX_LINE];
     obj_t *obj;
 
     assert(objs);
     assert(user && *user);
-    assert(host && *host);
+    assert(ip && *ip);
+    assert(port > 0);
     assert(sd >= 0);
 
     set_descriptor_nonblocking(sd);
 
-    name = create_fmt_string("%s@%s", user, host);
+    snprintf(name, sizeof(name), "%s@%s:%d", user, ip, port);
+    name[sizeof(name) - 1] = '\0';
     obj = create_obj(SOCKET, objs, name, sd);
-    free(name);
 
     obj->aux.socket.gotIAC = 0;
     time(&obj->aux.socket.timeLastRead);
