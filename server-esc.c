@@ -1,11 +1,11 @@
 /******************************************************************************\
- *  $Id: server-esc.c,v 1.6 2001/08/03 21:11:46 dun Exp $
+ *  $Id: server-esc.c,v 1.7 2001/08/14 23:18:36 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
 #include <assert.h>
@@ -170,7 +170,7 @@ static void perform_log_replay(obj_t *client)
          *  If the console's circular-buffer has not yet wrapped around,
          *    don't wrap back into uncharted buffer territory.
          */
-        if (!logfile->gotWrapped)
+        if (!logfile->gotBufWrap)
             n = MIN(CONMAN_REPLAY_LEN, logfile->bufInPtr - logfile->buf);
         else
             n = MIN(CONMAN_REPLAY_LEN, MAX_BUF_SIZE - 1);
@@ -238,19 +238,19 @@ static void perform_suspend(obj_t *client)
  *    the buffer wraps around, data will be lost.
  */
     int rc;
-    int gotSuspended;
+    int gotSuspend;
 
     assert(client->type == CLIENT);
 
     if ((rc = pthread_mutex_lock(&client->bufLock)) != 0)
         err_msg(rc, "pthread_mutex_lock() failed for [%s]", client->name);
 
-    gotSuspended = client->gotSuspended ^= 1;
+    gotSuspend = client->aux.client.gotSuspend ^= 1;
 
     if ((rc = pthread_mutex_unlock(&client->bufLock)) != 0)
         err_msg(rc, "pthread_mutex_unlock() failed for [%s]", client->name);
 
-    if (gotSuspended)
+    if (gotSuspend)
         DPRINTF("Suspending output to client [%s].\n", client->name);
     else
         DPRINTF("Resuming output to client [%s].\n", client->name);
