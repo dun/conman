@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 #
-# $Id: Makefile.in,v 1.15 2001/08/22 22:22:34 dun Exp $
+# $Id: Makefile.in,v 1.16 2001/08/23 21:55:03 dun Exp $
 ##
 
 PACKAGE=	@PACKAGE@
@@ -95,16 +95,16 @@ $(PACKAGE).spec: $(PACKAGE).spec.in
 
 # DEVELOPER TARGETS
 
-devtar:
-	@$(MAKE) tag=HEAD tar
-
 tar \
 $(PACKAGE)-$(VERSION).tgz: VERSION
 	@if test -z "$(PACKAGE)"; then echo "PACKAGE undefined"; exit 1; fi; \
 	if test -z "$(VERSION)"; then echo "VERSION undefined"; exit 1; fi; \
+	test -z "$$tag" && tag=`echo $(PACKAGE)-$(VERSION) | tr '.' '-'`; \
+	ver=`cvs co -r $$tag -p $(PACKAGE)/VERSION 2>/dev/null | \
+	  sed -ne 's/.*-\(.*\)/\1/p'`; \
+	if test -z "$$ver"; then echo "VERSION ($$tag) undefined"; exit 1; fi; \
 	tmp=$${TMPDIR-/tmp}/tmp-$(PACKAGE)-$$$$; \
-	name=$(PACKAGE)-$(VERSION); \
-	test -z "$$tag" && tag=`echo $$name | tr '.' '-'`; \
+	name=$(PACKAGE)-$$ver; \
 	dir=$$tmp/$$name; \
 	echo "creating $$name.tgz ($$tag)"; \
 	$(mkinstalldirs) $$tmp >/dev/null; \
