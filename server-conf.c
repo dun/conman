@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-conf.c,v 1.49 2002/05/19 18:12:13 dun Exp $
+ *  $Id: server-conf.c,v 1.50 2002/05/19 23:22:15 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -111,6 +111,7 @@ static void signal_daemon(server_conf_t *conf, int signum);
 static void parse_console_directive(Lex l, server_conf_t *conf);
 static void parse_global_directive(Lex l, server_conf_t *conf);
 static void parse_server_directive(Lex l, server_conf_t *conf);
+static int create_pidfile(const char *pidfile);
 static int lookup_syslog_facility(const char *facility);
 
 
@@ -197,19 +198,22 @@ void destroy_server_conf(server_conf_t *conf)
         free(conf->logFileName);
     if (conf->pidFileName) {
         if (unlink(conf->pidFileName) < 0)
-            log_err(errno, "Unable to delete \"%s\"", conf->pidFileName);
+            log_msg(LOG_ERR, "Unable to delete pidfile \"%s\": %s",
+                conf->pidFileName, strerror(errno));
         free(conf->pidFileName);
     }
     if (conf->resetCmd)
         free(conf->resetCmd);
     if (conf->fd >= 0) {
         if (close(conf->fd) < 0)
-            log_err(errno, "Unable to close \"%s\"", conf->confFileName);
+            log_msg(LOG_ERR, "Unable to close \"%s\": %s",
+                conf->confFileName, strerror(errno));
         conf->fd = -1;
     }
     if (conf->ld >= 0) {
         if (close(conf->ld) < 0)
-            log_err(errno, "Unable to close listening socket");
+            log_msg(LOG_ERR, "Unable to close listening socket: %s",
+                strerror(errno));
         conf->ld = -1;
     }
     if (conf->objs)
@@ -349,21 +353,12 @@ void process_server_conf_file(server_conf_t *conf)
     else if (conf->port <= 0)           /* port not set so use default */
         conf->port = atoi(CONMAN_PORT);
 
-    /*  The pidfile must be created after daemonize() has finished forking.
-     */
     if (conf->pidFileName) {
-
-        FILE *fp;
-
-        if (!(fp = fopen(conf->pidFileName, "w")))
-            log_msg(LOG_ERR, "Unable to open \"%s\": %s",
-                conf->pidFileName, strerror(errno));
-        fprintf(fp, "%d\n", (int) getpid());
-        if (fclose(fp) == EOF)
-            log_msg(LOG_ERR, "Unable to close \"%s\": %s",
-                conf->pidFileName, strerror(errno));
+        if (create_pidfile(conf->pidFileName) < 0) {
+            free(conf->pidFileName);
+            conf->pidFileName = NULL;   /* prevent unlink() at exit */
+        }
     }
-
     return;
 }
 
@@ -729,7 +724,11 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
             else {
                 if (conf->pidFileName)
                     free(conf->pidFileName);
-                conf->pidFileName = create_string(lex_text(l));
+                if ((lex_text(l)[0] != '/') && (conf->cwd))
+                    conf->pidFileName = create_format_string("%s/%s",
+                        conf->cwd, lex_text(l));
+                else
+                    conf->pidFileName = create_string(lex_text(l));
             }
             break;
 
@@ -854,6 +853,46 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
             lex_next(l);
     }
     return;
+}
+
+
+static int create_pidfile(const char *pidfile)
+{
+/*  Creates the specified pidfile.
+ *  Returns 0 on success, or -1 on error.
+ *
+ *  The pidfile must be created after daemonize() has finished forking.
+ *  The pidfile must be specified with an absolute pathname; o/w, the
+ *    unlink() call at exit will fail because the daemon has chdir()'d.
+ */
+    FILE *fp;
+    int gotError = 0;
+
+    assert(pidfile != NULL);
+    assert(pidfile[0] == '/');
+
+    if (!(fp = fopen(pidfile, "w"))) {
+        log_msg(LOG_ERR, "Unable to open pidfile \"%s\": %s",
+            pidfile, strerror(errno));
+        return(-1);
+    }
+    if (fprintf(fp, "%d\n", (int) getpid()) == EOF) {
+        log_msg(LOG_ERR, "Unable to write to pidfile \"%s\": %s",
+            pidfile, strerror(errno));
+        gotError = 1;
+    }
+    if (fclose(fp) == EOF) {
+        log_msg(LOG_ERR, "Unable to close pidfile \"%s\": %s",
+            pidfile, strerror(errno));
+        gotError = 1;
+    }
+    if (gotError) {
+        if (unlink(pidfile) < 0)
+            log_msg(LOG_ERR, "Unable to delete pidfile \"%s\": %s",
+                pidfile, strerror(errno));
+        return(-1);
+    }
+    return(0);
 }
 
 
