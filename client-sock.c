@@ -2,7 +2,7 @@
  *  client-sock.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: client-sock.c,v 1.5 2001/05/15 23:53:05 dun Exp $
+ *  $Id: client-sock.c,v 1.6 2001/05/18 15:25:55 dun Exp $
 \******************************************************************************/
 
 
@@ -321,7 +321,7 @@ void display_error(client_conf_t *conf)
 
     assert(conf->errnum > 0);
 
-    p = create_fmt_string("ERROR: %s\n",
+    p = create_fmt_string("ERROR: %s\n\n",
         (conf->errmsg ? conf->errmsg : "Unspecified"));
     if (write_n(STDERR_FILENO, p, strlen(p)) < 0)
         err_msg(errno, "write(%d) failed", STDERR_FILENO);

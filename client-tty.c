@@ -2,7 +2,7 @@
  *  client-tty.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: client-tty.c,v 1.6 2001/05/16 17:34:06 dun Exp $
+ *  $Id: client-tty.c,v 1.7 2001/05/18 15:25:55 dun Exp $
 \******************************************************************************/
 
 
@@ -95,7 +95,7 @@ void connect_console(client_conf_t *conf)
         /*
          *  Append a CR/LF since tty is in raw mode.
          */
-        str = create_fmt_string("\r\nConnection to ConMan [%s:%d]"
+        str = create_fmt_string("\r\nConMan: Connection [%s:%d]"
             " terminated by peer.\r\n", conf->dhost, conf->dport);
         if (write_n(STDOUT_FILENO, str, strlen(str)) < 0)
             err_msg(errno, "write(%d) failed", STDOUT_FILENO);
@@ -300,7 +300,7 @@ static void perform_close_esc(client_conf_t *conf, char c)
 
     /*  Append a CR/LF since tty is in raw mode.
      */
-    str = create_fmt_string("Connection to ConMan [%s:%d] closed.\r\n",
+    str = create_fmt_string("ConMan: Connection to [%s:%d] closed.\r\n",
         conf->dhost, conf->dport);
     if (write_n(STDOUT_FILENO, str, strlen(str)) < 0)
         err_msg(errno, "write(%d) failed", STDOUT_FILENO);
