@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-sock.c,v 1.46 2002/05/08 00:10:55 dun Exp $
+ *  $Id: server-sock.c,v 1.47 2002/05/08 18:40:10 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -263,12 +263,11 @@ static int recv_greeting(req_t *req)
     /*  Validate greeting.
      */
     if (!req->user) {
+        req->user = create_string("unknown");
         send_rsp(req, CONMAN_ERR_BAD_REQUEST, 
             "Invalid greeting: no user specified");
         return(-1);
     }
-    DPRINTF((5, "Received request from <%s@%s:%d>.\n",
-        req->user, req->fqdn, req->port));
 
     /*  Send response to greeting.
      */
@@ -746,21 +745,20 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
         n = append_format_string(buf, sizeof(buf), "\n");
     }
     else {
-    /*
-     *  FIXME: Should all errors be logged here?
-     */
-        n = strlcpy(tmp, (errmsg ? errmsg : "Doh!"), sizeof(tmp));
+        n = strlcpy(tmp, (errmsg ? errmsg : "unspecified error"), sizeof(tmp));
         n = snprintf(buf, sizeof(buf), "%s %s=%d %s='%s'\n",
             proto_strs[LEX_UNTOK(CONMAN_TOK_ERROR)],
             proto_strs[LEX_UNTOK(CONMAN_TOK_CODE)], errnum,
             proto_strs[LEX_UNTOK(CONMAN_TOK_MESSAGE)], lex_encode(tmp));
+        log_msg(LOG_NOTICE, "Client <%s@%s:%d>: %s",
+            req->user, req->fqdn, req->port, errmsg);
     }
 
     /*  FIXME: Gracefully handle buffer overruns.
      */
     if ((n < 0) || (n >= sizeof(buf))) {
         log_msg(LOG_WARNING,
-            "Request from <%s@%s:%d> terminated by buffer overrun",
+            "Client <%s@%s:%d>: Terminated by buffer overrun",
             req->user, req->fqdn, req->port);
         return(-1);
     }
@@ -790,6 +788,9 @@ static int perform_query_cmd(req_t *req)
     assert(req->command == QUERY);
     assert(!list_is_empty(req->consoles));
 
+    log_msg(LOG_INFO, "Client <%s@%s:%d>: Issued query command",
+        req->user, req->fqdn, req->port);
+
     if (send_rsp(req, CONMAN_ERR_NONE, NULL) < 0)
         return(-1);
     destroy_req(req);
@@ -809,6 +810,9 @@ static int perform_monitor_cmd(req_t *req, server_conf_t *conf)
     assert(req->sd >= 0);
     assert(req->command == MONITOR);
     assert(list_count(req->consoles) == 1);
+
+    log_msg(LOG_INFO, "Client <%s@%s:%d>: Issued monitor command",
+        req->user, req->fqdn, req->port);
 
     if (send_rsp(req, CONMAN_ERR_NONE, NULL) < 0)
         return(-1);
@@ -835,6 +839,9 @@ static int perform_connect_cmd(req_t *req, server_conf_t *conf)
 
     assert(req->sd >= 0);
     assert(req->command == CONNECT);
+
+    log_msg(LOG_INFO, "Client <%s@%s:%d>: Issued connect command",
+        req->user, req->fqdn, req->port);
 
     if (send_rsp(req, CONMAN_ERR_NONE, NULL) < 0)
         return(-1);
