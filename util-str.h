@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-str.h,v 1.1 2001/09/06 21:50:52 dun Exp $
+ *  $Id: util-str.h,v 1.2 2001/09/13 20:36:31 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -80,12 +80,12 @@ char * create_time_delta_string(time_t t);
  *  Note that the caller is responsible for freeing this string.
  */
 
-struct tm * get_localtime(time_t *t, struct tm *tm);
+struct tm * get_localtime(time_t *tPtr, struct tm *tmPtr);
 /*
  *  Gets the local time in a thread-safe manner.
- *  The time struct (*tm) is filled-in with the local time based on (*t);
- *    if (*t == 0), it is set with the current time.
- *  Returns the ptr to the time struct arg (tm).
+ *  The time struct (*tmPtr) is filled-in with the local time based on (*tPtr);
+ *    if (*tPtr == 0), it is set with the current time.
+ *  Returns the ptr to the time struct arg (tmPtr).
  */
 
 #ifndef HAVE_STRLCAT

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-str.c,v 1.1 2001/09/06 21:50:52 dun Exp $
+ *  $Id: util-str.c,v 1.2 2001/09/13 20:36:31 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util-str.h" for documentation on public functions.
@@ -219,21 +219,20 @@ char * create_time_delta_string(time_t t)
 }
 
 
-struct tm * get_localtime(time_t *t, struct tm *tm)
+struct tm * get_localtime(time_t *tPtr, struct tm *tmPtr)
 {
 #ifndef HAVE_LOCALTIME_R
 
-    int rc;
-    static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-    struct tm *ptm;
+    static pthread_mutex_t localtimeLock = PTHREAD_MUTEX_INITIALIZER;
+    struct tm *tmTmpPtr;
 
 #endif /* !HAVE_LOCALTIME_R */
 
-    assert(t);
-    assert(tm);
+    assert(tPtr);
+    assert(tmPtr);
 
-    if (*t == 0) {
-        if (time(t) == ((time_t) -1))
+    if (*tPtr == 0) {
+        if (time(tPtr) == (time_t) -1)
             err_msg(errno, "time() failed -- What time is it?");
     }
 
@@ -241,20 +240,18 @@ struct tm * get_localtime(time_t *t, struct tm *tm)
 
     /*  localtime() is not thread-safe, so it is protected by a mutex.
      */
-    if ((rc = pthread_mutex_lock(&lock)) != 0)
-        err_msg(rc, "pthread_mutex_lock() failed");
-    if (!(ptm = localtime(t)))
+    lock_mutex(&localtimeLock);
+    if (!(tmTmpPtr = localtime(tPtr)))
         err_msg(errno, "localtime() failed");
-    *tm = *ptm;
-    if ((rc = pthread_mutex_unlock(&lock)) != 0)
-        err_msg(rc, "pthread_mutex_unlock() failed");
+    *tmPtr = *tmTmpPtr;
+    unlock_mutex(&localtimeLock);
 
 #else /* HAVE_LOCALTIME_R */
 
-    if (!localtime_r(t, tm))
+    if (!localtime_r(tPtr, tmPtr))
         err_msg(errno, "localtime_r() failed");
 
 #endif /* !HAVE_LOCALTIME_R */
 
-    return(tm);
+    return(tmPtr);
 }
