@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-tty.c,v 1.14 2001/06/07 17:01:30 dun Exp $
+ *  $Id: client-tty.c,v 1.15 2001/06/07 22:59:19 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -173,7 +173,7 @@ static int read_from_stdin(client_conf_t *conf)
     if (n == 0)
         return(0);
 
-    if ((mode == EOL) && (c == esc)) {
+    if ((mode != ESC) && (c == esc)) {
         mode = ESC;
         return(1);
     }
@@ -218,7 +218,7 @@ static int read_from_stdin(client_conf_t *conf)
     if (conf->req->command == CONNECT) {
         /*
          *  Perform character-stuffing of the escape-sequence character
-         *    by doubling all occurrences of the "escape" character.
+         *    by doubling all occurrences of it.
          */
         for (q=p-1; q>=buf; q--) {
             if (*q == CONMAN_ESC_CHAR) {
@@ -320,13 +320,12 @@ static void perform_help_esc(client_conf_t *conf, char c)
     str = create_fmt_string(
         "Supported ConMan Escape Sequences:\r\n"
         "  %2s%-2s -  Display this help message.\r\n"
-        "  %2s%-2s -  Transmit a serial-break.\r\n"
         "  %2s%-2s -  Terminate the connection.\r\n"
         "  %2s%-2s -  Send the escape character by typing it twice.\r\n"
-        "  %2s%-2s -  Suspend the client.\r\n"
-        "(Note that escapes are only recognized immediately after newline)\r\n",
-        escChar, escHelp, escChar, escBreak, escChar, escClose,
-        escChar, escChar, escChar, escSuspend);
+        "  %2s%-2s -  Transmit a serial-break.\r\n"
+        "  %2s%-2s -  Suspend the client.\r\n",
+        escChar, escHelp, escChar, escClose, escChar, escChar,
+        escChar, escBreak, escChar, escSuspend);
     if (write_n(STDOUT_FILENO, str, strlen(str)) < 0)
         err_msg(errno, "write(%d) failed", STDOUT_FILENO);
     free(str);
