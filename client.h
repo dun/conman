@@ -2,7 +2,7 @@
  *  client.h
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: client.h,v 1.6 2001/05/21 23:31:45 dun Exp $
+ *  $Id: client.h,v 1.7 2001/05/21 23:36:12 dun Exp $
 \******************************************************************************/
 
 
@@ -16,23 +16,23 @@
 
 
 typedef struct client_conf {
-    int    sd;				/* server socket descriptor           */
-    char  *user;			/* name of local user                 */
-    char  *dhost;			/* conman daemon host name            */
-    int    dport;			/* conman daemon port number          */
-    cmd_t  command;			/* command to send to conman daemon   */
-    int    escapeChar;			/* char to issue client escape seq    */
-    int    enableBroadcast;		/* true if b-casting to many consoles */
-    int    enableForce;			/* true if forcing console connection */
-    int    enableVerbose;		/* true if to be more verbose to user */
-    char  *program;			/* program name for EXECUTE cmd       */
-    char  *log;				/* connection logfile name            */
-    int    ld;				/* connection logfile descriptor      */
-    List   consoles;			/* list of consoles affected by cmd   */
-    int    closedByClient;		/* true if client closed console conn */
-    int    errnum;			/* error number from issuing command  */
-    char  *errmsg;			/* error message from issuing command */
-    struct termios term;		/* saved "cooked" terminal mode       */
+    int             sd;			/* server socket descriptor           */
+    char           *user;		/* name of local user                 */
+    char           *dhost;		/* conman daemon host name            */
+    int             dport;		/* conman daemon port number          */
+    cmd_t           command;		/* command to send to conman daemon   */
+    int             escapeChar;		/* char to issue client escape seq    */
+    int             enableBroadcast;	/* true if b-casting to many consoles */
+    int             enableForce;	/* true if forcing console connection */
+    int             enableVerbose;	/* true if to be more verbose to user */
+    char           *program;		/* program name for EXECUTE cmd       */
+    char           *log;		/* connection logfile name            */
+    int             ld;			/* connection logfile descriptor      */
+    List            consoles;		/* list of consoles affected by cmd   */
+    int             closedByClient;	/* true if client closed console conn */
+    int             errnum;		/* error number from issuing command  */
+    char           *errmsg;		/* error message from issuing command */
+    struct termios  term;		/* saved "cooked" terminal mode       */
 } client_conf_t;
 
 
