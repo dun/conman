@@ -2,7 +2,7 @@
  *  server.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server.c,v 1.5 2001/05/15 19:45:31 dun Exp $
+ *  $Id: server.c,v 1.6 2001/05/15 20:32:12 dun Exp $
 \******************************************************************************/
 
 
@@ -284,8 +284,8 @@ static void accept_client(server_conf_t *conf)
  *    socket connection is accept()'d, the select() loop begins its next
  *    iteration.  It notices read activity on the listen socket from the
  *    client that has not yet been accepted, so a new thread is created.
- *    This new thread will block on the accept() since there is only one
- *    client knockin' at the door.
+ *    Since the listen socket is set non-blocking, this new thread would
+ *    receive an EAGAIN/EWOULDBLOCK on the accept() and terminate, but still...
  */
     int sd;
     client_arg_t *args;
