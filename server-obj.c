@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.32 2001/08/17 23:32:35 dun Exp $
+ *  $Id: server-obj.c,v 1.33 2001/08/28 22:15:51 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -23,12 +23,6 @@
 #include "list.h"
 #include "server.h"
 #include "util.h"
-
-
-#define DEFAULT_SERIAL_BPS      B9600
-#define DEFAULT_SERIAL_DATABITS 8
-#define DEFAULT_SERIAL_PARITY   0
-#define DEPAULT_SERIAL_STOPBITS 1
 
 
 static obj_t * create_obj(
@@ -97,12 +91,18 @@ obj_t * create_console_obj(
      */
     set_descriptor_nonblocking(fd);
 
+    /*  Note that while the initial state of the console dev's termios
+     *    are saved, the settings derived from the 'opts' string are not.
+     *  This is because the settings do not change until the obj is destroyed,
+     *    at which time the termios is reverted back to its initial state.
+     */
     console = create_obj(conf, name, fd, CONSOLE);
     console->aux.console.dev = create_string(dev);
     console->aux.console.logfile = NULL;
-    get_tty_mode(fd, &console->aux.console.tty);
-    get_tty_raw(fd, &tty);
-    set_tty_mode(fd, &tty);
+    get_tty_mode(&console->aux.console.tty, fd);
+    get_tty_raw(&tty, fd);
+    set_serial_opts(&tty, console, opts);
+    set_tty_mode(&tty, fd);
 
     return(console);
 
@@ -286,7 +286,7 @@ void destroy_obj(obj_t *obj)
         if (tcflush(obj->fd, TCIOFLUSH) < 0)
             err_msg(errno, "Unable to flush tty device for console [%s]",
                 obj->name);
-        set_tty_mode(obj->fd, &obj->aux.console.tty);
+        set_tty_mode(&obj->aux.console.tty, obj->fd);
     }
     if (obj->fd >= 0) {
         if (close(obj->fd) < 0)
