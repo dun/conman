@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-str.h,v 1.3 2001/10/08 04:02:37 dun Exp $
+ *  $Id: util-str.h,v 1.4 2001/12/27 19:24:39 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -88,6 +88,15 @@ struct tm * get_localtime(time_t *tPtr, struct tm *tmPtr);
  *    if (*tPtr == 0), it is set with the current time.
  *  Returns the ptr to the time struct arg (tmPtr).
  */
+
+#ifndef HAVE_STRCASECMP
+int strcasecmp(const char *s1, const char *s2);
+/*
+ *  Compares the two strings 's1' and 's2', ignoring the case of the chars.
+ *  Returns less-than-zero if (s1 < s2), zero if (s1 == s2), and
+ *    greater-than-zero if (s1 > s2).
+ */
+#endif /* !HAVE_STRCASECMP */
 
 #ifndef HAVE_STRLCAT
 size_t strlcat(char *dst, const char *src, size_t siz);

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-str.c,v 1.8 2001/12/20 01:06:54 dun Exp $
+ *  $Id: util-str.c,v 1.9 2001/12/27 19:24:39 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util-str.h" for documentation on public functions.
@@ -11,6 +11,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include <assert.h>
+#include <ctype.h>
 #include <errno.h>
 #include <pthread.h>
 #include <stdarg.h>
@@ -254,3 +255,17 @@ struct tm * get_localtime(time_t *tPtr, struct tm *tmPtr)
 
     return(tmPtr);
 }
+
+
+#ifndef HAVE_STRCASECMP
+int strcasecmp(const char *s1, const char *s2)
+{
+    const char *p, *q;
+
+    p = s1;
+    q = s2;
+    while (*p && toupper((int) *p) == toupper((int) *q))
+        p++, q++;
+    return(toupper((int) *p) - toupper((int) *q));
+}
+#endif /* !HAVE_STRCASECMP */
