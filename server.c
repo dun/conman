@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.42 2001/12/29 04:38:23 dun Exp $
+ *  $Id: server.c,v 1.43 2001/12/30 02:08:43 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -47,7 +47,7 @@ static void mux_io(server_conf_t *conf);
 static void reopen_logfiles(List objs);
 static void accept_client(server_conf_t *conf);
 static void reset_console(obj_t *console, const char *cmd);
-static void kill_console_reset(pid_t pid);
+static void kill_console_reset(pid_t *arg);
 
 
 static int done = 0;
@@ -592,6 +592,7 @@ static void reset_console(obj_t *console, const char *cmd)
  */
     char cmdbuf[MAX_LINE];
     pid_t pid;
+    pid_t *arg;
 
     assert(is_console_obj(console));
     assert(console->gotReset);
@@ -624,20 +625,32 @@ static void reset_console(obj_t *console, const char *cmd)
      *    both we avoid a race condition.  (cf. APUE 9.4 p244)
      */
     setpgid(pid, 0);
-    /*
-     *  Set a timer to ensure the reset cmd does not exceed its time limit.
+
+    /*  Set a timer to ensure the reset cmd does not exceed its time limit.
+     *  The callback function's arg must be allocated on the heap since
+     *    local vars on the stack will be lost once this routine returns.
      */
-    timeout((CallBackF) kill_console_reset, (void *) pid,
-        RESET_CMD_TIMEOUT * 1000);
+    if (!(arg = malloc(sizeof *arg)))
+        out_of_memory();
+    *arg = pid;
+    timeout((CallBackF) kill_console_reset, arg, RESET_CMD_TIMEOUT * 1000);
+
     return;
 }
 
 
-static void kill_console_reset(pid_t pid)
+static void kill_console_reset(pid_t *arg)
 {
-/*  Terminates the "ResetCmd" process 'pid' if it has exceeded its time limit.
+/*  Terminates the "ResetCmd" process associated with 'arg' if it has
+ *    exceeded its time limit.
+ *  Memory allocated to 'arg' will be free()'d by this routine.
  */
+    pid_t pid;
+
+    assert(arg);
+    pid = *arg;
     assert(pid > 0);
+    free(arg);
 
     if (kill(pid, 0) < 0)		/* process is no longer running */
         return;
