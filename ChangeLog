@@ -1,3 +1,8 @@
+2003-10-21  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* lib/examples/shell_cmd_1.exp, lib/examples/shell_cmd_n.exp:
+	Added {gnats:316}.
+
 2003-10-07  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* : Released 0.1.8.8.

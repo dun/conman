@@ -1,0 +1,105 @@
+#!/usr/bin/expect --
+###############################################################################
+# $Id: shell_cmd_1.exp,v 1.1.2.1 2003/10/22 00:21:01 dun Exp $
+#   by Chris Dunlap <cdunlap@llnl.gov>
+###############################################################################
+# USAGE:
+#   shell_cmd_1.exp <console(s)...> <command>
+#
+# DESCRIPTION:
+#   This script takes a console name followed by a single-argument command.
+#   The console "name" argument(s) can contain conman options such as "-j"
+#   (console-sharing) or "-f" (console-stealing).  The "command" argument
+#   can contain any number of commands as long as they are all enclosed
+#   within quotes such that the shell interprets it as a single argument.
+#
+#   A connection is made to the specified console, after which a
+#   single carriage-return is sent.  If a recognizable shell prompt is
+#   returned, then the "command" argument is sent to the shell.
+#
+#   Each line in response to the command (ie, up to the next recognizable
+#   shell prompt) is sent to stdout.  But unlike "shell_cmd_n.exp", it is not
+#   prepended with the console name.
+#
+# NOTES:
+#   The shell prompt recognition cannot account for all the diverse types
+#   of prompts seen in the wild (via the PS1 environment variable),
+#   but it tries really hard.
+###############################################################################
+
+set env(PATH) "/bin:/usr/bin:/usr/local/bin"
+source /usr/lib/conman/conman.exp
+exp_internal 0
+log_user 0
+
+# Additional options to pass to the conman command.  Typical options
+#   would include '-f' for console-stealing and '-j' for console-sharing.
+set opts ""
+
+# If set to 1, console output is echoed back; if set to 0, nothing is echoed.
+set echo 1
+
+# The amount of time to wait for console input before giving up.
+set timeout 3
+
+proc do_shell_cmd {spawn_id output_id console cmd {echo 1} {tmout 3}} {
+
+  set expect_out(buffer) ""
+  set cmdstr "[join $cmd]"
+
+  exp_send "\r"
+  set timeout $tmout
+  expect {
+    -re "^\[^\r]*(%|#|\\\$|]|\[^>]>) \$" {
+      set prompt $expect_out(0,string)
+    }
+    -gl "\n" {
+      exp_continue -continue_timer
+    }
+    timeout {
+      exp_send -i $output_id "ERROR: No shell prompt.\n"; return 0
+    }
+    eof {
+      exp_send -i $output_id "ERROR: Encountered EOF.\n"; return 0
+    }
+  }
+
+  exp_send -- "$cmdstr\r"
+  set timeout $tmout
+  expect {
+    -re "^$cmdstr\r+\n" {
+      exp_continue -continue_timer
+    }
+    -re "^$prompt\$" {
+      ;
+    }
+    -re "(^\[^\r]*)\r+\n" {
+      if {$echo} {exp_send -i $output_id "$expect_out(1,string)\n"}
+      exp_continue -continue_timer
+    }
+    timeout {
+      exp_send -i $output_id "ERROR: Timed-out.\n"; return 0
+    }
+    eof {
+      exp_send -i $output_id "ERROR: Encountered EOF.\n"; return 0
+    }
+  }
+  return 1
+}
+
+set consoles [lrange $argv 0 [expr [llength $argv] - 1]]
+set command [lindex $argv end]
+set options "$opts [conman_parse_opts consoles]"
+set console [conman_query $consoles $options error]
+if {[llength $console] == 0} {
+  send_error -- "ERROR: $error.\n"; exit 1
+}
+if {[llength $console] > 1} {
+  send_error -- "ERROR: Matched too many consoles.\n"; exit 1
+}
+set console_id [conman_open $console $options error]
+if {[string length $console_id] == 0} {
+  send_error -- "ERROR: $error.\n"; exit 1
+}
+eval do_shell_cmd $console_id $user_spawn_id $console {$command} $echo $timeout
+conman_close $console_id
