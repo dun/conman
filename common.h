@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.h,v 1.27 2001/12/28 23:23:44 dun Exp $
+ *  $Id: common.h,v 1.28 2001/12/30 21:21:17 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -45,9 +45,12 @@
 #define ESC_CHAR		0xFF
 #define ESC_CHAR_BREAK		'B'
 #define ESC_CHAR_CLOSE		'.'
+#define ESC_CHAR_FORCE		'F'
 #define ESC_CHAR_HELP		'?'
 #define ESC_CHAR_INFO		'I'
+#define ESC_CHAR_JOIN		'J'
 #define ESC_CHAR_LOG		'L'
+#define ESC_CHAR_MONITOR	'M'
 #define ESC_CHAR_QUIET		'Q'
 #define ESC_CHAR_RESET		'R'
 #define ESC_CHAR_SUSPEND	'Z'

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-conf.c,v 1.36 2001/12/30 20:08:54 dun Exp $
+ *  $Id: client-conf.c,v 1.37 2001/12/30 21:21:17 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -170,6 +170,14 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
         }
     }
 
+    /*  Disable those options not used in R/O mode.
+     */
+    if (conf->req->command == MONITOR) {
+        conf->req->enableBroadcast = 0;
+        conf->req->enableForce = 0;
+        conf->req->enableJoin = 0;
+    }
+
     for (i=optind; i<argc; i++) {
 
         char *p, *q;
@@ -274,13 +282,13 @@ void open_client_log(client_conf_t *conf)
     assert(conf->logd < 0);
 
     if ((conf->logd = open(conf->log, flags, S_IRUSR | S_IWUSR)) < 0)
-        err_msg(errno, "Unable to open logfile [%s]", conf->log);
+        err_msg(errno, "Unable to open \"%s\"", conf->log);
 
     now = create_long_time_string(0);
     str = create_format_string("%sLog started at %s%s",
         CONMAN_MSG_PREFIX, now, CONMAN_MSG_SUFFIX);
     if (write_n(conf->logd, str, strlen(str)) < 0)
-        err_msg(errno, "write() failed on fd=%d", conf->logd);
+        err_msg(errno, "Unable to write to \"%s\"", conf->log);
     free(now);
     free(str);
 
@@ -300,12 +308,12 @@ void close_client_log(client_conf_t *conf)
     str = create_format_string("%sLog finished at %s%s",
         CONMAN_MSG_PREFIX, now, CONMAN_MSG_SUFFIX);
     if (write_n(conf->logd, str, strlen(str)) < 0)
-        err_msg(errno, "write() failed on fd=%d", conf->logd);
+        err_msg(errno, "Unable to write to \"%s\"", conf->log);
     free(now);
     free(str);
 
     if (close(conf->logd) < 0)
-        err_msg(errno, "close() failed on fd=%d", conf->logd);
+        err_msg(errno, "Unable to close \"%s\"", conf->log);
     conf->logd = -1;
 
     return;

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.56 2001/12/27 22:10:43 dun Exp $
+ *  $Id: server-obj.c,v 1.57 2001/12/30 21:21:17 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -35,6 +35,7 @@ static obj_t * create_obj(
     server_conf_t *conf, char *name, int fd, enum obj_type type);
 static void reset_telnet_delay(obj_t *telnet);
 static char * find_trailing_int_str(char *str);
+static int validate_obj_links(obj_t *obj);
 
 
 static obj_t * create_obj(
@@ -704,7 +705,7 @@ void link_objs(obj_t *src, obj_t *dst)
 
     if (is_client_obj(src) && is_console_obj(dst)) {
 
-        gotBcast = list_count(src->aux.client.req->consoles) > 1;
+        gotBcast = src->aux.client.req->enableBroadcast;
         gotStolen = src->aux.client.req->enableForce
             && !list_is_empty(dst->writers);
         now = create_short_time_string(0);
@@ -767,78 +768,125 @@ void link_objs(obj_t *src, obj_t *dst)
     list_append(dst->writers, src);
 
     DPRINTF("Linked [%s] reads to [%s] writes.\n", src->name, dst->name);
+    assert(validate_obj_links(src) >= 0);
+    assert(validate_obj_links(dst) >= 0);
+
+    return;
+}
+
+
+void unlink_objs(obj_t *src, obj_t *dst)
+{
+/*  Destroys the link allowing data read from (src) to be written to (dst)
+ *    (ie, the link from src readers to dst writers).
+ */
+    int n;
+    char *now;
+    char *tty;
+    char buf[MAX_LINE];
+    obj_t *obj;
+    ListIterator i;
+
+    if (list_delete_all(src->readers, (ListFindF) find_obj, dst))
+        DPRINTF("Removing [%s] from [%s] readers.\n", dst->name, src->name);
+    if ((n = list_delete_all(dst->writers, (ListFindF) find_obj, src)))
+        DPRINTF("Removing [%s] from [%s] writers.\n", src->name, dst->name);
+
+    /*  If a "writable" client is being unlinked from a console ...
+     */
+    if ((n > 0) && is_client_obj(src) && is_console_obj(dst)) {
+
+        /*  Create msg for console logfile and its existing writer(s)
+         *    regarding the "writable" client's departure.
+         */
+        now = create_short_time_string(0);
+        tty = src->aux.client.req->tty;
+        snprintf(buf, sizeof(buf),
+            "%sConsole [%s] departed by <%s@%s>%s%s at %s%s",
+            CONMAN_MSG_PREFIX, dst->name,
+            src->aux.client.req->user, src->aux.client.req->host,
+            (tty ? " on " : ""), (tty ? tty : ""), now, CONMAN_MSG_SUFFIX);
+        free(now);
+        strcpy(&buf[sizeof(buf) - 3], "\r\n");
+
+        /*  If console session is being logged,
+         *    write msg recording departure of a console writer.
+         */
+        if ((obj = get_console_logfile_obj(dst)))
+            write_obj_data(obj, buf, strlen(buf), 1);
+
+        /*  Write msg to existing console writer(s).
+         */
+        i = list_iterator_create(dst->writers);
+        while ((obj = list_next(i))) {
+            assert(is_client_obj(obj));
+            write_obj_data(obj, buf, strlen(buf), 1);
+        }
+        list_iterator_destroy(i);
+    }
+
+    DPRINTF("Unlinked [%s] reads from [%s] writes.\n", src->name, dst->name);
+    assert(validate_obj_links(src) >= 0);
+    assert(validate_obj_links(dst) >= 0);
+
     return;
 }
 
 
 void unlink_obj(obj_t *obj)
 {
-/*  Destroys all links connecting other objects to (obj).
+/*  Destroys all links between (obj) and its readers & writers.
  */
-    ListIterator i;
-    ListIterator j;
     obj_t *x;
-    obj_t *console;
-    char *now;
-    char *tty;
-    char buf[MAX_LINE];
 
     /*  Set flag to ensure no additional data is written into the buffer.
      */
     obj->gotEOF = 1;
 
-    i = list_iterator_create(obj->writers);
-    while ((x = list_next(i)))
-        if (list_delete_all(x->readers, (ListFindF) find_obj, obj) > 0)
-            DPRINTF("Unlinked [%s] from [%s] readers.\n", obj->name, x->name);
-    list_iterator_destroy(i);
+    while ((x = list_peek(obj->readers)))
+        unlink_objs(obj, x);
+
+    while ((x = list_peek(obj->writers)))
+        unlink_objs(x, obj);
+
+    return;
+}
+
+
+static int validate_obj_links(obj_t *obj)
+{
+/*  Validates the readers and writers lists are successfully linked
+ *    to other objects.
+ *  Returns 0 if the links are good; o/w, returns -1.
+ */
+    ListIterator i;
+    obj_t *reader;
+    obj_t *writer;
+    int gotError = 0;
+
+    assert (obj != NULL);
 
     i = list_iterator_create(obj->readers);
-    while ((x = list_next(i))) {
-
-        if (list_delete_all(x->writers, (ListFindF) find_obj, obj) == 0)
-            continue;
-
-        DPRINTF("Unlinked [%s] from [%s] writers.\n", obj->name, x->name);
-        /*
-         *  If a "writable" client is being unlinked from a console ...
-         */
-        if (is_client_obj(obj) && is_console_obj(x)) {
-
-            console = x;
-
-            /*  Create msg for console logfile and its existing writer(s)
-             *    regarding the "writable" client's departure.
-             */
-            now = create_short_time_string(0);
-            tty = obj->aux.client.req->tty;
-            snprintf(buf, sizeof(buf),
-                "%sConsole [%s] departed by <%s@%s>%s%s at %s%s",
-                CONMAN_MSG_PREFIX, console->name,
-                obj->aux.client.req->user, obj->aux.client.req->host,
-                (tty ? " on " : ""), (tty ? tty : ""), now, CONMAN_MSG_SUFFIX);
-            free(now);
-            strcpy(&buf[sizeof(buf) - 3], "\r\n");
-
-            /*  If console session is being logged,
-             *    write msg recording departure of a console writer.
-             */
-            if ((x = get_console_logfile_obj(console)))
-                write_obj_data(x, buf, strlen(buf), 1);
-
-            /*  Write msg to existing console writer(s).
-             */
-            j = list_iterator_create(console->writers);
-            while ((x = list_next(j))) {
-                assert(is_client_obj(x));
-                write_obj_data(x, buf, strlen(buf), 1);
-            }
-            list_iterator_destroy(j);
+    while ((reader = list_next(i))) {
+        if (!list_find_first(reader->writers, (ListFindF) find_obj, obj)) {
+            DPRINTF("[%s] writes not linked to [%s] reads.\n",
+                obj->name, reader->name);
+            gotError = 1;
         }
     }
     list_iterator_destroy(i);
 
-    return;
+    i = list_iterator_create(obj->writers);
+    while ((writer = list_next(i))) {
+        if (!list_find_first(writer->readers, (ListFindF) find_obj, obj)) {
+            DPRINTF("[%s] reads not linked to [%s] writes.\n",
+                obj->name, writer->name);
+            gotError = 1;
+        }
+    }
+    list_iterator_destroy(i);
+
+    return(gotError ? -1 : 0);
 }
 
 
@@ -937,7 +985,7 @@ again:
         return(rc);
     }
     else {
-        DPRINTF("Read %d bytes from [%s].\n", n, obj->name); /* xyzzy */
+        DPRINTF("Read %d bytes from [%s].\n", n, obj->name);
 
         if (is_client_obj(obj)) {
             x_pthread_mutex_lock(&obj->bufLock);
@@ -1157,7 +1205,7 @@ again:
             }
         }
         else if (n > 0) {
-            DPRINTF("Wrote %d bytes to [%s].\n", n, obj->name); /* xyzzy */
+            DPRINTF("Wrote %d bytes to [%s].\n", n, obj->name);
             obj->bufOutPtr += n;
             /*
              *  Do the hokey-pokey and perform a circular-buffer wrap-around.

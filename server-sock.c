@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.40 2001/12/20 22:00:32 dun Exp $
+ *  $Id: server-sock.c,v 1.41 2001/12/30 21:21:17 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -35,10 +35,13 @@
  */
 #include <syslog.h>
 #include <tcpd.h>
+
 extern int hosts_ctl(
   char *daemon, char *client_name, char *client_addr, char *client_user);
+
 int allow_severity = LOG_INFO;		/* logging level for accepted reqs */
 int deny_severity = LOG_WARNING;	/* logging level for rejected reqs */
+
 #endif /* WITH_TCP_WRAPPERS */
 
 
@@ -120,8 +123,8 @@ void process_client(client_arg_t *args)
             goto err;
         break;
     default:
-        log_msg(0, "Received invalid command=%d from <%s@%s>.",
-            req->command, req->user, req->host);
+        log_msg(0, "Received invalid command=%d from <%s@%s:%d>.",
+            req->command, req->user, req->fqdn, req->port);
         goto err;
     }
     return;
@@ -179,7 +182,7 @@ static int resolve_addr(server_conf_t *conf, req_t *req, int sd)
         if (hosts_ctl(CONMAN_DAEMON_NAME,
           (gotHostName ? req->fqdn : STRING_UNKNOWN),
           req->ip, STRING_UNKNOWN) == 0) {
-            log_msg(0, "TCP-Wrappers rejected connection from [%s:%d].",
+            log_msg(0, "TCP-Wrappers rejected connection from <%s:%d>.",
                 req->fqdn, req->port);
             return(-1);
         }
@@ -205,16 +208,16 @@ static int recv_greeting(req_t *req)
     assert(req->sd >= 0);
 
     if ((n = read_line(req->sd, buf, sizeof(buf))) < 0) {
-        log_msg(0, "Error reading greeting from %s: %s",
-            req->ip, strerror(errno));
+        log_msg(0, "Unable to read greeting from <%s:%d>: %s",
+            req->fqdn, req->port, strerror(errno));
         return(-1);
     }
     else if (n == 0) {
-        log_msg(0, "Connection terminated by %s", req->ip);
+        log_msg(0, "Connection terminated by <%s:%d>", req->fqdn, req->port);
         return(-1);
     }
 
-    DPRINTF("Received greeting: %s", buf); /* xyzzy */
+    DPRINTF("Received greeting: %s", buf);
 
     l = lex_create(buf, proto_strs);
     while (!done) {
@@ -240,13 +243,8 @@ static int recv_greeting(req_t *req)
             "Invalid greeting: no user specified");
         return(-1);
     }
-/*  if (strcmp(req->ip, "127.0.0.1")) {
- *      send_rsp(req, CONMAN_ERR_AUTHENTICATE,
- *          "Authentication required (but not yet implemented)");
- *      return(-1);
- *  }
- */
-    DPRINTF("Received request from <%s@%s>.\n", req->user, req->host);
+    DPRINTF("Received request from <%s@%s:%d>.\n",
+        req->user, req->fqdn, req->port);
 
     /*  Send response to greeting.
      */
@@ -307,16 +305,16 @@ static int recv_req(req_t *req)
     assert(req->sd >= 0);
 
     if ((n = read_line(req->sd, buf, sizeof(buf))) < 0) {
-        log_msg(0, "Error reading request from %s: %s",
-            req->ip, strerror(errno));
+        log_msg(0, "Unable to read request from <%s:%d>: %s",
+            req->fqdn, req->port, strerror(errno));
         return(-1);
     }
     else if (n == 0) {
-        log_msg(0, "Connection terminated by %s", req->ip);
+        log_msg(0, "Connection terminated by <%s:%d>", req->fqdn, req->port);
         return(-1);
     }
 
-    DPRINTF("Received request: %s", buf); /* xyzzy */
+    DPRINTF("Received request: %s", buf);
 
     l = lex_create(buf, proto_strs);
     while (!done) {
@@ -422,6 +420,13 @@ static int query_consoles(server_conf_t *conf, req_t *req)
     list_destroy(req->consoles);
     req->consoles = matches;
     list_sort(req->consoles, (ListCmpF) compare_objs);
+
+    /*  If only one console was selected for a broadcast, then
+     *    the session is placed into R/W mode instead of W/O mode.
+     *    So update the req accordingly.
+     */
+    if (list_count(req->consoles) == 1)
+        req->enableBroadcast = 0;
 
     return(rc);
 }
@@ -574,7 +579,8 @@ static int check_too_many_consoles(req_t *req)
         strlcpy(buf, obj->name, sizeof(buf));
         strlcat(buf, "\n", sizeof(buf));
         if (write_n(req->sd, buf, strlen(buf)) < 0) {
-            log_msg(0, "Error writing to %s: %s", req->ip, strerror(errno));
+            log_msg(0, "Unable to write to <%s:%d>: %s",
+                req->fqdn, req->port, strerror(errno));
             break;
         }
     }
@@ -655,7 +661,8 @@ static int check_busy_consoles(req_t *req)
             if (delta)
                 free(delta);
             if (write_n(req->sd, buf, strlen(buf)) < 0) {
-                log_msg(0, "Error writing to %s: %s", req->ip, strerror(errno));
+                log_msg(0, "Unable to write to <%s:%d>: %s",
+                    req->fqdn, req->port, strerror(errno));
                 break;
             }
         }
@@ -724,19 +731,20 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
     /*  FIX_ME: Gracefully handle buffer overruns.
      */
     if ((n < 0) || (n >= sizeof(buf))) {
-        log_msg(10, "Request from <%s@%s> terminated due to buffer overrun.",
-            req->user, req->host);
+        log_msg(10, "Request from <%s@%s:%d> terminated by buffer overrun.",
+            req->user, req->fqdn, req->port);
         return(-1);
     }
 
     /*  Write response to client.
      */
     if (write_n(req->sd, buf, strlen(buf)) < 0) {
-        log_msg(0, "Error writing to %s: %s", req->ip, strerror(errno));
+        log_msg(0, "Unable to write to <%s:%d>: %s",
+            req->fqdn, req->port, strerror(errno));
         return(-1);
     }
 
-    DPRINTF("Sent response: %s", buf); /* xyzzy */
+    DPRINTF("Sent response: %s", buf);
     return(0);
 }
 

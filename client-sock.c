@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-sock.c,v 1.27 2001/12/19 23:38:01 dun Exp $
+ *  $Id: client-sock.c,v 1.28 2001/12/30 21:21:17 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -40,13 +40,17 @@ int connect_to_server(client_conf_t *conf)
     assert(conf->req->port > 0);
 
     if ((sd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-        err_msg(errno, "socket() failed");
+        err_msg(errno, "Unable to create socket");
 
     memset(&saddr, 0, sizeof(saddr));
     saddr.sin_family = AF_INET;
     saddr.sin_port = htons(conf->req->port);
-    if (host_name_to_addr4(conf->req->host, &saddr.sin_addr) < 0)
-        err_msg(0, "Unable to resolve hostname [%s]", conf->req->host);
+    if (host_name_to_addr4(conf->req->host, &saddr.sin_addr) < 0) {
+        conf->errnum = CONMAN_ERR_LOCAL;
+        conf->errmsg = create_format_string(
+            "Unable to resolve host <%s>", conf->req->host);
+        return(-1);
+    }
 
     if (host_name_to_cname(conf->req->host, buf, sizeof(buf)) == NULL) {
         conf->req->fqdn = create_string(conf->req->host);
@@ -62,7 +66,7 @@ int connect_to_server(client_conf_t *conf)
     if (connect(sd, (struct sockaddr *) &saddr, sizeof(saddr)) < 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
         conf->errmsg = create_format_string(
-            "Unable to connect to [%s:%d]: %s",
+            "Unable to connect to <%s:%d>: %s",
             conf->req->fqdn, conf->req->port, strerror(errno));
         return(-1);
     }
@@ -100,8 +104,8 @@ int send_greeting(client_conf_t *conf)
     if (write_n(conf->req->sd, buf, strlen(buf)) < 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
         conf->errmsg = create_format_string(
-            "Unable to send greeting to [%s:%d]: %s",
-            conf->req->fqdn, conf->req->port, strerror(errno));
+            "Unable to send greeting to <%s:%d>: %s",
+            conf->req->host, conf->req->port, strerror(errno));
         return(-1);
     }
 
@@ -111,7 +115,8 @@ int send_greeting(client_conf_t *conf)
              *  FIX_ME: NOT_IMPLEMENTED_YET
              */
             if (close(conf->req->sd) < 0)
-                err_msg(errno, "close() failed on fd=%d", conf->req->sd);
+                err_msg(errno, "Unable to close connection to <%s:%d>",
+                    conf->req->host, conf->req->port);
             conf->req->sd = -1;
         }
         return(-1);
@@ -194,8 +199,8 @@ int send_req(client_conf_t *conf)
     if (write_n(conf->req->sd, buf, strlen(buf)) < 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
         conf->errmsg = create_format_string(
-            "Unable to send greeting to [%s:%d]: %s",
-            conf->req->fqdn, conf->req->port, strerror(errno));
+            "Unable to send greeting to <%s:%d>: %s",
+            conf->req->host, conf->req->port, strerror(errno));
         return(-1);
     }
 
@@ -206,8 +211,8 @@ int send_req(client_conf_t *conf)
         if (shutdown(conf->req->sd, SHUT_WR) < 0) {
             conf->errnum = CONMAN_ERR_LOCAL;
             conf->errmsg = create_format_string(
-                "Unable to close write-half of connection to [%s:%d]: %s",
-                conf->req->fqdn, conf->req->port, strerror(errno));
+                "Unable to close write-half of connection to <%s:%d>: %s",
+                conf->req->host, conf->req->port, strerror(errno));
             return(-1);
         }
     }
@@ -228,14 +233,14 @@ int recv_rsp(client_conf_t *conf)
     if ((n = read_line(conf->req->sd, buf, sizeof(buf))) < 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
         conf->errmsg = create_format_string("Unable to read response"
-            " from [%s:%d]:\n  %s (blocked by TCP-Wrappers?)",
-            conf->req->fqdn, conf->req->port, strerror(errno));
+            " from <%s:%d>:\n  %s (blocked by TCP-Wrappers?)",
+            conf->req->host, conf->req->port, strerror(errno));
         return(-1);
     }
     else if (n == 0) {
         conf->errnum = CONMAN_ERR_LOCAL;
-        conf->errmsg = create_format_string("Connection terminated by [%s:%d]",
-            conf->req->fqdn, conf->req->port);
+        conf->errmsg = create_format_string("Connection terminated by <%s:%d>",
+            conf->req->host, conf->req->port);
         return(-1);
     }
 
@@ -266,7 +271,7 @@ int recv_rsp(client_conf_t *conf)
     if (conf->errnum == CONMAN_ERR_NONE) {
         conf->errnum = CONMAN_ERR_LOCAL;
         conf->errmsg = create_format_string("Received invalid reponse from"
-            " [%s:%d]", conf->req->fqdn, conf->req->port);
+            " <%s:%d>", conf->req->host, conf->req->port);
     }
     return(-1);
 }
@@ -344,13 +349,13 @@ void display_error(client_conf_t *conf)
 
     assert(conf->errnum > 0);
 
-    p = create_format_string("ERROR: %s\n\n",
+    p = create_format_string("ERROR: %s.\n\n",
         (conf->errmsg ? conf->errmsg : "Unspecified"));
     if (write_n(STDERR_FILENO, p, strlen(p)) < 0)
-        err_msg(errno, "write() failed on fd=%d", STDERR_FILENO);
+        err_msg(errno, "Unable to write to stderr");
     if (conf->logd >= 0)
         if (write_n(conf->logd, p, strlen(p)) < 0)
-            err_msg(errno, "write() failed on fd=%d", conf->logd);
+            err_msg(errno, "Unable to write to \"%s\"", conf->log);
     free(p);
 
     if (conf->errnum != CONMAN_ERR_LOCAL)
@@ -367,10 +372,10 @@ void display_error(client_conf_t *conf)
 
     if (p) {
         if (write_n(STDERR_FILENO, p, strlen(p)) < 0)
-            err_msg(errno, "write() failed on fd=%d", STDERR_FILENO);
+            err_msg(errno, "Unable to write to stderr");
         if (conf->logd >= 0)
             if (write_n(conf->logd, p, strlen(p)) < 0)
-                err_msg(errno, "write() failed on fd=%d", conf->logd);
+                err_msg(errno, "Unable to write to \"%s\"", conf->log);
     }
 
     exit(2);
@@ -390,14 +395,15 @@ void display_data(client_conf_t *conf, int fd)
     for (;;) {
         n = read(conf->req->sd, buf, sizeof(buf));
         if (n < 0)
-            err_msg(errno, "Unable to read data from socket");
+            err_msg(errno, "Unable to read from <%s:%d>",
+                conf->req->host, conf->req->port);
         if (n == 0)
             break;
         if (write_n(fd, buf, n) < 0)
-            err_msg(errno, "write() failed on fd=%d", fd);
+            err_msg(errno, "Unable to write to fd=%d", fd);
         if (conf->logd >= 0)
             if (write_n(conf->logd, buf, n) < 0)
-                err_msg(errno, "write() failed on fd=%d", conf->logd);
+                err_msg(errno, "Unable to write to \"%s\"", conf->log);
     }
     return;
 }
@@ -416,10 +422,10 @@ void display_consoles(client_conf_t *conf, int fd)
         if (n < 0 || n >= sizeof(buf))
             err_msg(0, "Buffer overflow");
         if (write_n(fd, buf, n) < 0)
-            err_msg(errno, "write() failed on fd=%d", fd);
+            err_msg(errno, "Unable to write to fd=%d", fd);
         if (conf->logd >= 0)
             if (write_n(conf->logd, buf, n) < 0)
-                err_msg(errno, "write() failed on fd=%d", conf->logd);
+                err_msg(errno, "Unable to write to \"%s\"", conf->log);
     }
     list_iterator_destroy(i);
     return;

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-esc.c,v 1.20 2001/12/29 06:02:55 dun Exp $
+ *  $Id: server-esc.c,v 1.21 2001/12/30 21:21:17 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -26,6 +26,7 @@
 
 
 static void perform_serial_break(obj_t *client);
+static void perform_console_writer_linkage(obj_t *client);
 static void perform_log_replay(obj_t *client);
 static void perform_quiet_toggle(obj_t *client);
 static void perform_reset(obj_t *client);
@@ -60,8 +61,23 @@ int process_client_escapes(obj_t *client, void *src, int len)
             case ESC_CHAR_BREAK:
                 perform_serial_break(client);
                 break;
+            case ESC_CHAR_FORCE:
+                client->aux.client.req->enableForce = 1;
+                client->aux.client.req->enableJoin = 0;
+                perform_console_writer_linkage(client);
+                break;
+            case ESC_CHAR_JOIN:
+                client->aux.client.req->enableForce = 0;
+                client->aux.client.req->enableJoin = 1;
+                perform_console_writer_linkage(client);
+                break;
             case ESC_CHAR_LOG:
                 perform_log_replay(client);
+                break;
+            case ESC_CHAR_MONITOR:
+                client->aux.client.req->enableForce = 0;
+                client->aux.client.req->enableJoin = 0;
+                perform_console_writer_linkage(client);
                 break;
             case ESC_CHAR_QUIET:
                 perform_quiet_toggle(client);
@@ -117,6 +133,51 @@ static void perform_serial_break(obj_t *client)
         }
     }
     list_iterator_destroy(i);
+    return;
+}
+
+
+static void perform_console_writer_linkage(obj_t *client)
+{
+/*  Converts the client's console session between read-only and read-write.
+ */
+    obj_t *console;
+    int gotWrite;
+    char *str;
+
+    assert(is_client_obj(client));
+
+    /*  Broadcast sessions are treated as a no-op.
+     */
+    if (client->aux.client.req->enableBroadcast)
+        return;
+    assert(list_count(client->readers) <= 1);
+
+    /*  A R/O or R/W client will have exactly one console writer.
+     */
+    assert(list_count(client->writers) == 1);
+    console = list_peek(client->writers);
+    assert(is_console_obj(console));
+
+    /*  A R/O client will have no readers,
+     *    while a R/W client will have only one reader.
+     */
+    gotWrite = list_count(client->readers);
+
+    str = create_format_string("%sConnecting %s to console [%s]%s",
+        CONMAN_MSG_PREFIX, (gotWrite ? "R/O" : "R/W"),
+        console->name, CONMAN_MSG_SUFFIX);
+    write_obj_data(client, str, strlen(str), 1);
+    free(str);
+
+    if (gotWrite) {
+        client->aux.client.req->command = MONITOR;
+        unlink_objs(client, console);
+    }
+    else {
+        client->aux.client.req->command = CONNECT;
+        link_objs(client, console);
+    }
     return;
 }
 
@@ -241,7 +302,7 @@ static void perform_quiet_toggle(obj_t *client)
         op = "Enabled", action = "suppressed";
     else
         op = "Disabled", action = "displayed";
-    str = create_format_string( "%s%s quiet-mode -- info msgs will be %s%s",
+    str = create_format_string("%s%s quiet-mode -- info msgs will be %s%s",
         CONMAN_MSG_PREFIX, op, action, CONMAN_MSG_SUFFIX);
     /*
      *  Technically, this is an informational message.  But, it is marked as
@@ -265,11 +326,13 @@ static void perform_reset(obj_t *client)
  */
     ListIterator i;
     obj_t *console;
+    char *tty;
     char *now;
     char buf[MAX_LINE];
 
     assert(is_client_obj(client));
 
+    tty = client->aux.client.req->tty;
     now = create_short_time_string(0);
     i = list_iterator_create(client->readers);
     while ((console = list_next(i))) {
@@ -279,9 +342,11 @@ static void perform_reset(obj_t *client)
         console->gotReset = 1;
         log_msg(0, "Console [%s] reset by <%s@%s>", console->name,
             client->aux.client.req->user, client->aux.client.req->host);
-        snprintf(buf, sizeof(buf), "%sConsole [%s] reset by <%s@%s> at %s%s",
-            CONMAN_MSG_PREFIX, console->name, client->aux.client.req->user,
-            client->aux.client.req->host, now, CONMAN_MSG_SUFFIX);
+        snprintf(buf, sizeof(buf),
+            "%sConsole [%s] reset by <%s@%s>%s%s at %s%s",
+            CONMAN_MSG_PREFIX, console->name,
+            client->aux.client.req->user, client->aux.client.req->host,
+            (tty ? " on " : ""), (tty ? tty : ""), now, CONMAN_MSG_SUFFIX);
         strcpy(&buf[sizeof(buf) - 3], "\r\n");
         notify_console_objs(console, buf);
     }

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-tty.c,v 1.38 2001/12/14 07:43:03 dun Exp $
+ *  $Id: client-tty.c,v 1.39 2001/12/30 21:21:17 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -30,8 +30,12 @@ static int write_to_stdout(client_conf_t *conf);
 static int send_esc_seq(client_conf_t *conf, char c);
 static int perform_break_esc(client_conf_t *conf, char c);
 static int perform_close_esc(client_conf_t *conf, char c);
+static int perform_force_esc(client_conf_t *conf, char c);
 static int perform_help_esc(client_conf_t *conf, char c);
 static int perform_info_esc(client_conf_t *conf, char c);
+static int perform_join_esc(client_conf_t *conf, char c);
+static int perform_log_replay_esc(client_conf_t *conf, char c);
+static int perform_monitor_esc(client_conf_t *conf, char c);
 static int perform_quiet_esc(client_conf_t *conf, char c);
 static int perform_reset_esc(client_conf_t *conf, char c);
 static int perform_suspend_esc(client_conf_t *conf, char c);
@@ -52,6 +56,14 @@ void connect_console(client_conf_t *conf)
 
     assert(conf->req->sd >= 0);
     assert((conf->req->command == CONNECT) || (conf->req->command == MONITOR));
+    assert(list_count(conf->req->consoles) > 0);
+
+    /*  If only one console was selected for a broadcast, then
+     *    the session is placed into R/W mode instead of W/O mode.
+     *    So update the req accordingly.
+     */
+    if (list_count(conf->req->consoles) == 1)
+        conf->req->enableBroadcast = 0;
 
     if (!isatty(STDIN_FILENO))
         err_msg(0, "Standard Input is not a terminal device.");
@@ -97,12 +109,12 @@ void connect_console(client_conf_t *conf)
     }
 
     if (close(conf->req->sd) < 0)
-        err_msg(errno, "Unable to close connection to %s:%d",
+        err_msg(errno, "Unable to close connection to <%s:%d>",
             conf->req->host, conf->req->port);
     conf->req->sd = -1;
 
     if (!conf->isClosedByClient)
-        locally_display_status(conf, "terminated by peer");
+        locally_display_status(conf, "terminated by server");
 
     set_tty_mode(&conf->tty, STDIN_FILENO);
     return;
@@ -151,12 +163,18 @@ static int read_from_stdin(client_conf_t *conf)
             return(perform_break_esc(conf, c));
         case ESC_CHAR_CLOSE:
             return(perform_close_esc(conf, c));
+        case ESC_CHAR_FORCE:
+            return(perform_force_esc(conf, c));
         case ESC_CHAR_HELP:
             return(perform_help_esc(conf, c));
         case ESC_CHAR_INFO:
             return(perform_info_esc(conf, c));
+        case ESC_CHAR_JOIN:
+            return(perform_join_esc(conf, c));
         case ESC_CHAR_LOG:
-            return(send_esc_seq(conf, c));
+            return(perform_log_replay_esc(conf, c));
+        case ESC_CHAR_MONITOR:
+            return(perform_monitor_esc(conf, c));
         case ESC_CHAR_QUIET:
             return(perform_quiet_esc(conf, c));
         case ESC_CHAR_RESET:
@@ -200,7 +218,7 @@ static int read_from_stdin(client_conf_t *conf)
         if (write_n(conf->req->sd, buf, p - buf) < 0) {
             if (errno == EPIPE)
                 return(0);
-            err_msg(errno, "Unable to write to %s:%d",
+            err_msg(errno, "Unable to write to <%s:%d>",
                 conf->req->host, conf->req->port);
         }
     }
@@ -224,7 +242,7 @@ static int write_to_stdout(client_conf_t *conf)
         if (errno == EPIPE)
             return(0);
         if (errno != EINTR)
-            err_msg(errno, "Unable to read from %s:%d",
+            err_msg(errno, "Unable to read from <%s:%d>",
                 conf->req->host, conf->req->port);
     }
     if (n > 0) {
@@ -232,7 +250,7 @@ static int write_to_stdout(client_conf_t *conf)
             err_msg(errno, "Unable to write to stdout");
         if (conf->logd >= 0)
             if (write_n(conf->logd, buf, n) < 0)
-                err_msg(errno, "Unable to write to log \"%s\"", conf->log);
+                err_msg(errno, "Unable to write to \"%s\"", conf->log);
     }
     return(n);
 }
@@ -251,7 +269,7 @@ static int send_esc_seq(client_conf_t *conf, char c)
     if (write_n(conf->req->sd, buf, sizeof(buf)) < 0) {
         if (errno == EPIPE)
             return(0);
-        err_msg(errno, "Unable to write to %s:%d",
+        err_msg(errno, "Unable to write to <%s:%d>",
             conf->req->host, conf->req->port);
     }
     return(1);
@@ -280,11 +298,28 @@ static int perform_close_esc(client_conf_t *conf, char c)
     locally_display_status(conf, "closed");
 
     if (shutdown(conf->req->sd, SHUT_WR) < 0) {
-        err_msg(errno, "Unable to shutdown connection to %s:%d",
+        err_msg(errno, "Unable to shutdown connection to <%s:%d>",
             conf->req->host, conf->req->port);
     }
     conf->isClosedByClient = 1;
     return(1);
+}
+
+
+static int perform_force_esc(client_conf_t *conf, char c)
+{
+/*  Changes a R/O session into a R/W session by forcibly stealing the console
+ *    from existing console writers.
+ *  Returns 1 on success, or 0 if the socket connection is to be closed.
+ */
+    if (conf->req->command != MONITOR)
+        return(1);
+    assert(!conf->req->enableBroadcast);
+
+    conf->req->command = CONNECT;
+    conf->req->enableForce = 1;
+    conf->req->enableJoin = 0;
+    return(send_esc_seq(conf, c));
 }
 
 
@@ -319,29 +354,50 @@ static int perform_help_esc(client_conf_t *conf, char c)
             "  %2s%-2s -  Transmit a serial-break.\r\n", esc, tmp);
     }
 
+    if (conf->req->command == MONITOR) {
+        write_esc_char(ESC_CHAR_FORCE, tmp);
+        n = append_format_string(buf, sizeof(buf),
+            "  %2s%-2s -  Force write-privileges (console-stealing).\r\n",
+            esc, tmp);
+    }
+
     write_esc_char(ESC_CHAR_INFO, tmp);
     n = append_format_string(buf, sizeof(buf),
         "  %2s%-2s -  Display connection information.\r\n", esc, tmp);
 
-    write_esc_char(ESC_CHAR_LOG, tmp);
-    n = append_format_string(buf, sizeof(buf),
-        "  %2s%-2s -  Replay up to the last %d bytes of the log.\r\n",
-        esc, tmp, CONMAN_REPLAY_LEN);
-
-    if (conf->req->command == CONNECT) {
-        write_esc_char(ESC_CHAR_QUIET, tmp);
-        if (conf->req->enableQuiet)
-            n = append_format_string(buf, sizeof(buf), "  %2s%-2s -  "
-                "Disable quiet-mode (and display info msgs).\r\n", esc, tmp);
-        else
-            n = append_format_string(buf, sizeof(buf), "  %2s%-2s -  "
-                "Enable quiet-mode (and suppress info msgs).\r\n", esc, tmp);
+    if (conf->req->command == MONITOR) {
+        write_esc_char(ESC_CHAR_JOIN, tmp);
+        n = append_format_string(buf, sizeof(buf),
+            "  %2s%-2s -  Join write-privileges (console-sharing).\r\n",
+            esc, tmp);
     }
+
+    if (!conf->req->enableBroadcast) {
+        write_esc_char(ESC_CHAR_LOG, tmp);
+        n = append_format_string(buf, sizeof(buf),
+            "  %2s%-2s -  Replay up to the last %d bytes of the log.\r\n",
+            esc, tmp, CONMAN_REPLAY_LEN);
+    }
+
+    if ((conf->req->command == CONNECT) && (!conf->req->enableBroadcast)) {
+        write_esc_char(ESC_CHAR_MONITOR, tmp);
+        n = append_format_string(buf, sizeof(buf),
+            "  %2s%-2s -  Monitor without write-privileges (read-only).\r\n",
+            esc, tmp);
+    }
+
+    write_esc_char(ESC_CHAR_QUIET, tmp);
+    if (conf->req->enableQuiet)
+        n = append_format_string(buf, sizeof(buf), "  %2s%-2s -  "
+            "Disable quiet-mode (display info msgs).\r\n", esc, tmp);
+    else
+        n = append_format_string(buf, sizeof(buf), "  %2s%-2s -  "
+            "Enable quiet-mode (suppress info msgs).\r\n", esc, tmp);
 
     if ((conf->req->command == CONNECT) && (conf->req->enableReset)) {
         write_esc_char(ESC_CHAR_RESET, tmp);
         n = append_format_string(buf, sizeof(buf), "  %2s%-2s -  "
-            "Reset node associated with this console%s.\r\n", esc, tmp,
+            "Reset node%s associated with this console.\r\n", esc, tmp,
             (list_count(conf->req->consoles) == 1 ? "" : "s"));
     }
 
@@ -365,12 +421,15 @@ static int perform_info_esc(client_conf_t *conf, char c)
     char *str;
 
     if (list_count(conf->req->consoles) == 1) {
-        str = create_format_string("%sConnected to console [%s] on %s:%d%s",
-            CONMAN_MSG_PREFIX, (char *) list_peek(conf->req->consoles),
+        str = create_format_string(
+            "%sConnected %s to console [%s] on <%s:%d>%s",
+            CONMAN_MSG_PREFIX, (conf->req->command == MONITOR ? "R/O" : "R/W"),
+            (char *) list_peek(conf->req->consoles),
             conf->req->host, conf->req->port, CONMAN_MSG_SUFFIX);
     }
     else {
-        str = create_format_string("%sBroadcasting to %d consoles on %s:%d%s",
+        str = create_format_string(
+            "%sBroadcasting to %d consoles on <%s:%d>%s",
             CONMAN_MSG_PREFIX, list_count(conf->req->consoles),
             conf->req->host, conf->req->port, CONMAN_MSG_SUFFIX);
     }
@@ -381,15 +440,60 @@ static int perform_info_esc(client_conf_t *conf, char c)
 }
 
 
+static int perform_join_esc(client_conf_t *conf, char c)
+{
+/*  Changes a R/O session into a R/W session by joining with existing
+ *    console writers.
+ *  Returns 1 on success, or 0 if the socket connection is to be closed.
+ */
+    if (conf->req->command != MONITOR)
+        return(1);
+    assert(!conf->req->enableBroadcast);
+
+    conf->req->command = CONNECT;
+    conf->req->enableForce = 0;
+    conf->req->enableJoin = 1;
+    return(send_esc_seq(conf, c));
+}
+
+
+static int perform_log_replay_esc(client_conf_t *conf, char c)
+{
+/*  Requests the server to replay the log of the connected console.
+ *  Returns 1 on success, or 0 if the socket connection is to be closed.
+ */
+    if (conf->req->enableBroadcast)
+        return(1);
+    assert(list_count(conf->req->consoles) == 1);
+
+    return(send_esc_seq(conf, c));
+}
+
+
+static int perform_monitor_esc(client_conf_t *conf, char c)
+{
+/*  Changes a R/W session into a R/O session by dropping write-privileges
+ *    from the console.
+ *  Returns 1 on success, or 0 if the socket connection is to be closed.
+ */
+    if (conf->req->command != CONNECT)
+        return(1);
+    if (conf->req->enableBroadcast)
+        return(1);
+
+    conf->req->command = MONITOR;
+    conf->req->enableForce = 0;
+    conf->req->enableJoin = 0;
+    return(send_esc_seq(conf, c));
+}
+
+
 static int perform_quiet_esc(client_conf_t *conf, char c)
 {
 /*  Toggles whether the client connection is "quiet" (ie, whether or not
  *    informational messages will be displayed).
  *  Returns 1 on success, or 0 if the socket connection is to be closed.
  */
-    if (conf->req->command != CONNECT)
-        return(1);
-
     conf->req->enableQuiet ^= 1;
     return(send_esc_seq(conf, c));
 }
@@ -425,7 +529,7 @@ static int perform_suspend_esc(client_conf_t *conf, char c)
     set_tty_mode(&conf->tty, STDIN_FILENO);
 
     if (kill(getpid(), SIGTSTP) < 0)
-        err_msg(errno, "Unable to suspend client (pid %d)", getpid());
+        err_msg(errno, "Unable to suspend client (pid %d)", (int) getpid());
 
     get_tty_raw(&tty, STDIN_FILENO);
     set_tty_mode(&tty, STDIN_FILENO);

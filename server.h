@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.41 2001/12/27 20:10:50 dun Exp $
+ *  $Id: server.h,v 1.42 2001/12/30 21:21:17 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -274,6 +274,8 @@ int find_obj(obj_t *obj, obj_t *key);
 void notify_console_objs(obj_t *console, char *msg);
 
 void link_objs(obj_t *src, obj_t *dst);
+
+void unlink_objs(obj_t *src, obj_t *dst);
 
 void unlink_obj(obj_t *obj);
 
