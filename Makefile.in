@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
-# $Id: Makefile.in,v 1.50.2.2 2003/07/24 20:16:04 dun Exp $
+# $Id: Makefile.in,v 1.50.2.3 2003/12/04 00:03:47 dun Exp $
 ##
 
 PROJECT=	conman
@@ -11,6 +11,7 @@ SHELL=		@SHELL@
 CC=		@CC@
 DEFS=		@DEFS@
 CFLAGS=		@CFLAGS@
+CPPFLAGS=	@CPPFLAGS@
 LDFLAGS=	@LDFLAGS@
 LIBS=		@LIBS@
 RANLIB=		@RANLIB@

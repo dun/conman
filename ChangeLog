@@ -1,5 +1,9 @@
 2003-12-03  Chris Dunlap  <cdunlap@llnl.gov>
 
+        * Makefile.in, config.h.in, configure, configure.ac:
+	Updated to autoconf-2.57.  Enable tcp-wrappers by default if possible.
+	Added CPPFLAGS AC-substitution to support non-standard includes.
+
 	* server-logfile.c (write_log_data):
 	Fixed compiler warnings under Tru64 v5.1 {gnats:343}.
 

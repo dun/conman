@@ -2,7 +2,7 @@
 # ConMan AutoConf Configuration
 #   Process this file with autoconf to produce a configure script.
 #******************************************************************************
-# $Id: configure.ac,v 1.22 2002/05/16 04:34:28 dun Exp $
+# $Id: configure.ac,v 1.22.2.1 2003/12/04 00:03:47 dun Exp $
 #******************************************************************************
 # Copyright (C) 2001-2002 The Regents of the University of California.
 # Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -193,7 +193,6 @@ AH_BOTTOM(
 
 dnl Check for TCP Wrappers.
 dnl
-AC_MSG_CHECKING(whether to use TCP Wrappers)
 AC_ARG_WITH(tcp-wrappers,
   AC_HELP_STRING([--with-tcp-wrappers], [use Wietse Venema's TCP Wrappers]),
   [ case "$withval" in
@@ -204,20 +203,25 @@ AC_ARG_WITH(tcp-wrappers,
     esac
   ]
 )
-AC_MSG_RESULT(${tcp_wrappers=no})
-if test "$tcp_wrappers" = yes; then
-  AC_CHECK_LIB(wrap, main,
-    [ AC_DEFINE_UNQUOTED(WITH_TCP_WRAPPERS, 1, [Define if using TCP Wrappers.])
-      LIBS="-lwrap $LIBS"
-    ], [tcp_wrappers=no]
-  )
+if test "$tcp_wrappers" != no; then
+  AC_CHECK_HEADER(tcpd.h, ac_have_tcpd_h=yes)
+  AC_CHECK_LIB(wrap, main, ac_have_libwrap=yes)
+  if test "$ac_have_tcpd_h" = yes -a "$ac_have_libwrap" = yes; then
+    AC_DEFINE_UNQUOTED(WITH_TCP_WRAPPERS, 1, [Define if using TCP Wrappers.])
+    LIBS="-lwrap $LIBS"
+    tcp_wrappers=yes
+  else
+    tcp_wrappers=no
+  fi
   dnl
   dnl If libnsl is already getting linked, there's no reason to do it again.
   dnl
-  if test "$ac_cv_lib_nsl_inet_addr" != yes; then
+  if test "$tcp_wrappers" = yes -a "$ac_cv_lib_nsl_inet_addr" != yes; then
     AC_CHECK_LIB(nsl, yp_get_default_domain)
   fi
 fi
+AC_MSG_CHECKING(whether to use TCP Wrappers)
+AC_MSG_RESULT(${tcp_wrappers=no})
 
 
 dnl Check for ConMan daemon conf file.
