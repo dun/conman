@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-tty.c,v 1.21 2001/06/15 17:04:29 dun Exp $
+ *  $Id: client-tty.c,v 1.22 2001/06/15 17:28:03 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -27,10 +27,10 @@ static void set_raw_tty_mode(int fd, struct termios *old);
 static void restore_tty_mode(int fd, struct termios *new);
 static int read_from_stdin(client_conf_t *conf);
 static int write_to_stdout(client_conf_t *conf);
-static void send_esc_seq(client_conf_t *conf, char c);
-static void perform_close_esc(client_conf_t *conf, char c);
-static void perform_help_esc(client_conf_t *conf, char c);
-static void perform_suspend_esc(client_conf_t *conf, char c);
+static int send_esc_seq(client_conf_t *conf, char c);
+static int perform_close_esc(client_conf_t *conf, char c);
+static int perform_help_esc(client_conf_t *conf, char c);
+static int perform_suspend_esc(client_conf_t *conf, char c);
 static void locally_echo_esc(char e, char c);
 static void locally_display_status(client_conf_t *conf, char *msg);
 
@@ -183,20 +183,15 @@ static int read_from_stdin(client_conf_t *conf)
         mode = EOL;
         switch(c) {
         case ESC_CHAR_BREAK:
-            send_esc_seq(conf, c);
-            return(1);
+            return(send_esc_seq(conf, c));
         case ESC_CHAR_CLOSE:
-            perform_close_esc(conf, c);
-            return(1);
+            return(perform_close_esc(conf, c));
         case ESC_CHAR_HELP:
-            perform_help_esc(conf, c);
-            return(1);
+            return(perform_help_esc(conf, c));
         case ESC_CHAR_LOG:
-            send_esc_seq(conf, c);
-            return(1);
+            return(send_esc_seq(conf, c));
         case ESC_CHAR_SUSPEND:
-            perform_suspend_esc(conf, c);
-            return(1);
+            return(perform_suspend_esc(conf, c));
         }
         if (c != esc) {
             /*
@@ -254,6 +249,8 @@ static int write_to_stdout(client_conf_t *conf)
      *    escape sequences.  For human input, this isn't too bad.
      */
     while ((n = read(conf->req->sd, buf, sizeof(buf))) < 0) {
+        if (errno == EPIPE)
+            return(0);
         if (errno != EINTR)
             err_msg(errno, "read() failed on fd=%d", conf->req->sd);
     }
@@ -268,23 +265,29 @@ static int write_to_stdout(client_conf_t *conf)
 }
 
 
-static void send_esc_seq(client_conf_t *conf, char c)
+static int send_esc_seq(client_conf_t *conf, char c)
 {
 /*  Transmit an escape sequence to the server.
+ *  Returns 1 on success, or 0 if the socket connection has been closed.
  */
     unsigned char buf[2];
 
     buf[0] = ESC_CHAR;
     buf[1] = c;
-    if (write_n(conf->req->sd, buf, sizeof(buf)) < 0)
+
+    if (write_n(conf->req->sd, buf, sizeof(buf)) < 0) {
+        if (errno == EPIPE)
+            return(0);
         err_msg(errno, "write() failed on fd=%d", STDOUT_FILENO);
-    return;
+    }
+    return(1);
 }
 
 
-static void perform_close_esc(client_conf_t *conf, char c)
+static int perform_close_esc(client_conf_t *conf, char c)
 {
 /*  Perform a client-initiated close.
+ *  Returns 1 on success.
  */
     locally_echo_esc(conf->escapeChar, c);
 
@@ -294,13 +297,14 @@ static void perform_close_esc(client_conf_t *conf, char c)
         err_msg(errno, "shutdown() failed on fd=%d", conf->req->sd);
 
     conf->closedByClient = 1;
-    return;
+    return(1);
 }
 
 
-static void perform_help_esc(client_conf_t *conf, char c)
+static int perform_help_esc(client_conf_t *conf, char c)
 {
 /*  Display the "escape sequence" help.
+ *  Returns 1 on success.
  */
     char escChar[3];
     char escBreak[3];
@@ -333,20 +337,22 @@ static void perform_help_esc(client_conf_t *conf, char c)
     if (write_n(STDOUT_FILENO, str, strlen(str)) < 0)
         err_msg(errno, "write() failed on fd=%d", STDOUT_FILENO);
     free(str);
-    return;
+    return(1);
 }
 
 
-static void perform_suspend_esc(client_conf_t *conf, char c)
+static int perform_suspend_esc(client_conf_t *conf, char c)
 {
 /*  Suspend the client.  While suspended, anything sent by the server
  *    will be buffered by the network layer until the client is resumed.
  *    Once the network buffers are full, the server should overwrite
  *    data to this client in its circular write buffer.
+ *  Returns 1 on success, or 0 if the socket connection has been closed.
  */
     locally_echo_esc(conf->escapeChar, c);
 
-    send_esc_seq(conf, c);
+    if (!send_esc_seq(conf, c))
+        return(0);
     locally_display_status(conf, "suspended");
     restore_tty_mode(STDIN_FILENO, &conf->term);
 
@@ -355,9 +361,9 @@ static void perform_suspend_esc(client_conf_t *conf, char c)
 
     set_raw_tty_mode(STDIN_FILENO, &conf->term);
     locally_display_status(conf, "resumed");
-    send_esc_seq(conf, c);
-
-    return;
+    if (!send_esc_seq(conf, c))
+        return(0);
+    return(1);
 }
 
 
