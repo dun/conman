@@ -2,7 +2,7 @@
  *  server.h
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server.h,v 1.4 2001/05/14 16:22:09 dun Exp $
+ *  $Id: server.h,v 1.5 2001/05/15 19:45:31 dun Exp $
 \******************************************************************************/
 
 
@@ -69,6 +69,11 @@ typedef struct server_conf {
     List             objs;		/* list of all server objects         */
 } server_conf_t;
 
+typedef struct client_args {
+    int              sd;		/* socket descriptor of new client    */
+    server_conf_t   *conf;		/* server's configuration             */
+} client_arg_t;
+
 
 /*******************\
 **  server-conf.c  **
@@ -121,7 +126,7 @@ int write_obj_data(obj_t *obj, void *src, int len);
 **  server-sock.c  **
 \*******************/
 
-void process_client(server_conf_t *conf);
+void process_client(client_arg_t *args);
 
 
 #endif /* !_SERVER_H */

@@ -2,7 +2,7 @@
  *  server-sock.c  
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server-sock.c,v 1.5 2001/05/14 21:55:27 dun Exp $
+ *  $Id: server-sock.c,v 1.6 2001/05/15 19:45:30 dun Exp $
 \******************************************************************************/
 
 
@@ -54,7 +54,7 @@ static void perform_connect_cmd(req_t *req, server_conf_t *conf);
 static void perform_execute_cmd(req_t *req, server_conf_t *conf);
 
 
-void process_client(server_conf_t *conf)
+void process_client(client_arg_t *args)
 {
 /*  The thread responsible for accepting a client connection
  *    and processing the request.
@@ -65,29 +65,24 @@ void process_client(server_conf_t *conf)
  */
     int rc;
     int sd;
+    server_conf_t *conf;
     struct sockaddr_in addr;
     socklen_t addrlen = sizeof(addr);
     char buf[MAX_LINE];
     req_t *req;
 
+    assert(args);
+    sd = args->sd;
+    conf = args->conf;
+    free(args);
+
+    DPRINTF("Processing new client.\n");
+
     if ((rc = pthread_detach(pthread_self())) != 0)
         err_msg(rc, "pthread_detach() failed");
 
-    /*  The accept() is performed within this thread instead of mux_io()
-     *    because this routine needs to have the conf ptr passed in as an
-     *    arg in order to perform query_consoles(), etc.
-     *  Sure, I could have created a struct in which to stuff both the
-     *    conf ptr and the sd of the new connection, but that seemed silly.
-     */
-    while ((sd = accept(conf->ld, &addr, &addrlen)) < 0) {
-        if (errno == EINTR)
-            continue;
-        if ((errno == EAGAIN) || (errno == EWOULDBLOCK))
-            return;
-        if (errno == ECONNABORTED)
-            return;
-        err_msg(errno, "accept() failed");
-    }
+    if (getpeername(sd, &addr, &addrlen) < 0)
+        err_msg(errno, "getpeername() failed");
 
     if (!inet_ntop(AF_INET, &addr.sin_addr, buf, sizeof(buf))) {
         err_msg(errno, "inet_ntop() failed");
@@ -140,8 +135,6 @@ void process_client(server_conf_t *conf)
         break;
     }
 
-    /*  FIX_ME: Is a pthread_exit() needed here?  Check the weird ps behavior.
-     */
     destroy_req(req);
     return;
 

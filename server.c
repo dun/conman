@@ -2,7 +2,7 @@
  *  server.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server.c,v 1.4 2001/05/14 16:22:09 dun Exp $
+ *  $Id: server.c,v 1.5 2001/05/15 19:45:31 dun Exp $
 \******************************************************************************/
 
 
@@ -31,6 +31,7 @@ static void exit_handler(int signum);
 static void enable_console_logging(server_conf_t *conf);
 static void create_listen_socket(server_conf_t *conf);
 static void mux_io(server_conf_t *conf);
+static void accept_client(server_conf_t *conf);
 
 
 static int done = 0;
@@ -52,6 +53,9 @@ int main(int argc, char *argv[])
     Signal(SIGPIPE, SIG_IGN);
     Signal(SIGINT, exit_handler);
     Signal(SIGTERM, exit_handler);
+
+    /* FIX_ME: Exit handlers do not seem to be effective after daemonize().
+     */
 
     /*  Server's log file must be opened AFTER daemonize(),
      *    otherwise its file descriptor will be closed.
@@ -198,8 +202,6 @@ static void mux_io(server_conf_t *conf)
     struct timeval tval;
     int maxfd;
     int n;
-    int rc;
-    pthread_t tid;
     obj_t *obj;
 
     if (list_is_empty(conf->objs)) {
@@ -251,15 +253,11 @@ static void mux_io(server_conf_t *conf)
             else if (done)
                 /* i need a */ break;
         }
-
         if (n <= 0)
             /* should i */ continue;
 
-        if (FD_ISSET(conf->ld, &rset)) {
-            if ((rc = pthread_create(&tid, NULL,
-              (PthreadFunc) process_client, (void *) conf)) != 0)
-                err_msg(rc, "pthread_create() failed");
-        }
+        if (FD_ISSET(conf->ld, &rset))
+            accept_client(conf);
 
         list_iterator_reset(i);
         while ((obj = list_next(i))) {
@@ -273,5 +271,49 @@ static void mux_io(server_conf_t *conf)
     }
 
     list_iterator_destroy(i);
+    return;
+}
+
+
+static void accept_client(server_conf_t *conf)
+{
+/*  The new socket connection must be accept()'d within the select() loop.
+ *    O/w, the following scenario could occur:  Read activity would be
+ *    select()'d on the listen socket.  A new thread would be created to
+ *    process this request.  Before this new thread is scheduled and the
+ *    socket connection is accept()'d, the select() loop begins its next
+ *    iteration.  It notices read activity on the listen socket from the
+ *    client that has not yet been accepted, so a new thread is created.
+ *    This new thread will block on the accept() since there is only one
+ *    client knockin' at the door.
+ */
+    int sd;
+    client_arg_t *args;
+    int rc;
+    pthread_t tid;
+
+    DPRINTF("Acceping new client.\n");
+    while ((sd = accept(conf->ld, NULL, NULL)) < 0) {
+        if (errno == EINTR)
+            continue;
+        if ((errno == EAGAIN) || (errno == EWOULDBLOCK))
+            return;
+        if (errno == ECONNABORTED)
+            return;
+        err_msg(errno, "accept() failed");
+    }
+
+    /*  Create a tmp struct to hold two args to pass to the thread.
+     *  Note that the thread is responsible for freeing this memory.
+     */
+    if (!(args = malloc(sizeof(client_arg_t))))
+        err_msg(0, "Out of memory");
+    args->sd = sd;
+    args->conf = conf;
+
+    if ((rc = pthread_create(&tid, NULL,
+      (PthreadFunc) process_client, args)) != 0)
+        err_msg(rc, "pthread_create() failed");
+
     return;
 }
