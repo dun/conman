@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.h,v 1.28 2001/12/30 21:21:17 dun Exp $
+ *  $Id: common.h,v 1.29 2002/01/14 17:13:05 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -124,17 +124,17 @@ enum proto_toks {
 /*
  *  Keep enums in sync w/ common.c:proto_strs[].
  */
-    CONMAN_TOK_OK = LEX_TOK_OFFSET,
-    CONMAN_TOK_ERROR,
-    CONMAN_TOK_BROADCAST,
+    CONMAN_TOK_BROADCAST = LEX_TOK_OFFSET,
     CONMAN_TOK_CODE,
     CONMAN_TOK_CONNECT,
     CONMAN_TOK_CONSOLE,
+    CONMAN_TOK_ERROR,
     CONMAN_TOK_FORCE,
     CONMAN_TOK_HELLO,
     CONMAN_TOK_JOIN,
     CONMAN_TOK_MESSAGE,
     CONMAN_TOK_MONITOR,
+    CONMAN_TOK_OK,
     CONMAN_TOK_OPTION,
     CONMAN_TOK_QUERY,
     CONMAN_TOK_QUIET,

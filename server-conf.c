@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.37 2001/12/30 20:08:55 dun Exp $
+ *  $Id: server-conf.c,v 1.38 2002/01/14 17:13:05 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -28,6 +28,9 @@
 
 
 enum server_conf_toks {
+/*
+ *  Keep enums in sync w/ server_conf_strs[].
+ */
     SERVER_CONF_CONSOLE = LEX_TOK_OFFSET,
     SERVER_CONF_DEV,
     SERVER_CONF_GLOBAL,
@@ -50,6 +53,10 @@ enum server_conf_toks {
 };
 
 static char *server_conf_strs[] = {
+/*
+ *  Keep strings in sync w/ server_conf_toks enum.
+ *  These must be sorted in a case-insensitive manner.
+ */
     "CONSOLE",
     "DEV",
     "GLOBAL",

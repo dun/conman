@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.c,v 1.21 2001/12/26 21:01:51 dun Exp $
+ *  $Id: common.c,v 1.22 2002/01/14 17:13:05 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -21,18 +21,19 @@
 char *proto_strs[] = {
 /*
  *  Keep strings in sync w/ common.h:proto_toks enum.
+ *  These must be sorted in a case-insensitive manner.
  */
-    "OK",
-    "ERROR",
     "BROADCAST",
     "CODE",
     "CONNECT",
     "CONSOLE",
+    "ERROR",
     "FORCE",
     "HELLO",
     "JOIN",
     "MESSAGE",
     "MONITOR",
+    "OK",
     "OPTION",
     "QUERY",
     "QUIET",

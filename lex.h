@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: lex.h,v 1.6 2001/12/15 14:33:49 dun Exp $
+ *  $Id: lex.h,v 1.7 2002/01/14 17:13:05 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -87,7 +87,8 @@ Lex lex_create(void *buf, char *toks[]);
  *  The text to be lexed is specified by the NUL-terminated buffer (buf);
  *    this buffer WILL NOT be modified by the lexer.
  *  The NULL-terminated array of strings (toks) defines the set of tokens
- *    that will be recognized by the lexer.
+ *    that will be recognized by the lexer; these strings must be listed
+ *    in a case-insensitive ascending order (ie, according to strcasecmp).
  *  Note: Abadoning a lexer without calling lex_destroy() will result
  *    in a memory leak.
  */

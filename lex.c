@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: lex.c,v 1.13 2001/12/15 14:33:49 dun Exp $
+ *  $Id: lex.c,v 1.14 2002/01/14 17:13:05 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "lex.h" for documentation on public functions.
@@ -46,10 +46,11 @@
 struct lexer_state {
     char          *pos;			/* current ptr in buffer              */
     char         **toks;		/* array of recognized strings        */
+    int            numtoks;		/* number of strings in toks[]        */
     char           text[LEX_MAX_STR];	/* tmp buffer for lexed strings       */
-    int	           prev;		/* prev token returned by lex_next()  */
-    int	           line;		/* current line number in buffer      */
-    int	           gotEOL;		/* true if next token is on new line  */
+    int            prev;		/* prev token returned by lex_next()  */
+    int            line;		/* current line number in buffer      */
+    int            gotEOL;		/* true if next token is on new line  */
 #ifndef NDEBUG
     unsigned int   magic;		/* sentinel for asserting validity    */
 #endif /* NDEBUG */
@@ -60,7 +61,8 @@ struct lexer_state {
 **  Prototypes  **
 \****************/
 
-static int lookup_token(char *str, char *toks[]);
+static int validate_sorted_tokens(char *toks[]);
+static int lookup_token(char *str, char *toks[], int numtoks);
 
 
 /************\
@@ -79,13 +81,17 @@ static int lookup_token(char *str, char *toks[]);
 Lex lex_create(void *buf, char *toks[])
 {
     Lex l;
+    int n;
 
     assert(buf != NULL);
+    assert(validate_sorted_tokens(toks) >= 0);
 
     if (!(l = (Lex) malloc(sizeof(struct lexer_state))))
         return(out_of_memory());
     l->pos = buf;
     l->toks = toks;
+    for (n=0; toks[n] != NULL; n++) {;}
+    l->numtoks = n;
     l->text[0] = '\0';
     l->prev = 0;
     l->line = 0;
@@ -179,7 +185,7 @@ int lex_next(Lex l)
                 memcpy(l->text, l->pos, len);
                 l->text[len] = '\0';
                 l->pos = p;
-                return(l->prev = lookup_token(l->text, l->toks));
+                return(l->prev = lookup_token(l->text, l->toks, l->numtoks));
             }
             else if (isdigit((int)*l->pos)
               || (((*l->pos == '-') || (*l->pos == '+'))
@@ -224,23 +230,64 @@ const char * lex_text(Lex l)
 }
 
 
-static int lookup_token(char *str, char *toks[])
+#ifndef HAVE_STRCASECMP
+static int xstrcasecmp(const char *s1, const char *s2)
 {
-/*  Internal function to determine whether the string (str) is in
- *    the NULL-terminated array of strings (toks).
- *  Returns the token corresponding to the matched string in the
- *    array (toks), or the generic string token if no match is found.
+/*  Compares the two strings (s1) and (s2), ignoring the case of the chars.
  */
-    int i;
+    const char *p, *q;
+
+    p = s1;
+    q = s2;
+    while (*p && toupper((int) *p) == toupper((int) *q))
+        p++, q++;
+    return(toupper((int) *p) - toupper((int) *q));
+}
+#else
+#  define xstrcasecmp strcasecmp
+#endif /* !HAVE_STRCASECMP */
+
+
+static int validate_sorted_tokens(char *toks[])
+{
+/*  Determines whether the NULL-terminated array of strings (toks) is sorted.
+ *  Returns 0 if the array is sorted; o/w, returns -1.
+ */
+    char **pp;
     char *p, *q;
 
+    if ((pp = toks) && *pp) {
+        for (p=*pp++, q=*pp++; q; p=q, q=*pp++) {
+            if (xstrcasecmp(p, q) > 0)
+                return(-1);
+        }
+    }
+    return(0);
+}
+
+
+static int lookup_token(char *str, char *toks[], int numtoks)
+{
+/*  Determines if and where the string (str) is in the NULL-terminated array
+ *    of (numtoks) sorted strings (toks).
+ *  Returns the token corresponding to the matched string in the array (toks),
+ *    or the generic string token if no match is found.
+ */
+    int low, middle, high;
+    int x;
+
     if (toks) {
-        for (i=0; (q=toks[i]) != NULL; i++) {
-            p = str;
-            while (*p && toupper((int) *p) == toupper((int) *q))
-                p++, q++;
-            if (!*p && !*q)		/* token found, whoohoo! */
-                return(i + LEX_TOK_OFFSET);
+        low = 0;
+        high = numtoks - 1;
+        while (low <= high) {
+            middle = (low + high) / 2;
+            x = xstrcasecmp(str, toks[middle]);
+            if (x < 0)
+                high = middle - 1;
+            else if (x > 0)
+                low = middle + 1;
+            else			/* token found, whoohoo! */
+                return(middle + LEX_TOK_OFFSET);
         }
     }
     return(LEX_STR);			/* token not found; doh! */
