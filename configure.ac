@@ -3,7 +3,7 @@ dnl
 dnl ConMan AutoConf Config Jazz
 dnl   by Chris Dunlap <cdunlap@llnl.gov>
 dnl
-dnl $Id: configure.ac,v 1.12 2001/12/28 20:13:06 dun Exp $
+dnl $Id: configure.ac,v 1.13 2001/12/28 22:34:33 dun Exp $
 
 
 dnl Prologue.
@@ -30,11 +30,11 @@ dnl
 AC_MSG_CHECKING(whether debugging is enabled)
 AC_ARG_ENABLE(debug,
   AC_HELP_STRING([--enable-debug], [enable debugging for development work]),
-  [ case "${enableval}" in
+  [ case "$enableval" in
       yes) debug=yes ;;
       no)  debug=no ;;
       *)   AC_MSG_RESULT(doh!)
-           AC_MSG_ERROR([bad value "${enableval}" for --enable-debug]) ;;
+           AC_MSG_ERROR([bad value "$enableval" for --enable-debug]) ;;
     esac
   ]
 )
@@ -191,7 +191,7 @@ dnl
 AC_MSG_CHECKING(for ConMan daemon conf file)
 AC_ARG_WITH(conman-conf,
   AC_HELP_STRING([--with-conman-conf=FILE],
-    [default conf file of ConMan daemon]),
+    [default conf file of daemon [[/etc/conman.conf]]]),
   [ if test -n "$withval" -a "$withval" != yes -a "$withval" != no; then
       CONMAN_CONF="$withval"
     fi
@@ -208,7 +208,7 @@ dnl
 AC_MSG_CHECKING(for ConMan daemon host name)
 AC_ARG_WITH(conman-host,
   AC_HELP_STRING([--with-conman-host=HOST],
-    [default host name or ip addr of ConMan daemon]),
+    [default host name of daemon [[127.0.0.1]]]),
   [ if test -n "$withval" -a "$withval" != yes -a "$withval" != no; then
       CONMAN_HOST="$withval"
     fi
@@ -225,7 +225,7 @@ dnl
 AC_MSG_CHECKING(for ConMan daemon port number)
 AC_ARG_WITH(conman-port,
   AC_HELP_STRING([--with-conman-port=PORT],
-    [default port number of ConMan daemon]),
+    [default port number of daemon [[7890]]]),
   [ if test `expr match "$withval" '[[0-9]]*$'` -gt 0; then
       CONMAN_PORT="$withval"
     fi
@@ -247,8 +247,7 @@ dnl
 AC_DEFINE(WITH_PTHREADS, 1, [Define if using Pthreads.])
 
 AH_BOTTOM(
-[/* Override default out_of_memory() macro definition.
- */
+[/* Override default out_of_memory() macro definition. */
 #include "errors.h"
 #define out_of_memory() (err_msg(0, "Out of memory"), (void *) NULL)]
 )

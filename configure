@@ -635,9 +635,9 @@ Optional Packages:
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
   --with-dmalloc          use Gray Watson's dmalloc library
   --with-tcp-wrappers     use Wietse Venema's TCP Wrappers
-  --with-conman-conf=FILE default conf file of ConMan daemon
-  --with-conman-host=HOST default host name or ip addr of ConMan daemon
-  --with-conman-port=PORT default port number of ConMan daemon
+  --with-conman-conf=FILE default conf file of daemon [/etc/conman.conf]
+  --with-conman-host=HOST default host name of daemon [127.0.0.1]
+  --with-conman-port=PORT default port number of daemon [7890]
 
 Some influential environment variables:
   CC          C compiler command
@@ -976,13 +976,13 @@ echo $ECHO_N "checking whether debugging is enabled... $ECHO_C" >&6
 # Check whether --enable-debug or --disable-debug was given.
 if test "${enable_debug+set}" = set; then
   enableval="$enable_debug"
-   case "${enableval}" in
+   case "$enableval" in
       yes) debug=yes ;;
       no)  debug=no ;;
       *)   echo "$as_me:982: result: doh!" >&5
 echo "${ECHO_T}doh!" >&6
-           { { echo "$as_me:984: error: bad value \"${enableval}\" for --enable-debug" >&5
-echo "$as_me: error: bad value \"${enableval}\" for --enable-debug" >&2;}
+           { { echo "$as_me:984: error: bad value \"$enableval\" for --enable-debug" >&5
+echo "$as_me: error: bad value \"$enableval\" for --enable-debug" >&2;}
    { (exit 1); exit 1; }; } ;;
     esac
 
