@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.28 2001/09/18 00:10:08 dun Exp $
+ *  $Id: server.c,v 1.29 2001/09/21 05:52:05 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -298,7 +298,9 @@ static void mux_io(server_conf_t *conf)
             if (obj->fd < 0) {
                 continue;
             }
-            if (is_console_obj(obj) || is_client_obj(obj)) {
+            if ((is_telnet_obj(obj) && obj->aux.telnet.conState == TELCON_UP)
+              || is_serial_obj(obj)
+              || is_client_obj(obj)) {
                 FD_SET(obj->fd, &rset);
                 maxfd = MAX(maxfd, obj->fd);
             }
@@ -307,8 +309,9 @@ static void mux_io(server_conf_t *conf)
                 FD_SET(obj->fd, &wset);
                 maxfd = MAX(maxfd, obj->fd);
             }
-            else if (is_telnet_obj(obj)
+            if (is_telnet_obj(obj)
               && obj->aux.telnet.conState == TELCON_PENDING) {
+                FD_SET(obj->fd, &rset);
                 FD_SET(obj->fd, &wset);
                 maxfd = MAX(maxfd, obj->fd);
             }
@@ -327,6 +330,7 @@ static void mux_io(server_conf_t *conf)
         tval.tv_sec = 1;
         tval.tv_usec = 0;
 
+        DPRINTF("Entering select()...\n");
         while ((n = select(maxfd+1, &rset, &wset, NULL, &tval)) < 0) {
             if (errno != EINTR)
                 err_msg(errno, "Unable to multiplex I/O");
@@ -339,8 +343,10 @@ static void mux_io(server_conf_t *conf)
         if (FD_ISSET(conf->ld, &rset))
             accept_client(conf);
 
-        /*  If write_to_obj() returns -1, the obj's buffer has been flushed
-         *    and the obj is ready to be removed from the master objs list.
+        /*  If read_from_obj() or write_to_obj() returns -1,
+         *    the obj's buffer has been flushed.  If it is a telnet obj,
+         *    retain it and attempt to re-establish the connection;
+         *    o/w, give up and remove it from the master objs list.
          */
         list_iterator_reset(i);
         while ((obj = list_next(i))) {
@@ -348,48 +354,23 @@ static void mux_io(server_conf_t *conf)
             if (obj->fd < 0) {
                 continue;
             }
-            /*  Did the non-blocking connect complete successfully?
-             *    (cf. Stevens UNPv1 15.3 p409)
-             */
-            if ((is_telnet_obj(obj) && obj->aux.telnet.conState==TELCON_PENDING)
+            if (is_telnet_obj(obj)
+              && (obj->aux.telnet.conState == TELCON_PENDING)
               && (FD_ISSET(obj->fd, &rset) || FD_ISSET(obj->fd, &wset))) {
-                int err = 0;
-                int len = sizeof(err);
-                int rc = getsockopt(obj->fd, SOL_SOCKET, SO_ERROR, &err, &len);
-                /*
-                 *  If an error occurred, Berkeley-derived implementations
-                 *    return 0 with the pending error in 'err'.  But Solaris
-                 *    returns -1 with the pending error in 'errno'.  Sigh...
-                 */
-                if (rc < 0)
-                    err = errno;
-                if (err) {
-                    x_pthread_mutex_lock(&obj->bufLock);
-                    obj->aux.telnet.conState = TELCON_DOWN;
-                    x_pthread_mutex_unlock(&obj->bufLock);
-                    DPRINTF("Console [%s] is DOWN.\n", obj->name);
-                    log_msg(0, "Unable to open console [%s]: %s.",
-                        obj->name, strerror(err));
-                }
-                else {
-                    x_pthread_mutex_lock(&obj->bufLock);
-                    obj->aux.telnet.conState = TELCON_UP;
-                    x_pthread_mutex_unlock(&obj->bufLock);
-                    DPRINTF("Console [%s] is UP.\n", obj->name);
-                    send_telnet_cmd(obj, DO, TELOPT_SGA);
-                    send_telnet_cmd(obj, DO, TELOPT_ECHO);
-                }
+                connect_telnet_obj(obj);
                 continue;
             }
             if (FD_ISSET(obj->fd, &rset)) {
                 if (read_from_obj(obj, &wset) < 0) {
-                    list_delete(i);
+                    if (!is_telnet_obj(obj))
+                        list_delete(i);
                     continue;
                 }
             }
             if (FD_ISSET(obj->fd, &wset)) {
                 if (write_to_obj(obj) < 0)
-                    list_delete(i);
+                    if (!is_telnet_obj(obj))
+                        list_delete(i);
                     continue;
             }
         }

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.43 2001/09/17 22:08:13 dun Exp $
+ *  $Id: server-obj.c,v 1.44 2001/09/21 05:52:05 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -35,6 +35,43 @@ static obj_t * create_obj(
     server_conf_t *conf, char *name, int fd, enum obj_type type);
 static char * find_trailing_int_str(char *str);
 static void unlink_objs_helper(obj_t *src, obj_t *dst);
+static void notify_objs(List list1, List list2, char *msg);
+
+
+static obj_t * create_obj(
+    server_conf_t *conf, char *name, int fd, enum obj_type type)
+{
+/*  Creates an object of the specified (type) opened on (fd) and adds it
+ *    to the master objs list.
+ */
+    obj_t *obj;
+
+    assert(conf);
+    assert(name);
+    assert(type==CLIENT || type==LOGFILE || type==SERIAL || type==TELNET);
+
+    if (!(obj = malloc(sizeof(obj_t))))
+        err_msg(0, "Out of memory");
+    obj->name = create_string(name);
+    obj->fd = fd;
+    obj->bufInPtr = obj->bufOutPtr = obj->buf;
+    x_pthread_mutex_init(&obj->bufLock, NULL);
+    if (!(obj->readers = list_create(NULL)))
+        err_msg(0, "Out of memory");
+    if (!(obj->writers = list_create(NULL)))
+        err_msg(0, "Out of memory");
+    obj->type = type;
+    obj->gotBufWrap = 0;
+    obj->gotEOF = 0;
+
+    /*  Add obj to the master conf->objs list.
+     */
+    if (!list_append(conf->objs, obj))
+        err_msg(0, "Out of memory");
+
+    DPRINTF("Created object [%s] on fd=%d.\n", obj->name, obj->fd);
+    return(obj);   
+}
 
 
 obj_t * create_client_obj(server_conf_t *conf, req_t *req)
@@ -151,7 +188,7 @@ obj_t * create_serial_obj(
  *  Returns the new object, or NULL on error.
  */
     ListIterator i;
-    obj_t *console;
+    obj_t *serial;
     int fd = -1;
     struct termios tty;
 
@@ -167,18 +204,18 @@ obj_t * create_serial_obj(
      */
     if (!(i = list_iterator_create(conf->objs)))
         err_msg(0, "Out of memory");
-    while ((console = list_next(i))) {
-        if (is_console_obj(console) && !strcmp(console->name, name)) {
+    while ((serial = list_next(i))) {
+        if (is_console_obj(serial) && !strcmp(serial->name, name)) {
             log_msg(0, "Ignoring duplicate console name \"%s\".", name);
             break;
         }
-        if (is_serial_obj(console) && !strcmp(console->aux.serial.dev, dev)) {
+        if (is_serial_obj(serial) && !strcmp(serial->aux.serial.dev, dev)) {
             log_msg(0, "Ignoring duplicate device name \"%s\".", dev);
             break;
         }
     }
     list_iterator_destroy(i);
-    if (console != NULL)
+    if (serial != NULL)
         goto err;
 
     if ((fd = open(dev, O_RDWR | O_NONBLOCK | O_NOCTTY)) < 0) {
@@ -207,15 +244,15 @@ obj_t * create_serial_obj(
      *  This is because the settings do not change until the obj is destroyed,
      *    at which time the termios is reverted back to its initial state.
      */
-    console = create_obj(conf, name, fd, SERIAL);
-    console->aux.serial.dev = create_string(dev);
-    console->aux.serial.logfile = NULL;
-    get_tty_mode(&console->aux.serial.tty, fd);
+    serial = create_obj(conf, name, fd, SERIAL);
+    serial->aux.serial.dev = create_string(dev);
+    serial->aux.serial.logfile = NULL;
+    get_tty_mode(&serial->aux.serial.tty, fd);
     get_tty_raw(&tty, fd);
-    set_serial_opts(&tty, console, opts);
+    set_serial_opts(&tty, serial, opts);
     set_tty_mode(&tty, fd);
 
-    return(console);
+    return(serial);
 
 err:
     if (fd >= 0)
@@ -234,129 +271,195 @@ obj_t * create_telnet_obj(
  *  Returns the new object, or NULL on error.
  */
     ListIterator i;
-    obj_t *console;
+    obj_t *telnet;
     struct sockaddr_in saddr;
-    int sd = -1;
-    const int on = 1;
-    telcon_state_t conState;
     int n;
+    char buf[MAX_LINE];
 
     assert(conf);
     assert(name && *name);
     assert(host && *host);
 
-    if ((sd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        log_msg(0, "Unable to create socket for [%s].", name);
-        goto err;
-    }
     memset(&saddr, 0, sizeof(saddr));
     saddr.sin_family = AF_INET;
     if (port <= 0) {
         log_msg(0, "Invalid port number %d.", port);
-        goto err;
+        return(NULL);
     }
     saddr.sin_port = htons(port);
     if (host_name_to_addr4(host, &saddr.sin_addr) < 0) {
         log_msg(0, "Unable to resolve host \"%s\".", host);
-        goto err;
+        return(NULL);
     }
 
     /*  Check for duplicate console names and terminal server locations.
      */
     if (!(i = list_iterator_create(conf->objs)))
         err_msg(0, "Out of memory");
-    while ((console = list_next(i))) {
-        if (is_console_obj(console) && !strcmp(console->name, name)) {
+    while ((telnet = list_next(i))) {
+        if (is_console_obj(telnet) && !strcmp(telnet->name, name)) {
             log_msg(0, "Ignoring duplicate console name \"%s\".", name);
             break;
         }
-        if (is_telnet_obj(console) && !memcmp(
-          &saddr, &console->aux.telnet.saddr, sizeof(struct sockaddr_in))) {
+        if (is_telnet_obj(telnet) && !memcmp(&saddr,
+          &telnet->aux.telnet.saddr, sizeof(telnet->aux.telnet.saddr))) {
             log_msg(0, "Ignoring duplicate terminal server \"%s:%d\".",
                 host, port);
             break;
         }
     }
     list_iterator_destroy(i);
-    if (console != NULL)
-        goto err;
+    if (telnet != NULL)
+        return(NULL);
 
-    set_descriptor_nonblocking(sd);
-    if (setsockopt(sd, SOL_SOCKET, SO_OOBINLINE, &on, sizeof(on)) < 0)
-        err_msg(errno, "Unable to set OOBINLINE socket option");
-    if (conf->enableKeepAlive) {
-        if (setsockopt(sd, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on)) < 0)
-            err_msg(errno, "Unable to set KEEPALIVE socket option");
+    if (host_addr4_to_name(&saddr.sin_addr, buf, sizeof(buf))) {
+        if ((host = strchr(buf, '.')))
+            *host = '\0';
+        host = buf;
     }
 
-again:
-    if (connect(sd, (struct sockaddr *) &saddr, sizeof(saddr)) < 0) {
-        if (errno == EINTR)
-            goto again;
-        if (errno != EINPROGRESS) {
-            log_msg(errno, "Unable to connect to [%s:%d]", host, port);
-            goto err;
-        }
-        conState = TELCON_PENDING;
-        DPRINTF("Console [%s] is PENDING.\n", name);
-    }
-    else {
-        conState = TELCON_UP;
-        DPRINTF("Console [%s] is UP.\n", name);
-    }
-
-    console = create_obj(conf, name, sd, TELNET);
-    console->aux.telnet.saddr = saddr;
-    console->aux.telnet.logfile = NULL;
-    console->aux.telnet.iac = -1;
-    console->aux.telnet.conState = conState;
+    telnet = create_obj(conf, name, -1, TELNET);
+    telnet->aux.telnet.host = create_string(host);
+    telnet->aux.telnet.port = port;
+    telnet->aux.telnet.saddr = saddr;
+    telnet->aux.telnet.logfile = NULL;
+    telnet->aux.telnet.iac = -1;
     for (n=0; n<NTELOPTS; n++)
-        console->aux.telnet.optState[n] = TELOPT_NO;
+        telnet->aux.telnet.optState[n] = TELOPT_NO;
+    telnet->aux.telnet.conState = TELCON_DOWN;
+    /*
+     *  Dup 'enableKeepAlive' to prevent passing 'conf' to connect_telnet_obj().
+     */
+    telnet->aux.telnet.enableKeepAlive = conf->enableKeepAlive;
 
-    return(console);
-
-err:
-    if (sd >= 0)
-        if (close(sd) < 0)
-            err_msg(errno, "close() failed on sd=%d", sd);
-    return(NULL);
+    connect_telnet_obj(telnet);
+    return(telnet);
 }
 
 
-static obj_t * create_obj(
-    server_conf_t *conf, char *name, int fd, enum obj_type type)
+int connect_telnet_obj(obj_t *telnet)
 {
-/*  Creates an object of the specified (type) opened on (fd) and adds it
- *    to the master objs list.
+/*  Establishes a non-blocking connect with the specified (telnet) obj.
+ *  Returns 0 if the connection is successfully completed; o/w, returns -1.
  */
-    obj_t *obj;
+    const int on = 1;
+    const int n = sizeof(on);
+    char *now;
+    char buf[MAX_LINE];
 
-    assert(conf);
-    assert(name);
-    assert(fd >= 0);
-    assert(type==CLIENT || type==LOGFILE || type==SERIAL || type==TELNET);
+    assert(telnet);
+    assert(is_telnet_obj(telnet));
+    assert(telnet->aux.telnet.conState != TELCON_UP);
 
-    if (!(obj = malloc(sizeof(obj_t))))
-        err_msg(0, "Out of memory");
-    obj->name = create_string(name);
-    obj->fd = fd;
-    obj->bufInPtr = obj->bufOutPtr = obj->buf;
-    x_pthread_mutex_init(&obj->bufLock, NULL);
-    if (!(obj->readers = list_create(NULL)))
-        err_msg(0, "Out of memory");
-    if (!(obj->writers = list_create(NULL)))
-        err_msg(0, "Out of memory");
-    obj->type = type;
-    obj->gotBufWrap = 0;
-    obj->gotEOF = 0;
+    if (telnet->aux.telnet.conState == TELCON_DOWN) {
+        /*
+         *  Initiate a non-blocking connection attempt.
+         */
+        if ((telnet->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+            err_msg(0, "Unable to create socket for [%s].", telnet->name);
+        if (setsockopt(telnet->fd, SOL_SOCKET, SO_OOBINLINE, &on, n) < 0)
+            err_msg(errno, "Unable to set OOBINLINE socket option");
+        if (telnet->aux.telnet.enableKeepAlive) {
+            if (setsockopt(telnet->fd, SOL_SOCKET, SO_KEEPALIVE, &on, n) < 0)
+                err_msg(errno, "Unable to set KEEPALIVE socket option");
+        }
+        set_descriptor_nonblocking(telnet->fd);
 
-    /*  Add obj to the master conf->objs list.
+        while (connect(telnet->fd,
+          (struct sockaddr *) &telnet->aux.telnet.saddr,
+          sizeof(telnet->aux.telnet.saddr)) < 0) {
+            if (errno == EINTR)
+                continue;
+            if (errno == EINPROGRESS)
+                telnet->aux.telnet.conState = TELCON_PENDING;
+            else
+                disconnect_telnet_obj(telnet);
+            return(-1);
+        }
+        /* Success!  Continue after if/else expr. */
+    }
+    else if (telnet->aux.telnet.conState == TELCON_PENDING) {
+        /*
+         *  Did the non-blocking connect complete successfully?
+         *    (cf. Stevens UNPv1 15.3 p409)
+         */
+        int err = 0;
+        int len = sizeof(err);
+        int rc = getsockopt(telnet->fd, SOL_SOCKET, SO_ERROR, &err, &len);
+        /*
+         *  If an error occurred, Berkeley-derived implementations
+         *    return 0 with the pending error in 'err'.  But Solaris
+         *    returns -1 with the pending error in 'errno'.  Sigh...
+         */
+        if (rc < 0)
+            err = errno;
+        if (err) {
+            disconnect_telnet_obj(telnet);
+            return(-1);
+        }
+        /* Success!  Continue after if/else expr. */
+    }
+    else {
+        err_msg(0, "Console [%s] is in an unknown telnet state %d.\n",
+            telnet->aux.telnet.conState);
+    }
+
+    /*  Success!
      */
-    if (!list_append(conf->objs, obj))
-        err_msg(0, "Out of memory");
+    DPRINTF("Console [%s] is UP.\n", telnet->name);
 
-    DPRINTF("Created object [%s] on fd=%d.\n", obj->name, obj->fd);
-    return(obj);   
+    now = create_short_time_string(0);
+    snprintf(buf, sizeof(buf), "%sConsole [%s] connected to <%s:%d> at %s%s",
+        CONMAN_MSG_PREFIX, telnet->name, telnet->aux.telnet.host,
+        telnet->aux.telnet.port, now, CONMAN_MSG_SUFFIX);
+    free(now);
+    buf[sizeof(buf) - 2] = '\n';
+    buf[sizeof(buf) - 1] = '\n';
+    notify_objs(telnet->readers, telnet->writers, buf);
+    telnet->aux.telnet.conState = TELCON_UP;
+
+    send_telnet_cmd(telnet, DO, TELOPT_SGA);
+    send_telnet_cmd(telnet, DO, TELOPT_ECHO);
+
+    return(0);
+}
+
+
+void disconnect_telnet_obj(obj_t *telnet)
+{
+/*  Tears down the connection with the specified (telnet) obj.
+ */
+    char buf[MAX_LINE];
+    char *now;
+
+    assert(telnet);
+    assert(telnet->fd > 0);
+    assert(is_telnet_obj(telnet));
+
+    DPRINTF("Console [%s] is DOWN.\n", telnet->name);
+
+    if (close(telnet->fd) < 0)
+        err_msg(errno, "close() of <%s:%d> failed for [%s]",
+            telnet->aux.telnet.host, telnet->aux.telnet.port, telnet->name);
+
+    telnet->fd = -1;
+
+    if (telnet->aux.telnet.conState == TELCON_UP) {
+        now = create_short_time_string(0);
+        snprintf(buf, sizeof(buf),
+            "%sConsole [%s] disconnected from <%s:%d> at %s%s",
+            CONMAN_MSG_PREFIX, telnet->name, telnet->aux.telnet.host,
+            telnet->aux.telnet.port, now, CONMAN_MSG_SUFFIX);
+        free(now);
+        buf[sizeof(buf) - 2] = '\n';
+        buf[sizeof(buf) - 1] = '\n';
+        notify_objs(telnet->readers, telnet->writers, buf);
+    }
+    telnet->aux.telnet.conState = TELCON_DOWN;
+
+    /*  SCHEDULE TIMER FOR ATTEMPT AT RE-ESTABLISHING THE CONNECTION. */
+
+    return;
 }
 
 
@@ -369,8 +472,6 @@ void destroy_obj(obj_t *obj)
         return;
 
     DPRINTF("Destroyed object [%s].\n", obj->name);
-
-    assert(obj->fd >= 0);
 /*
  *  FIX_ME? Ensure obj buf is flushed (if not suspended) before destruction.
  *
@@ -423,6 +524,8 @@ void destroy_obj(obj_t *obj)
         /* Do not destroy obj->aux.serial.logfile since it is only a ref. */
         break;
     case TELNET:
+        if (obj->aux.telnet.host)
+            free(obj->aux.telnet.host);
         /* Do not destroy obj->aux.telnet.logfile since it is only a ref. */
         break;
     default:
@@ -508,9 +611,6 @@ void link_objs(obj_t *src, obj_t *dst)
     int gotBcast, gotForce, gotJoin;
     char buf[MAX_LINE];
 
-    assert(src->fd >= 0);
-    assert(dst->fd >= 0);
-
     /*  If the dst console already has writers,
      *    display a warning if the request is to be joined
      *    or steal the console if the request is to be forced.
@@ -565,9 +665,6 @@ void unlink_objs(obj_t *obj1, obj_t *obj2)
 {
 /*  Destroys all links between (obj1) and (obj2).
  */
-    assert(obj1->fd >= 0);
-    assert(obj2->fd >= 0);
-
     unlink_objs_helper(obj1, obj2);
     unlink_objs_helper(obj2, obj1);
     DPRINTF("Unlinked objects [%s] and [%s].\n", obj1->name, obj2->name);
@@ -577,7 +674,7 @@ void unlink_objs(obj_t *obj1, obj_t *obj2)
 
 static void unlink_objs_helper(obj_t *src, obj_t *dst)
 {
-/*  FIX_ME: DOCUMENT_ME.
+/*  DOCUMENT_ME!
  */
     int n;
     ListIterator i;
@@ -592,6 +689,7 @@ static void unlink_objs_helper(obj_t *src, obj_t *dst)
     if (list_find_first(src->writers, (ListFindF) find_obj, dst))
         DPRINTF("Removing [%s] from [%s] writers.\n", dst->name, src->name);
     n = list_delete_all(src->writers, (ListFindF) find_obj, dst);
+
     if ((n > 0) && is_console_obj(src) && !list_is_empty(src->writers)) {
 
         assert(is_client_obj(dst));
@@ -628,13 +726,21 @@ static void unlink_objs_helper(obj_t *src, obj_t *dst)
 
 void shutdown_obj(obj_t *obj)
 {
-/*  FIX_ME: DOCUMENT_ME.
+/*  DOCUMENT_ME!
  */
     ListIterator i;
     obj_t *reader;
     obj_t *writer;
 
     assert(obj->fd >= 0);
+
+    /*  If a telent obj is shut down, tear down the existing connection
+     *    and attempt to initiate a new connection in the near future.
+     */
+    if (is_telnet_obj(obj)) {
+        disconnect_telnet_obj(obj);
+        return;
+    }
 
     if (!(i = list_iterator_create(obj->readers)))
         err_msg(0, "Out of memory");
@@ -649,6 +755,40 @@ void shutdown_obj(obj_t *obj)
     list_iterator_destroy(i);
 
     DPRINTF("Shutdown object [%s].\n", obj->name);
+    return;
+}
+
+
+void notify_objs(List list1, List list2, char *msg)
+{
+/*  DOCUMENT_ME!
+ */
+    ListIterator i;
+    obj_t *obj;
+
+    if (!list1)
+        list1 = list2;
+    if (!list1)
+        return;
+    if (!msg || !strlen(msg))
+        return;
+
+    if (!(i = list_iterator_create(list1)))
+        err_msg(0, "Out of memory");
+    while ((obj = list_next(i)))
+        write_obj_data(obj, msg, strlen(msg), 1);
+    list_iterator_destroy(i);
+
+    if (list2) {
+        if (!(i = list_iterator_create(list2)))
+            err_msg(0, "Out of memory");
+        while ((obj = list_next(i))) {
+            if (!list_find_first(list1, (ListFindF) find_obj, obj))
+                write_obj_data(obj, msg, strlen(msg), 1);
+        }
+        list_iterator_destroy(i);
+    }
+
     return;
 }
 
@@ -693,6 +833,8 @@ again:
     }
     else if (n == 0) {
         shutdown_obj(obj);
+        if (obj->fd < 0)		/* telnet obj has been disconnected */
+            return(-1);
         FD_SET(obj->fd, pWriteSet);	/* ensure buffer is flushed if needed */
     }
     else {
@@ -753,6 +895,14 @@ int write_obj_data(obj_t *obj, void *src, int len, int isInfo)
      */
     if (obj->gotEOF) {
         DPRINTF("Attempted to write into [%s] after EOF.\n", obj->name);
+        return(0);
+    }
+
+    /*  If the obj is a disconnected telnet connection,
+     *    data will simply be discarded so perform a no-op here.
+     */
+    if (is_telnet_obj(obj) && obj->aux.telnet.conState != TELCON_UP) {
+        DPRINTF("Attempted to write to disconnected [%s].\n", obj->name);
         return(0);
     }
 
@@ -856,6 +1006,7 @@ int write_to_obj(obj_t *obj)
     int isDead = 0;
 
     assert(obj->fd >= 0);
+
     x_pthread_mutex_lock(&obj->bufLock);
 
     /*  Assert the buffer's input and output ptrs are valid upon entry.
@@ -869,7 +1020,8 @@ int write_to_obj(obj_t *obj)
      *    does not take into account data that has wrapped-around in the
      *    circular-buffer.  This remaining data will be written on the
      *    next invocation of this routine.  It's just simpler that way.
-     *  If the object is suspended, no data is written out to its fd.
+     *  If a client is suspended, no data is written out to its fd.
+     *  If a telnet connection goes down, the buffer is cleared.
      *  Note that if (bufInPtr == bufOutPtr), the obj's buffer is empty.
      */
     if (is_client_obj(obj) && obj->aux.client.gotSuspend) {
@@ -877,6 +1029,7 @@ int write_to_obj(obj_t *obj)
     }
     else if (is_telnet_obj(obj) && obj->aux.telnet.conState != TELCON_UP) {
         avail = 0;
+        obj->bufInPtr = obj->bufOutPtr = obj->buf;
     }
     else if (obj->bufInPtr >= obj->bufOutPtr) {
         avail = obj->bufInPtr - obj->bufOutPtr;

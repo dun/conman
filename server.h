@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.30 2001/09/17 22:08:14 dun Exp $
+ *  $Id: server.h,v 1.31 2001/09/21 05:52:06 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -61,11 +61,14 @@ typedef struct serial_obj {		/* SERIAL AUX OBJ DATA:               */
 } serial_obj_t;
 
 typedef struct telnet_obj {		/* TELNET AUX OBJ DATA:               */
+    char            *host;		/*  remote telnetd host name (or ip)  */
+    int              port;		/*  remote telnetd port number        */
     sockaddr_t       saddr;		/*  n/w address of terminal server    */
     struct base_obj *logfile;		/*  log obj ref for console output    */
     int              iac;		/*  -1, or last char if in IAC seq    */
-    telcon_state_t   conState:2;	/*  state of network connection       */
     unsigned char    optState[NTELOPTS];/*  rfc1143 Q-Method option state     */
+    telcon_state_t   conState:2;	/*  state of network connection       */
+    unsigned         enableKeepAlive:1;	/*  true if using TCP keep-alive      */
 } telnet_obj_t;
 
 typedef union aux_obj {
@@ -155,6 +158,10 @@ obj_t * create_serial_obj(
 
 obj_t * create_telnet_obj(
     server_conf_t *conf, char *name, char *host, int port);
+
+int connect_telnet_obj(obj_t *telnet);
+
+void disconnect_telnet_obj(obj_t *telnet);
 
 void destroy_obj(obj_t *obj);
 
