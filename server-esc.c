@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-esc.c,v 1.26 2002/03/29 05:39:52 dun Exp $
+ *  $Id: server-esc.c,v 1.27 2002/05/08 00:10:54 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -35,14 +35,15 @@
 #include <arpa/telnet.h>
 #include <assert.h>
 #include <errno.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "common.h"
-#include "errors.h"
 #include "list.h"
+#include "log.h"
 #include "server.h"
-#include "util.h"
 #include "util-str.h"
+#include "util.h"
 #include "wrapper.h"
 
 
@@ -110,7 +111,7 @@ int process_client_escapes(obj_t *client, void *src, int len)
                 perform_suspend(client);
                 break;
             default:
-                log_msg(10, "Received invalid escape '%c' from %s.",
+                log_msg(LOG_WARNING, "Received invalid escape '%c' from %s",
                     *p, client->name);
                 break;
             }
@@ -142,11 +143,12 @@ static void perform_serial_break(obj_t *client)
     while ((console = list_next(i))) {
 
         assert(is_console_obj(console));
-        DPRINTF("Performing serial-break on console [%s].\n", console->name);
+        DPRINTF((5, "Performing serial-break on console [%s].\n",
+            console->name));
 
         if (is_serial_obj(console)) {
             if (tcsendbreak(console->fd, 0) < 0)
-                err_msg(errno, "Unable to send serial-break to console [%s]",
+                log_err(errno, "Unable to send serial-break to console [%s]",
                     console->name);
         }
         else if (is_telnet_obj(console)) {
@@ -234,7 +236,8 @@ static void perform_log_replay(obj_t *client)
         n = snprintf(ptr, len, "%sConsole [%s] is not being logged%s",
             CONMAN_MSG_PREFIX, console->name, CONMAN_MSG_SUFFIX);
         if ((n < 0) || (n >= len)) {
-            log_msg(10, "Insufficient buffer to replay console %s log for %s.",
+            log_msg(LOG_WARNING,
+                "Insufficient buffer to replay console %s log for %s",
                 console->name, client->name);
             return;
         }
@@ -245,7 +248,8 @@ static void perform_log_replay(obj_t *client)
         n = snprintf(ptr, len, "%sBegin log replay of console [%s]%s",
             CONMAN_MSG_PREFIX, console->name, CONMAN_MSG_SUFFIX);
         if ((n < 0) || (n >= len) || (sizeof(buf) <= 2*n - 2)) {
-            log_msg(10, "Insufficient buffer to replay console %s log for %s.",
+            log_msg(LOG_WARNING,
+                "Insufficient buffer to replay console %s log for %s",
                 console->name, client->name);
             return;
         }
@@ -295,7 +299,7 @@ static void perform_log_replay(obj_t *client)
         ptr += n;
     }
 
-    DPRINTF("Performing log replay on console [%s].\n", console->name);
+    DPRINTF((5, "Performing log replay on console [%s].\n", console->name));
     write_obj_data(client, buf, ptr - buf, 0);
     return;
 }
@@ -311,7 +315,7 @@ static void perform_quiet_toggle(obj_t *client)
     assert(is_client_obj(client));
 
     client->aux.client.req->enableQuiet ^= 1;
-    DPRINTF("Toggled quiet-mode for client [%s].\n", client->name);
+    DPRINTF((5, "Toggled quiet-mode for client [%s].\n", client->name));
 
     if (client->aux.client.req->enableQuiet)
         op = "Enabled", action = "suppressed";
@@ -355,7 +359,7 @@ static void perform_reset(obj_t *client)
         if (console->gotReset)          /* prior reset not yet processed */
             continue;
         console->gotReset = 1;
-        log_msg(0, "Console [%s] reset by <%s@%s>", console->name,
+        log_msg(LOG_NOTICE, "Console [%s] reset by <%s@%s>", console->name,
             client->aux.client.req->user, client->aux.client.req->host);
         snprintf(buf, sizeof(buf),
             "%sConsole [%s] reset by <%s@%s>%s%s at %s%s",
@@ -387,8 +391,8 @@ static void perform_suspend(obj_t *client)
      *  FIXME: Do check_console_state() here looking for downed telnets.
      *    Should it check the state of all readers & writers?
      */
-    DPRINTF("%s output to client [%s].\n",
-        (gotSuspend ? "Suspending" : "Resuming"), client->name);
+    DPRINTF((5, "%s output to client [%s].\n",
+        (gotSuspend ? "Suspending" : "Resuming"), client->name));
     return;
 }
 
@@ -465,7 +469,7 @@ int process_telnet_escapes(obj_t *telnet, void *src, int len)
                 telnet->aux.telnet.iac = *p;
             break;
         default:
-            err_msg(0, "Reached invalid state %#.2x%.2x for console [%s]",
+            log_err(0, "Reached invalid state %#.2x%.2x for console [%s]",
                 telnet->aux.telnet.iac, *p, telnet->name);
             break;
         }
@@ -498,14 +502,15 @@ int send_telnet_cmd(obj_t *telnet, int cmd, int opt)
 
     *p++ = IAC;
     if (!TELCMD_OK(cmd)) {
-        log_msg(0, "Invalid telnet cmd=%#.2x for console [%s]",
+        log_msg(LOG_WARNING, "Invalid telnet cmd=%#.2x for console [%s]",
             cmd, telnet->name);
         return(-1);
     }
     *p++ = cmd;
     if ((cmd == DONT) || (cmd == DO) || (cmd == WONT) || (cmd == WILL)) {
         if (!TELOPT_OK(opt)) {
-            log_msg(0, "Invalid telnet cmd %s opt=%#.2x for console [%s]",
+            log_msg(LOG_WARNING,
+                "Invalid telnet cmd %s opt=%#.2x for console [%s]",
                 telcmds[cmd - TELCMD_FIRST], opt, telnet->name);
             return(-1);
         }
@@ -515,9 +520,9 @@ int send_telnet_cmd(obj_t *telnet, int cmd, int opt)
     assert((p > buf) && ((p - buf) <= sizeof(buf)));
     if (write_obj_data(telnet, buf, p - buf, 0) <= 0)
         return(-1);
-    DPRINTF("Sent telnet cmd %s%s%s to console [%s].\n",
+    DPRINTF((10, "Sent telnet cmd %s%s%s to console [%s].\n",
         telcmds[cmd - TELCMD_FIRST], ((p - buf > 2) ? " " : ""),
-        ((p - buf > 2) ? telopts[opt - TELOPT_FIRST] : ""), telnet->name);
+        ((p - buf > 2) ? telopts[opt - TELOPT_FIRST] : ""), telnet->name));
     return(0);
 }
 
@@ -533,13 +538,14 @@ static int process_telnet_cmd(obj_t *telnet, int cmd, int opt)
     assert(telnet->aux.telnet.conState == TELCON_UP);
 
     if (!TELCMD_OK(cmd)) {
-        log_msg(0, "Received invalid telnet cmd %#.2x from console [%s]",
+        log_msg(LOG_WARNING,
+            "Received invalid telnet cmd %#.2x from console [%s]",
             cmd, telnet->name);
         return(-1);
     }
-    DPRINTF("Received telnet cmd %s%s%s from console [%s].\n",
+    DPRINTF((10, "Received telnet cmd %s%s%s from console [%s].\n",
         telcmds[cmd - TELCMD_FIRST], (TELOPT_OK(opt) ? " " : ""),
-        (TELOPT_OK(opt) ? telopts[opt - TELOPT_FIRST] : ""), telnet->name);
+        (TELOPT_OK(opt) ? telopts[opt - TELOPT_FIRST] : ""), telnet->name));
 
     switch(cmd) {
     case DONT:
@@ -550,7 +556,8 @@ static int process_telnet_cmd(obj_t *telnet, int cmd, int opt)
         /* fall-thru */
     case WILL:
         if (!TELOPT_OK(opt)) {
-            log_msg(0, "Received invalid telnet opt %#.2x from console [%s]",
+            log_msg(LOG_WARNING,
+                "Received invalid telnet opt %#.2x from console [%s]",
                 opt, telnet->name);
             return(-1);
         }
@@ -560,7 +567,7 @@ static int process_telnet_cmd(obj_t *telnet, int cmd, int opt)
          */
         break;
     default:
-        log_msg(10, "Ignoring telnet cmd %s%s%s from console [%s]",
+        log_msg(LOG_INFO, "Ignoring telnet cmd %s%s%s from console [%s]",
             telcmds[cmd - TELCMD_FIRST], (TELOPT_OK(opt) ? " " : ""),
             (TELOPT_OK(opt) ? telopts[opt - TELOPT_FIRST] : ""), telnet->name);
         break;

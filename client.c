@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client.c,v 1.16 2002/03/30 01:35:38 dun Exp $
+ *  $Id: client.c,v 1.17 2002/05/08 00:10:54 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -30,9 +30,9 @@
 #endif /* HAVE_CONFIG_H */
 
 #include <unistd.h>
-#include "common.h"
 #include "client.h"
-#include "errors.h"
+#include "common.h"
+#include "log.h"
 
 
 int main(int argc, char *argv[])
@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
       || (conf->req->command == MONITOR))
         connect_console(conf);
     else
-        err_msg(0, "INTERNAL: Invalid command=%d", conf->req->command);
+        log_err(0, "INTERNAL: Invalid command=%d", conf->req->command);
 
     close_client_log(conf);
     destroy_client_conf(conf);

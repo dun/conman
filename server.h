@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.h,v 1.46 2002/03/29 05:39:52 dun Exp $
+ *  $Id: server.h,v 1.47 2002/05/08 00:10:55 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -162,7 +162,6 @@ typedef struct base_obj {               /* BASE OBJ:                         */
 typedef struct server_conf {
     char            *confFileName;      /* configuration file name           */
     char            *logDirName;        /* dir prefix for relative logfiles  */
-    char            *logFileName;       /* file to which events are logged   */
     char            *pidFileName;       /* file to which pid is written      */
     char            *resetCmd;          /* cmd to invoke for reset esc-seq   */
     int              tStampMinutes;     /* minutes 'tween logfile timestamps */
@@ -279,14 +278,14 @@ int write_sanitized_log_data(obj_t *log, const void *src, int len);
 
 obj_t * create_client_obj(server_conf_t *conf, req_t *req);
 
-obj_t * create_logfile_obj(
-    server_conf_t *conf, char *name, obj_t *console, logopt_t *opts);
+obj_t * create_logfile_obj(server_conf_t *conf, char *name,
+    obj_t *console, logopt_t *opts, char *errbuf, int errlen);
 
-obj_t * create_serial_obj(
-    server_conf_t *conf, char *name, char *dev, seropt_t *opts);
+obj_t * create_serial_obj(server_conf_t *conf, char *name,
+    char *dev, seropt_t *opts, char *errbuf, int errlen);
 
-obj_t * create_telnet_obj(
-    server_conf_t *conf, char *name, char *host, int port);
+obj_t * create_telnet_obj(server_conf_t *conf, char *name,
+    char *host, int port, char *errbuf, int errlen);
 
 int connect_telnet_obj(obj_t *telnet);
 

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: wrapper.h,v 1.7 2002/03/29 05:39:52 dun Exp $
+ *  $Id: wrapper.h,v 1.8 2002/05/08 00:10:55 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -34,7 +34,7 @@
 #endif /* HAVE_CONFIG_H */
 
 #include <errno.h>
-#include "errors.h"
+#include "log.h"
 
 
 #ifdef WITH_PTHREADS
@@ -42,31 +42,31 @@
 #  define x_pthread_mutex_init(MUTEX,ATTR)                                    \
      do {                                                                     \
          if ((errno = pthread_mutex_init((MUTEX), (ATTR))) != 0)              \
-             err_msg(errno, "pthread_mutex_init() failed");                   \
+             log_err(errno, "pthread_mutex_init() failed");                   \
      } while (0)
 
 #  define x_pthread_mutex_lock(MUTEX)                                         \
      do {                                                                     \
          if ((errno = pthread_mutex_lock(MUTEX)) != 0)                        \
-             err_msg(errno, "pthread_mutex_lock() failed");                   \
+             log_err(errno, "pthread_mutex_lock() failed");                   \
      } while (0)
 
 #  define x_pthread_mutex_unlock(MUTEX)                                       \
      do {                                                                     \
          if ((errno = pthread_mutex_unlock(MUTEX)) != 0)                      \
-             err_msg(errno, "pthread_mutex_unlock() failed");                 \
+             log_err(errno, "pthread_mutex_unlock() failed");                 \
      } while (0)
 
 #  define x_pthread_mutex_destroy(MUTEX)                                      \
      do {                                                                     \
          if ((errno = pthread_mutex_destroy(MUTEX)) != 0)                     \
-             err_msg(errno, "pthread_mutex_destroy() failed");                \
+             log_err(errno, "pthread_mutex_destroy() failed");                \
      } while (0)
 
 #  define x_pthread_detach(THREAD)                                            \
      do {                                                                     \
          if ((errno = pthread_detach(THREAD)) != 0)                           \
-             err_msg(errno, "pthread_detach() failed");                       \
+             log_err(errno, "pthread_detach() failed");                       \
      } while (0)
 
 #else /* !WITH_PTHREADS */

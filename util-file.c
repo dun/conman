@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: util-file.c,v 1.5 2002/03/29 05:39:52 dun Exp $
+ *  $Id: util-file.c,v 1.6 2002/05/08 00:10:55 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -35,7 +35,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include "errors.h"
+#include "log.h"
 #include "util-file.h"
 
 
@@ -48,7 +48,7 @@ void set_fd_closed_on_exec(int fd)
     assert(fd >= 0);
 
     if (fcntl(fd, F_SETFD, FD_CLOEXEC) < 0)
-        err_msg(errno, "fcntl(F_SETFD) failed");
+        log_err(errno, "fcntl(F_SETFD) failed");
     return;
 }
 
@@ -60,9 +60,9 @@ void set_fd_nonblocking(int fd)
     assert(fd >= 0);
 
     if ((fval = fcntl(fd, F_GETFL, 0)) < 0)
-        err_msg(errno, "fcntl(F_GETFL) failed");
+        log_err(errno, "fcntl(F_GETFL) failed");
     if (fcntl(fd, F_SETFL, fval | O_NONBLOCK) < 0)
-        err_msg(errno, "fcntl(F_SETFL) failed");
+        log_err(errno, "fcntl(F_SETFL) failed");
     return;
 }
 
@@ -136,7 +136,7 @@ static pid_t test_file_lock(int fd, int type)
     lock.l_len = 0;
 
     if (fcntl(fd, F_GETLK, &lock) < 0)
-        err_msg(errno, "Unable to test for file lock");
+        log_err(errno, "Unable to test for file lock");
     if (lock.l_type == F_UNLCK)
         return(0);
     return(lock.l_pid);

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-conf.c,v 1.41 2002/03/29 05:39:52 dun Exp $
+ *  $Id: server-conf.c,v 1.42 2002/05/08 00:10:54 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -40,9 +40,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include "common.h"
-#include "errors.h"
 #include "lex.h"
 #include "list.h"
+#include "log.h"
 #include "server.h"
 #include "util-file.h"
 #include "util-str.h"
@@ -58,7 +58,6 @@ enum server_conf_toks {
     SERVER_CONF_KEEPALIVE,
     SERVER_CONF_LOG,
     SERVER_CONF_LOGDIR,
-    SERVER_CONF_LOGFILE,
     SERVER_CONF_LOGOPTS,
     SERVER_CONF_LOOPBACK,
     SERVER_CONF_NAME,
@@ -84,7 +83,6 @@ static char *server_conf_strs[] = {
     "KEEPALIVE",
     "LOG",
     "LOGDIR",
-    "LOGFILE",
     "LOGOPTS",
     "LOOPBACK",
     "NAME",
@@ -116,7 +114,6 @@ server_conf_t * create_server_conf(void)
         out_of_memory();
     conf->confFileName = create_string(CONMAN_CONF);
     conf->logDirName = NULL;
-    conf->logFileName = NULL;
     conf->pidFileName = NULL;
     conf->resetCmd = NULL;
     conf->tStampMinutes = 0;
@@ -168,23 +165,21 @@ void destroy_server_conf(server_conf_t *conf)
 
     if (conf->logDirName)
         free(conf->logDirName);
-    if (conf->logFileName)
-        free(conf->logFileName);
     if (conf->pidFileName) {
         if (unlink(conf->pidFileName) < 0)
-            err_msg(errno, "Unable to delete \"%s\"", conf->pidFileName);
+            log_err(errno, "Unable to delete \"%s\"", conf->pidFileName);
         free(conf->pidFileName);
     }
     if (conf->resetCmd)
         free(conf->resetCmd);
     if (conf->fd >= 0) {
         if (close(conf->fd) < 0)
-            err_msg(errno, "Unable to close \"%s\"", conf->confFileName);
+            log_err(errno, "Unable to close \"%s\"", conf->confFileName);
         conf->fd = -1;
     }
     if (conf->ld >= 0) {
         if (close(conf->ld) < 0)
-            err_msg(errno, "Unable to close listening socket");
+            log_err(errno, "Unable to close listening socket");
         conf->ld = -1;
     }
     if (conf->objs)
@@ -200,7 +195,6 @@ void destroy_server_conf(server_conf_t *conf)
 void process_server_cmd_line(int argc, char *argv[], server_conf_t *conf)
 {
     int c;
-    int n;
     int signum = 0;
 
     opterr = 0;
@@ -218,10 +212,8 @@ void process_server_cmd_line(int argc, char *argv[], server_conf_t *conf)
             signum = SIGTERM;
             break;
         case 'p':
-            if ((n = atoi(optarg)) <= 0)
-                fprintf(stderr, "WARNING: Ignoring invalid port \"%d\".\n", n);
-            else
-                conf->port = n;
+            if ((conf->port = atoi(optarg)) <= 0)
+                log_err(0, "CMDLINE: invalid port \"%d\"", conf->port);
             break;
         case 'r':
             signum = SIGHUP;
@@ -236,11 +228,11 @@ void process_server_cmd_line(int argc, char *argv[], server_conf_t *conf)
             conf->enableZeroLogs = 1;
             break;
         case '?':                       /* invalid option */
-            fprintf(stderr, "ERROR: Invalid option \"%c\".\n", optopt);
-            exit(1);
+            log_err(0, "CMDLINE: invalid option \"%c\"", optopt);
+            break;
         default:
-            fprintf(stderr, "ERROR: Option \"%c\" not implemented.\n", c);
-            exit(1);
+            log_err(0, "CMDLINE: option \"%c\" not implemented", c);
+            break;
         }
     }
 
@@ -269,22 +261,22 @@ void process_server_conf_file(server_conf_t *conf)
     port = conf->port;
 
     if ((conf->fd = open(conf->confFileName, O_RDONLY)) < 0)
-        err_msg(errno, "Unable to open \"%s\"", conf->confFileName);
+        log_err(errno, "Unable to open \"%s\"", conf->confFileName);
 
     if ((pid = is_write_lock_blocked(conf->fd)) > 0)
-        err_msg(0, "Configuration \"%s\" in use by pid %d.",
+        log_err(0, "Configuration \"%s\" in use by pid %d",
             conf->confFileName, pid);
     if (get_read_lock(conf->fd) < 0)
-        err_msg(0, "Unable to lock configuration \"%s\".",
+        log_err(0, "Unable to lock configuration \"%s\"",
             conf->confFileName);
 
     if (fstat(conf->fd, &fdStat) < 0)
-        err_msg(errno, "Unable to stat \"%s\"", conf->confFileName);
+        log_err(errno, "Unable to stat \"%s\"", conf->confFileName);
     len = fdStat.st_size;
     if (!(buf = malloc(len + 1)))
         out_of_memory();
     if ((n = read_n(conf->fd, buf, len)) < 0)
-        err_msg(errno, "Unable to read \"%s\"", conf->confFileName);
+        log_err(errno, "Unable to read \"%s\"", conf->confFileName);
     assert(n == len);
     buf[len] = '\0';
 
@@ -303,11 +295,11 @@ void process_server_conf_file(server_conf_t *conf)
         case LEX_EOL:
             break;
         case LEX_ERR:
-            printf("ERROR: %s:%d: unmatched quote.\n",
+            log_msg(LOG_ERR, "CONF[%s:%d]: unmatched quote",
                 conf->confFileName, lex_line(l));
             break;
         default:
-            printf("ERROR: %s:%d: unrecognized token '%s'.\n",
+            log_msg(LOG_ERR, "CONF[%s:%d]: unrecognized token '%s'",
                 conf->confFileName, lex_line(l), lex_text(l));
             while (tok != LEX_EOL && tok != LEX_EOF)
                 tok = lex_next(l);
@@ -331,10 +323,12 @@ void process_server_conf_file(server_conf_t *conf)
         FILE *fp;
 
         if (!(fp = fopen(conf->pidFileName, "w")))
-            err_msg(errno, "Unable to open \"%s\"", conf->pidFileName);
+            log_msg(LOG_ERR, "Unable to open \"%s\": %s",
+                conf->pidFileName, strerror(errno));
         fprintf(fp, "%d\n", (int) getpid());
         if (fclose(fp) == EOF)
-            err_msg(errno, "Unable to close \"%s\"", conf->pidFileName);
+            log_msg(LOG_ERR, "Unable to close \"%s\": %s",
+                conf->pidFileName, strerror(errno));
     }
 
     return;
@@ -367,42 +361,34 @@ static void signal_daemon(server_conf_t *conf, int signum)
  */
     pid_t pid;
     char *msg;
-    int gotError = 0;
 
     assert(conf != NULL);
     assert(conf->confFileName != NULL);
     assert(signum > 0);
 
     if ((conf->fd = open(conf->confFileName, O_RDONLY)) < 0) {
-        printf("ERROR: Unable to open \"%s\": %s.\n",
-            conf->confFileName, strerror(errno));
-        gotError = 1;
+        log_err(errno, "Unable to open \"%s\"", conf->confFileName);
     }
-    else if (!(pid = is_write_lock_blocked(conf->fd))) {
-        printf("ERROR: Configuration \"%s\" is not active.\n",
-            conf->confFileName);
-        gotError = 1;
+    if (!(pid = is_write_lock_blocked(conf->fd))) {
+        log_err(0, "Configuration \"%s\" is not active", conf->confFileName);
     }
-    else {
-        if (kill(pid, signum) < 0) {
-            printf("ERROR: Unable to send signal=%d to pid %d: %s.\n",
-                signum, (int) pid, strerror(errno));
-            gotError = 1;
-        }
-        else if (conf->enableVerbose) {
-            if (signum == SIGHUP)
-                msg = "reconfigured on";
-            else if (signum == SIGTERM)
-                msg = "terminated on";
-            else
-                msg = "sent";
-            printf("Configuration \"%s\" (pid %d) %s signal=%d.\n",
-                conf->confFileName, (int) pid, msg, signum);
-        }
+    if (kill(pid, signum) < 0) {
+        log_err(errno, "Unable to send signal=%d to pid %d",
+            signum, (int) pid);
+    }
+    if (conf->enableVerbose) {
+        if (signum == SIGHUP)
+            msg = "reconfigured on";
+        else if (signum == SIGTERM)
+            msg = "terminated on";
+        else
+            msg = "sent";
+        fprintf(stderr, "Configuration \"%s\" (pid %d) %s signal=%d\n",
+            conf->confFileName, (int) pid, msg, signum);
     }
 
     destroy_server_conf(conf);
-    exit(gotError ? 1 : 0);
+    exit(0);
 }
 
 
@@ -514,7 +500,7 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
         snprintf(err, sizeof(err), "incomplete %s directive", directive);
     }
     if (*err) {
-        fprintf(stderr, "ERROR: %s:%d: %s.\n",
+        log_msg(LOG_ERR, "CONF[%s:%d]: %s",
             conf->confFileName, lex_line(l), err);
         while (lex_prev(l) != LEX_EOL && lex_prev(l) != LEX_EOF)
             lex_next(l);
@@ -523,27 +509,35 @@ static void parse_console_directive(Lex l, server_conf_t *conf)
 
     if ((p = strchr(dev, ':'))) {
         *p++ = '\0';
-        if (!(console = create_telnet_obj(conf, name, dev, atoi(p))))
-            log_msg(0, "%s:%d: Console [%s] removed from the configuration.",
-                conf->confFileName, line, name);
+        if (!(console = create_telnet_obj(
+          conf, name, dev, atoi(p), err, sizeof(err)))) {
+            log_msg(LOG_ERR, "CONF[%s:%d]: console [%s] %s",
+                conf->confFileName, line, name, err);
+        }
     }
-    else if (!(console = create_serial_obj(conf, name, dev, &seropts))) {
-            log_msg(0, "%s:%d: Console [%s] removed from the configuration.",
-                conf->confFileName, line, name);
+    else if (!(console = create_serial_obj(
+      conf, name, dev, &seropts, err, sizeof(err)))) {
+        log_msg(LOG_ERR, "CONF[%s:%d]: console [%s] %s",
+            conf->confFileName, line, name, err);
     }
 
     if (console && *log) {
+
         if (substitute_string(name, sizeof(name), log,
-          DEFAULT_CONFIG_ESCAPE, console->name) < 0)
-            log_msg(0, "%s:%d: Console [%s] cannot log to \"%s\": "
-                "%c-expansion failed.", conf->confFileName, line,
+          DEFAULT_CONFIG_ESCAPE, console->name) < 0) {
+            log_msg(LOG_ERR, "CONF[%s:%d]: console [%s] cannot log to "
+                "\"%s\": %c-expansion failed", conf->confFileName, line,
                 console->name, log, DEFAULT_CONFIG_ESCAPE);
+        }
         else if (!(logfile = create_logfile_obj(
-          conf, name, console, &logopts)))
-            log_msg(0, "%s:%d: Console [%s] cannot log to \"%s\".",
-                conf->confFileName, line, console->name, name);
-        else
+          conf, name, console, &logopts, err, sizeof(err)))) {
+            log_msg(LOG_ERR, "CONF[%s:%d]: console [%s] cannot log to "
+                "\"%s\": %s", conf->confFileName, line, console->name,
+                name, err);
+        }
+        else {
             link_objs(console, logfile);
+        }
     }
     return;
 }
@@ -602,7 +596,7 @@ static void parse_global_directive(Lex l, server_conf_t *conf)
     }
 
     if (*err) {
-        fprintf(stderr, "ERROR: %s:%d: %s.\n",
+        log_msg(LOG_ERR, "CONF[%s:%d]: %s",
             conf->confFileName, lex_line(l), err);
         while (lex_prev(l) != LEX_EOL && lex_prev(l) != LEX_EOF)
             lex_next(l);
@@ -653,24 +647,6 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
                 p = conf->logDirName + strlen(conf->logDirName) - 1;
                 while ((p >= conf->logDirName) && (*p == '/'))
                     *p-- = '\0';
-            }
-            break;
-
-        case SERVER_CONF_LOGFILE:
-            if (lex_next(l) != '=')
-                snprintf(err, sizeof(err), "expected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
-            else if (lex_next(l) != LEX_STR)
-                snprintf(err, sizeof(err), "expected STRING for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
-            else {
-                if (conf->logFileName)
-                    free(conf->logFileName);
-                if ((lex_text(l)[0] != '/') && (conf->logDirName))
-                    conf->logFileName = create_format_string("%s/%s",
-                        conf->logDirName, lex_text(l));
-                else
-                    conf->logFileName = create_string(lex_text(l));
             }
             break;
 
@@ -802,7 +778,7 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
     }
 
     if (*err) {
-        fprintf(stderr, "ERROR: %s:%d: %s.\n",
+        log_msg(LOG_ERR, "CONF[%s:%d]: %s",
             conf->confFileName, lex_line(l), err);
         while (lex_prev(l) != LEX_EOL && lex_prev(l) != LEX_EOF)
             lex_next(l);

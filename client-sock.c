@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-sock.c,v 1.31 2002/03/29 05:39:51 dun Exp $
+ *  $Id: client-sock.c,v 1.32 2002/05/08 00:10:54 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -32,15 +32,16 @@
 #include <assert.h>
 #include <errno.h>
 #include <netinet/in.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "common.h"
 #include "client.h"
-#include "errors.h"
+#include "common.h"
 #include "lex.h"
+#include "log.h"
 #include "util-file.h"
 #include "util-net.h"
 #include "util-str.h"
@@ -61,7 +62,7 @@ int connect_to_server(client_conf_t *conf)
     assert(conf->req->port > 0);
 
     if ((sd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-        err_msg(errno, "Unable to create socket");
+        log_err(errno, "Unable to create socket");
 
     memset(&saddr, 0, sizeof(saddr));
     saddr.sin_family = AF_INET;
@@ -136,7 +137,7 @@ int send_greeting(client_conf_t *conf)
              *  FIXME: NOT_IMPLEMENTED_YET
              */
             if (close(conf->req->sd) < 0)
-                err_msg(errno, "Unable to close connection to <%s:%d>",
+                log_err(errno, "Unable to close connection to <%s:%d>",
                     conf->req->host, conf->req->port);
             conf->req->sd = -1;
         }
@@ -166,7 +167,7 @@ int send_req(client_conf_t *conf)
         cmd = proto_strs[LEX_UNTOK(CONMAN_TOK_CONNECT)];
         break;
     default:
-        err_msg(0, "INTERNAL: Invalid command=%d", conf->req->command);
+        log_err(0, "INTERNAL: Invalid command=%d", conf->req->command);
         break;
     }
 
@@ -373,10 +374,10 @@ void display_error(client_conf_t *conf)
     p = create_format_string("ERROR: %s.\n\n",
         (conf->errmsg ? conf->errmsg : "Unspecified"));
     if (write_n(STDERR_FILENO, p, strlen(p)) < 0)
-        err_msg(errno, "Unable to write to stderr");
+        log_err(errno, "Unable to write to stderr");
     if (conf->logd >= 0)
         if (write_n(conf->logd, p, strlen(p)) < 0)
-            err_msg(errno, "Unable to write to \"%s\"", conf->log);
+            log_err(errno, "Unable to write to \"%s\"", conf->log);
     free(p);
 
     if (conf->errnum != CONMAN_ERR_LOCAL)
@@ -393,10 +394,10 @@ void display_error(client_conf_t *conf)
 
     if (p) {
         if (write_n(STDERR_FILENO, p, strlen(p)) < 0)
-            err_msg(errno, "Unable to write to stderr");
+            log_err(errno, "Unable to write to stderr");
         if (conf->logd >= 0)
             if (write_n(conf->logd, p, strlen(p)) < 0)
-                err_msg(errno, "Unable to write to \"%s\"", conf->log);
+                log_err(errno, "Unable to write to \"%s\"", conf->log);
     }
 
     exit(2);
@@ -416,15 +417,15 @@ void display_data(client_conf_t *conf, int fd)
     for (;;) {
         n = read(conf->req->sd, buf, sizeof(buf));
         if (n < 0)
-            err_msg(errno, "Unable to read from <%s:%d>",
+            log_err(errno, "Unable to read from <%s:%d>",
                 conf->req->host, conf->req->port);
         if (n == 0)
             break;
         if (write_n(fd, buf, n) < 0)
-            err_msg(errno, "Unable to write to fd=%d", fd);
+            log_err(errno, "Unable to write to fd=%d", fd);
         if (conf->logd >= 0)
             if (write_n(conf->logd, buf, n) < 0)
-                err_msg(errno, "Unable to write to \"%s\"", conf->log);
+                log_err(errno, "Unable to write to \"%s\"", conf->log);
     }
     return;
 }
@@ -441,12 +442,12 @@ void display_consoles(client_conf_t *conf, int fd)
     while ((p = list_next(i))) {
         n = snprintf(buf, sizeof(buf), "%s\n", p);
         if (n < 0 || n >= sizeof(buf))
-            err_msg(0, "Buffer overflow");
+            log_err(0, "Got console list buffer overrun");
         if (write_n(fd, buf, n) < 0)
-            err_msg(errno, "Unable to write to fd=%d", fd);
+            log_err(errno, "Unable to write to fd=%d", fd);
         if (conf->logd >= 0)
             if (write_n(conf->logd, buf, n) < 0)
-                err_msg(errno, "Unable to write to \"%s\"", conf->log);
+                log_err(errno, "Unable to write to \"%s\"", conf->log);
     }
     list_iterator_destroy(i);
     return;

@@ -2,7 +2,7 @@
 # ConMan AutoConf Configuration
 #   Process this file with autoconf to produce a configure script.
 #******************************************************************************
-# $Id: configure.ac,v 1.17 2002/03/31 01:06:07 dun Exp $
+# $Id: configure.ac,v 1.18 2002/05/08 00:10:54 dun Exp $
 #******************************************************************************
 # Copyright (C) 2001-2002 The Regents of the University of California.
 # Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -280,8 +280,8 @@ AH_BOTTOM(
 #endif /* WITH_PTHREADS */
 
 /* Override default out_of_memory() macro definition. */
-#include "errors.h"
-#define out_of_memory() (err_msg(0, "Out of memory"), (void *) NULL)]
+#include "log.h"
+#define out_of_memory() (log_err(0, "Out of memory"), (void *) NULL)]
 )
 
 

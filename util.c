@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: util.c,v 1.20 2002/03/29 05:39:52 dun Exp $
+ *  $Id: util.c,v 1.21 2002/05/08 00:10:55 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -34,7 +34,7 @@
 
 #include <errno.h>
 #include <signal.h>
-#include "errors.h"
+#include "log.h"
 #include "util.h"
 
 
@@ -44,7 +44,7 @@ void * out_of_memory(void)
 {
 /*  Example for an external Out-Of-Memory Function.
  */
-    err_msg(0, "Out of memory");
+    log_err(0, "Out of memory");
     return(NULL);                       /* not reached but prevents warnings */
 }
 #endif /* WITH_OOMF */
@@ -72,9 +72,9 @@ SigFunc * posix_signal(int signum, SigFunc *f)
     }
 
     /*  Technically, this routine should return SIG_ERR if sigaction()
-     *    fails here.  But the caller would just err_msg() away, anways.
+     *    fails here.  But the caller would just log_err() away, anyways.
      */
     if (sigaction(signum, &act1, &act0) < 0)
-        err_msg(errno, "signal(%d) failed", signum);
+        log_err(errno, "signal(%d) failed", signum);
     return(act0.sa_handler);
 }

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: util-str.c,v 1.12 2002/03/29 05:39:52 dun Exp $
+ *  $Id: util-str.c,v 1.13 2002/05/08 00:10:55 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -40,7 +40,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "errors.h"
+#include "log.h"
 #include "util-str.h"
 #include "wrapper.h"
 
@@ -171,7 +171,7 @@ char * create_long_time_string(time_t t)
     get_localtime(&t, &tm);
 
     if (strftime(p, len, "%m/%d/%Y %H:%M:%S %Z", &tm) == 0)
-        err_msg(0, "strftime() failed");
+        log_err(0, "strftime() failed");
 
     return(p);
 }
@@ -189,7 +189,7 @@ char * create_short_time_string(time_t t)
     get_localtime(&t, &tm);
 
     if (strftime(p, len, "%m/%d %H:%M", &tm) == 0)
-        err_msg(0, "strftime() failed");
+        log_err(0, "strftime() failed");
 
     return(p);
 }
@@ -203,7 +203,7 @@ char * create_time_delta_string(time_t t)
     char buf[25];
 
     if (time(&now) == (time_t) -1)
-        err_msg(errno, "time() failed");
+        log_err(errno, "time() failed");
     n = difftime(now, t);
     assert(n >= 0);
 
@@ -254,7 +254,7 @@ struct tm * get_localtime(time_t *tPtr, struct tm *tmPtr)
 
     if (*tPtr == 0) {
         if (time(tPtr) == (time_t) -1)
-            err_msg(errno, "time() failed");
+            log_err(errno, "time() failed");
     }
 
 #ifndef HAVE_LOCALTIME_R
@@ -263,14 +263,14 @@ struct tm * get_localtime(time_t *tPtr, struct tm *tmPtr)
      */
     x_pthread_mutex_lock(&localtimeLock);
     if (!(tmTmpPtr = localtime(tPtr)))
-        err_msg(errno, "localtime() failed");
+        log_err(errno, "localtime() failed");
     *tmPtr = *tmTmpPtr;
     x_pthread_mutex_unlock(&localtimeLock);
 
 #else /* HAVE_LOCALTIME_R */
 
     if (!localtime_r(tPtr, tmPtr))
-        err_msg(errno, "localtime_r() failed");
+        log_err(errno, "localtime_r() failed");
 
 #endif /* !HAVE_LOCALTIME_R */
 

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-obj.c,v 1.63 2002/03/29 05:39:52 dun Exp $
+ *  $Id: server-obj.c,v 1.64 2002/05/08 00:10:54 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -34,6 +34,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <netinet/in.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -41,14 +42,14 @@
 #include <time.h>
 #include <unistd.h>
 #include "common.h"
-#include "errors.h"
 #include "list.h"
+#include "log.h"
 #include "server.h"
 #include "tselect.h"
-#include "util.h"
 #include "util-file.h"
 #include "util-net.h"
 #include "util-str.h"
+#include "util.h"
 #include "wrapper.h"
 
 
@@ -93,7 +94,7 @@ static obj_t * create_obj(
      */
     list_append(conf->objs, obj);
 
-    DPRINTF("Created object [%s].\n", obj->name);
+    DPRINTF((10, "Created object [%s].\n", obj->name));
     return(obj);   
 }
 
@@ -122,7 +123,7 @@ obj_t * create_client_obj(server_conf_t *conf, req_t *req)
     client->aux.client.req = req;
     time(&client->aux.client.timeLastRead);
     if (client->aux.client.timeLastRead == (time_t) -1)
-        err_msg(errno, "What time is it?");
+        log_err(errno, "time() failed");
     client->aux.client.gotEscape = 0;
     client->aux.client.gotSuspend = 0;
 
@@ -130,8 +131,8 @@ obj_t * create_client_obj(server_conf_t *conf, req_t *req)
 }
 
 
-obj_t * create_logfile_obj(
-    server_conf_t *conf, char *name, obj_t *console, logopt_t *opts)
+obj_t * create_logfile_obj(server_conf_t *conf, char *name,
+    obj_t *console, logopt_t *opts, char *errbuf, int errlen)
 {
 /*  Creates a new logfile object and adds it to the master objs list.
  *    Note: the logfile is open and set for non-blocking I/O.
@@ -156,7 +157,7 @@ obj_t * create_logfile_obj(
         if (!is_logfile_obj(logfile))
             continue;
         if (!strcmp(logfile->name, name)) {
-            log_msg(0, "Ignoring duplicate logfile name \"%s\".", name);
+            snprintf(errbuf, errlen, "log already in use");
             break;
         }
     }
@@ -173,7 +174,7 @@ obj_t * create_logfile_obj(
     else if (is_telnet_obj(console))
         console->aux.telnet.logfile = logfile;
     else
-        err_msg(0, "INTERNAL: Unrecognized console [%s] type=%d",
+        log_err(0, "INTERNAL: Unrecognized console [%s] type=%d",
             console->name, console->type);
 
     open_logfile_obj(logfile, conf->enableZeroLogs);
@@ -182,8 +183,8 @@ obj_t * create_logfile_obj(
 }
 
 
-obj_t * create_serial_obj(
-    server_conf_t *conf, char *name, char *dev, seropt_t *opts)
+obj_t * create_serial_obj(server_conf_t *conf, char *name,
+    char *dev, seropt_t *opts, char *errbuf, int errlen)
 {
 /*  Creates a new serial device object and adds it to the master objs list.
  *    Note: the console is open and set for non-blocking I/O.
@@ -208,11 +209,11 @@ obj_t * create_serial_obj(
     i = list_iterator_create(conf->objs);
     while ((serial = list_next(i))) {
         if (is_console_obj(serial) && !strcmp(serial->name, name)) {
-            log_msg(0, "Ignoring duplicate console name \"%s\".", name);
+            snprintf(errbuf, errlen, "specifies duplicate console name");
             break;
         }
         if (is_serial_obj(serial) && !strcmp(serial->aux.serial.dev, dev)) {
-            log_msg(0, "Ignoring duplicate device name \"%s\".", dev);
+            snprintf(errbuf, errlen, "specifies duplicate device \"%s\"", dev);
             break;
         }
     }
@@ -221,15 +222,16 @@ obj_t * create_serial_obj(
         goto err;
 
     if ((fd = open(dev, O_RDWR | O_NONBLOCK | O_NOCTTY)) < 0) {
-        log_msg(0, "Unable to open console [%s]: %s.", name, strerror(errno));
+        snprintf(errbuf, errlen,
+            "cannot open \"%s\": %s", dev, strerror(errno));
         goto err;
     }
     if (get_write_lock(fd) < 0) {
-        log_msg(0, "Unable to lock \"%s\".", dev);
+        snprintf(errbuf, errlen, "cannot lock \"%s\"", dev);
         goto err;
     }
     if (!isatty(fd)) {
-        log_msg(0, "Device \"%s\" is not a terminal.", dev);
+        snprintf(errbuf, errlen, "device \"%s\" is not a terminal", dev);
         goto err;
     }
     /*  According to the UNIX Programming FAQ v1.37
@@ -262,13 +264,13 @@ obj_t * create_serial_obj(
 err:
     if (fd >= 0)
         if (close(fd) < 0)
-            err_msg(errno, "Unable to close console [%s]", name);
+            log_err(errno, "Unable to close console [%s]", name);
     return(NULL);
 }
 
 
-obj_t * create_telnet_obj(
-    server_conf_t *conf, char *name, char *host, int port)
+obj_t * create_telnet_obj(server_conf_t *conf, char *name,
+    char *host, int port, char *errbuf, int errlen)
 {
 /*  Creates a new terminal server object and adds it to the master objs list.
  *  Note: a non-blocking connect is initiated for the remote host:port
@@ -288,12 +290,12 @@ obj_t * create_telnet_obj(
     memset(&saddr, 0, sizeof(saddr));
     saddr.sin_family = AF_INET;
     if (port <= 0) {
-        log_msg(0, "Invalid port number %d.", port);
+        snprintf(errbuf, errlen, "specifies invalid port \"%d\"", port);
         return(NULL);
     }
     saddr.sin_port = htons(port);
     if (host_name_to_addr4(host, &saddr.sin_addr) < 0) {
-        log_msg(0, "Unable to resolve host \"%s\".", host);
+        snprintf(errbuf, errlen, "cannot resolve host \"%s\"", host);
         return(NULL);
     }
 
@@ -302,13 +304,13 @@ obj_t * create_telnet_obj(
     i = list_iterator_create(conf->objs);
     while ((telnet = list_next(i))) {
         if (is_console_obj(telnet) && !strcmp(telnet->name, name)) {
-            log_msg(0, "Ignoring duplicate console name \"%s\".", name);
+            snprintf(errbuf, errlen, "specifies duplicate console name");
             break;
         }
         if (is_telnet_obj(telnet) && !memcmp(&saddr,
           &telnet->aux.telnet.saddr, sizeof(telnet->aux.telnet.saddr))) {
-            log_msg(0, "Ignoring duplicate terminal server \"%s:%d\".",
-                host, port);
+            snprintf(errbuf, errlen,
+                "specifies duplicate terminal server \"%s:%d\"", host, port);
             break;
         }
     }
@@ -368,18 +370,18 @@ int connect_telnet_obj(obj_t *telnet)
          *  Initiate a non-blocking connection attempt.
          */
         if ((telnet->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-            err_msg(0, "Unable to create socket for [%s].", telnet->name);
+            log_err(0, "Unable to create socket for [%s]", telnet->name);
         if (setsockopt(telnet->fd, SOL_SOCKET, SO_OOBINLINE, &on, n) < 0)
-            err_msg(errno, "Unable to set OOBINLINE socket option");
+            log_err(errno, "Unable to set OOBINLINE socket option");
         if (telnet->aux.telnet.enableKeepAlive) {
             if (setsockopt(telnet->fd, SOL_SOCKET, SO_KEEPALIVE, &on, n) < 0)
-                err_msg(errno, "Unable to set KEEPALIVE socket option");
+                log_err(errno, "Unable to set KEEPALIVE socket option");
         }
         set_fd_nonblocking(telnet->fd);
         set_fd_closed_on_exec(telnet->fd);
 
-        DPRINTF("Connecting to <%s:%d> for [%s].\n",
-            telnet->aux.telnet.host, telnet->aux.telnet.port, telnet->name);
+        DPRINTF((10, "Connecting to <%s:%d> for [%s].\n",
+            telnet->aux.telnet.host, telnet->aux.telnet.port, telnet->name));
 
         if (connect(telnet->fd, (struct sockaddr *) &telnet->aux.telnet.saddr,
           sizeof(telnet->aux.telnet.saddr)) < 0) {
@@ -430,13 +432,13 @@ int connect_telnet_obj(obj_t *telnet)
         /* Success!  Continue after if/else expr. */
     }
     else {
-        err_msg(0, "Console [%s] is in an unknown telnet state=%d.\n",
+        log_err(0, "Console [%s] is in an unknown telnet state=%d",
             telnet->aux.telnet.conState);
     }
 
     /*  Success!
      */
-    log_msg(0, "Console [%s] connected to <%s:%d>.", telnet->name,
+    log_msg(LOG_INFO, "Console [%s] connected to <%s:%d>", telnet->name,
         telnet->aux.telnet.host, telnet->aux.telnet.port);
 
     /*  Notify linked objs when transitioning into an UP state.
@@ -479,8 +481,8 @@ void disconnect_telnet_obj(obj_t *telnet)
     assert(telnet != NULL);
     assert(is_telnet_obj(telnet));
 
-    DPRINTF("Disconnecting from <%s:%d> for [%s].\n",
-        telnet->aux.telnet.host, telnet->aux.telnet.port, telnet->name);
+    DPRINTF((10, "Disconnecting from <%s:%d> for [%s].\n",
+        telnet->aux.telnet.host, telnet->aux.telnet.port, telnet->name));
 
     if (telnet->aux.telnet.timer >= 0) {
         untimeout(telnet->aux.telnet.timer);
@@ -488,7 +490,7 @@ void disconnect_telnet_obj(obj_t *telnet)
     }
     if (telnet->fd >= 0) {
         if (close(telnet->fd) < 0)
-            err_msg(errno, "Unable to close connection to <%s:%d> for [%s]",
+            log_err(errno, "Unable to close connection to <%s:%d> for [%s]",
                 telnet->aux.telnet.host, telnet->aux.telnet.port,
                 telnet->name);
         telnet->fd = -1;
@@ -497,8 +499,8 @@ void disconnect_telnet_obj(obj_t *telnet)
     /*  Notify linked objs when transitioning from an UP state.
      */
     if (telnet->aux.telnet.conState == TELCON_UP) {
-        log_msg(0, "Console [%s] disconnected from <%s:%d>.", telnet->name,
-            telnet->aux.telnet.host, telnet->aux.telnet.port);
+        log_msg(LOG_NOTICE, "Console [%s] disconnected from <%s:%d>",
+            telnet->name, telnet->aux.telnet.host, telnet->aux.telnet.port);
         now = create_short_time_string(0);
         snprintf(buf, sizeof(buf),
             "%sConsole [%s] disconnected from <%s:%d> at %s%s",
@@ -549,7 +551,7 @@ void destroy_obj(obj_t *obj)
  *    ensuring it will be removed from the master objs list before destruction.
  */
     assert(obj != NULL);
-    DPRINTF("Destroying object [%s].\n", obj->name);
+    DPRINTF((10, "Destroying object [%s].\n", obj->name));
 
 /*  FIXME? Ensure obj buf is flushed (if not suspended) before destruction.
  *
@@ -581,7 +583,7 @@ void destroy_obj(obj_t *obj)
          *    Play it safe and discard any pending output.
          */
         if (tcflush(obj->fd, TCIOFLUSH) < 0)
-            err_msg(errno, "Unable to flush tty device for console [%s]",
+            log_err(errno, "Unable to flush tty device for console [%s]",
                 obj->name);
         if (obj->aux.serial.dev)
             free(obj->aux.serial.dev);
@@ -598,7 +600,7 @@ void destroy_obj(obj_t *obj)
          */
         break;
     default:
-        err_msg(0, "INTERNAL: Unrecognized object [%s] type=%d",
+        log_err(0, "INTERNAL: Unrecognized object [%s] type=%d",
             obj->name, obj->type);
         break;
     }
@@ -610,7 +612,7 @@ void destroy_obj(obj_t *obj)
         list_destroy(obj->writers);
     if (obj->fd >= 0) {
         if (close(obj->fd) < 0)
-            err_msg(errno, "Unable to close object [%s]", obj->name);
+            log_err(errno, "Unable to close object [%s]", obj->name);
         obj->fd = -1;
     }
     if (obj->name)
@@ -784,7 +786,7 @@ void link_objs(obj_t *src, obj_t *dst)
     assert(!list_find_first(dst->writers, (ListFindF) find_obj, src));
     list_append(dst->writers, src);
 
-    DPRINTF("Linked [%s] reads to [%s] writes.\n", src->name, dst->name);
+    DPRINTF((10, "Linked [%s] reads to [%s] writes.\n", src->name, dst->name));
     assert(validate_obj_links(src) >= 0);
     assert(validate_obj_links(dst) >= 0);
     return;
@@ -802,9 +804,11 @@ void unlink_objs(obj_t *src, obj_t *dst)
     char buf[MAX_LINE];
 
     if (list_delete_all(src->readers, (ListFindF) find_obj, dst))
-        DPRINTF("Removing [%s] from [%s] readers.\n", dst->name, src->name);
+        DPRINTF((10, "Removing [%s] from [%s] readers.\n",
+            dst->name, src->name));
     if ((n = list_delete_all(dst->writers, (ListFindF) find_obj, src)))
-        DPRINTF("Removing [%s] from [%s] writers.\n", src->name, dst->name);
+        DPRINTF((10, "Removing [%s] from [%s] writers.\n",
+            src->name, dst->name));
 
     /*  If a "writable" client is being unlinked from a console ...
      */
@@ -840,7 +844,8 @@ void unlink_objs(obj_t *src, obj_t *dst)
         dst->gotEOF = 1;
     }
 
-    DPRINTF("Unlinked [%s] reads from [%s] writes.\n", src->name, dst->name);
+    DPRINTF((10, "Unlinked [%s] reads from [%s] writes.\n",
+        src->name, dst->name));
     assert(validate_obj_links(src) >= 0);
     assert(validate_obj_links(dst) >= 0);
     return;
@@ -878,8 +883,8 @@ static int validate_obj_links(obj_t *obj)
     i = list_iterator_create(obj->readers);
     while ((reader = list_next(i))) {
         if (!list_find_first(reader->writers, (ListFindF) find_obj, obj)) {
-            DPRINTF("[%s] writes not linked to [%s] reads.\n",
-                obj->name, reader->name);
+            DPRINTF((1, "[%s] writes not linked to [%s] reads.\n",
+                obj->name, reader->name));
             gotError = 1;
         }
     }
@@ -888,8 +893,8 @@ static int validate_obj_links(obj_t *obj)
     i = list_iterator_create(obj->writers);
     while ((writer = list_next(i))) {
         if (!list_find_first(writer->readers, (ListFindF) find_obj, obj)) {
-            DPRINTF("[%s] reads not linked to [%s] writes.\n",
-                obj->name, writer->name);
+            DPRINTF((1, "[%s] reads not linked to [%s] writes.\n",
+                obj->name, writer->name));
             gotError = 1;
         }
     }
@@ -913,7 +918,7 @@ int shutdown_obj(obj_t *obj)
         return(0);
 
     if (close(obj->fd) < 0)
-        err_msg(errno, "Unable to close object [%s]", obj->name);
+        log_err(errno, "Unable to close object [%s]", obj->name);
     obj->fd = -1;
 
     /*  Flush the obj's buffer.
@@ -942,7 +947,7 @@ int shutdown_obj(obj_t *obj)
      *    master objs list by mux_io(), and the objs list destructor will
      *    destroy the obj.
      */
-    DPRINTF("Shutdown object [%s].\n", obj->name);
+    DPRINTF((10, "Shutdown object [%s].\n", obj->name));
     return(-1);
 }
 
@@ -983,7 +988,7 @@ again:
             goto again;
         if ((errno == EAGAIN) || (errno == EWOULDBLOCK))
             return(0);
-        log_msg(20, "Unable to read from [%s]: %s.",
+        log_msg(LOG_INFO, "Unable to read from [%s]: %s",
             obj->name, strerror(errno));
         return(shutdown_obj(obj));
     }
@@ -994,13 +999,13 @@ again:
         return(rc);
     }
     else {
-        DPRINTF("Read %d bytes from [%s].\n", n, obj->name);
+        DPRINTF((15, "Read %d bytes from [%s].\n", n, obj->name));
 
         if (is_client_obj(obj)) {
             x_pthread_mutex_lock(&obj->bufLock);
             time(&obj->aux.client.timeLastRead);
             if (obj->aux.client.timeLastRead == (time_t) -1)
-                err_msg(errno, "What time is it?");
+                log_err(errno, "time() failed");
             x_pthread_mutex_unlock(&obj->bufLock);
             n = process_client_escapes(obj, buf, n);
         }
@@ -1055,7 +1060,7 @@ int write_obj_data(obj_t *obj, void *src, int len, int isInfo)
      *    no more data can be written into its buffer.
      */
     if (obj->gotEOF) {
-        DPRINTF("Attempted to write to [%s] after EOF.\n", obj->name);
+        DPRINTF((1, "Attempted to write to [%s] after EOF.\n", obj->name));
         return(0);
     }
 
@@ -1063,7 +1068,7 @@ int write_obj_data(obj_t *obj, void *src, int len, int isInfo)
      *    data will simply be discarded so perform a no-op here.
      */
     if (is_telnet_obj(obj) && obj->aux.telnet.conState != TELCON_UP) {
-        DPRINTF("Attempted to write to disconnected [%s].\n", obj->name);
+        DPRINTF((1, "Attempted to write to disconnected [%s].\n", obj->name));
         return(0);
     }
 
@@ -1137,7 +1142,7 @@ int write_obj_data(obj_t *obj, void *src, int len, int isInfo)
      */
     if (len > avail) {
         if (!is_client_obj(obj) || !obj->aux.client.gotSuspend)
-            log_msg(10, "Overwrote %d bytes in buffer for %s.",
+            log_msg(LOG_NOTICE, "Overwrote %d bytes in buffer for %s",
                 len-avail, obj->name);
         obj->bufOutPtr = obj->bufInPtr + 1;
         if (obj->bufOutPtr == &obj->buf[MAX_BUF_SIZE])
@@ -1207,14 +1212,14 @@ again:
              *  FIXME: Mirror read_from_obj() construct here when dethreaded.
              */
             if ((errno != EAGAIN) && (errno != EWOULDBLOCK)) {
-                log_msg(20, "Unable to write to [%s]: %s.",
+                log_msg(LOG_INFO, "Unable to write to [%s]: %s",
                     obj->name, strerror(errno));
                 obj->gotEOF = 1;
                 obj->bufInPtr = obj->bufOutPtr = obj->buf;
             }
         }
         else if (n > 0) {
-            DPRINTF("Wrote %d bytes to [%s].\n", n, obj->name);
+            DPRINTF((15, "Wrote %d bytes to [%s].\n", n, obj->name));
             obj->bufOutPtr += n;
             /*
              *  Do the hokey-pokey and perform a circular-buffer wrap-around.

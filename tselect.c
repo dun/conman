@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: tselect.c,v 1.10 2002/03/29 05:39:52 dun Exp $
+ *  $Id: tselect.c,v 1.11 2002/05/08 00:10:55 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -42,6 +42,7 @@
 #include <sys/types.h>
 #include <time.h>                                                   /* xyzzy */
 #include <unistd.h>
+#include "log.h"                                                    /* xyzzy */
 #include "tselect.h"
 
 
@@ -126,8 +127,8 @@ int tselect(int maxfdp1, fd_set *rset, fd_set *wset, fd_set *xset)
         /*  Dispatch timer events that have expired.
          */
         while (active && !timercmp(&tvNow, &active->tv, <)) {
-            DPRINTF("TSELECT: dispatching timer %d for f:%p a:%p.\n",
-                active->id, active->fnc, active->arg);              /* xyzzy */
+            DPRINTF((20, "TSELECT: dispatching timer %d for f:%p a:%p.\n",
+                active->id, active->fnc, active->arg));             /* xyzzy */
             t = active;
             active = active->next;
             t->next = inactive;
@@ -249,8 +250,8 @@ int abtimeout(CallBackF callback, void *arg, const struct timeval *tvp)
     *tPrevPtr = t;
     t->next = tCurr;
 
-    DPRINTF("TSELECT: started timer %d for f:%p a:%p in %ld secs.\n",
-        t->id, callback, arg, (tvp->tv_sec - (long) time(NULL)));   /* xyzzy */
+    DPRINTF((20, "TSELECT: started timer %d for f:%p a:%p in %ld secs.\n",
+        t->id, callback, arg, (tvp->tv_sec - (long) time(NULL))));  /* xyzzy */
     return(t->id);
 }
 
@@ -276,7 +277,7 @@ void untimeout(int timerid)
     tCurr->next = inactive;
     inactive = tCurr;
 
-    DPRINTF("TSELECT: canceled timer %d.\n", timerid);              /* xyzzy */
+    DPRINTF((20, "TSELECT: canceled timer %d.\n", timerid));        /* xyzzy */
     return;
 }
 

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: common.c,v 1.25 2002/03/29 05:39:52 dun Exp $
+ *  $Id: common.c,v 1.26 2002/05/08 00:10:54 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -35,7 +35,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include "common.h"
-#include "errors.h"
+#include "log.h"
 #include "util-str.h"
 
 
@@ -102,7 +102,7 @@ void destroy_req(req_t *req)
 
     if (req->sd >= 0) {
         if (close(req->sd) < 0)
-            err_msg(errno, "close() failed on fd=%d", req->sd);
+            log_err(errno, "close() failed on fd=%d", req->sd);
         req->sd = -1;
     }
     if (req->user)
@@ -133,7 +133,7 @@ void get_tty_mode(struct termios *tty, int fd)
     if (!isatty(fd))
         return;
     if (tcgetattr(fd, tty) < 0)
-        err_msg(errno, "tcgetattr() failed on fd=%d", fd);
+        log_err(errno, "tcgetattr() failed on fd=%d", fd);
     return;
 }
 
@@ -148,7 +148,7 @@ void set_tty_mode(struct termios *tty, int fd)
     if (!isatty(fd))
         return;
     if (tcsetattr(fd, TCSAFLUSH, tty) < 0)
-        err_msg(errno, "tcgetattr() failed on fd=%d", fd);
+        log_err(errno, "tcgetattr() failed on fd=%d", fd);
     return;
 }
 

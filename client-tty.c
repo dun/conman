@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-tty.c,v 1.42 2002/03/29 05:39:51 dun Exp $
+ *  $Id: client-tty.c,v 1.43 2002/05/08 00:10:54 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -32,17 +32,18 @@
 #include <assert.h>
 #include <errno.h>
 #include <signal.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <termios.h>
 #include <unistd.h>
-#include "common.h"
 #include "client.h"
-#include "errors.h"
-#include "util.h"
+#include "common.h"
+#include "log.h"
 #include "util-file.h"
 #include "util-str.h"
+#include "util.h"
 
 
 static void exit_handler(int signum);
@@ -87,9 +88,9 @@ void connect_console(client_conf_t *conf)
         conf->req->enableBroadcast = 0;
 
     if (!isatty(STDIN_FILENO))
-        err_msg(0, "Standard Input is not a terminal device.");
+        log_err(0, "Standard Input is not a terminal device");
     if (!isatty(STDOUT_FILENO))
-        err_msg(0, "Standard Output is not a terminal device.");
+        log_err(0, "Standard Output is not a terminal device");
 
     posix_signal(SIGHUP, SIG_IGN);
     posix_signal(SIGINT, SIG_IGN);
@@ -112,7 +113,7 @@ void connect_console(client_conf_t *conf)
         rset = rsetBak;
         while ((n = select(conf->req->sd+1, &rset, NULL, NULL, NULL)) <= 0) {
             if (errno != EINTR)
-                err_msg(errno, "Unable to multiplex I/O");
+                log_err(errno, "Unable to multiplex I/O");
             else if (done)
                 /* i need a */ break;
         }
@@ -130,7 +131,7 @@ void connect_console(client_conf_t *conf)
     }
 
     if (close(conf->req->sd) < 0)
-        err_msg(errno, "Unable to close connection to <%s:%d>",
+        log_err(errno, "Unable to close connection to <%s:%d>",
             conf->req->host, conf->req->port);
     conf->req->sd = -1;
 
@@ -168,7 +169,7 @@ static int read_from_stdin(client_conf_t *conf)
 
     while ((n = read(STDIN_FILENO, &c, 1)) < 0) {
         if (errno != EINTR)
-            err_msg(errno, "Unable to read from stdin");
+            log_err(errno, "Unable to read from stdin");
     }
     if (n == 0)
         return(0);
@@ -239,7 +240,7 @@ static int read_from_stdin(client_conf_t *conf)
         if (write_n(conf->req->sd, buf, p - buf) < 0) {
             if (errno == EPIPE)
                 return(0);
-            err_msg(errno, "Unable to write to <%s:%d>",
+            log_err(errno, "Unable to write to <%s:%d>",
                 conf->req->host, conf->req->port);
         }
     }
@@ -263,15 +264,15 @@ static int write_to_stdout(client_conf_t *conf)
         if (errno == EPIPE)
             return(0);
         if (errno != EINTR)
-            err_msg(errno, "Unable to read from <%s:%d>",
+            log_err(errno, "Unable to read from <%s:%d>",
                 conf->req->host, conf->req->port);
     }
     if (n > 0) {
         if (write_n(STDOUT_FILENO, buf, n) < 0)
-            err_msg(errno, "Unable to write to stdout");
+            log_err(errno, "Unable to write to stdout");
         if (conf->logd >= 0)
             if (write_n(conf->logd, buf, n) < 0)
-                err_msg(errno, "Unable to write to \"%s\"", conf->log);
+                log_err(errno, "Unable to write to \"%s\"", conf->log);
     }
     return(n);
 }
@@ -290,7 +291,7 @@ static int send_esc_seq(client_conf_t *conf, char c)
     if (write_n(conf->req->sd, buf, sizeof(buf)) < 0) {
         if (errno == EPIPE)
             return(0);
-        err_msg(errno, "Unable to write to <%s:%d>",
+        log_err(errno, "Unable to write to <%s:%d>",
             conf->req->host, conf->req->port);
     }
     return(1);
@@ -319,7 +320,7 @@ static int perform_close_esc(client_conf_t *conf, char c)
     locally_display_status(conf, "closed");
 
     if (shutdown(conf->req->sd, SHUT_WR) < 0) {
-        err_msg(errno, "Unable to shutdown connection to <%s:%d>",
+        log_err(errno, "Unable to shutdown connection to <%s:%d>",
             conf->req->host, conf->req->port);
     }
     conf->isClosedByClient = 1;
@@ -429,7 +430,7 @@ static int perform_help_esc(client_conf_t *conf, char c)
     if (n < 0)                          /* append CR/LF if buf was truncated */
         strcpy(&buf[sizeof(buf) - 3], "\r\n");
     if (write_n(STDOUT_FILENO, buf, strlen(buf)) < 0)
-        err_msg(errno, "Unable to write to stdout");
+        log_err(errno, "Unable to write to stdout");
     return(1);
 }
 
@@ -455,7 +456,7 @@ static int perform_info_esc(client_conf_t *conf, char c)
             conf->req->host, conf->req->port, CONMAN_MSG_SUFFIX);
     }
     if (write_n(STDOUT_FILENO, str, strlen(str)) < 0)
-        err_msg(errno, "Unable to write to stdout");
+        log_err(errno, "Unable to write to stdout");
     free(str);
     return(1);
 }
@@ -550,7 +551,7 @@ static int perform_suspend_esc(client_conf_t *conf, char c)
     set_tty_mode(&conf->tty, STDIN_FILENO);
 
     if (kill(getpid(), SIGTSTP) < 0)
-        err_msg(errno, "Unable to suspend client (pid %d)", (int) getpid());
+        log_err(errno, "Unable to suspend client (pid %d)", (int) getpid());
 
     get_tty_raw(&tty, STDIN_FILENO);
     set_tty_mode(&tty, STDIN_FILENO);
@@ -574,7 +575,7 @@ static void locally_echo_esc(char e, char c)
     assert((p - buf) <= sizeof(buf));
 
     if (write_n(STDOUT_FILENO, buf, p - buf) < 0)
-        err_msg(errno, "Unable to write to stdout");
+        log_err(errno, "Unable to write to stdout");
     return;
 }
 
@@ -631,6 +632,6 @@ static void locally_display_status(client_conf_t *conf, char *msg)
     if ((n < 0) || (n >= sizeof(buf)))  /* append CR/LF if buf was truncated */
         strcpy(&buf[sizeof(buf) - 3], "\r\n");
     if (write_n(STDOUT_FILENO, buf, strlen(buf)) < 0)
-        err_msg(errno, "Unable to write to stdout");
+        log_err(errno, "Unable to write to stdout");
     return;
 }

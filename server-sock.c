@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-sock.c,v 1.45 2002/03/29 05:39:52 dun Exp $
+ *  $Id: server-sock.c,v 1.46 2002/05/08 00:10:55 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -35,14 +35,15 @@
 #include <fnmatch.h>
 #include <pthread.h>
 #include <regex.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <time.h>
 #include <unistd.h>
 #include "common.h"
-#include "errors.h"
 #include "lex.h"
+#include "log.h"
 #include "server.h"
 #include "util-file.h"
 #include "util-net.h"
@@ -106,7 +107,7 @@ void process_client(client_arg_t *args)
     conf = args->conf;
     free(args);
 
-    DPRINTF("Processing new client.\n");
+    DPRINTF((5, "Processing new client.\n"));
 
     x_pthread_detach(pthread_self());
 
@@ -144,7 +145,7 @@ void process_client(client_arg_t *args)
             goto err;
         break;
     default:
-        log_msg(0, "Received invalid command=%d from <%s@%s:%d>.",
+        log_msg(LOG_WARNING, "Received invalid command=%d from <%s@%s:%d>",
             req->command, req->user, req->fqdn, req->port);
         goto err;
     }
@@ -172,9 +173,9 @@ static int resolve_addr(server_conf_t *conf, req_t *req, int sd)
 
     req->sd = sd;
     if (getpeername(sd, (struct sockaddr *) &addr, &addrlen) < 0)
-        err_msg(errno, "Unable to get address of remote peer");
+        log_err(errno, "Unable to get address of remote peer");
     if (!inet_ntop(AF_INET, &addr.sin_addr, buf, sizeof(buf)))
-        err_msg(errno, "Unable to convert network address into string");
+        log_err(errno, "Unable to convert network address into string");
     req->port = ntohs(addr.sin_port);
     req->ip = create_string(buf);
     /*
@@ -203,7 +204,8 @@ static int resolve_addr(server_conf_t *conf, req_t *req, int sd)
         if (hosts_ctl(CONMAN_DAEMON_NAME,
           (gotHostName ? req->fqdn : STRING_UNKNOWN),
           req->ip, STRING_UNKNOWN) == 0) {
-            log_msg(0, "TCP-Wrappers rejected connection from <%s:%d>.",
+            log_msg(LOG_NOTICE,
+                "TCP-Wrappers rejected connection from <%s:%d>",
                 req->fqdn, req->port);
             return(-1);
         }
@@ -229,16 +231,17 @@ static int recv_greeting(req_t *req)
     assert(req->sd >= 0);
 
     if ((n = read_line(req->sd, buf, sizeof(buf))) < 0) {
-        log_msg(0, "Unable to read greeting from <%s:%d>: %s",
+        log_msg(LOG_NOTICE, "Unable to read greeting from <%s:%d>: %s",
             req->fqdn, req->port, strerror(errno));
         return(-1);
     }
     else if (n == 0) {
-        log_msg(0, "Connection terminated by <%s:%d>", req->fqdn, req->port);
+        log_msg(LOG_NOTICE, "Connection terminated by <%s:%d>",
+            req->fqdn, req->port);
         return(-1);
     }
 
-    DPRINTF("Received greeting: %s", buf);
+    DPRINTF((5, "Received greeting: %s", buf));
 
     l = lex_create(buf, proto_strs);
     while (!done) {
@@ -264,8 +267,8 @@ static int recv_greeting(req_t *req)
             "Invalid greeting: no user specified");
         return(-1);
     }
-    DPRINTF("Received request from <%s@%s:%d>.\n",
-        req->user, req->fqdn, req->port);
+    DPRINTF((5, "Received request from <%s@%s:%d>.\n",
+        req->user, req->fqdn, req->port));
 
     /*  Send response to greeting.
      */
@@ -326,16 +329,17 @@ static int recv_req(req_t *req)
     assert(req->sd >= 0);
 
     if ((n = read_line(req->sd, buf, sizeof(buf))) < 0) {
-        log_msg(0, "Unable to read request from <%s:%d>: %s",
+        log_msg(LOG_NOTICE, "Unable to read request from <%s:%d>: %s",
             req->fqdn, req->port, strerror(errno));
         return(-1);
     }
     else if (n == 0) {
-        log_msg(0, "Connection terminated by <%s:%d>", req->fqdn, req->port);
+        log_msg(LOG_NOTICE, "Connection terminated by <%s:%d>",
+            req->fqdn, req->port);
         return(-1);
     }
 
-    DPRINTF("Received request: %s", buf);
+    DPRINTF((5, "Received request: %s", buf));
 
     l = lex_create(buf, proto_strs);
     while (!done) {
@@ -528,7 +532,7 @@ static int query_consoles_via_regex(
     rc = regcomp(&rex, buf, REG_EXTENDED | REG_ICASE);
     if (rc != 0) {
         if (regerror(rc, &rex, buf, sizeof(buf)) > sizeof(buf))
-            log_msg(10, "Buffer overflow during regerror()");
+            log_msg(LOG_WARNING, "Got regerror() buffer overrun");
         regfree(&rex);
         send_rsp(req, CONMAN_ERR_BAD_REGEX, buf);
         return(-1);
@@ -600,7 +604,7 @@ static int check_too_many_consoles(req_t *req)
         strlcpy(buf, obj->name, sizeof(buf));
         strlcat(buf, "\n", sizeof(buf));
         if (write_n(req->sd, buf, strlen(buf)) < 0) {
-            log_msg(0, "Unable to write to <%s:%d>: %s",
+            log_msg(LOG_NOTICE, "Unable to write to <%s:%d>: %s",
                 req->fqdn, req->port, strerror(errno));
             break;
         }
@@ -683,7 +687,7 @@ static int check_busy_consoles(req_t *req)
             if (delta)
                 free(delta);
             if (write_n(req->sd, buf, strlen(buf)) < 0) {
-                log_msg(0, "Unable to write to <%s:%d>: %s",
+                log_msg(LOG_NOTICE, "Unable to write to <%s:%d>: %s",
                     req->fqdn, req->port, strerror(errno));
                 break;
             }
@@ -755,7 +759,8 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
     /*  FIXME: Gracefully handle buffer overruns.
      */
     if ((n < 0) || (n >= sizeof(buf))) {
-        log_msg(10, "Request from <%s@%s:%d> terminated by buffer overrun.",
+        log_msg(LOG_WARNING,
+            "Request from <%s@%s:%d> terminated by buffer overrun",
             req->user, req->fqdn, req->port);
         return(-1);
     }
@@ -763,12 +768,12 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
     /*  Write response to client.
      */
     if (write_n(req->sd, buf, strlen(buf)) < 0) {
-        log_msg(0, "Unable to write to <%s:%d>: %s",
+        log_msg(LOG_NOTICE, "Unable to write to <%s:%d>: %s",
             req->fqdn, req->port, strerror(errno));
         return(-1);
     }
 
-    DPRINTF("Sent response: %s", buf);
+    DPRINTF((5, "Sent response: %s", buf));
     return(0);
 }
 

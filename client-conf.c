@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-conf.c,v 1.44 2002/04/29 21:50:34 dun Exp $
+ *  $Id: client-conf.c,v 1.45 2002/05/08 00:10:54 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -40,10 +40,10 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "common.h"
 #include "client.h"
-#include "errors.h"
+#include "common.h"
 #include "list.h"
+#include "log.h"
 #include "util-file.h"
 #include "util-str.h"
 
@@ -72,7 +72,7 @@ client_conf_t * create_client_conf(void)
         passp = getpwnam(p);
     if ((p == NULL) || (passp == NULL) || (passp->pw_uid != uid))
         if (!(passp = getpwuid(uid)))
-            err_msg(errno, "Unable to lookup user name for UID=%d", uid);
+            log_err(errno, "Unable to lookup user name for UID=%d", uid);
     if (passp->pw_name && *passp->pw_name)
         conf->req->user = create_string(passp->pw_name);
 
@@ -114,7 +114,7 @@ void destroy_client_conf(client_conf_t *conf)
         free(conf->log);
     if (conf->logd >= 0) {
         if (close(conf->logd) < 0)
-            err_msg(errno, "close() failed on fd=%d", conf->logd);
+            log_err(errno, "close() failed on fd=%d", conf->logd);
         conf->logd = -1;
     }
     if (conf->errmsg)
@@ -278,7 +278,7 @@ static void read_consoles_from_file(List consoles, char *file)
     assert(file != NULL);
 
     if (!(fp = fopen(file, "r")))
-        err_msg(errno, "Unable to open \"%s\"", file);
+        log_err(errno, "Unable to open \"%s\"", file);
 
     while (fgets(buf, sizeof(buf), fp) != NULL) {
 
@@ -303,7 +303,7 @@ static void read_consoles_from_file(List consoles, char *file)
     }
 
     if (fclose(fp) != 0)
-        err_msg(errno, "Unable to close \"%s\"", file);
+        log_err(errno, "Unable to close \"%s\"", file);
 
     return;
 }
@@ -352,13 +352,13 @@ void open_client_log(client_conf_t *conf)
     assert(conf->logd < 0);
 
     if ((conf->logd = open(conf->log, flags, S_IRUSR | S_IWUSR)) < 0)
-        err_msg(errno, "Unable to open \"%s\"", conf->log);
+        log_err(errno, "Unable to open \"%s\"", conf->log);
 
     now = create_long_time_string(0);
     str = create_format_string("%sLog started at %s%s",
         CONMAN_MSG_PREFIX, now, CONMAN_MSG_SUFFIX);
     if (write_n(conf->logd, str, strlen(str)) < 0)
-        err_msg(errno, "Unable to write to \"%s\"", conf->log);
+        log_err(errno, "Unable to write to \"%s\"", conf->log);
     free(now);
     free(str);
 
@@ -378,12 +378,12 @@ void close_client_log(client_conf_t *conf)
     str = create_format_string("%sLog finished at %s%s",
         CONMAN_MSG_PREFIX, now, CONMAN_MSG_SUFFIX);
     if (write_n(conf->logd, str, strlen(str)) < 0)
-        err_msg(errno, "Unable to write to \"%s\"", conf->log);
+        log_err(errno, "Unable to write to \"%s\"", conf->log);
     free(now);
     free(str);
 
     if (close(conf->logd) < 0)
-        err_msg(errno, "Unable to close \"%s\"", conf->log);
+        log_err(errno, "Unable to close \"%s\"", conf->log);
     conf->logd = -1;
 
     return;

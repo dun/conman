@@ -82,6 +82,6 @@
 #endif /* WITH_PTHREADS */
 
 /* Override default out_of_memory() macro definition. */
-#include "errors.h"
-#define out_of_memory() (err_msg(0, "Out of memory"), (void *) NULL)
+#include "log.h"
+#define out_of_memory() (log_err(0, "Out of memory"), (void *) NULL)
 

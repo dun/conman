@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-serial.c,v 1.4 2002/03/29 05:39:52 dun Exp $
+ *  $Id: server-serial.c,v 1.5 2002/05/08 00:10:55 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -34,7 +34,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <termios.h>
-#include "errors.h"
+#include "log.h"
 #include "server.h"
 
 
@@ -226,15 +226,15 @@ void set_serial_opts(struct termios *tty, obj_t *serial, seropt_t *opts)
     assert((opts->parity >= 0) && (opts->parity <= 2));
     assert((opts->stopbits >= 1) && (opts->stopbits <= 2));
 
-    DPRINTF("Setting [%s] dev=%s to %d,%d%s%d.\n",
+    DPRINTF((10, "Setting [%s] dev=%s to %d,%d%s%d.\n",
         serial->name, serial->aux.serial.dev, bps_to_int(opts->bps),
-        opts->databits, parity_to_str(opts->parity), opts->stopbits);
+        opts->databits, parity_to_str(opts->parity), opts->stopbits));
 
     if (cfsetispeed(tty, opts->bps) < 0)
-        err_msg(errno, "Unable to set [%s] input baud rate to %d",
+        log_err(errno, "Unable to set [%s] input baud rate to %d",
             serial->name, opts->bps);
     if (cfsetospeed(tty, opts->bps) < 0)
-        err_msg(errno, "Unable to set [%s] output baud rate to %d",
+        log_err(errno, "Unable to set [%s] output baud rate to %d",
             serial->name, opts->bps);
 
     tty->c_cflag &= ~CSIZE;

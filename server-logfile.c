@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-logfile.c,v 1.6 2002/03/29 05:39:52 dun Exp $
+ *  $Id: server-logfile.c,v 1.7 2002/05/08 00:10:54 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -36,7 +36,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include "errors.h"
+#include "log.h"
 #include "server.h"
 #include "util-file.h"
 #include "util-str.h"
@@ -97,7 +97,7 @@ int open_logfile_obj(obj_t *logfile, int gotTrunc)
 
     if (logfile->fd >= 0) {
         if (close(logfile->fd) < 0)     /* log err and continue */
-            log_msg(0, "Unable to close logfile \"%s\": %s.",
+            log_msg(LOG_WARNING, "Unable to close logfile \"%s\": %s",
                 logfile->name, strerror(errno));
         logfile->fd = -1;
     }
@@ -106,12 +106,12 @@ int open_logfile_obj(obj_t *logfile, int gotTrunc)
     if (gotTrunc)
         flags |= O_TRUNC;
     if ((logfile->fd = open(logfile->name, flags, S_IRUSR | S_IWUSR)) < 0) {
-        log_msg(0, "Unable to open logfile \"%s\": %s.",
+        log_msg(LOG_WARNING, "Unable to open logfile \"%s\": %s",
             logfile->name, strerror(errno));
         return(-1);
     }
     if (get_write_lock(logfile->fd) < 0) {
-        log_msg(0, "Unable to lock \"%s\".", logfile->name);
+        log_msg(LOG_WARNING, "Unable to lock \"%s\"", logfile->name);
         close(logfile->fd);             /* ignore err on close() */
         logfile->fd = -1;
         return(-1);
@@ -127,9 +127,9 @@ int open_logfile_obj(obj_t *logfile, int gotTrunc)
     free(now);
     free(msg);
 
-    DPRINTF("Opened %slogfile \"%s\" for console [%s].\n",
+    DPRINTF((10, "Opened %slogfile \"%s\" for console [%s].\n",
         (logfile->aux.logfile.opts.enableSanitize ? "SANE " : ""),
-        logfile->name, logfile->aux.logfile.consoleName);
+        logfile->name, logfile->aux.logfile.consoleName));
     return(0);
 }
 
@@ -149,7 +149,7 @@ obj_t * get_console_logfile_obj(obj_t *console)
     else if (is_telnet_obj(console))
         logfile = console->aux.telnet.logfile;
     else
-        err_msg(0, "INTERNAL: Unrecognized console [%s] type=%d",
+        log_err(0, "INTERNAL: Unrecognized console [%s] type=%d",
             console->name, console->type);
 
     if (!logfile || (logfile->fd < 0))
@@ -184,8 +184,8 @@ int write_sanitized_log_data(obj_t *log, const void *src, int len)
     if (len > sizeof(buf) / 2)
         len = sizeof(buf) / 2;
 
-    DPRINTF("Sanitizing %d bytes for [%s] log.\n",
-        len, log->aux.logfile.consoleName);
+    DPRINTF((15, "Sanitizing %d bytes for [%s] log.\n",
+        len, log->aux.logfile.consoleName));
 
     for (p=src, q=buf; len>0; p++, len--) {
 
