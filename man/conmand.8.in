@@ -1,4 +1,4 @@
-.\" $Id: conmand.8.in,v 1.2 2002/05/12 19:20:29 dun Exp $
+.\" $Id: conmand.8.in,v 1.3 2002/05/15 03:44:45 dun Exp $
 
 .TH CONMAND 8 "@DATE@" "@PROJECT@-@VERSION@" "LLNL"
 
@@ -23,7 +23,9 @@ Display a summary of the command-line options.
 .TP
 .B \-k
 Kill the \fBconmand\fR process that is associated with the specified
-configuration.
+configuration.  If the configuration file has been modified while the
+daemon is running, this option will be unable to identify the daemon
+process and a SIGTERM will have to be sent to it manually.
 .TP
 .B \-p \fIport\fR
 Specify the port on which \fBconmand\fR will listen for clients, overriding
