@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: tselect.c,v 1.3 2001/09/25 22:58:42 dun Exp $
+ *  $Id: tselect.c,v 1.4 2001/10/11 07:48:47 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ****************************************************************************** 
  *  Based on the implementation in Jon C. Snader's
@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <time.h>						/* xyzzy */
 #include <unistd.h>
 #include "tselect.h"
 
@@ -50,9 +51,9 @@
 
 struct timer {
     int             id;			/* timer ID                           */
-    CallBackF       fnc;		/* function called when timer expires */
+    CallBackF       fnc;		/* callback function                  */
     void           *arg;		/* callback function arg              */
-    struct timeval  tv;			/* time when timer expires            */
+    struct timeval  tv;			/* time at which timer expires        */
     struct timer   *next;		/* next timer in list                 */
 };
 
@@ -105,7 +106,7 @@ int tselect(int maxfdp1, fd_set *rset, fd_set *wset, fd_set *xset)
          */
         while (active && !timercmp(&tvNow, &active->tv, <)) {
             DPRINTF("TSELECT: dispatching timer %d for f:%p a:%p.\n",
-                active->id, active->fnc, active->arg); /* xyzzy */
+                active->id, active->fnc, active->arg);		/* xyzzy */
             t = active;
             active = active->next;
             t->next = inactive;
@@ -153,10 +154,8 @@ int tselect(int maxfdp1, fd_set *rset, fd_set *wset, fd_set *xset)
         tvDelta.tv_usec = 0;
         tvDeltaPtr = &tvDelta;
 
-        while ((n = select(maxfdp1, rset, wset, xset, tvDeltaPtr)) < 0) {
-            if (errno != EINTR)
-                return(n);
-        }
+        if ((n = select(maxfdp1, rset, wset, xset, tvDeltaPtr)) < 0)
+            return(-1);
         if (n > 0)
             return(n);
 
@@ -230,7 +229,7 @@ int abtimeout(CallBackF callback, void *arg, const struct timeval *tvp)
     t->next = tCurr;
 
     DPRINTF("TSELECT: started timer %d for f:%p a:%p in %ld secs.\n",
-        t->id, callback, arg, (tvp->tv_sec - time(NULL))); /* xyzzy */
+        t->id, callback, arg, (tvp->tv_sec - time(NULL)));	/* xyzzy */
     return(t->id);
 }
 
@@ -256,18 +255,14 @@ void untimeout(int timerid)
     tCurr->next = inactive;
     inactive = tCurr;
 
-    DPRINTF("TSELECT: canceled timer %d.\n", timerid); /* xyzzy */
+    DPRINTF("TSELECT: canceled timer %d.\n", timerid);		/* xyzzy */
     return;
 }
 
 
 static Timer alloc_timer(void)
 {
-/*  This routine returns out_of_memory() when memory allocation fails.
- *  By default, this is a macro definition that returns NULL; this macro may
- *  be redefined to invoke another routine instead.  Furthermore, if USE_OOMF
- *  is defined, this macro will not be defined and the list will expect an
- *  external Out-Of-Memory Function to be defined.
+/*  Returns a timer, or out_of_memory() if memory allocation fails.
  */
     Timer t, tLast;
 
