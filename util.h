@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util.h,v 1.4 2001/05/31 18:18:40 dun Exp $
+ *  $Id: util.h,v 1.5 2001/06/12 16:17:48 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -14,6 +14,7 @@
 
 #include <netinet/in.h>
 #include <sys/types.h>
+#include <time.h>
 
 
 #ifndef MAX
@@ -43,6 +44,11 @@ char * create_fmt_string(const char *fmt, ...);
  *  Note that the caller is responsible for freeing this string.
  */
 
+void destroy_string(char *str);
+/*
+ *  Destroys the string (str).
+ */
+
 char * create_date_time_string(time_t t);
 /*
  *  Creates and returns a new string with the specified date & time
@@ -64,15 +70,18 @@ char * create_time_string(time_t t);
 char * create_time_delta_string(time_t t);
 /*
  *  Creates and returns a new string indicating the time delta
- *    between time (t) and the current time, or NULL on error.
+ *    between time (t) and the current time.
  *  The difference is broken-down into years, weeks, days, hours,
  *    minutes, and seconds.
  *  Note that the caller is responsible for freeing this string.
  */
 
-void destroy_string(char *str);
+struct tm * get_localtime(time_t *t, struct tm *tm);
 /*
- *  Destroys the string (str).
+ *  Gets the local time in a thread-safe manner.
+ *  The time struct (*tm) is filled-in with the local time based on (*t);
+ *    if (*t == 0), it is set with the current time.
+ *  Returns the ptr to the time struct arg (tm).
  */
 
 void set_descriptor_nonblocking(int fd);

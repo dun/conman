@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.14 2001/06/08 20:31:15 dun Exp $
+ *  $Id: server.h,v 1.15 2001/06/12 16:17:48 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -85,6 +85,17 @@ void destroy_server_conf(server_conf_t *conf);
 void process_server_cmd_line(int argc, char *argv[], server_conf_t *conf);
 
 void process_server_conf_file(server_conf_t *conf);
+
+
+/******************\
+**  server-esc.c  **
+\******************/
+
+int process_escape_chars(obj_t *client, void *src, int len);
+
+void perform_serial_break(obj_t *client);
+
+void perform_log_replay(obj_t *client);
 
 
 /******************\

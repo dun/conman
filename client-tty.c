@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-tty.c,v 1.17 2001/06/08 20:51:09 dun Exp $
+ *  $Id: client-tty.c,v 1.18 2001/06/12 16:17:47 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -160,11 +160,11 @@ static int read_from_stdin(client_conf_t *conf)
  */
     static enum { CHR, EOL, ESC } mode = EOL;
     int n;
-    u_char c;
+    unsigned char c;
     char esc = conf->escapeChar;
-    u_char buf[4];
-    u_char *p = buf;
-    u_char *q, *r;
+    unsigned char buf[4];
+    unsigned char *p = buf;
+    unsigned char *q, *r;
 
     while ((n = read(STDIN_FILENO, &c, 1)) < 0) {
         if (errno != EINTR)
@@ -189,7 +189,7 @@ static int read_from_stdin(client_conf_t *conf)
         case ESC_CHAR_HELP:
             perform_help_esc(conf, c);
             return(1);
-        case ESC_CHAR_LOG_REPLAY:
+        case ESC_CHAR_LOG:
             send_esc_seq(conf, c);
             return(1);
         case ESC_CHAR_SUSPEND:
@@ -245,7 +245,7 @@ static int write_to_stdout(client_conf_t *conf)
  *  Returns the number of bytes written to stdout,
  *    or 0 if the socket connection has been closed.
  */
-    char buf[MAX_BUF_SIZE];
+    unsigned char buf[MAX_BUF_SIZE];
     int n;
 
     /*  Stdin has to be processed character-by-character to check for
@@ -270,7 +270,7 @@ static void send_esc_seq(client_conf_t *conf, char c)
 {
 /*  Transmit an escape sequence to the server.
  */
-    char buf[2];
+    unsigned char buf[2];
 
     buf[0] = ESC_CHAR;
     buf[1] = c;
@@ -310,18 +310,12 @@ static void perform_help_esc(client_conf_t *conf, char c)
 
     locally_echo_esc(conf->escapeChar, c);
 
-    str = write_esc_char(conf->escapeChar, escChar);
-    assert((str - escChar) <= sizeof(escChar));
-    str = write_esc_char(ESC_CHAR_BREAK, escBreak);
-    assert((str - escBreak) <= sizeof(escBreak));
-    str = write_esc_char(ESC_CHAR_CLOSE, escClose);
-    assert((str - escClose) <= sizeof(escClose));
-    str = write_esc_char(ESC_CHAR_HELP, escHelp);
-    assert((str - escHelp) <= sizeof(escHelp));
-    str = write_esc_char(ESC_CHAR_LOG_REPLAY, escLog);
-    assert((str - escLog) <= sizeof(escLog));
-    str = write_esc_char(ESC_CHAR_SUSPEND, escSuspend);
-    assert((str - escSuspend) <= sizeof(escSuspend));
+    write_esc_char(conf->escapeChar, escChar);
+    write_esc_char(ESC_CHAR_BREAK, escBreak);
+    write_esc_char(ESC_CHAR_CLOSE, escClose);
+    write_esc_char(ESC_CHAR_HELP, escHelp);
+    write_esc_char(ESC_CHAR_LOG, escLog);
+    write_esc_char(ESC_CHAR_SUSPEND, escSuspend);
 
     str = create_fmt_string(
         "Supported ConMan Escape Sequences:\r\n"
@@ -386,32 +380,32 @@ static void locally_echo_esc(char e, char c)
 }
 
 
-char * write_esc_char(char c, char *p)
+char * write_esc_char(char c, char *dst)
 {
-/*  Writes the escape character (c) into the buffer pointed to by (p).
+/*  Writes the escape character (c) into the buffer pointed to by (dst).
  *  Returns a ptr to the char following the escape char in the buffer.
  *  (cf. Stevens UNP p638).
  */
-    assert(p);
+    assert(dst);
 
-    c &= 0177;
+    c &= 0x7F;
 
     /*  Echo ASCII ctrl-chars as a caret followed by the uppercase char.
      */
-    if (c < 040) {
-        *p++ = '^';
-        *p++ = c + '@';
+    if (c < 0x20) {
+        *dst++ = '^';
+        *dst++ = c + '@';
     }
-    else if (c == 0177) {		/* ASCII DEL char */
-        *p++ = '^';
-        *p++ = '?';
+    else if (c == 0x7F) {		/* ASCII DEL char */
+        *dst++ = '^';
+        *dst++ = '?';
     }
     else {
-        *p++ = c;
+        *dst++ = c;
     }
 
-    *p = '\0';				/* DO NOT advance ptr here */
-    return(p);
+    *dst = '\0';			/* DO NOT advance ptr here */
+    return(dst);
 }
 
 
@@ -437,13 +431,14 @@ static void display_connection_msg(client_conf_t *conf, char *msg)
     if (!overflow) {
 
         if (list_count(conf->req->consoles) == 1) {
-            n = snprintf(ptr, len, "%s Connection to console %s %s.\r\n",
+            n = snprintf(ptr, len, "%sConnection to console %s %s%s\r\n",
                 CONMAN_MSG_PREFIX, (char *) list_peek(conf->req->consoles),
-                msg);
+                msg, CONMAN_MSG_SUFFIX);
         }
         else {
-            n = snprintf(ptr, len, "%s Broadcast to %d consoles %s.\r\n",
-                CONMAN_MSG_PREFIX, list_count(conf->req->consoles), msg);
+            n = snprintf(ptr, len, "%sBroadcast to %d consoles %s%s\r\n",
+                CONMAN_MSG_PREFIX, list_count(conf->req->consoles),
+                msg, CONMAN_MSG_SUFFIX);
         }
         if (n < 0 || n >= len)
             overflow = 1;

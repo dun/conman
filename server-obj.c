@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.14 2001/06/08 21:26:40 dun Exp $
+ *  $Id: server-obj.c,v 1.15 2001/06/12 16:17:48 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -29,9 +29,6 @@ static obj_t * create_obj(enum obj_type type, List objs, char *name, int fd);
 static void set_raw_console_mode(obj_t *obj);
 static void restore_console_mode(obj_t *obj);
 static void unlink_objs_helper(obj_t *src, obj_t *dst);
-static int process_escape_chars(obj_t *client, void *src, int len);
-static void perform_serial_break(obj_t *client);
-static void perform_log_replay(obj_t *client);
 
 
 obj_t * create_console_obj(List objs, char *name, char *dev,
@@ -101,8 +98,8 @@ obj_t * create_logfile_obj(List objs, char *name, obj_t *console)
     console->aux.console.logfile = logfile;
 
     now = create_date_time_string(0);
-    msg = create_fmt_string("\r\n%s Console %s log started at %s.\r\n",
-        CONMAN_MSG_PREFIX, console->name, now);
+    msg = create_fmt_string("\r\n%sConsole %s log started at %s%s\r\n",
+        CONMAN_MSG_PREFIX, console->name, now, CONMAN_MSG_SUFFIX);
     write_obj_data(logfile, msg, strlen(msg));
     free(now);
     free(msg);
@@ -337,7 +334,7 @@ int find_obj(obj_t *obj, obj_t *key)
 
 void link_objs(obj_t *src, obj_t *dst)
 {
-/*  Creates a link so data read from (src) is copied to (dst).
+/*  Creates a link so data read from (src) is written to (dst).
  */
     ListIterator i;
     char *now;
@@ -364,11 +361,11 @@ void link_objs(obj_t *src, obj_t *dst)
         now = create_time_string(0);
         tty = src->aux.client.req->tty;
         snprintf(buf, sizeof(buf),
-            "\r\n%s Console %s %s%s by %s@%s%s%s at %s.\r\n",
+            "\r\n%sConsole %s %s%s by %s@%s%s%s at %s%s\r\n",
             CONMAN_MSG_PREFIX, dst->name,
             (gotJoin ? "joined" : "stolen"), (gotBcast ? " for B/C" : ""),
             src->aux.client.req->user, src->aux.client.req->host,
-            (tty ? " on " : ""), (tty ? tty : ""), now);
+            (tty ? " on " : ""), (tty ? tty : ""), now, CONMAN_MSG_SUFFIX);
         free(now);
         buf[sizeof(buf) - 2] = '\n';
         buf[sizeof(buf) - 1] = '\0';
@@ -415,6 +412,8 @@ void unlink_objs(obj_t *obj1, obj_t *obj2)
 
 static void unlink_objs_helper(obj_t *src, obj_t *dst)
 {
+/*  FIX_ME: DOCUMENT_ME.
+ */
     int n;
     ListIterator i;
     obj_t *writer;
@@ -434,10 +433,10 @@ static void unlink_objs_helper(obj_t *src, obj_t *dst)
         now = create_time_string(0);
         tty = dst->aux.client.req->tty;
         snprintf(buf, sizeof(buf),
-            "\r\n%s Console %s departed by %s@%s%s%s at %s.\r\n",
+            "\r\n%sConsole %s departed by %s@%s%s%s at %s%s\r\n",
             CONMAN_MSG_PREFIX, src->name,
             dst->aux.client.req->user, dst->aux.client.req->host,
-            (tty ? " on " : ""), (tty ? tty : ""), now);
+            (tty ? " on " : ""), (tty ? tty : ""), now, CONMAN_MSG_SUFFIX);
         free(now);
         buf[sizeof(buf) - 2] = '\n';
         buf[sizeof(buf) - 1] = '\0';
@@ -464,6 +463,8 @@ static void unlink_objs_helper(obj_t *src, obj_t *dst)
 
 void shutdown_obj(obj_t *obj)
 {
+/*  FIX_ME: DOCUMENT_ME.
+ */
     ListIterator i;
     obj_t *reader;
     obj_t *writer;
@@ -553,182 +554,12 @@ again:
 }
 
 
-static int process_escape_chars(obj_t *client, void *src, int len)
-{
-/*  Processes the buffer (src) of length (len) received from the client
- *    for escape character sequences.
- *  Escape characters are removed (unstuffed) from the buffer
- *    and immediately processed.
- *  Returns the new length of the modified buffer.
- */
-    const u_char *last = (u_char *) src + len;
-    u_char *p, *q;
-
-    assert(client->type == CLIENT);
-    assert(client->fd >= 0);
-
-    if (!src || len <= 0)
-        return(0);
-
-    for (p=q=src; p<last; p++) {
-
-        if (client->aux.client.gotEscape) {
-            client->aux.client.gotEscape = 0;
-            switch (*p) {
-            case ESC_CHAR:
-                *q++ = *p;
-                break;
-            case ESC_CHAR_BREAK:
-                perform_serial_break(client);
-                break;
-            case ESC_CHAR_LOG_REPLAY:
-                perform_log_replay(client);
-                break;
-            default:
-                log_msg(10, "Received invalid escape '%c' from %s.",
-                    *p, client->name);
-                break;
-            }
-        }
-        else if (*p == ESC_CHAR) {
-            client->aux.client.gotEscape = 1;
-        }
-        else {
-            *q++ = *p;
-        }
-    }
-    assert((q >= (u_char *) src) && (q <= p));
-    len = q - (u_char *) src;
-    return(len);
-}
-
-
-static void perform_serial_break(obj_t *client)
-{
-/*  Transmits a serial-break to each of the consoles written to by the client.
- */
-    ListIterator i;
-    obj_t *console;
-
-    assert(client->type == CLIENT);
-    if (!(i = list_iterator_create(client->readers)))
-        err_msg(0, "Out of memory");
-    while ((console = list_next(i))) {
-        assert(console->type == CONSOLE);
-        DPRINTF("Performing serial-break on console [%s].\n", console->name);
-        if (tcsendbreak(console->fd, 0) < 0)
-            err_msg(errno, "tcsendbreak() failed for console [%s]",
-                console->name);
-    }
-    list_iterator_destroy(i);
-    return;
-}
-
-
-static void perform_log_replay(obj_t *client)
-{
-/*  Kinda like TiVo's Instant Replay.  :)
- *  Replays the last bytes from the console logfile (if present) associated
- *    with this client (in either a R/O or R/W session, but not a B/C session).
- */
-    obj_t *console;
-    obj_t *logfile;
-    u_char buf[MAX_LINE + CONMAN_REPLAY_LEN];
-    u_char *ptr = buf;
-    int len = sizeof(buf);
-    u_char *p;
-    int n, m;
-    int rc;
-
-    assert(client->type == CLIENT);
-
-    /*  Broadcast sessions are "write-only", so the log-replay is a no-op.
-     */
-    if (list_is_empty(client->writers))
-        return;
-
-    /*  The client will have exactly one writer in either a R/O or R/W session.
-     */
-    assert(list_count(client->writers) == 1);
-    console = list_peek(client->writers);
-    assert(console->type == CONSOLE);
-    logfile = console->aux.console.logfile;
-
-    if (!logfile) {
-        n = snprintf(ptr, len, "\r\n%s Console %s is not being logged.\r\n",
-            CONMAN_MSG_PREFIX, console->name);
-        if ((n < 0) || (n >= len)) {
-            log_msg(10, "Insufficient buffer to replay console %s log for %s.",
-                console->name, client->name);
-            return;
-        }
-    }
-    else {
-        assert(logfile->type == LOGFILE);
-        n = snprintf(ptr, len, "\r\n%s Begin replay of console %s.\r\n",
-            CONMAN_MSG_PREFIX, console->name);
-        if (((n < 0) || (n >= len)) || (sizeof(buf) < 2*n)) {
-            log_msg(10, "Insufficient buffer to replay console %s log for %s.",
-                console->name, client->name);
-            return;
-        }
-        ptr += n;
-        /*
-         *  Since we know the length of the "begin" message, reserve space
-         *    in 'buf' for the "end" message by doubling its length.
-         */
-        len -= 2*n;
-
-        if ((rc = pthread_mutex_lock(&logfile->bufLock)) != 0)
-            err_msg(rc, "pthread_mutex_lock() failed for [%s]",
-                logfile->name);
-
-        /*  If the console's circular-buffer has not yet wrapped around,
-         *    don't wrap back into uncharted buffer territory.
-         */
-        if (!logfile->gotWrapped)
-            n = MIN(CONMAN_REPLAY_LEN, logfile->bufInPtr - logfile->buf);
-        else
-            n = MIN(CONMAN_REPLAY_LEN, MAX_BUF_SIZE - 1);
-        n = MIN(n, len);
-
-        p = logfile->bufInPtr - n;
-        if (p >= logfile->buf) {	/* no wrap needed */
-            memcpy(ptr, p, n);
-            ptr += n;
-        }
-        else {				/* wrap backwards */
-            m = logfile->buf - p;
-            p = &logfile->buf[MAX_BUF_SIZE] - m;
-            memcpy(ptr, p, m);
-            ptr += m;
-            n -= m;
-            memcpy(ptr, logfile->buf, n);
-            ptr += n;
-        }
-
-        if ((rc = pthread_mutex_unlock(&logfile->bufLock)) != 0)
-            err_msg(rc, "pthread_mutex_unlock() failed for [%s]",
-                logfile->name);
-
-        /*  Must recompute 'len' since we already subtracted space reserved
-         *    for this string.  We could get away with just sprintf() here.
-         */
-        len = &buf[sizeof(buf)] - ptr;
-        n = snprintf(ptr, len, "\r\n%s End replay of console %s.\r\n",
-            CONMAN_MSG_PREFIX, console->name);
-        assert((n >= 0) && (n < len));
-    }
-
-    write_obj_data(client, buf, strlen(buf));
-    return;
-}
-
-
 int write_obj_data(obj_t *obj, void *src, int len)
 {
 /*  Writes the buffer (src) of length (len) into the object's (obj)
  *    circular-buffer.  Returns the number of bytes written.
+ *  Note that this routine can write at most (MAX_BUF_SIZE - 1) bytes
+ *    of data into the object's circular-buffer.
  */
     int rc;
     int avail;

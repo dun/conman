@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.c,v 1.5 2001/06/08 20:33:11 dun Exp $
+ *  $Id: common.c,v 1.6 2001/06/12 16:17:48 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -9,7 +9,6 @@
 #endif /* HAVE_CONFIG_H */
 
 #include <errno.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include "common.h"

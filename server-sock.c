@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-sock.c,v 1.17 2001/06/08 20:31:15 dun Exp $
+ *  $Id: server-sock.c,v 1.18 2001/06/12 16:17:48 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -393,7 +393,7 @@ static int query_consoles(server_conf_t *conf, req_t *req)
  *    with a list of console obj_t's.
  */
     ListIterator i;
-    char buf[MAX_BUF_SIZE];
+    char buf[MAX_SOCK_LINE];
     char *p;
     int rc;
     regex_t rex;

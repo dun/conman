@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-sock.c,v 1.10 2001/05/31 18:22:41 dun Exp $
+ *  $Id: client-sock.c,v 1.11 2001/06/12 16:17:47 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -8,17 +8,13 @@
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include <arpa/inet.h>
 #include <assert.h>
 #include <errno.h>
 #include <netdb.h>
-#include <netinet/in.h>
-#include <pwd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <sys/utsname.h>
 #include <unistd.h>
 #include "common.h"
 #include "client.h"

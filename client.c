@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client.c,v 1.5 2001/05/29 23:45:24 dun Exp $
+ *  $Id: client.c,v 1.6 2001/06/12 16:17:48 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -8,9 +8,6 @@
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include "common.h"
 #include "client.h"

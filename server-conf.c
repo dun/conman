@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-conf.c,v 1.8 2001/06/08 20:31:15 dun Exp $
+ *  $Id: server-conf.c,v 1.9 2001/06/12 16:17:48 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -11,12 +11,10 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <unistd.h>
 #include "common.h"
 #include "errors.h"
@@ -24,13 +22,6 @@
 #include "list.h"
 #include "server.h"
 #include "util.h"
-
-
-#ifndef NDEBUG
-#define DEBUG_STRING " (debug)"
-#else
-#define DEBUG_STRING ""
-#endif /* !NDEBUG */
 
 
 enum server_conf_toks {
@@ -291,7 +282,7 @@ static void parse_console_cmd(Lex l, server_conf_t *conf)
             lex_next(l);
     }
     else {
-        if (!(console = create_console_obj( conf->objs, name, dev, rst, bps)))
+        if (!(console = create_console_obj(conf->objs, name, dev, rst, bps)))
             log_msg(0, "Unable to create console object '%s'", name);
         if (*log) {
             if (!(logfile = create_logfile_obj(conf->objs, log, console)))

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client.h,v 1.9 2001/05/29 23:45:24 dun Exp $
+ *  $Id: client.h,v 1.10 2001/06/12 16:17:48 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -10,7 +10,6 @@
 
 #include <termios.h>
 #include "common.h"
-#include "list.h"
 
 
 typedef struct client_conf {
@@ -66,7 +65,7 @@ void display_consoles(client_conf_t *conf, int fd);
 
 void connect_console(client_conf_t *conf);
 
-char * write_esc_char(char c, char *p);
+char * write_esc_char(char c, char *dst);
 
 
 #endif /* !_CLIENT_H */

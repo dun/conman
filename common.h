@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.h,v 1.5 2001/06/08 20:33:11 dun Exp $
+ *  $Id: common.h,v 1.6 2001/06/12 16:17:48 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -15,28 +15,34 @@
 #define DEFAULT_CONMAN_PORT	7890
 #define DEFAULT_SERVER_CONF	"/etc/conman.conf"
 #define DEFAULT_CONSOLE_BAUD	9600
+#define DEFAULT_CLIENT_ESCAPE	'&'
 
+#define CONMAN_MSG_PREFIX	"<ConMan> "
+#define CONMAN_MSG_SUFFIX	"."
 
 /*  Notes regarding the recommended sizes of various constants:
  *
- *    - MAX_BUF_SIZE >= CONMAN_REPLAY_LEN
+ *    - MAX_BUF_SIZE >= CONMAN_REPLAY_LEN * 2
  *    - MAX_BUF_SIZE >= MAX_LINE
  *    - MAX_SOCK_LINE >= MAX_LINE
  */
-#define CONMAN_MSG_PREFIX	"<ConMan>"
 #define CONMAN_REPLAY_LEN	4096
-#define DEFAULT_CLIENT_ESCAPE	'&'
 #define MAX_BUF_SIZE		8192
-#define MAX_LINE		1024
 #define MAX_SOCK_LINE		8192
-
+#define MAX_LINE		1024
 
 #define ESC_CHAR		0xFF
 #define ESC_CHAR_BREAK		'B'
 #define ESC_CHAR_CLOSE		'.'
 #define ESC_CHAR_HELP		'?'
-#define ESC_CHAR_LOG_REPLAY	'L'
+#define ESC_CHAR_LOG		'L'
 #define ESC_CHAR_SUSPEND	'Z'
+
+#ifndef NDEBUG
+#define DEBUG_STRING " (debug)"
+#else
+#define DEBUG_STRING ""
+#endif /* !NDEBUG */
 
 
 typedef enum cmd_type {

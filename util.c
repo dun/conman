@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util.c,v 1.7 2001/05/31 18:18:40 dun Exp $
+ *  $Id: util.c,v 1.8 2001/06/12 16:17:48 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util.h" for documentation on public functions.
@@ -20,8 +20,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
 #include "errors.h"
 #include "util.h"
@@ -32,9 +31,6 @@
 #ifndef INET_ADDRSTRLEN
 #define INET_ADDRSTRLEN 16
 #endif /* !INET_ADDRSTRLEN */
-
-
-static struct tm * get_time(time_t *t, struct tm *tm);
 
 
 char * create_string(const char *str)
@@ -72,6 +68,14 @@ char * create_fmt_string(const char *fmt, ...)
 }
 
 
+void destroy_string(char *str)
+{
+    if (str)
+        free(str);
+    return;
+}
+
+
 char * create_date_time_string(time_t t)
 {
     char *p;
@@ -81,7 +85,7 @@ char * create_date_time_string(time_t t)
     if (!(p = malloc(len)))
         err_msg(0, "Out of memory");
 
-    get_time(&t, &tm);
+    get_localtime(&t, &tm);
 
     if (strftime(p, len, "%m/%d/%Y %H:%M:%S", &tm) == 0)
         err_msg(0, "strftime() failed");
@@ -99,7 +103,7 @@ char * create_time_string(time_t t)
     if (!(p = malloc(len)))
         err_msg(0, "Out of memory");
 
-    get_time(&t, &tm);
+    get_localtime(&t, &tm);
 
     if (strftime(p, len, "%H:%M", &tm) == 0)
         err_msg(0, "strftime() failed");
@@ -108,10 +112,53 @@ char * create_time_string(time_t t)
 }
 
 
-static struct tm * get_time(time_t *t, struct tm *tm)
+char * create_time_delta_string(time_t t)
 {
-/*  Internal helper function to get the time (t) in a thread-safe manner.
- */
+    time_t now;
+    long n;
+    int years, weeks, days, hours, minutes, seconds;
+    char buf[25];
+
+    if (time(&now) == ((time_t) -1))
+        err_msg(errno, "time() failed -- What time is it?");
+    n = difftime(now, t);
+    assert(n >= 0);
+
+    seconds = n % 60;
+    n /= 60;
+    minutes = n % 60;
+    n /= 60;
+    hours = n % 24;
+    n /= 24;
+    days = n % 7;
+    n /= 7;
+    weeks = n % 52;
+    n /= 52;
+    years = n;
+
+    if (years > 0)
+        n = snprintf(buf, sizeof(buf), "%dy %dw %dd %dh %dm %ds",
+            years, weeks, days, hours, minutes, seconds);
+    else if (weeks > 0)
+        n = snprintf(buf, sizeof(buf), "%dw %dd %dh %dm %ds",
+            weeks, days, hours, minutes, seconds);
+    else if (days > 0)
+        n = snprintf(buf, sizeof(buf), "%dd %dh %dm %ds",
+            days, hours, minutes, seconds);
+    else if (hours > 0)
+        n = snprintf(buf, sizeof(buf), "%dh %dm %ds", hours, minutes, seconds);
+    else if (minutes > 0)
+        n = snprintf(buf, sizeof(buf), "%dm %ds", minutes, seconds);
+    else
+        n = snprintf(buf, sizeof(buf), "%ds", seconds);
+
+    assert((n >= 0) && (n < sizeof(buf)));
+    return(create_string(buf));
+}
+
+
+struct tm * get_localtime(time_t *t, struct tm *tm)
+{
 #ifndef HAVE_LOCALTIME_R
     int rc;
     static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
@@ -149,62 +196,6 @@ static struct tm * get_time(time_t *t, struct tm *tm)
 }
 
 
-char * create_time_delta_string(time_t t)
-{
-    time_t now;
-    long n;
-    int years, weeks, days, hours, minutes, seconds;
-    char buf[25];
-    char *p;
-
-    if (time(&now) == ((time_t) -1))
-        err_msg(errno, "time() failed -- What time is it?");
-    n = difftime(now, t);
-
-    seconds = n % 60;
-    n /= 60;
-    minutes = n % 60;
-    n /= 60;
-    hours = n % 24;
-    n /= 24;
-    days = n % 7;
-    n /= 7;
-    weeks = n % 52;
-    n /= 52;
-    years = n;
-
-    if (years > 0)
-        n = snprintf(buf, sizeof(buf), "%dy %dw %dd %dh %dm %ds",
-            years, weeks, days, hours, minutes, seconds);
-    else if (weeks > 0)
-        n = snprintf(buf, sizeof(buf), "%dw %dd %dh %dm %ds",
-            weeks, days, hours, minutes, seconds);
-    else if (days > 0)
-        n = snprintf(buf, sizeof(buf), "%dd %dh %dm %ds",
-            days, hours, minutes, seconds);
-    else if (hours > 0)
-        n = snprintf(buf, sizeof(buf), "%dh %dm %ds", hours, minutes, seconds);
-    else if (minutes > 0)
-        n = snprintf(buf, sizeof(buf), "%dm %ds", minutes, seconds);
-    else
-        n = snprintf(buf, sizeof(buf), "%ds", seconds);
-
-    if ((n < 0) || (n >= sizeof(buf)))
-        return(NULL);
-    if (!(p = strdup(buf)))
-        return(NULL);
-    return(p);
-}
-
-
-void destroy_string(char *str)
-{
-    if (str)
-        free(str);
-    return;
-}
-
-
 void set_descriptor_nonblocking(int fd)
 {
     int fval;
@@ -221,7 +212,7 @@ ssize_t read_n(int fd, void *buf, size_t n)
 {
     size_t nleft;
     ssize_t nread;
-    char *p;
+    unsigned char *p;
 
     p = buf;
     nleft = n;
@@ -246,7 +237,7 @@ ssize_t write_n(int fd, void *buf, size_t n)
 {
     size_t nleft;
     ssize_t nwritten;
-    char *p;
+    unsigned char *p;
 
     p = buf;
     nleft = n;
@@ -267,7 +258,7 @@ ssize_t write_n(int fd, void *buf, size_t n)
 ssize_t read_line(int fd, void *buf, size_t maxlen)
 {
     ssize_t n, rc;
-    char c, *p;
+    unsigned char c, *p;
 
     n = 0;
     p = buf;

@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.10 2001/06/07 17:01:31 dun Exp $
+ *  $Id: server.c,v 1.11 2001/06/12 16:17:48 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -8,7 +8,6 @@
 #include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
@@ -206,8 +205,8 @@ static void mux_io(server_conf_t *conf)
          *    Suppose select() blocks after spawning a new thread to handle
          *    a CONNECT request.  This thread adds a client obj to the
          *    conf->objs list to be handled by mux_io().  But read-activity
-         *    on this socket (or its associated console) will not unblock
-         *    select() because it is not yet listed in select()'s read-set.
+         *    on this client's socket will not unblock select() because it
+         *    does not yet exist in select()'s read-set.
          *  Although select() is to treat the timeval struct as a constant,
          *    Linux systems reportedly modify it (cf. Stevens UNPv1 p151).
          *    As such, initialize it before each call to select().

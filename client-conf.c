@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-conf.c,v 1.12 2001/05/31 18:23:03 dun Exp $
+ *  $Id: client-conf.c,v 1.13 2001/06/12 16:17:47 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -24,13 +24,6 @@
 #include "util.h"
 
 
-#ifndef NDEBUG
-#define DEBUG_STRING " (debug)"
-#else
-#define DEBUG_STRING ""
-#endif /* !NDEBUG */
-
-
 static void display_client_help(char *prog);
 
 
@@ -38,8 +31,8 @@ client_conf_t * create_client_conf(void)
 {
     client_conf_t *conf;
     uid_t uid;
-    struct passwd *passp;
     char *p;
+    struct passwd *passp;
 
     if (!(conf = malloc(sizeof(client_conf_t))))
         err_msg(0, "Out of memory");
@@ -49,9 +42,15 @@ client_conf_t * create_client_conf(void)
     /*  Who am I?
      */
     uid = getuid();
-    if (!(passp = getpwuid(uid)))
-        err_msg(errno, "Unable to lookup UID %d", uid);
+    if ((p = getenv("USER")) || (p = getenv("LOGNAME")))
+        passp = getpwnam(p);
+    if ((p == NULL) || (passp == NULL) || (passp->pw_uid != uid))
+        if (!(passp = getpwuid(uid)))
+            err_msg(errno, "Unable to lookup user name for UID=%d", uid);
     conf->req->user = create_string(passp->pw_name);
+
+    /*  Where am I?
+     */
     p = ttyname(STDIN_FILENO);
     if (strstr(p, "/dev/") == p)
         p += 5;
@@ -210,8 +209,8 @@ void open_client_log(client_conf_t *conf)
         err_msg(errno, "Unable to open logfile [%s]", conf->log);
 
     now = create_date_time_string(0);
-    str = create_fmt_string("\r\n%s Log started at %s.\r\n",
-        CONMAN_MSG_PREFIX, now);
+    str = create_fmt_string("\r\n%sLog started at %s%s\r\n",
+        CONMAN_MSG_PREFIX, now, CONMAN_MSG_SUFFIX);
     if (write_n(conf->logd, str, strlen(str)) < 0)
         err_msg(errno, "write(%d) failed", conf->logd);
     free(now);
@@ -230,8 +229,8 @@ void close_client_log(client_conf_t *conf)
     assert(conf->logd >= 0);
 
     now = create_date_time_string(0);
-    str = create_fmt_string("\r\n%s Log finished at %s.\r\n",
-        CONMAN_MSG_PREFIX, now);
+    str = create_fmt_string("\r\n%sLog finished at %s%s\r\n",
+        CONMAN_MSG_PREFIX, now, CONMAN_MSG_SUFFIX);
     if (write_n(conf->logd, str, strlen(str)) < 0)
         err_msg(errno, "write(%d) failed", conf->logd);
     free(now);
