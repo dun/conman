@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.24 2001/08/17 02:45:07 dun Exp $
+ *  $Id: server.h,v 1.25 2001/08/28 22:16:17 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -136,6 +136,13 @@ int write_to_obj(obj_t *obj);
 \*******************/
 
 void process_client(client_arg_t *args);
+
+
+/*******************\
+**  server-tty.c  **
+\*******************/
+
+void set_serial_opts(struct termios *tty, obj_t *console, char *str);
 
 
 #endif /* !_SERVER_H */
