@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-obj.c,v 1.70 2002/05/19 03:13:51 dun Exp $
+ *  $Id: server-obj.c,v 1.70.2.1 2003/04/04 05:34:49 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -593,8 +593,9 @@ void destroy_obj(obj_t *obj)
          *    in the close() call until the output drains.
          *    Play it safe and discard any pending output.
          */
-        if (tcflush(obj->fd, TCIOFLUSH) < 0)
-            log_err(errno, "Unable to flush tty device for console [%s]",
+        /*  FIXME: Changed to non-fatal error. 20030403 */
+        if ((obj->fd >= 0) && (tcflush(obj->fd, TCIOFLUSH) < 0))
+            log_msg(LOG_INFO, "Unable to flush tty device for console [%s]",
                 obj->name);
         if (obj->aux.serial.dev)
             free(obj->aux.serial.dev);
