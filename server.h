@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.36 2001/12/04 08:08:30 dun Exp $
+ *  $Id: server.h,v 1.37 2001/12/14 07:40:40 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -19,8 +19,19 @@
 
 
 #define RESET_CMD_TIMEOUT	60
+
 #define TELNET_MIN_TIMEOUT	15
 #define TELNET_MAX_TIMEOUT	1800
+
+
+/*  Under Solaris and Tru64, NTELOPTS is only defined when TELOPTS is defined.
+ *    But the TELOPTS definition also defines storage for telopts[] -- and that
+ *    can only be done once in the executable.  So we create our own definition
+ *    for NTELOPTS for those brain-damaged platforms.  Sigh...
+ */
+#ifndef NTELOPTS
+#  define NTELOPTS (1+TELOPT_LAST)
+#endif /* NTELOPTS */
 
 
 enum obj_type {				/* bit-field limited to 4 values      */
