@@ -2,7 +2,7 @@
  *  server-conf.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server-conf.c,v 1.3 2001/05/14 16:22:09 dun Exp $
+ *  $Id: server-conf.c,v 1.4 2001/05/18 15:48:16 dun Exp $
 \******************************************************************************/
 
 
@@ -71,7 +71,7 @@ server_conf_t * create_server_conf(void)
     conf->filename = create_string(DEFAULT_SERVER_CONF);
     conf->logname = NULL;
     conf->ld = -1;
-    if (!(conf->objs = list_create((ListDelF) dealloc_obj)))
+    if (!(conf->objs = list_create((ListDelF) destroy_obj)))
         err_msg(0, "Out of memory");
     return(conf);
 }
@@ -205,7 +205,8 @@ static void parse_console_cmd(Lex l, server_conf_t *conf)
     char log[MAX_LINE] = "";
     char rst[MAX_LINE] = "";
     int bps = DEFAULT_CONSOLE_BAUD;
-    obj_t *obj;
+    obj_t *console;
+    obj_t *logfile;
 
     directive = server_conf_strs[LEX_UNTOK(lex_prev(l))];
 
@@ -287,8 +288,15 @@ static void parse_console_cmd(Lex l, server_conf_t *conf)
             lex_next(l);
     }
     else {
-        if (!(obj = create_console_obj(conf->objs, name, dev, log, rst, bps)))
-            err_msg(0, "Unable to create console object '%s'", name);
+        if (!(console = create_console_obj(
+          conf->objs, name, dev, log, rst, bps)))
+            log_msg(0, "Unable to create console object '%s'", name);
+        if (*log) {
+            if (!(logfile = create_logfile_obj(conf->objs, log, name)))
+                log_msg(0, "Unable to create logfile object '%s'", name);
+            else
+                link_objs(console, logfile);
+        }
     }
     return;
 }

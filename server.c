@@ -2,7 +2,7 @@
  *  server.c
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server.c,v 1.6 2001/05/15 20:32:12 dun Exp $
+ *  $Id: server.c,v 1.7 2001/05/18 15:48:16 dun Exp $
 \******************************************************************************/
 
 
@@ -12,6 +12,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,7 +29,6 @@
 
 static void daemonize(void);
 static void exit_handler(int signum);
-static void enable_console_logging(server_conf_t *conf);
 static void create_listen_socket(server_conf_t *conf);
 static void mux_io(server_conf_t *conf);
 static void accept_client(server_conf_t *conf);
@@ -47,6 +47,11 @@ int main(int argc, char *argv[])
     process_server_cmd_line(argc, argv, conf);
     process_server_conf_file(conf);
 
+    if (conf->logname)
+        open_msg_log(conf->logname);
+
+    /* FIX_ME: Exit handlers do not seem to be effective after daemonize().
+     */
     daemonize();
 
     Signal(SIGHUP, SIG_IGN);
@@ -54,16 +59,6 @@ int main(int argc, char *argv[])
     Signal(SIGINT, exit_handler);
     Signal(SIGTERM, exit_handler);
 
-    /* FIX_ME: Exit handlers do not seem to be effective after daemonize().
-     */
-
-    /*  Server's log file must be opened AFTER daemonize(),
-     *    otherwise its file descriptor will be closed.
-     */
-    if (conf->logname)
-        open_msg_log(conf->logname);
-
-    enable_console_logging(conf);
     create_listen_socket(conf);
 
     mux_io(conf);
@@ -76,8 +71,8 @@ int main(int argc, char *argv[])
 
 static void daemonize(void)
 {
-    int i;
     pid_t pid;
+    int devnull;
 
 #ifndef NDEBUG
     /*  Don't daemonize during DEBUG.
@@ -110,13 +105,18 @@ static void daemonize(void)
     else if (pid > 0)
         exit(0);
 
-    /*  Close "all" file descriptors and ignore the return code since
-     *    most of them will return EBADF.  There is no easy way to
-     *    determine "all" (cf, APUE), so just close the first 20.
+    /*  Discard data to/from stdin, stdout, and stderr.
      */
-    for (i=0; i<20; i++)
-        close(i);
-    errno = 0;
+    if ((devnull = open("/dev/null", O_RDWR)) < 0)
+        err_msg(errno, "open(/dev/null) failed");
+    if (dup2(devnull, STDIN_FILENO) < 0)
+        err_msg(errno, "dup2(stdin) failed");
+    if (dup2(devnull, STDOUT_FILENO) < 0)
+        err_msg(errno, "dup2(stdout) failed");
+    if (dup2(devnull, STDERR_FILENO) < 0)
+        err_msg(errno, "dup2(stderr) failed");
+    if (close(devnull) < 0)
+        err_msg(errno, "close(/dev/null) failed");
 
     /*  Clear file mode creation mask.
      */
@@ -130,37 +130,6 @@ static void exit_handler(int signum)
 {
     log_msg(0, "Exiting on signal %d.", signum);
     done = 1;
-    return;
-}
-
-
-static void enable_console_logging(server_conf_t *conf)
-{
-    ListIterator i;
-    obj_t *obj;
-    obj_t *log;
-    char *now, *str;
-
-    if (!(i = list_iterator_create(conf->objs)))
-        err_msg(0, "Out of memory");
-    while ((obj = list_next(i))) {
-        if ((obj->type != CONSOLE) || (obj->aux.console.log == NULL))
-            continue;
-        if (!(log = create_logfile_obj(conf->objs, obj->aux.console.log)))
-            continue;
-        if (link_objs(obj, log) < 0) {
-            destroy_obj(log);
-            continue;
-        }
-        assert(log->writer->type == CONSOLE);
-        now = create_time_string(0);
-        str = create_fmt_string("* Console [%s] log started %s.\r\n\r\n",
-            log->writer->name, now);
-        write_obj_data(log, str, strlen(str));
-        free(now);
-        free(str);
-    }
-    list_iterator_destroy(i);
     return;
 }
 
@@ -191,6 +160,7 @@ static void create_listen_socket(server_conf_t *conf)
         err_msg(errno, "listen() failed");
 
     conf->ld = ld;
+    DPRINTF("Listing for client connections on fd=%d.\n", conf->ld);
     return;
 }
 
@@ -228,7 +198,7 @@ static void mux_io(server_conf_t *conf)
                 FD_SET(obj->fd, &rset);
                 maxfd = MAX(maxfd, obj->fd);
             }
-            if ((obj->writer != NULL) && (obj->bufInPtr != obj->bufOutPtr)) {
+            if (obj->bufInPtr != obj->bufOutPtr) {
                 FD_SET(obj->fd, &wset);
                 maxfd = MAX(maxfd, obj->fd);
             }
@@ -259,14 +229,18 @@ static void mux_io(server_conf_t *conf)
         if (FD_ISSET(conf->ld, &rset))
             accept_client(conf);
 
+        /*  If write_to_obj() returns -1, the obj's buffer has been flushed
+         *    and the obj is ready to be removed from the master objs list.
+         */
         list_iterator_reset(i);
         while ((obj = list_next(i))) {
             if (obj->fd < 0)
                 continue;
-            if (FD_ISSET(obj->fd, &wset))
-                write_to_obj(obj);
             if (FD_ISSET(obj->fd, &rset))
-                read_from_obj(obj);
+                read_from_obj(obj, &wset);
+            if (FD_ISSET(obj->fd, &wset))
+                if (write_to_obj(obj) < 0)
+                    list_delete(i);
         }
     }
 
@@ -277,7 +251,8 @@ static void mux_io(server_conf_t *conf)
 
 static void accept_client(server_conf_t *conf)
 {
-/*  The new socket connection must be accept()'d within the select() loop.
+/*  Accepts a new client connection on the listening socket.
+ *  The new socket connection must be accept()'d within the select() loop.
  *    O/w, the following scenario could occur:  Read activity would be
  *    select()'d on the listen socket.  A new thread would be created to
  *    process this request.  Before this new thread is scheduled and the
@@ -292,7 +267,6 @@ static void accept_client(server_conf_t *conf)
     int rc;
     pthread_t tid;
 
-    DPRINTF("Acceping new client.\n");
     while ((sd = accept(conf->ld, NULL, NULL)) < 0) {
         if (errno == EINTR)
             continue;
@@ -302,6 +276,7 @@ static void accept_client(server_conf_t *conf)
             return;
         err_msg(errno, "accept() failed");
     }
+    DPRINTF("Accepted new client on fd=%d.\n", sd);
 
     /*  Create a tmp struct to hold two args to pass to the thread.
      *  Note that the thread is responsible for freeing this memory.

@@ -2,7 +2,7 @@
  *  server.h
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server.h,v 1.5 2001/05/15 19:45:31 dun Exp $
+ *  $Id: server.h,v 1.6 2001/05/18 15:48:16 dun Exp $
 \******************************************************************************/
 
 
@@ -33,7 +33,7 @@ typedef struct console_obj {		/* CONSOLE AUX OBJ DATA:              */
 } console_obj_t;
 
 typedef struct logfile_obj {		/* LOGFILE AUX OBJ DATA:              */
-    ;					/*  empty (is this legal C?)          */
+    char            *console;		/*  name of console being logged      */
 } logfile_obj_t;
 
 typedef struct socket_obj {		/* SOCKET AUX OBJ DATA:               */
@@ -57,7 +57,6 @@ typedef struct base_obj {		/* BASE OBJ:                          */
     pthread_mutex_t  bufLock;		/*  lock protecting access to buf     */
     struct base_obj *writer;		/*  obj that writes to me             */
     List             readers;		/*  list of objs that i write to      */
-    List             objs;		/*  list of all objs from conf        */
     enum obj_type    type;		/*  type of auxxiliary obj            */
     aux_obj_t        aux;		/*  auxiliary obj data                */
 } obj_t;
@@ -95,17 +94,11 @@ void process_server_conf_file(server_conf_t *conf);
 obj_t * create_console_obj(List objs, char *name, char *dev,
     char *log, char *rst, int bps);
 
-obj_t * create_logfile_obj(List objs, char *name);
+obj_t * create_logfile_obj(List objs, char *logfile, char *console);
 
 obj_t * create_socket_obj(List objs, char *user, char *host, int sd);
 
 void destroy_obj(obj_t *obj);
-
-void dealloc_obj(obj_t *obj);
-
-int open_obj(obj_t *obj);
-
-void close_obj(obj_t *obj);
 
 int compare_objs(obj_t *obj1, obj_t *obj2);
 
@@ -115,11 +108,11 @@ int link_objs(obj_t *src, obj_t *dst);
 
 int unlink_obj(obj_t *obj);
 
-void write_to_obj(obj_t *obj);
-
-void read_from_obj(obj_t *obj);
+void read_from_obj(obj_t *obj, fd_set *pWriteSet);
 
 int write_obj_data(obj_t *obj, void *src, int len);
+
+int write_to_obj(obj_t *obj);
 
 
 /*******************\

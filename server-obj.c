@@ -2,7 +2,7 @@
  *  server-obj.c  
  *    by Chris Dunlap <cdunlap@llnl.gov>
  *
- *  $Id: server-obj.c,v 1.4 2001/05/14 16:22:09 dun Exp $
+ *  $Id: server-obj.c,v 1.5 2001/05/18 15:48:16 dun Exp $
 \******************************************************************************/
 
 
@@ -25,7 +25,7 @@
 #include "util.h"
 
 
-static obj_t * create_obj(List objs, char *name, enum obj_type type);
+static obj_t * create_obj(enum obj_type type, List objs, char *name, int fd);
 static void set_raw_console_mode(obj_t *obj);
 static void restore_console_mode(obj_t *obj);
 static void parse_buf_for_control(obj_t *obj, void *src, int *pLen);
@@ -34,82 +34,130 @@ static void parse_buf_for_control(obj_t *obj, void *src, int *pLen);
 obj_t * create_console_obj(List objs, char *name, char *dev,
     char *log, char *rst, int bps)
 {
+/*  Creates a new console object and adds it to the master (objs) list.
+ *    Note: the console is open and set for non-blocking I/O.
+ *  Returns the new object, or NULL on error.
+ */
+    int fd;
     obj_t *obj;
 
+    assert(objs);
     assert(name && *name);
     assert(dev && *dev);
 
-    /* FIX_ME: check if console dev is really a tty via isatty() */
     /* FIX_ME: check name, dev, & log for dopplegangers */
     /* FIX_ME: check if rst program exists */
     /* FIX_ME: config file needs directive to specify execute dir for rst */
     /* FIX_ME: check bps for valid baud rate (cf APUE p343-344) */
 
-    obj = create_obj(objs, name, CONSOLE);
+    if ((fd = open(dev, O_RDWR | O_NONBLOCK)) < 0) {
+        log_msg(0, "Unable to open console [%s]: %s", name, strerror(errno));
+        return(NULL);
+    }
+    if (!isatty(fd)) {
+        log_msg(0, "Console [%s] is not a TTY device", name);
+        if (close(fd) < 0)
+            err_msg(errno, "close(%d) failed", fd);
+        return(NULL);
+    }
+    obj = create_obj(CONSOLE, objs, name, fd);
     obj->aux.console.dev = create_string(dev);
     if (log && *log)
         obj->aux.console.log = create_string(log);
     if (rst && *rst)
         obj->aux.console.rst = create_string(rst);
     obj->aux.console.bps = bps;
+    set_raw_console_mode(obj);
+
     return(obj);
 }
 
 
-obj_t * create_logfile_obj(List objs, char *name)
+obj_t * create_logfile_obj(List objs, char *logfile, char *console)
 {
+/*  Creates a new logfile object and adds it to the master (objs) list.
+ *    Note: the logfile is open and set for non-blocking I/O.
+ *  Returns the new object, or NULL on error.
+ */
+    int flags;
+    int fd;
     obj_t *obj;
+    char *now, *msg;
 
-    assert(name);
+    assert(objs);
+    assert(logfile && *logfile);
+    assert(console && *console);
 
-    obj = create_obj(objs, name, LOGFILE);
+    flags = O_WRONLY | O_CREAT | O_APPEND | O_NONBLOCK;
+    if ((fd = open(logfile, flags, S_IRUSR | S_IWUSR)) < 0) {
+        log_msg(0, "Unable to open logfile [%s]: %s", logfile, strerror(errno));
+        return(NULL);
+    }
+
+    obj = create_obj(LOGFILE, objs, logfile, fd);
+    obj->aux.logfile.console = create_string(console);
+
+    now = create_time_string(0);
+    msg = create_fmt_string("\r\nConMan: Console [%s] log started %s.\r\n",
+        console, now);
+    write_obj_data(obj, msg, strlen(msg));
+    free(now);
+    free(msg);
+
     return(obj);
 }
 
 
 obj_t * create_socket_obj(List objs, char *user, char *host, int sd)
 {
+/*  Creates a new socket object and adds it to the master (objs) list.
+ *    Note: the socket is open and set for non-blocking I/O.
+ *  Returns the new object, or NULL on error.
+ */
     char *name;
     obj_t *obj;
 
-    assert(user);
-    assert(host);
+    assert(objs);
+    assert(user && *user);
+    assert(host && *host);
     assert(sd >= 0);
 
-    name = create_fmt_string("%s@%s", user, host);
-    obj = create_obj(objs, name, SOCKET);
-    free(name);
-
-    /*  Socket objs are created in the "active" state (ie, fd >= 0)
-     *    since the connection has already been established.
-     */
     set_descriptor_nonblocking(sd);
-    obj->fd = sd;
+
+    name = create_fmt_string("%s@%s", user, host);
+    obj = create_obj(SOCKET, objs, name, sd);
+    free(name);
 
     obj->aux.socket.gotIAC = 0;
     time(&obj->aux.socket.timeLastRead);
     if (obj->aux.socket.timeLastRead == ((time_t) -1))
         err_msg(errno, "time() failed -- What time is it?");
+
     return(obj);
 }
 
 
-static obj_t * create_obj(List objs, char *name, enum obj_type type)
+static obj_t * create_obj(enum obj_type type, List objs, char *name, int fd)
 {
+/*  Creates an object of the specified (type) opened on (fd) and adds it
+ *    to the master (objs) list.
+ */
     obj_t *obj;
     int rc;
 
-    assert(name);
     assert(type == CONSOLE || type == LOGFILE || type == SOCKET);
+    assert(name);
+    assert(fd >= 0);
+    assert(objs);
 
     /*  FIX_ME? Ensure name not already in use by another obj of same type
      */
-    /*  FIX_ME: Return NULL if out-of-memory
+    /*  FIX_ME? Return NULL if out-of-memory
      */
     if (!(obj = malloc(sizeof(obj_t))))
         err_msg(0, "Out of memory");
     obj->name = create_string(name);
-    obj->fd = -1;
+    obj->fd = fd;
     obj->gotEOF = 0;
     obj->bufInPtr = obj->bufOutPtr = obj->buf;
     if ((rc = pthread_mutex_init(&obj->bufLock, NULL)) != 0)
@@ -119,40 +167,31 @@ static obj_t * create_obj(List objs, char *name, enum obj_type type)
         err_msg(0, "Out of memory");
     obj->type = type;
 
-    /*  Save ref to objs list so destroy_obj() can remove the obj.
-     */
-    obj->objs = objs;
-
-    /*  Add obj to conf->objs list.
+    /*  Add obj to the master conf->objs list.
      */
     if (!list_append(objs, obj))
         err_msg(0, "Out of memory");
 
-    DPRINTF("Created object [%s].\n", name);
+    DPRINTF("Created object [%s] on fd=%d.\n", obj->name, obj->fd);
     return(obj);   
 }
 
 
 void destroy_obj(obj_t *obj)
 {
-    int n;
-
-    n = list_delete_all(obj->objs, (ListFindF) find_obj, obj);
-    assert(n == 1);
-    return;
-}
-
-
-void dealloc_obj(obj_t *obj)
-{
-/*  Note: Do NOT destroy objs list; it is just a ref to the actual objs list.
+/*  Destroys the object, closing the fd and freeing resources as needed.
+ *  Note: This routine is ONLY called via the objs list destructor.
  */
     int rc;
 
-    assert(obj->bufInPtr == obj->bufOutPtr);
-
     DPRINTF("Destroyed object [%s].\n", obj->name);
 
+    assert(obj->fd >= 0);
+    assert(obj->bufInPtr == obj->bufOutPtr);
+
+    if (obj->type == CONSOLE) {
+        restore_console_mode(obj);
+    }
     if (obj->fd >= 0) {
         if (close(obj->fd) < 0)
             err_msg(errno, "close(%d) failed", obj->fd);
@@ -172,6 +211,8 @@ void dealloc_obj(obj_t *obj)
             free(obj->aux.console.rst);
         break;
     case LOGFILE:
+        if (obj->aux.logfile.console)
+            free(obj->aux.logfile.console);
         break;
     case SOCKET:
         break;
@@ -189,45 +230,14 @@ void dealloc_obj(obj_t *obj)
 }
 
 
-int open_obj(obj_t *obj)
-{
-/*  Returns 1 if obj was successfully opened, 0 if obj was already open,
- *    and -1 if an error occurred.
- *  Note that SOCKET objs are created in the "open" state.
- */
-    if (obj->fd >= 0)			/* obj already open */
-        return(0);
-
-    if (obj->type == CONSOLE) {
-        if ((obj->fd = open(obj->aux.console.dev, O_RDWR | O_NONBLOCK)) < 0) {
-            log_msg(0, "Unable to open console [%s]: %s", obj->name,
-                strerror(errno));
-            return(-1);
-        }
-        set_raw_console_mode(obj);
-    }
-    else if (obj->type == LOGFILE) {
-        int flags = O_WRONLY | O_CREAT | O_APPEND | O_NONBLOCK;
-        if ((obj->fd = open(obj->name, flags, S_IRUSR | S_IWUSR)) < 0) {
-            log_msg(0, "Unable to open logfile [%s]: %s", obj->name,
-                strerror(errno));
-            return(-1);
-        }
-    }
-
-    DPRINTF("Opened object [%s].\n", obj->name);
-    return(1);
-}
-
-
 static void set_raw_console_mode(obj_t *obj)
 {
-/*  FIX_ME:  Can this be combined with client's set_raw_tty_mode() in util.c?
+/*  FIX_ME: Can this be combined with client's set_raw_tty_mode() in util.c?
  */
     struct termios term;
 
-    assert(obj->type == CONSOLE);
     assert(obj->fd >= 0);
+    assert(obj->type == CONSOLE);
 
     if (tcgetattr(obj->fd, &term) < 0)
         err_msg(errno, "tcgetattr(%s) failed", obj->aux.console.dev);
@@ -266,42 +276,12 @@ static void set_raw_console_mode(obj_t *obj)
 }
 
 
-void close_obj(obj_t *obj)
-{
-    /*  FIX_ME: Write msg to console logfile when object is closed. */
-
-    unlink_obj(obj);
-
-    DPRINTF("Closing object [%s].\n", obj->name);
-
-    /*  If buffer contains data, set "gotEOF" so write_to_obj() will flush it.
-     */
-    if (obj->bufInPtr != obj->bufOutPtr) {
-        obj->gotEOF = 1;
-    }
-    else {
-        obj->gotEOF = 0;
-        if (obj->fd >= 0) {
-            if (obj->type == CONSOLE)
-                restore_console_mode(obj);
-            if (close(obj->fd) < 0)
-                err_msg(errno, "close(%d) failed", obj->fd);
-            obj->fd = -1;
-        }
-        if (obj->type == SOCKET) {
-            destroy_obj(obj);
-        }
-    }
-    return;
-}
-
-
 static void restore_console_mode(obj_t *obj)
 {
-/*  FIX_ME:  Can this be combined with client's restore_tty_mode() in util.c?
+/*  FIX_ME: Can this be combined with client's restore_tty_mode() in util.c?
  */
-    assert(obj->type == CONSOLE);
     assert(obj->fd >= 0);
+    assert(obj->type == CONSOLE);
 
     if (tcsetattr(obj->fd, TCSANOW, &obj->aux.console.term) < 0)
         err_msg(errno, "tcsetattr(%s) failed", obj->aux.console.dev);
@@ -312,6 +292,8 @@ static void restore_console_mode(obj_t *obj)
 
 int compare_objs(obj_t *obj1, obj_t *obj2)
 {
+/*  Used by list_sort() to compare the name of (obj1) to that of (obj2).
+ */
     char *x, *y;
 
     assert(obj1);
@@ -327,28 +309,25 @@ int compare_objs(obj_t *obj1, obj_t *obj2)
 
 int find_obj(obj_t *obj, obj_t *key)
 {
+/*  Used by list_find_first() to locate the object
+ *    specified by (key) within the list.
+ *
+ *  FIX_ME: Is this routine still needed?
+ */
     return(obj == key);
 }
 
 
 int link_objs(obj_t *src, obj_t *dst)
 {
-    int rcSrc, rcDst;
+/*  Creates a link such that data read from (src) is copied to (dst).
+ *
+ *  FIX_ME: Is the return value used?  What happens if we're out of memory?
+ */
     char *now, *str;
 
-    /*  Ensure both objs are "active".
-     */
-    if (src->fd < 0) {
-        if ((rcSrc = open_obj(src)) < 0)
-            return(-1);
-    }
-    if (dst->fd < 0) {
-        if ((rcDst = open_obj(dst)) < 0) {
-            if (rcSrc == 1)
-                close_obj(src);
-            return(-1);
-        }
-    }
+    assert(src->fd >= 0);
+    assert(dst->fd >= 0);
 
     /*  If the dst console is already in R/W use by another client, steal it.
      */
@@ -357,33 +336,42 @@ int link_objs(obj_t *src, obj_t *dst)
         assert(dst->type == CONSOLE);
         assert(dst->writer->type == SOCKET);
         now = create_time_string(0);
-        str = create_fmt_string("\nConsole '%s' stolen by <%s> at %s.\r\n",
-            dst->name, src->name, now);
+        str = create_fmt_string("\r\nConMan: Console [%s] stolen by <%s>"
+            " %s.\r\n", dst->name, src->name, now);
         write_obj_data(dst->writer, str, strlen(str));
         free(now);
         free(str);
-        close_obj(dst->writer);
+        unlink_obj(dst->writer);
     }
 
-    /*  Create obj link where src writes to dst.
+    /*  Create link where src writes to dst.
      */
     dst->writer = src;
     if (!list_append(src->readers, dst))
         err_msg(0, "Out of memory");
 
-    DPRINTF("Linked object [%s] to [%s].\n", src->name, dst->name);
+    DPRINTF("Linked [%s] reads to [%s] writes.\n",
+        src->name, dst->name);
     return(0);
 }
 
 
 int unlink_obj(obj_t *obj)
 {
+/*  Destroys all links associated with (obj).
+ *
+ *  FIX_ME: Is the return value used?  What happens if we're out of memory?
+ */
     ListIterator i;
     obj_t *reader;
 
-    DPRINTF("Unlinking object [%s].\n", obj->name);
+    assert(obj->fd >= 0);
 
-    /*  Remove object link between my writer and me.
+    /*  Set flag to ensure no additional data is written into the buffer.
+     */
+    obj->gotEOF = 1;
+
+    /*  Remove link between my writer and me.
      */
     if (obj->writer != NULL) {
         if (!(i = list_iterator_create(obj->writer->readers)))
@@ -393,9 +381,6 @@ int unlink_obj(obj_t *obj)
                 DPRINTF("Removing(1) [%s] from [%s] readers.\n",
                     obj->name, obj->writer->name);
                 list_delete(i);
-                if ((obj->writer->writer == NULL)
-                  && list_is_empty(obj->writer->readers))
-                    close_obj(obj->writer);
                 obj->writer = NULL;
                 break;
             }
@@ -403,114 +388,41 @@ int unlink_obj(obj_t *obj)
         list_iterator_destroy(i);
     }
 
-    /*  Remove object link between each of my readers and me.
+    /*  Remove link between each of my readers and me.
      */
     while ((reader = list_pop(obj->readers))) {
         if (reader->writer == obj) {
             DPRINTF("Removing(2) [%s] from [%s] readers.\n",
                 reader->name, obj->name);
             reader->writer = NULL;
-            if (list_is_empty(reader->readers))
-                close_obj(reader);
         }
     }
 
+    DPRINTF("Unlinked object [%s].\n", obj->name);
     return(0);
 }
 
 
-void write_to_obj(obj_t *obj)
-{
-/*  Writes data from the obj's circular-buffer out to its file descriptor.
- */
-    int rc;
-    int avail;
-    int n;
-
-    assert(obj->fd >= 0);
-    if (obj->fd < 0)
-        return;
-
-    if ((rc = pthread_mutex_lock(&obj->bufLock)) != 0)
-        err_msg(rc, "pthread_mutex_lock() failed for [%s]", obj->name);
-
-    assert(obj->bufInPtr >= obj->buf);
-    assert(obj->bufInPtr < &obj->buf[MAX_BUF_SIZE]);
-    assert(obj->bufOutPtr >= obj->buf);
-    assert(obj->bufOutPtr < &obj->buf[MAX_BUF_SIZE]);
-
-    /*  The number of available bytes to write out to the file descriptor
-     *    does not take into account data that has wrapped-around in the
-     *    circular-buffer.  This remaining data will be written on the
-     *    next invocation of this routine.
-     *  Note that if (bufInPtr == bufOutPtr), the obj's buffer is empty.
-     */
-    if (obj->bufInPtr >= obj->bufOutPtr)
-        avail = obj->bufInPtr - obj->bufOutPtr;
-    else
-        avail = &obj->buf[MAX_BUF_SIZE] - obj->bufOutPtr;
-
-    if (avail > 0) {
-again:
-        if ((n = write(obj->fd, obj->bufOutPtr, avail)) < 0) {
-
-            if (errno == EINTR) {
-                goto again;
-            }
-            else if (errno == EPIPE) {
-                obj->gotEOF = 1;
-                obj->bufInPtr = obj->bufOutPtr = obj->buf;	/* flush buf */
-            }
-            else if ((errno != EAGAIN) && (errno != EWOULDBLOCK)) {
-                err_msg(errno, "write error on fd=%d (%s)", obj->fd, obj->name);
-            }
-        }
-        else if (n > 0) {
-
-            obj->bufOutPtr += n;
-            /*
-             *  Do the hokey-pokey and perform a circular-buffer wrap-around.
-             */
-            if (obj->bufOutPtr == &obj->buf[MAX_BUF_SIZE])
-                obj->bufOutPtr = obj->buf;
-        }
-    }
-
-    assert(obj->bufOutPtr >= obj->buf);
-    assert(obj->bufOutPtr < &obj->buf[MAX_BUF_SIZE]);
-
-    if ((rc = pthread_mutex_unlock(&obj->bufLock)) != 0)
-        err_msg(rc, "pthread_mutex_unlock() failed for [%s]", obj->name);
-
-    /*  If the gotEOF flag in enabled, no additional data can be
-     *    written into the buffer.  And if (bufInPtr == bufOutPtr),
-     *    all data in the buffer has been written out to its fd.
-     *    Thus, the object is ready to be closed.
-     */
-    if (obj->gotEOF && (obj->bufInPtr == obj->bufOutPtr)) {
-        close_obj(obj);
-    }
-
-    return;
-}
-
-
-void read_from_obj(obj_t *obj)
+void read_from_obj(obj_t *obj, fd_set *pWriteSet)
 {
 /*  Reads data from the obj's file descriptor and writes it out
  *    to the circular-buffer of each obj in its "readers" list.
+ *  The ptr to select()'s write-set is an optimization used to
+ *    "prime" the set for write_to_obj().  This allows data read
+ *    to be written out to those objs not yet traversed during the
+ *    current iteration, thereby reducing the latency.  Without it,
+ *    these objs would be select()'d on the next iteration of the loop.
  *  An obj's circular-buffer is empty when (bufInPtr == bufOutPtr).
  *    Thus, it can hold at most (MAX_BUF_SIZE - 1) bytes of data.
  *    This routine's internal buffer is set accordingly.
  */
     unsigned char buf[MAX_BUF_SIZE - 1];
     int n;
+    int rc;
     ListIterator i;
     obj_t *reader;
 
     assert(obj->fd >= 0);
-    if (obj->fd < 0)
-        return;
 
 again:
     if ((n = read(obj->fd, buf, sizeof(buf))) < 0) {
@@ -521,36 +433,50 @@ again:
                 obj->fd, obj->name);
     }
     else if (n == 0) {
-        close_obj(obj);
+        unlink_obj(obj);
+        FD_SET(obj->fd, pWriteSet);	/* ensure buffer is flushed if needed */
     }
     else {
+        DPRINTF("Read %d bytes from [%s].\n", n, obj->name); /* xyzzy */
         if (obj->type == SOCKET) {
+
+            if ((rc = pthread_mutex_lock(&obj->bufLock)) != 0)
+                err_msg(rc, "pthread_mutex_lock() failed for [%s]", obj->name);
             if (time(&obj->aux.socket.timeLastRead) == ((time_t) -1))
                 err_msg(errno, "time() failed -- What time is it?");
+            if ((rc = pthread_mutex_unlock(&obj->bufLock)) != 0)
+                err_msg(rc, "pthread_mutex_unlock() failed for [%s]",
+                    obj->name);
+
             parse_buf_for_control(obj, buf, &n);
         }
-        /*  If the obj's gotEOF flag is enabled,
-         *    no additional data can be written into its buffer.
-         */
+
         if (!(i = list_iterator_create(obj->readers)))
             err_msg(0, "Out of memory");
-        while ((reader = list_next(i)))
-            if (!reader->gotEOF)
+        while ((reader = list_next(i))) {
+            /*
+             *  If the obj's gotEOF flag is set,
+             *    no more data can be written into its buffer.
+             */
+            if (!reader->gotEOF) {
                 write_obj_data(reader, buf, n);
+                FD_SET(reader->fd, pWriteSet);
+            }
+        }
         list_iterator_destroy(i);
     }
-
     return;
 }
 
 
 static void parse_buf_for_control(obj_t *obj, void *src, int *pLen)
 {
+/*
+ *  FIX_ME: NOT_IMPLEMENTED_YET
+ */
     if (!src || *pLen <= 0)
         return;
-    /*
-     *  FIX_ME: NOT_IMPLEMENTED_YET
-     */
+
     return;
 }
 
@@ -576,6 +502,8 @@ int write_obj_data(obj_t *obj, void *src, int len)
     if ((rc = pthread_mutex_lock(&obj->bufLock)) != 0)
         err_msg(rc, "pthread_mutex_lock() failed for [%s]", obj->name);
 
+    /*  Assert the buffer's input and output ptrs are valid upon entry.
+     */
     assert(obj->bufInPtr >= obj->buf);
     assert(obj->bufInPtr < &obj->buf[MAX_BUF_SIZE]);
     assert(obj->bufOutPtr >= obj->buf);
@@ -587,13 +515,16 @@ int write_obj_data(obj_t *obj, void *src, int len)
      *  Data in the circular-buffer will be overwritten if needed since
      *    this routine must not block.
      */
-    if (obj->bufOutPtr == obj->bufInPtr)
+    if (obj->bufOutPtr == obj->bufInPtr) {
         avail = MAX_BUF_SIZE - 1;
-    else if (obj->bufOutPtr > obj->bufInPtr)
+    }
+    else if (obj->bufOutPtr > obj->bufInPtr) {
         avail = obj->bufOutPtr - obj->bufInPtr;
-    else
+    }
+    else {
         avail = (&obj->buf[MAX_BUF_SIZE] - obj->bufInPtr) +
             (obj->bufOutPtr - obj->buf);
+    }
 
     /*  Copy first chunk of data (ie, up to the end of the buffer).
      */
@@ -614,7 +545,7 @@ int write_obj_data(obj_t *obj, void *src, int len)
      */
     if (n > 0) {
         memcpy(obj->bufInPtr, src, n);
-        obj->bufInPtr += n;		/* Hokey-Pokey not needed here. */
+        obj->bufInPtr += n;		/* Hokey-Pokey not needed here */
     }
 
     /*  Check to see if any data in circular-buffer was overwritten.
@@ -626,6 +557,8 @@ int write_obj_data(obj_t *obj, void *src, int len)
             obj->bufOutPtr = obj->buf;
     }
 
+    /*  Assert the buffer's input and output ptrs are valid upon exit.
+     */
     assert(obj->bufInPtr >= obj->buf);
     assert(obj->bufInPtr < &obj->buf[MAX_BUF_SIZE]);
     assert(obj->bufOutPtr >= obj->buf);
@@ -635,4 +568,90 @@ int write_obj_data(obj_t *obj, void *src, int len)
         err_msg(rc, "pthread_mutex_unlock() failed for [%s]", obj->name);
 
     return(len);
+}
+
+
+int write_to_obj(obj_t *obj)
+{
+/*  Writes data from the obj's circular-buffer out to its file descriptor.
+ *  Returns -1 if obj buffer has been flushed and the obj is ready to remove
+ *    from the objs list; o/w, returns 0.
+ */
+    int rc;
+    int avail;
+    int n;
+    int flushed = 0;
+
+    assert(obj->fd >= 0);
+
+    if ((rc = pthread_mutex_lock(&obj->bufLock)) != 0)
+        err_msg(rc, "pthread_mutex_lock() failed for [%s]", obj->name);
+
+    /*  Assert the buffer's input and output ptrs are valid upon entry.
+     */
+    assert(obj->bufInPtr >= obj->buf);
+    assert(obj->bufInPtr < &obj->buf[MAX_BUF_SIZE]);
+    assert(obj->bufOutPtr >= obj->buf);
+    assert(obj->bufOutPtr < &obj->buf[MAX_BUF_SIZE]);
+
+    /*  The number of available bytes to write out to the file descriptor
+     *    does not take into account data that has wrapped-around in the
+     *    circular-buffer.  This remaining data will be written on the
+     *    next invocation of this routine.  It's just simpler that way.
+     *  Note that if (bufInPtr == bufOutPtr), the obj's buffer is empty.
+     */
+    if (obj->bufInPtr >= obj->bufOutPtr) {
+        avail = obj->bufInPtr - obj->bufOutPtr;
+    }
+    else {
+        avail = &obj->buf[MAX_BUF_SIZE] - obj->bufOutPtr;
+    }
+
+    if (avail > 0) {
+again:
+        if ((n = write(obj->fd, obj->bufOutPtr, avail)) < 0) {
+
+            if (errno == EINTR) {
+                goto again;
+            }
+            else if (errno == EPIPE) {
+                obj->gotEOF = 1;
+                obj->bufInPtr = obj->bufOutPtr = obj->buf;	/* flush buf */
+            }
+            else if ((errno != EAGAIN) && (errno != EWOULDBLOCK)) {
+                err_msg(errno, "write error on fd=%d (%s)", obj->fd, obj->name);
+            }
+        }
+        else if (n > 0) {
+
+            DPRINTF("Wrote %d bytes to [%s].\n", n, obj->name); /* xyzzy */
+            obj->bufOutPtr += n;
+            /*
+             *  Do the hokey-pokey and perform a circular-buffer wrap-around.
+             */
+            if (obj->bufOutPtr == &obj->buf[MAX_BUF_SIZE])
+                obj->bufOutPtr = obj->buf;
+        }
+    }
+
+    /*  If the gotEOF flag in enabled, no additional data can be
+     *    written into the buffer.  And if (bufInPtr == bufOutPtr),
+     *    all data in the buffer has been written out to its fd.
+     *    Thus, the object is ready to be closed, so return a code to
+     *    notify mux_io() that the obj can be deleted from the objs list.
+     */
+    if (obj->gotEOF && (obj->bufInPtr == obj->bufOutPtr))
+        flushed = 1;
+
+    /*  Assert the buffer's input and output ptrs are valid upon exit.
+     */
+    assert(obj->bufInPtr >= obj->buf);
+    assert(obj->bufInPtr < &obj->buf[MAX_BUF_SIZE]);
+    assert(obj->bufOutPtr >= obj->buf);
+    assert(obj->bufOutPtr < &obj->buf[MAX_BUF_SIZE]);
+
+    if ((rc = pthread_mutex_unlock(&obj->bufLock)) != 0)
+        err_msg(rc, "pthread_mutex_unlock() failed for [%s]", obj->name);
+
+    return(flushed ? -1 : 0);
 }
