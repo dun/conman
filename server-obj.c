@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.51 2001/12/18 22:24:50 dun Exp $
+ *  $Id: server-obj.c,v 1.52 2001/12/19 23:51:27 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -541,7 +541,6 @@ void disconnect_telnet_obj(obj_t *telnet)
     char *now;
 
     assert(telnet != NULL);
-    assert(telnet->fd > 0);
     assert(is_telnet_obj(telnet));
 
     if (telnet->aux.telnet.timer >= 0) {
