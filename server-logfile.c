@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-logfile.c,v 1.2 2001/12/27 20:17:16 dun Exp $
+ *  $Id: server-logfile.c,v 1.3 2002/01/28 06:01:42 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -168,38 +168,42 @@ int write_sanitized_log_data(obj_t *log, const void *src, int len)
 
     for (p=src, q=buf; len>0; p++, len--) {
 
-        c = *p & 0x7F;			/* strip data to 7-bit ASCII */
-
-        if (*p == '\r') {
-        /*
-         *  For carriage-returns, append a newline character to prevent the
-         *    client from effectively writing over data during a log-replay.
+        /*  A "sanitize" state machine is used to properly sanitize CR/LF line
+         *    terminations.  This is responsible for coalescing multiple CRs,
+         *    swapping LF/CR to CR/LF, prepending a CR to a lonely LF, and
+         *    appending a LF to a lonely CR to prevent characters from being
+         *    overwritten.
          */
-            *q++ = *p;
-            *q++ = '\n';
-            log->aux.logfile.gotSanitizedCR = 1;
-            continue;
+        if (*p == '\r') {
+            if (log->aux.logfile.sanitizeState == LOG_SANE_INIT)
+                log->aux.logfile.sanitizeState = LOG_SANE_CR;
         }
         else if (*p == '\n') {
-        /*
-         *  If gotSanitizedCR is true, then the newline has
-         *    already been added by the preceding carriage-return.
-         */
-            if (!log->aux.logfile.gotSanitizedCR)
-                *q++ = *p;
-        }
-        else if (c < 0x20) {		/* ASCII ctrl-chars */
-            *q++ = '^';
-            *q++ = c + '@';
-        }
-        else if (c == 0x7F) {		/* ASCII DEL char */
-            *q++ = '^';
-            *q++ = c + '?';
+            log->aux.logfile.sanitizeState = LOG_SANE_LF;
+            *q++ = '\r';
+            *q++ = '\n';
         }
         else {
-            *q++ = c;
+            if (log->aux.logfile.sanitizeState == LOG_SANE_CR) {
+                *q++ = '\r';
+                *q++ = '\n';
+            }
+            log->aux.logfile.sanitizeState = LOG_SANE_INIT;
+
+            c = *p & 0x7F;		/* strip data to 7-bit ASCII */
+
+            if (c < 0x20) {		/* ASCII ctrl-chars */
+                *q++ = '^';
+                *q++ = c + '@';
+            }
+            else if (c == 0x7F) {	/* ASCII DEL char */
+                *q++ = '^';
+                *q++ = c + '?';
+            }
+            else {
+                *q++ = c;
+            }
         }
-        log->aux.logfile.gotSanitizedCR = 0;
     }
 
     assert((q >= buf) && (q <= buf + sizeof(buf)));

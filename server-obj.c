@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.59 2002/01/02 18:00:16 dun Exp $
+ *  $Id: server-obj.c,v 1.60 2002/01/28 06:01:42 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -145,7 +145,7 @@ obj_t * create_logfile_obj(
 
     logfile = create_obj(conf, name, -1, LOGFILE);
     logfile->aux.logfile.consoleName = create_string(console->name);
-    logfile->aux.logfile.gotSanitizedCR = 0;
+    logfile->aux.logfile.sanitizeState = LOG_SANE_INIT;
     logfile->aux.logfile.opts = *opts;
     if (is_serial_obj(console))
         console->aux.serial.logfile = logfile;

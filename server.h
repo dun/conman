@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.h,v 1.42 2001/12/30 21:21:17 dun Exp $
+ *  $Id: server.h,v 1.43 2002/01/28 06:01:42 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -59,10 +59,16 @@ typedef struct logfile_opt {		/* LOGFILE OBJ OPTIONS:               */
     unsigned         enableSanitize:1;	/*  true if logfile being sanitized   */
 } logopt_t;
 
+typedef enum logfile_sanitize_state {	/* bit-field limited to 4 values      */
+    LOG_SANE_INIT,
+    LOG_SANE_CR,
+    LOG_SANE_LF,
+} log_sane_state_t;
+
 typedef struct logfile_obj {		/* LOGFILE AUX OBJ DATA:              */
     char            *consoleName;	/*  name of console being logged      */
     logopt_t         opts;		/*  local options                     */
-    unsigned         gotSanitizedCR:1;	/*  true if last sane char was a CR   */
+    log_sane_state_t sanitizeState:2;	/*  state of logfile CR/LF insanity   */
 } logfile_obj_t;
 
 typedef struct serial_opt {		/* SERIAL OBJ OPTIONS:                */
