@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-logfile.c,v 1.7 2002/05/08 00:10:54 dun Exp $
+ *  $Id: server-logfile.c,v 1.8 2002/05/08 06:12:19 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -139,7 +139,7 @@ obj_t * get_console_logfile_obj(obj_t *console)
 /*  Returns a ptr to the logfile obj associated with 'console'
  *    if one exists and is currently active; o/w, returns NULL.
  */
-    obj_t *logfile;
+    obj_t *logfile = NULL;
 
     assert(console != NULL);
     assert(is_console_obj(console));

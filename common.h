@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: common.h,v 1.32 2002/03/29 05:39:52 dun Exp $
+ *  $Id: common.h,v 1.33 2002/05/08 06:12:19 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -100,7 +100,7 @@
 #define SERVER_FEATURES (FEATURE_DEBUG FEATURE_DMALLOC FEATURE_TCP_WRAPPERS)
 
 #ifndef HAVE_SOCKLEN_T
-typedef unsigned int socklen_t;         /* socklen_t is defined in Posix.1g  */
+typedef int socklen_t;                  /* socklen_t is uint32_t in Posix.1g */
 #endif /* !HAVE_SOCKLEN_T */
 
 

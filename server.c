@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.c,v 1.48 2002/05/08 00:10:55 dun Exp $
+ *  $Id: server.c,v 1.49 2002/05/08 06:12:19 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -82,11 +82,13 @@ int main(int argc, char *argv[])
     server_conf_t *conf;
 
     log_set_file(stderr, LOG_DEBUG);
+
 #ifdef NDEBUG
     log_set_syslog(argv[0]);
-#endif /* NDEBUG */
-
     fd = begin_daemonize();
+#else /* NDEBUG */
+    fd = -1;                            /* suppress unused variable warning */
+#endif /* NDEBUG */
 
     posix_signal(SIGCHLD, sig_chld_handler);
     posix_signal(SIGHUP, sig_hup_handler);
@@ -104,11 +106,12 @@ int main(int argc, char *argv[])
         schedule_timestamp(conf);
 
     create_listen_socket(conf);
-    end_daemonize(fd);
 
 #ifdef NDEBUG
+    end_daemonize(fd);
     log_set_file(NULL, 0);
 #endif /* NDEBUG */
+
     log_msg(LOG_NOTICE, "Starting ConMan daemon %s (pid %d)",
         VERSION, (int) getpid());
 
@@ -132,12 +135,6 @@ static int begin_daemonize(void)
     int fdPair[2];
     pid_t pid;
     char c;
-
-#ifndef NDEBUG
-    /*  Do not execute routine during DEBUG.
-     */
-    return(-1);
-#endif /* !NDEBUG */
 
     /*  Clear file mode creation mask.
      */
@@ -203,12 +200,6 @@ static void end_daemonize(int fd)
  *    where 'fd' is the value returned by begin_daemonize().
  */
     int devNull;
-
-#ifndef NDEBUG
-    /*  Do not execute routine during DEBUG.
-     */
-    return;
-#endif /* !NDEBUG */
 
     /*  Ensure process does not keep a directory in use.
      */
@@ -406,7 +397,8 @@ static void create_listen_socket(server_conf_t *conf)
     else
         addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-    if (setsockopt(ld, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0)
+    if (setsockopt(ld, SOL_SOCKET, SO_REUSEADDR,
+      (const void *) &on, sizeof(on)) < 0)
         log_err(errno, "Unable to set REUSEADDR socket option");
 
     if (bind(ld, (struct sockaddr *) &addr, sizeof(addr)) < 0)
@@ -596,7 +588,8 @@ static void accept_client(server_conf_t *conf)
     DPRINTF((5, "Accepted new client on fd=%d.\n", sd));
 
     if (conf->enableKeepAlive) {
-        if (setsockopt(sd, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on)) < 0)
+        if (setsockopt(sd, SOL_SOCKET, SO_KEEPALIVE,
+          (const void *) &on, sizeof(on)) < 0)
             log_err(errno, "Unable to set KEEPALIVE socket option");
     }
 

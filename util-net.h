@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: util-net.h,v 1.7 2002/03/29 05:39:52 dun Exp $
+ *  $Id: util-net.h,v 1.8 2002/05/08 06:12:19 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -42,7 +42,7 @@
 
 
 struct hostent * get_host_by_name(const char *name,
-    char *buf, int buflen, int *h_err);
+    void *buf, int buflen, int *h_err);
 /*
  *  A portable thread-safe alternative to be used in place of gethostbyname().
  *  The result is stored in the buffer (buf) of length (buflen); if the buffer
@@ -52,7 +52,7 @@ struct hostent * get_host_by_name(const char *name,
  */
 
 struct hostent * get_host_by_addr(const char *addr, int len, int type,
-    char *buf, int buflen, int *h_err);
+    void *buf, int buflen, int *h_err);
 /*
  *  A portable thread-safe alternative to be used in place of gethostbyaddr().
  *  The result is stored in the buffer (buf) of length (buflen); if the buffer

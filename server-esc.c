@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-esc.c,v 1.27 2002/05/08 00:10:54 dun Exp $
+ *  $Id: server-esc.c,v 1.28 2002/05/08 06:12:19 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -233,7 +233,7 @@ static void perform_log_replay(obj_t *client)
     logfile = get_console_logfile_obj(console);
 
     if (!logfile) {
-        n = snprintf(ptr, len, "%sConsole [%s] is not being logged%s",
+        n = snprintf((char *) ptr, len, "%sConsole [%s] is not being logged%s",
             CONMAN_MSG_PREFIX, console->name, CONMAN_MSG_SUFFIX);
         if ((n < 0) || (n >= len)) {
             log_msg(LOG_WARNING,
@@ -245,7 +245,7 @@ static void perform_log_replay(obj_t *client)
     }
     else {
         assert(is_logfile_obj(logfile));
-        n = snprintf(ptr, len, "%sBegin log replay of console [%s]%s",
+        n = snprintf((char *) ptr, len, "%sBegin log replay of console [%s]%s",
             CONMAN_MSG_PREFIX, console->name, CONMAN_MSG_SUFFIX);
         if ((n < 0) || (n >= len) || (sizeof(buf) <= 2*n - 2)) {
             log_msg(LOG_WARNING,
@@ -293,7 +293,7 @@ static void perform_log_replay(obj_t *client)
          *    for this string.  We could get away with just sprintf() here.
          */
         len = &buf[sizeof(buf)] - ptr;
-        n = snprintf(ptr, len, "%sEnd log replay of console [%s]%s",
+        n = snprintf((char *) ptr, len, "%sEnd log replay of console [%s]%s",
             CONMAN_MSG_PREFIX, console->name, CONMAN_MSG_SUFFIX);
         assert((n >= 0) && (n < len));
         ptr += n;

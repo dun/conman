@@ -2,7 +2,7 @@
 # ConMan AutoConf Configuration
 #   Process this file with autoconf to produce a configure script.
 #******************************************************************************
-# $Id: configure.ac,v 1.18 2002/05/08 00:10:54 dun Exp $
+# $Id: configure.ac,v 1.19 2002/05/08 06:12:19 dun Exp $
 #******************************************************************************
 # Copyright (C) 2001-2002 The Regents of the University of California.
 # Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -44,30 +44,6 @@ AC_SUBST(PROJECT)
 VERSION="`perl -ne 'print,exit if s/^\s*VERSION:\s*(\S*).*/\1/i' $srcdir/META`"
 AC_DEFINE_UNQUOTED(VERSION, "$VERSION", [Define the project's version.])
 AC_SUBST(VERSION)
-
-
-dnl Check for debug vs. production compilation.
-dnl This must be done before AC_PROG_CC defines its own defaults.
-dnl
-AC_MSG_CHECKING(whether debugging is enabled)
-AC_ARG_ENABLE(debug,
-  AC_HELP_STRING([--enable-debug], [enable debugging for development work]),
-  [ case "$enableval" in
-      yes) debug=yes ;;
-      no)  debug=no ;;
-      *)   AC_MSG_RESULT(doh!)
-           AC_MSG_ERROR([bad value "$enableval" for --enable-debug]) ;;
-    esac
-  ]
-)
-if test "$debug" = yes; then
-  CFLAGS="${CFLAGS--g -Wall}"
-else
-  CFLAGS="${CFLAGS--O}"
-  LDFLAGS="${LDFLAGS--s}"
-  AC_DEFINE(NDEBUG, 1, [Define if you are building a production release.])
-fi
-AC_MSG_RESULT(${debug=no})
 
 
 dnl Determine the system type.
@@ -147,6 +123,33 @@ dnl
 
 dnl Check for system-specific stuff.
 dnl
+
+
+dnl Check for debug vs. production compilation.
+dnl
+AC_MSG_CHECKING(whether debugging is enabled)
+AC_ARG_ENABLE(debug,
+  AC_HELP_STRING([--enable-debug], [enable debugging for development work]),
+  [ case "$enableval" in
+      yes) debug=yes ;;
+      no)  debug=no ;;
+      *)   AC_MSG_RESULT(doh!)
+           AC_MSG_ERROR([bad value "$enableval" for --enable-debug]) ;;
+    esac
+  ]
+)
+if test "$debug" = yes; then
+  if test -z "$ac_save_CFLAGS"; then
+    test "$ac_cv_prog_cc_g" = yes && CFLAGS="-g"
+    test "$GCC" = yes && CFLAGS="$CFLAGS -Wall"
+  fi
+else
+  if test -z "$ac_save_CFLAGS"; then
+    test "$GCC" = yes && CFLAGS="-O2 -Wall" || CFLAGS="-O"
+  fi
+  AC_DEFINE(NDEBUG, 1, [Define if you are building a production release.])
+fi
+AC_MSG_RESULT(${debug=no})
 
 
 dnl Check for Gray Watson's Debug Malloc Library <http://dmalloc.com/>.

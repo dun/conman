@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-conf.c,v 1.45 2002/05/08 00:10:54 dun Exp $
+ *  $Id: client-conf.c,v 1.46 2002/05/08 06:12:19 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -57,7 +57,7 @@ client_conf_t * create_client_conf(void)
     client_conf_t *conf;
     uid_t uid;
     char *p;
-    struct passwd *passp;
+    struct passwd *passp = NULL;
 
     if (!(conf = malloc(sizeof(client_conf_t))))
         out_of_memory();

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-obj.c,v 1.64 2002/05/08 00:10:54 dun Exp $
+ *  $Id: server-obj.c,v 1.65 2002/05/08 06:12:19 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -352,7 +352,6 @@ int connect_telnet_obj(obj_t *telnet)
  *  Returns 0 if the connection is successfully completed; o/w, returns -1.
  */
     const int on = 1;
-    const int n = sizeof(on);
     char *now;
     char buf[MAX_LINE];
 
@@ -371,10 +370,12 @@ int connect_telnet_obj(obj_t *telnet)
          */
         if ((telnet->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
             log_err(0, "Unable to create socket for [%s]", telnet->name);
-        if (setsockopt(telnet->fd, SOL_SOCKET, SO_OOBINLINE, &on, n) < 0)
+        if (setsockopt(telnet->fd, SOL_SOCKET, SO_OOBINLINE,
+          (const void *) &on, sizeof(on)) < 0)
             log_err(errno, "Unable to set OOBINLINE socket option");
         if (telnet->aux.telnet.enableKeepAlive) {
-            if (setsockopt(telnet->fd, SOL_SOCKET, SO_KEEPALIVE, &on, n) < 0)
+            if (setsockopt(telnet->fd, SOL_SOCKET, SO_KEEPALIVE,
+              (const void *) &on, sizeof(on)) < 0)
                 log_err(errno, "Unable to set KEEPALIVE socket option");
         }
         set_fd_nonblocking(telnet->fd);
@@ -410,7 +411,8 @@ int connect_telnet_obj(obj_t *telnet)
          */
         int err = 0;
         int len = sizeof(err);
-        int rc = getsockopt(telnet->fd, SOL_SOCKET, SO_ERROR, &err, &len);
+        int rc = getsockopt(telnet->fd, SOL_SOCKET, SO_ERROR,
+            (void *) &err, &len);
         /*
          *  If an error occurred, Berkeley-derived implementations
          *    return 0 with the pending error in 'err'.  But Solaris
@@ -1120,7 +1122,7 @@ int write_obj_data(obj_t *obj, void *src, int len, int isInfo)
     if (m > 0) {
         memcpy(obj->bufInPtr, src, m);
         n -= m;
-        src += m;
+        src = (unsigned char *) src + m;
         obj->bufInPtr += m;
         /*
          *  Do the hokey-pokey and perform a circular-buffer wrap-around.

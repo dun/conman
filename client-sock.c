@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-sock.c,v 1.32 2002/05/08 00:10:54 dun Exp $
+ *  $Id: client-sock.c,v 1.33 2002/05/08 06:12:19 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -151,7 +151,7 @@ int send_req(client_conf_t *conf)
 {
     char buf[MAX_SOCK_LINE] = "";       /* init buf for appending with NUL */
     int n;
-    char *cmd;
+    char *cmd = NULL;
     char *str;
 
     assert(conf->req->sd >= 0);

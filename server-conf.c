@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-conf.c,v 1.42 2002/05/08 00:10:54 dun Exp $
+ *  $Id: server-conf.c,v 1.43 2002/05/08 06:12:19 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -710,8 +710,7 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
             snprintf(err, sizeof(err),
                 "%s keyword requires compile-time support",
                 server_conf_strs[LEX_UNTOK(tok)]);
-            break;
-#endif /* !WITH_TCP_WRAPPERS */
+#else /* WITH_TCP_WRAPPERS */
             if (lex_next(l) != '=')
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
@@ -722,6 +721,7 @@ static void parse_server_directive(Lex l, server_conf_t *conf)
             else
                 snprintf(err, sizeof(err), "expected ON or OFF for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
+#endif /* WITH_TCP_WRAPPERS */
             break;
 
         case SERVER_CONF_TIMESTAMP:

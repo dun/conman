@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: util-net.c,v 1.16 2002/05/08 00:10:55 dun Exp $
+ *  $Id: util-net.c,v 1.17 2002/05/08 06:12:19 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -59,7 +59,7 @@ static int validate_hostent_copy(
 
 
 struct hostent * get_host_by_name(const char *name,
-    char *buf, int buflen, int *h_err)
+    void *buf, int buflen, int *h_err)
 {
 /*  gethostbyname() is not thread-safe, and there is no frelling standard
  *    for gethostbyname_r() -- the arg list varies from system to system!
@@ -86,7 +86,7 @@ struct hostent * get_host_by_name(const char *name,
 
 
 struct hostent * get_host_by_addr(const char *addr, int len, int type,
-    char *buf, int buflen, int *h_err)
+    void *buf, int buflen, int *h_err)
 {
 /*  gethostbyaddr() is not thread-safe, and there is no frelling standard
  *    for gethostbyaddr_r() -- the arg list varies from system to system!
