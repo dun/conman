@@ -1,7 +1,7 @@
 #!/usr/bin/expect --
 
 ##
-# $Id: boot_alpha.exp,v 1.5 2001/08/23 20:31:16 dun Exp $
+# $Id: boot_alpha.exp,v 1.6 2001/08/31 01:09:59 dun Exp $
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
 
@@ -17,7 +17,7 @@ proc pre_boot_alpha {spawn_id output_id console} {
     return 0
   }
   set cmds [list \
-    {set boot_osflags "ip=dhcp root=/dev/nfs console=ttyS0"} \
+    {set boot_osflags "ip=dhcp root=/dev/nfs console=ttyS0,19200"} \
     {set eib0_mode Auto-Negotiate} \
     {set eib0_protocols BOOTP} \
     {set boot_reset OFF} \
@@ -27,6 +27,13 @@ proc pre_boot_alpha {spawn_id output_id console} {
   foreach cmd $cmds {
     alpha_do_srm_cmd $spawn_id $output_id $console 0 $cmd
   }
+  return 1
+}
+
+proc post_boot_alpha {spawn_id output_id console} {
+
+  send_user "Booting $console.\n"
+  alpha_do_srm_cmd $spawn_id $output_id $console 0 "boot" 60
   return 1
 }
 
@@ -42,11 +49,6 @@ if {$n == 0} {
 }
 
 conman_run 128 "-j $argv" pre_boot_alpha
-
-foreach console $consoles {
-  send_user "Booting $console.\n"
-  conman_run 1 "-j $console" alpha_do_srm_cmd 0 "boot" 20
-  sleep 10
-}
+conman_run   2 "-j $argv" post_boot_alpha
 
 exit 0
