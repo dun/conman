@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.25 2001/08/14 23:18:47 dun Exp $
+ *  $Id: server-obj.c,v 1.26 2001/08/14 23:59:11 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -37,15 +37,29 @@ obj_t * create_console_obj(List objs, char *name, char *dev, int bps)
  *    Note: the console is open and set for non-blocking I/O.
  *  Returns the new object, or NULL on error.
  */
-    int fd;
+    ListIterator i;
     obj_t *console;
+    int fd;
 
     assert(objs);
     assert(name && *name);
     assert(dev && *dev);
 
-    /* FIX_ME: check name, dev, & log for dopplegangers */
-    /* FIX_ME: check bps for valid baud rate (cf APUE p343-344) */
+    /*  Check for duplicate name.
+     */
+    if (!(i = list_iterator_create(objs)))
+        err_msg(0, "Out of memory");
+    while ((console = list_next(i))) {
+        if (console->type != CONSOLE)
+            continue;
+        if (!strcmp(console->name, name))
+            break;
+    }
+    list_iterator_destroy(i);
+    if (console != NULL) {
+        log_msg(0, "Ignoring duplicate console name \"%s\".", name);
+        return(NULL);
+    }
 
     if ((fd = open(dev, O_RDWR | O_NONBLOCK)) < 0) {
         log_msg(0, "Unable to open console [%s]: %s", name, strerror(errno));
@@ -77,14 +91,31 @@ obj_t * create_logfile_obj(List objs, char *name, obj_t *console, int zeroLog)
  *    Note: the logfile is open and set for non-blocking I/O.
  *  Returns the new object, or NULL on error.
  */
+    ListIterator i;
+    obj_t *logfile;
     int flags;
     int fd;
-    obj_t *logfile;
     char *now, *msg;
 
     assert(objs);
     assert(name && *name);
     assert(console);
+
+    /*  Check for duplicate name.
+     */
+    if (!(i = list_iterator_create(objs)))
+        err_msg(0, "Out of memory");
+    while ((logfile = list_next(i))) {
+        if (logfile->type != LOGFILE)
+            continue;
+        if (!strcmp(logfile->name, name))
+            break;
+    }
+    list_iterator_destroy(i);
+    if (logfile != NULL) {
+        log_msg(0, "Ignoring duplicate logfile name \"%s\".", name);
+        return(NULL);
+    }
 
     flags = O_WRONLY | O_CREAT | O_APPEND | O_NONBLOCK;
     if (zeroLog)
@@ -154,10 +185,6 @@ static obj_t * create_obj(enum obj_type type, List objs, char *name, int fd)
     assert(name);
     assert(fd >= 0);
 
-    /*  FIX_ME? Ensure name not already in use by another obj of same type
-     */
-    /*  FIX_ME? Return NULL if out-of-memory
-     */
     if (!(obj = malloc(sizeof(obj_t))))
         err_msg(0, "Out of memory");
     obj->name = create_string(name);
