@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: str.h,v 1.2 2002/10/01 17:38:25 dun Exp $
+ *  $Id$
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).

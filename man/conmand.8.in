@@ -1,4 +1,4 @@
-.\" $Id: conmand.8.in,v 1.9 2003/08/02 00:02:18 dun Exp $
+.\" $Id$
 
 .TH CONMAND 8 "@DATE@" "@PROJECT@-@VERSION@" "LLNL"
 

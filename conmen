@@ -3,7 +3,7 @@
 #******************************************************************************
 # ConMen: a wrapper to aid in ConMan broadcast sessions.
 #******************************************************************************
-# $Id: conmen,v 1.14 2002/06/06 16:18:50 dun Exp $
+# $Id$
 #******************************************************************************
 # Copyright (C) 2001-2002 The Regents of the University of California.
 # Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).

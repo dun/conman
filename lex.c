@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: lex.c,v 1.20 2002/09/17 22:40:25 dun Exp $
+ *  $Id$
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).

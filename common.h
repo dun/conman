@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: common.h,v 1.43 2003/08/02 00:02:18 dun Exp $
+ *  $Id$
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
