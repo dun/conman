@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-obj.c,v 1.28 2001/08/15 02:21:23 dun Exp $
+ *  $Id: server-obj.c,v 1.29 2001/08/15 14:05:23 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -70,15 +70,15 @@ obj_t * create_console_obj(List objs, char *name, char *dev, int bps)
         goto err;
 
     if ((fd = open(dev, O_RDWR | O_NONBLOCK)) < 0) {
-        log_msg(0, "Unable to open console [%s]: %s", name, strerror(errno));
+        log_msg(0, "Unable to open console [%s]: %s.", name, strerror(errno));
         goto err;
     }
     if (get_write_lock(fd) < 0) {
-        log_msg(0, "Unable to lock \"%s\" for console [%s].", dev, name);
+        log_msg(0, "Unable to lock \"%s\".", dev);
         goto err;
     }
     if (!isatty(fd)) {
-        log_msg(0, "Console [%s] is not a TTY device", name);
+        log_msg(0, "Device \"%s\" is not a terminal.", dev);
         goto err;
     }
     console = create_obj(CONSOLE, objs, name, fd);
@@ -137,12 +137,11 @@ obj_t * create_logfile_obj(List objs, char *name, obj_t *console, int zeroLog)
     if (zeroLog)
         flags |= O_TRUNC;
     if ((fd = open(name, flags, S_IRUSR | S_IWUSR)) < 0) {
-        log_msg(0, "Unable to open logfile \"%s\": %s", name, strerror(errno));
+        log_msg(0, "Unable to open logfile \"%s\": %s.", name, strerror(errno));
         goto err;
     }
     if (get_write_lock(fd) < 0) {
-        log_msg(0, "Unable to lock \"%s\" for console [%s].",
-            name, console->name);
+        log_msg(0, "Unable to lock \"%s\".", name);
         goto err;
     }
 
@@ -710,7 +709,7 @@ int write_obj_data(obj_t *obj, void *src, int len, int isInfo)
      */
     if (len > avail) {
         if ((obj->type != CLIENT) || (!obj->aux.client.gotSuspend))
-            log_msg(10, "Overwrote %d bytes in buffer for %s",
+            log_msg(10, "Overwrote %d bytes in buffer for %s.",
                 len-avail, obj->name);
         obj->bufOutPtr = obj->bufInPtr + 1;
         if (obj->bufOutPtr == &obj->buf[MAX_BUF_SIZE])
