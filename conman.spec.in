@@ -1,4 +1,4 @@
-# $Id: conman.spec.in,v 1.4 2001/08/30 18:02:03 dun Exp $
+# $Id: conman.spec.in,v 1.5 2001/08/30 18:12:45 dun Exp $
 
 %define name    @PACKAGE@
 %define version @VERSION@
@@ -36,21 +36,27 @@ rm -rf "$RPM_BUILD_ROOT"
 
 %pre
 if [ -x /etc/rc.d/init.d/conman ]; then
-  /etc/rc.d/init.d/conman stop
+  if /etc/rc.d/init.d/conman status | grep running >/dev/null 2>&1; then
+    /etc/rc.d/init.d/conman stop
+  fi
 fi
 
 %post
 if [ -x /etc/rc.d/init.d/conman ]; then
   [ -x /sbin/chkconfig ] && /sbin/chkconfig --del conman
   [ -x /sbin/chkconfig ] && /sbin/chkconfig --add conman
-  /etc/rc.d/init.d/conman start
+  if /etc/rc.d/init.d/conman status | grep stopped >/dev/null 2>&1; then
+    /etc/rc.d/init.d/conman start
+  fi
 fi
 
 %preun
 if [ "$1" = 0 ]; then                   # last version of pkg being erased
   if [ -x /etc/rc.d/init.d/conman ]; then
     [ -x /sbin/chkconfig ] && /sbin/chkconfig --del conman
-    /etc/rc.d/init.d/conman stop
+    if /etc/rc.d/init.d/conman status | grep running >/dev/null 2>&1; then
+      /etc/rc.d/init.d/conman stop
+    fi
   fi
 fi
 
