@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: client-conf.c,v 1.46 2002/05/08 06:12:19 dun Exp $
+ *  $Id: client-conf.c,v 1.47 2002/05/10 06:30:46 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -230,7 +230,7 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
         }
     }
 
-    if (gotHelp) {
+    if (gotHelp || (argc == 1)) {
         display_client_help(conf);
         exit(0);
     }
