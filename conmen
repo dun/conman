@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 ##
-#  $Id: conmen,v 1.2 2001/06/15 15:54:36 dun Exp $
+#  $Id: conmen,v 1.3 2001/06/15 19:51:33 dun Exp $
 #    by Chris Dunlap <cdunlap@llnl.gov>
 ##
 #  ConMen is a wrapper to aid in ConMan broadcast sessions.
@@ -27,7 +27,7 @@ $help = `conman -h`;
 ($def_dst) = ($help =~ /-d .* \(default: ([^\)]*)\)/);
 ($def_esc) = ($help =~ /-e .* \(default: ([^\)]*)\)/);
 
-if (!@ARGV || !getopts('d:e:fhjmV') || $opt_h) {
+if (!@ARGV || !getopts('d:e:fg:hjmV') || $opt_h) {
     print_usage();
 }
 
@@ -37,12 +37,10 @@ if (!@ARGV || !getopts('d:e:fhjmV') || $opt_h) {
 if ($opt_V) {
     exec("conman -V");
 }
-if ($opt_d) {
-    $server = "-d $opt_d";
-}
-if ($opt_e) {
-    $escape = "-e $opt_e";
-}
+
+$conman = "conman";
+$conman .= " -d \'$opt_d\'" if ($opt_d);
+$conman .= " -e \'$opt_e\'" if ($opt_e);
 
 if ($opt_f) {
     $mode = "-f";
@@ -58,20 +56,23 @@ foreach (@ARGV) {
     $_ = "'$_'";
 }
 $patterns = join(" ", @ARGV);
-chomp(@consoles = `conman -q $server $patterns`);
+chomp(@consoles = `$conman -q $patterns`);
 
 if (@consoles == 0) {
     exit(1);
 }
 if (@consoles == 1) {
-    exec("conman $server $escape $mode $consoles[0]");
+    exec("$conman $mode $consoles[0]");
 }
+
+$xterm = "xterm";
+$xterm .= " -geometry \'$opt_g\'" if ($opt_g);
 foreach (@consoles) {
-    $name = "\"ConMan: $_\"";
-    system("xterm -T $name -n $name -e conman $server $escape $mode $_ &");
+    $name = "\'ConMan: $_\'";
+    system("$xterm -T $name -n $name -e $conman $mode $_ &\n");
 }
 sleep(1);
-system("conman $server $escape -bj $patterns");
+system("$conman -bj $patterns");
 kill('TERM', -getpid);
 
 exit(0);
@@ -86,6 +87,7 @@ sub print_usage
     print("  -d HOST   Specify location of server (default: $def_dst).\n");
     print("  -e CHAR   Set escape character (default: $def_esc).\n");
     print("  -f        Force connections (console stealing).\n");
+    print("  -g SIZE   Specify xterm's geometry (eg, 80x24).\n");
     print("  -j        Join connections (console sharing).\n");
     print("  -m        Monitor connections (read-only).\n");
     print("  -V        Display version information.\n");
