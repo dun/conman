@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server-esc.c,v 1.17 2001/12/18 22:24:50 dun Exp $
+ *  $Id: server-esc.c,v 1.18 2001/12/20 17:53:50 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -228,10 +228,27 @@ static void perform_quiet_toggle(obj_t *client)
 {
 /*  Toggles whether informational messages are suppressed by the client.
  */
+    const char *op, *action;
+    char *str;
+
     assert(is_client_obj(client));
 
     client->aux.client.req->enableQuiet ^= 1;
     DPRINTF("Toggled quiet-mode for client [%s].\n", client->name);
+
+    if (client->aux.client.req->enableQuiet)
+        op = "Enabled", action = "suppressed";
+    else
+        op = "Disabled", action = "displayed";
+    str = create_format_string( "%s%s quiet-mode -- info msgs will be %s%s",
+        CONMAN_MSG_PREFIX, op, action, CONMAN_MSG_SUFFIX);
+    /*
+     *  Technically, this is an informational message.  But, it is marked as
+     *    a non-info msg to write_obj_data() in order to ensure it is written
+     *    to the client regardless of the "quiet-mode" setting.
+     */
+    write_obj_data(client, str, strlen(str), 0);
+    free(str);
     return;
 }
 
