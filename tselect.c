@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: tselect.c,v 1.5 2001/12/14 07:43:04 dun Exp $
+ *  $Id: tselect.c,v 1.6 2001/12/14 21:18:47 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ****************************************************************************** 
  *  Based on the implementation in Jon C. Snader's
@@ -229,7 +229,7 @@ int abtimeout(CallBackF callback, void *arg, const struct timeval *tvp)
     t->next = tCurr;
 
     DPRINTF("TSELECT: started timer %d for f:%p a:%p in %ld secs.\n",
-        t->id, callback, arg, (tvp->tv_sec - time(NULL)));	/* xyzzy */
+        t->id, callback, arg, (tvp->tv_sec - (long) time(NULL))); /* xyzzy */
     return(t->id);
 }
 
