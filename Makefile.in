@@ -2,7 +2,7 @@
 # ConMan Makefile
 #   by Chris Dunlap <cdunlap@llnl.gov>
 #
-# $Id: Makefile.in,v 1.29 2001/10/06 22:57:32 dun Exp $
+# $Id: Makefile.in,v 1.30 2001/10/07 18:18:43 dun Exp $
 ##
 
 PACKAGE=	@PACKAGE@
@@ -111,6 +111,7 @@ rpm tar:
 	  sed -ne 's/.*-\(.*\)/\1/p'`; \
 	if test -z "$$ver"; then \
 	  echo "ERROR: Cannot determine VERSION (tag=$$tag)" 1>&2; exit 0; fi; \
+	test "$$tag" = "HEAD" -o "$$tag" = "BASE" && ver="$$ver+"; \
 	test -z "$$rel" && rel=1; \
 	$(MAKE) -s $@-internal cvs="$$cvs" mkdir="$$mkdir" \
 	  tag="$$tag" ver="$$ver" rel="$$rel"
