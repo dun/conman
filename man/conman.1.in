@@ -1,4 +1,4 @@
-.\" $Id: conman.1.in,v 1.4 2002/05/18 23:09:00 dun Exp $
+.\" $Id: conman.1.in,v 1.5 2002/09/09 22:48:26 dun Exp $
 
 .TH CONMAN 1 "@DATE@" "@PROJECT@-@VERSION@" "LLNL"
 
@@ -66,9 +66,9 @@ Display license information.
 Monitor a console (read-only).
 .TP
 .B \-q
-Query \fBconmand\fR for consoles matching the specified names/patterns.
-Output from this query can be saved to file for use with the '\fB-F\fR'
-option.
+Query \fBconmand\fR for consoles matching the specified names/patterns, or
+a list of all consoles if a name/pattern is not specified.  Output from
+this query can be saved to file for use with the '\fB-F\fR' option.
 .TP
 .B \-Q
 Enable quiet-mode, suppressing informational messages.  This mode can be

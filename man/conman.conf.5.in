@@ -1,4 +1,4 @@
-.\" $Id: conman.conf.5.in,v 1.5 2002/05/20 06:51:45 dun Exp $
+.\" $Id: conman.conf.5.in,v 1.6 2002/09/09 22:48:26 dun Exp $
 
 .TH CONMAN.CONF 5 "@DATE@" "@PROJECT@-@VERSION@" "LLNL"
 
@@ -91,8 +91,8 @@ Specifies global options for the console log files.  These options can be
 overridden on an individual basis by specifying the \fBCONSOLE\fR
 \fBlogopts\fR keyword.  The valid logoptions are \fBsanitize\fR and
 \fBnosanitize\fR; sanitized log files convert non-printable characters into
-7-bit printable characters.  This also affects the output of the client's
-log-replay escape.  The default is \fBnosanitize\fR.
+7-bit printable character sequences.  This also affects the output of the
+client's log-replay escape.  The default is \fBnosanitize\fR.
 .TP
 \fBseropts\fR \fB=\fR "\fIbps\fR[,\fIdatabits\fR[\fIparity\fR[\fIstopbits\fR]]]"
 Specifies global options for local serial devices.  These options can be
