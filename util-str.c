@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: util-str.c,v 1.7 2001/12/14 07:43:04 dun Exp $
+ *  $Id: util-str.c,v 1.8 2001/12/20 01:06:54 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
  ******************************************************************************
  *  Refer to "util-str.h" for documentation on public functions.
@@ -40,25 +40,21 @@ char * create_string(const char *str)
 
 char * create_format_string(const char *fmt, ...)
 {
+    char buf[MAX_STR_SIZE];
     va_list vargs;
-    int n, len;
     char *p;
 
     if (!fmt)
         return(NULL);
 
     va_start(vargs, fmt);
-    if ((len = vsnprintf(p, 0, fmt, vargs)) < 0)
-        len = MAX_STR_SIZE;
-    else				/* C99 standard returns needed strlen */
-        len++;				/* reserve space for terminating NUL */
-    if (!(p = (char *) malloc(len)))
-        out_of_memory();
-    n = vsnprintf(p, len, fmt, vargs);
+    vsnprintf(buf, sizeof(buf), fmt, vargs);
     va_end(vargs);
 
-    if (n < 0 || n >= len)
-        p[len - 1] = '\0';		/* ensure str is NUL-terminated */
+    buf[sizeof(buf) - 1] = '\0';	/* ensure buf is NUL-terminated */
+
+    if (!(p = strdup(buf)))
+        out_of_memory();
     return(p);
 }
 
