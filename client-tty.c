@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: client-tty.c,v 1.25 2001/07/31 20:11:21 dun Exp $
+ *  $Id: client-tty.c,v 1.26 2001/08/02 23:37:23 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -29,6 +29,7 @@ static int read_from_stdin(client_conf_t *conf);
 static int write_to_stdout(client_conf_t *conf);
 static int send_esc_seq(client_conf_t *conf, char c);
 static int perform_close_esc(client_conf_t *conf, char c);
+static int perform_info_esc(client_conf_t *conf, char c);
 static int perform_help_esc(client_conf_t *conf, char c);
 static int perform_suspend_esc(client_conf_t *conf, char c);
 static void locally_echo_esc(char e, char c);
@@ -193,6 +194,8 @@ static int read_from_stdin(client_conf_t *conf)
             return(send_esc_seq(conf, c));
         case ESC_CHAR_CLOSE:
             return(perform_close_esc(conf, c));
+        case ESC_CHAR_INFO:
+            return(perform_info_esc(conf, c));
         case ESC_CHAR_HELP:
             return(perform_help_esc(conf, c));
         case ESC_CHAR_LOG:
@@ -308,6 +311,30 @@ static int perform_close_esc(client_conf_t *conf, char c)
 }
 
 
+static int perform_info_esc(client_conf_t *conf, char c)
+{
+/*  Display information about the current connection.
+ *  Returns 1 on success.
+ */
+    char *str;
+
+    if (list_count(conf->req->consoles) == 1) {
+        str = create_fmt_string("%sConnected to console [%s] on %s:%d%s",
+            CONMAN_MSG_PREFIX, (char *) list_peek(conf->req->consoles),
+            conf->req->host, conf->req->port, CONMAN_MSG_SUFFIX);
+    }
+    else {
+        str = create_fmt_string("%sBroadcasting to %d consoles on %s:%d%s",
+            CONMAN_MSG_PREFIX, list_count(conf->req->consoles),
+            conf->req->host, conf->req->port, CONMAN_MSG_SUFFIX);
+    }
+    if (write_n(STDOUT_FILENO, str, strlen(str)) < 0)
+        err_msg(errno, "write() failed on fd=%d", STDOUT_FILENO);
+    free(str);
+    return(1);
+}
+
+
 static int perform_help_esc(client_conf_t *conf, char c)
 {
 /*  Display the "escape sequence" help.
@@ -317,6 +344,7 @@ static int perform_help_esc(client_conf_t *conf, char c)
     char escBreak[3];
     char escClose[3];
     char escHelp[3];
+    char escInfo[3];
     char escLog[3];
     char escSuspend[3];
     char *str;
@@ -327,6 +355,7 @@ static int perform_help_esc(client_conf_t *conf, char c)
     write_esc_char(ESC_CHAR_BREAK, escBreak);
     write_esc_char(ESC_CHAR_CLOSE, escClose);
     write_esc_char(ESC_CHAR_HELP, escHelp);
+    write_esc_char(ESC_CHAR_INFO, escInfo);
     write_esc_char(ESC_CHAR_LOG, escLog);
     write_esc_char(ESC_CHAR_SUSPEND, escSuspend);
 
@@ -336,11 +365,12 @@ static int perform_help_esc(client_conf_t *conf, char c)
         "  %2s%-2s -  Terminate the connection.\r\n"
         "  %2s%-2s -  Send the escape character by typing it twice.\r\n"
         "  %2s%-2s -  Transmit a serial-break.\r\n"
+        "  %2s%-2s -  Display connection information.\r\n"
         "  %2s%-2s -  Replay up to the last %d bytes of the log.\r\n"
         "  %2s%-2s -  Suspend the client.\r\n",
         escChar, escHelp, escChar, escClose, escChar, escChar,
-        escChar, escBreak, escChar, escLog, CONMAN_REPLAY_LEN,
-        escChar, escSuspend);
+        escChar, escBreak, escChar, escInfo, escChar, escLog,
+        CONMAN_REPLAY_LEN, escChar, escSuspend);
     if (write_n(STDOUT_FILENO, str, strlen(str)) < 0)
         err_msg(errno, "write() failed on fd=%d", STDOUT_FILENO);
     free(str);
@@ -433,30 +463,20 @@ static void locally_display_status(client_conf_t *conf, char *msg)
 
     assert((conf->req->command == CONNECT) || (conf->req->command == MONITOR));
 
-    if (!strcmp(msg, "terminated by peer")) {
-        n = snprintf(ptr, len, "\r\n");
-        if (n < 0 || n >= len)
-            overflow = 1;
-        else
-            ptr += n, len -= n;
+    if (list_count(conf->req->consoles) == 1) {
+        n = snprintf(ptr, len, "%sConnection to console [%s] %s%s",
+            CONMAN_MSG_PREFIX, (char *) list_peek(conf->req->consoles),
+            msg, CONMAN_MSG_SUFFIX);
     }
-    if (!overflow) {
-
-        if (list_count(conf->req->consoles) == 1) {
-            n = snprintf(ptr, len, "%sConnection to console [%s] %s%s",
-                CONMAN_MSG_PREFIX, (char *) list_peek(conf->req->consoles),
-                msg, CONMAN_MSG_SUFFIX);
-        }
-        else {
-            n = snprintf(ptr, len, "%sBroadcast to %d consoles %s%s",
-                CONMAN_MSG_PREFIX, list_count(conf->req->consoles),
-                msg, CONMAN_MSG_SUFFIX);
-        }
-        if (n < 0 || n >= len)
-            overflow = 1;
-        else
-            ptr += n, len -= n;
+    else {
+        n = snprintf(ptr, len, "%sBroadcast to %d consoles %s%s",
+            CONMAN_MSG_PREFIX, list_count(conf->req->consoles),
+            msg, CONMAN_MSG_SUFFIX);
     }
+    if (n < 0 || n >= len)
+        overflow = 1;
+    else
+        ptr += n, len -= n;
 
     if (overflow) {
         ptr = buf + sizeof(buf) - 3;

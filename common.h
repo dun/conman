@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: common.h,v 1.10 2001/07/31 20:11:21 dun Exp $
+ *  $Id: common.h,v 1.11 2001/08/02 23:37:23 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -36,6 +36,7 @@
 #define ESC_CHAR_BREAK		'B'
 #define ESC_CHAR_CLOSE		'.'
 #define ESC_CHAR_HELP		'?'
+#define ESC_CHAR_INFO		'I'
 #define ESC_CHAR_LOG		'L'
 #define ESC_CHAR_SUSPEND	'Z'
 
