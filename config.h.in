@@ -76,6 +76,11 @@
 #endif /* WITH_DMALLOC */
 
 
+
+#ifdef WITH_PTHREADS
+#  define _REENTRANT
+#endif /* WITH_PTHREADS */
+
 /* Override default out_of_memory() macro definition. */
 #include "errors.h"
 #define out_of_memory() (err_msg(0, "Out of memory"), (void *) NULL)
