@@ -1,7 +1,7 @@
 #!/usr/bin/expect --
 
 ##
-# $Id: boot_alpha.exp,v 1.3 2001/08/22 23:50:49 dun Exp $
+# $Id: boot_alpha.exp,v 1.4 2001/08/23 17:59:42 dun Exp $
 #   by Chris Dunlap <cdunlap@llnl.gov>
 ##
 
@@ -10,9 +10,8 @@ source /usr/lib/conman/conman.exp
 source /usr/lib/conman/alpha.exp
 log_user 0
 
-proc boot_alpha {spawn_id output_id console {echo 0}} {
+proc pre_boot_alpha {spawn_id output_id console} {
 
-  if {$echo} {exp_send -i $output_id "Booting.\n"}
   exec powerman -r $console
   if {! [alpha_is_at_srm $spawn_id $output_id $console 150]} {
     return 0
@@ -28,8 +27,25 @@ proc boot_alpha {spawn_id output_id console {echo 0}} {
   foreach cmd $cmds {
     alpha_do_srm_cmd $spawn_id $output_id $console 0 $cmd
   }
-  alpha_do_srm_cmd $spawn_id $output_id $console 0 "boot" 900
   return 1
 }
 
-conman_run 4 $argv boot_alpha 1
+set consoles [conman_query $argv]
+set n [llength $consoles]
+if {$n == 0} {
+  send_error "Found no matching consoles.\n"
+  exit 1
+} elseif {$n == 1} {
+  send_user "Resetting console [lindex $consoles 0].\n"
+} else {
+  send_user "Resetting $n consoles.\n"
+}
+
+conman_run 128 "-j $argv" pre_boot_alpha
+
+foreach console $consoles {
+  send_user "Booting $console.\n"
+  conman_run 1 "-j $console" alpha_do_srm_cmd 0 "boot" 10
+}
+
+exit 0
