@@ -1,5 +1,5 @@
 /******************************************************************************\
- *  $Id: server.c,v 1.27 2001/09/17 22:56:30 dun Exp $
+ *  $Id: server.c,v 1.28 2001/09/18 00:10:08 dun Exp $
  *    by Chris Dunlap <cdunlap@llnl.gov>
 \******************************************************************************/
 
@@ -206,6 +206,7 @@ static void display_configuration(server_conf_t *conf)
     list_iterator_destroy(i);
 
     printf("Starting ConMan daemon %s (pid %d).\n", VERSION, (int) getpid());
+    printf("Configuration \"%s\".\n", conf->confFileName);
     printf("Listening on port %d.\n", conf->port);
     printf("Monitoring %d console%s.\n", n, ((n==1) ? "" : "s"));
     printf("Options:");
