@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server.c,v 1.58 2002/05/19 18:12:13 dun Exp $
+ *  $Id: server.c,v 1.59 2002/05/19 23:08:55 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -574,6 +574,8 @@ static void mux_io(server_conf_t *conf)
 static void open_daemon_logfile(server_conf_t *conf)
 {
 /*  (Re)opens the daemon logfile.
+ *  Since this logfile can be re-opened after the daemon has chdir()'d,
+ *    it must be specified with an absolute pathname.
  */
     static int once = 1;
     const char *mode = "a";
@@ -581,6 +583,7 @@ static void open_daemon_logfile(server_conf_t *conf)
     int fd;
 
     assert(conf->logFileName != NULL);
+    assert(conf->logFileName[0] == '/');
 
     /*  Only truncate logfile at startup if needed.
      */
@@ -636,9 +639,6 @@ err:
 static void reopen_logfiles(server_conf_t *conf)
 {
 /*  Reopens the daemon logfile and all of the logfiles in the 'objs' list.
- *
- *  Since logfiles can be re-opened after the daemon has chdir()'d,
- *    they must be specified as absolute pathnames.
  */
     ListIterator i;
     obj_t *logfile;

@@ -1,5 +1,5 @@
 /*****************************************************************************\
- *  $Id: server-logfile.c,v 1.10 2002/05/16 18:54:20 dun Exp $
+ *  $Id: server-logfile.c,v 1.11 2002/05/19 23:08:55 dun Exp $
  *****************************************************************************
  *  Copyright (C) 2001-2002 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
@@ -85,6 +85,8 @@ int open_logfile_obj(obj_t *logfile, int gotTrunc)
 {
 /*  (Re)opens the specified 'logfile' obj; the logfile will be truncated
  *    if 'gotTrunc' is true (ie, non-zero).
+ *  Since this logfile can be re-opened after the daemon has chdir()'d,
+ *    it must be specified with an absolute pathname.
  *  Returns 0 if the logfile is successfully opened; o/w, returns -1.
  */
     int flags;
@@ -93,6 +95,7 @@ int open_logfile_obj(obj_t *logfile, int gotTrunc)
     assert(logfile != NULL);
     assert(is_logfile_obj(logfile));
     assert(logfile->name != NULL);
+    assert(logfile->name[0] == '/');
     assert(logfile->aux.logfile.consoleName != NULL);
 
     if (logfile->fd >= 0) {
