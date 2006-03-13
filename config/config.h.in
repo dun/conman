@@ -1,0 +1,58 @@
+/* config/config.h.in.  Generated from configure.ac by autoheader.  */
+
+/* Define the canonical host type. */
+#undef HOST
+
+/* Define the canonical host CPU type. */
+#undef HOST_CPU
+
+/* Define the canonical host OS type. */
+#undef HOST_OS
+
+/* Define the canonical host vendor type. */
+#undef HOST_VENDOR
+
+/* Define the project alias string (name-ver or name-ver-rel). */
+#undef META_ALIAS
+
+/* Define the project author. */
+#undef META_AUTHOR
+
+/* Define the project release date. */
+#undef META_DATE
+
+/* Define the libtool library 'age' version information. */
+#undef META_LT_AGE
+
+/* Define the libtool library 'current' version information. */
+#undef META_LT_CURRENT
+
+/* Define the libtool library 'revision' version information. */
+#undef META_LT_REVISION
+
+/* Define the project name. */
+#undef META_NAME
+
+/* Define the project release. */
+#undef META_RELEASE
+
+/* Define the project version. */
+#undef META_VERSION
+
+/* Define to 1 if you are building a production release. */
+#undef NDEBUG
+
+/* Define to the address where bug reports for this package should be sent. */
+#undef PACKAGE_BUGREPORT
+
+/* Define to the full name of this package. */
+#undef PACKAGE_NAME
+
+/* Define to the full name and version of this package. */
+#undef PACKAGE_STRING
+
+/* Define to the one symbol short name of this package. */
+#undef PACKAGE_TARNAME
+
+/* Define to the version of this package. */
+#undef PACKAGE_VERSION
