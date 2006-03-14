@@ -1,7 +1,7 @@
 /*****************************************************************************
  *  $Id$
  *****************************************************************************
- *  This file is part of ConMan, a remote console management program.
+ *  This file is part of ConMan: The Console Manager.
  *  For details, see <http://www.llnl.gov/linux/conman/>.
  *
  *  Copyright (C) 2001-2006 The Regents of the University of California.

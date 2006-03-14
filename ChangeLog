@@ -1,5 +1,7 @@
 2006-03-14  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* configure.ac, src/conman/conman.c: Updated header comment.
+
 	* src/conmand/conmand.c: Added parse_cmdline().
 	* src/conmand/conf.c, src/conmand/conf.h: Added.
 	* src/conmand/Makefile.am: Added conf.c & conf.h.
