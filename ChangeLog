@@ -1,3 +1,9 @@
+2006-03-14  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* src/conmand/conmand.c: Added parse_cmdline().
+	* src/conmand/conf.c, src/conmand/conf.h: Added.
+	* src/conmand/Makefile.am: Added conf.c & conf.h.
+
 2006-03-13  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* : A new beginning.

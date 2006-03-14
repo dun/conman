@@ -8,4 +8,6 @@ sbin_PROGRAMS = \
 	conmand
 
 conmand_SOURCES = \
-	conmand.c
+	conmand.c \
+	conf.c \
+	conf.h

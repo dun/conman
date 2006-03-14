@@ -54,7 +54,7 @@ CONFIG_CLEAN_FILES =
 am__installdirs = "$(DESTDIR)$(sbindir)"
 sbinPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(sbin_PROGRAMS)
-am_conmand_OBJECTS = conmand.$(OBJEXT)
+am_conmand_OBJECTS = conmand.$(OBJEXT) conf.$(OBJEXT)
 conmand_OBJECTS = $(am_conmand_OBJECTS)
 conmand_LDADD = $(LDADD)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)/config
@@ -159,7 +159,9 @@ sharedstatedir = @sharedstatedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 conmand_SOURCES = \
-	conmand.c
+	conmand.c \
+	conf.c \
+	conf.h
 
 all: all-am
 
@@ -227,6 +229,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/conf.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/conmand.Po@am__quote@
 
 .c.o:

@@ -25,25 +25,41 @@
  *****************************************************************************/
 
 
+#ifndef CONMAND_CONF_H
+#define CONMAND_CONF_H
+
 #if HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include "conf.h"
+
+/*****************************************************************************
+ *  Data Types
+ *****************************************************************************/
+
+struct conf {
+    int foo;
+};
+
+typedef struct conf * conf_t;
 
 
 /*****************************************************************************
- *  Functions
+ *  External Variables
  *****************************************************************************/
 
-int
-main (int argc, char *argv[])
-{
-    conf = create_conf ();
-    parse_cmdline (conf, argc, argv);
-    destroy_conf (conf);
+extern conf_t conf;                     /* defined in conf.c                 */
 
-    exit (EXIT_SUCCESS);
-}
+
+/*****************************************************************************
+ *  External Function Prototypes
+ *****************************************************************************/
+
+conf_t create_conf (void);
+
+void destroy_conf (conf_t conf);
+
+void parse_cmdline (conf_t conf, int argc, char **argv);
+
+
+#endif /* !CONMAND_CONF_H */
