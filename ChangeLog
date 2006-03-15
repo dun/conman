@@ -1,5 +1,7 @@
 2006-03-14  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* src/conmand/conf.c(display_help): Changed prog to progname.
+
 	* configure.ac, src/conman/conman.c: Updated header comment.
 
 	* src/conmand/conmand.c: Added parse_cmdline().

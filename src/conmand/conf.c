@@ -166,13 +166,13 @@ display_help (char *arg0)
 {
 /*  Display usage information.
  */
-    char *prog;
+    char *progname;
     const int w = -24;                  /* pad for width of option string */
 
     assert (arg0 != NULL);
-    prog = (prog = strrchr (arg0, '/')) ? prog + 1 : arg0;
+    progname = (progname = strrchr (arg0, '/')) ? progname + 1 : arg0;
 
-    printf ("Usage: %s [OPTIONS]\n", prog);
+    printf ("Usage: %s [OPTIONS]\n", progname);
     printf ("\n");
 
     printf ("  %*s %s\n", w, "-h, --help",
@@ -195,7 +195,7 @@ display_license (void)
 /*  Display license information.
  */
     static const char *license =                                              \
-      "ConMan: The Console Manager\n"                                                              \
+      "ConMan: The Console Manager\n"                                         \
       "Copyright (C) 2001-2006 The Regents of the University of California\n" \
       "Produced at Lawrence Livermore National Laboratory\n"                  \
       "Written by Chris Dunlap <cdunlap@llnl.gov>\n"                          \
