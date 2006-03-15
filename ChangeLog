@@ -1,5 +1,10 @@
 2006-03-14  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* src/conmand/Makefile.am: Added getopt in src/missing/.
+	* src/missing/getopt.c, src/missing/getopt1.c, src/missing/getopt.h:
+	  Added from glibc-2.3.2.
+	* config/compile: Added by automake.
+
 	* src/conmand/conf.c(display_help): Changed prog to progname.
 
 	* configure.ac, src/conman/conman.c: Updated header comment.

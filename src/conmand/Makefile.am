@@ -10,4 +10,13 @@ sbin_PROGRAMS = \
 conmand_SOURCES = \
 	conmand.c \
 	conf.c \
-	conf.h
+	conf.h \
+	$(MISSING)
+
+conmand_CPPFLAGS = \
+	-I$(top_srcdir)/src/missing
+
+MISSING = \
+	$(top_srcdir)/src/missing/getopt.c \
+	$(top_srcdir)/src/missing/getopt.h \
+	$(top_srcdir)/src/missing/getopt1.c
