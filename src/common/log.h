@@ -25,41 +25,43 @@
  *****************************************************************************/
 
 
-#ifndef CONMAND_CONF_H
-#define CONMAND_CONF_H
+#ifndef _COMMON_LOG_H
+#define _COMMON_LOG_H
 
 #if HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-
-/*****************************************************************************
- *  Data Types
- *****************************************************************************/
-
-struct conf {
-    int foo;
-};
-
-typedef struct conf * conf_t;
+#include <stdio.h>
+#include <syslog.h>
 
 
 /*****************************************************************************
- *  External Variables
+ *  Constants
  *****************************************************************************/
 
-extern conf_t conf;                     /* defined in conf.c                 */
+#define LOG_OPT_NONE            0x00
+#define LOG_OPT_JUSTIFY         0x01    /* L-justify msg str after priority  */
+#define LOG_OPT_PID             0x02    /* include pid if an identity is set */
+#define LOG_OPT_PRIORITY        0x04    /* add priority string to message    */
+#define LOG_OPT_TIMESTAMP       0x08    /* add timestamp to message          */
 
 
 /*****************************************************************************
  *  Function Prototypes
  *****************************************************************************/
 
-conf_t create_conf (void);
+int log_open_file (FILE *fp, const char *identity, int options, int priority);
 
-void destroy_conf (conf_t conf);
+int log_open_syslog (const char *identity, int options, int facility);
 
-void parse_cmdline (conf_t conf, int argc, char **argv);
+void log_close_file (void);
+
+void log_close_syslog (void);
+
+void log_close_all (void);
+
+void log_msg (int priority, const char *format, ...);
 
 
-#endif /* !CONMAND_CONF_H */
+#endif /* !_COMMON_LOG_H */

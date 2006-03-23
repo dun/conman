@@ -54,9 +54,10 @@ CONFIG_CLEAN_FILES =
 am__installdirs = "$(DESTDIR)$(sbindir)"
 sbinPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(sbin_PROGRAMS)
-am__objects_1 = conmand-getopt.$(OBJEXT) conmand-getopt1.$(OBJEXT)
+am__objects_1 = conmand-log.$(OBJEXT)
+am__objects_2 = conmand-getopt.$(OBJEXT) conmand-getopt1.$(OBJEXT)
 am_conmand_OBJECTS = conmand-conmand.$(OBJEXT) conmand-conf.$(OBJEXT) \
-	$(am__objects_1)
+	$(am__objects_1) $(am__objects_2)
 conmand_OBJECTS = $(am_conmand_OBJECTS)
 conmand_LDADD = $(LDADD)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)/config
@@ -164,10 +165,16 @@ conmand_SOURCES = \
 	conmand.c \
 	conf.c \
 	conf.h \
+	$(COMMON) \
 	$(MISSING)
 
 conmand_CPPFLAGS = \
+	-I$(top_srcdir)/src/common \
 	-I$(top_srcdir)/src/missing
+
+COMMON = \
+	$(top_srcdir)/src/common/log.c \
+	$(top_srcdir)/src/common/log.h
 
 MISSING = \
 	$(top_srcdir)/src/missing/getopt.c \
@@ -244,6 +251,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/conmand-conmand.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/conmand-getopt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/conmand-getopt1.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/conmand-log.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	if $(COMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c -o $@ $<; \
@@ -286,6 +294,20 @@ conmand-conf.obj: conf.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='conf.c' object='conmand-conf.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(conmand_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o conmand-conf.obj `if test -f 'conf.c'; then $(CYGPATH_W) 'conf.c'; else $(CYGPATH_W) '$(srcdir)/conf.c'; fi`
+
+conmand-log.o: $(top_srcdir)/src/common/log.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(conmand_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT conmand-log.o -MD -MP -MF "$(DEPDIR)/conmand-log.Tpo" -c -o conmand-log.o `test -f '$(top_srcdir)/src/common/log.c' || echo '$(srcdir)/'`$(top_srcdir)/src/common/log.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/conmand-log.Tpo" "$(DEPDIR)/conmand-log.Po"; else rm -f "$(DEPDIR)/conmand-log.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/src/common/log.c' object='conmand-log.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(conmand_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o conmand-log.o `test -f '$(top_srcdir)/src/common/log.c' || echo '$(srcdir)/'`$(top_srcdir)/src/common/log.c
+
+conmand-log.obj: $(top_srcdir)/src/common/log.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(conmand_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT conmand-log.obj -MD -MP -MF "$(DEPDIR)/conmand-log.Tpo" -c -o conmand-log.obj `if test -f '$(top_srcdir)/src/common/log.c'; then $(CYGPATH_W) '$(top_srcdir)/src/common/log.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/common/log.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/conmand-log.Tpo" "$(DEPDIR)/conmand-log.Po"; else rm -f "$(DEPDIR)/conmand-log.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/src/common/log.c' object='conmand-log.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(conmand_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o conmand-log.obj `if test -f '$(top_srcdir)/src/common/log.c'; then $(CYGPATH_W) '$(top_srcdir)/src/common/log.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/common/log.c'; fi`
 
 conmand-getopt.o: $(top_srcdir)/src/missing/getopt.c
 @am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(conmand_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT conmand-getopt.o -MD -MP -MF "$(DEPDIR)/conmand-getopt.Tpo" -c -o conmand-getopt.o `test -f '$(top_srcdir)/src/missing/getopt.c' || echo '$(srcdir)/'`$(top_srcdir)/src/missing/getopt.c; \

@@ -35,14 +35,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include "conf.h"
+#include "log.h"
 
 
 /*****************************************************************************
- *  Internal Prototypes
+ *  Internal Function Prototypes
  *****************************************************************************/
 
 static void display_help (char *arg0);
+
 static void display_license (void);
+
 static void display_version (void);
 
 
@@ -75,11 +78,12 @@ conf_t
 create_conf (void)
 {
 /*  Constructor for the configuration.
+ *  Returns a new configuration, or NULL on error.
  */
     conf_t conf;
 
     if (!(conf = malloc (sizeof (struct conf)))) {
-        /* FIXME error */
+        log_msg (LOG_ERR, "cannot allocate memory for configuration");
     }
     return (conf);
 }
@@ -134,23 +138,28 @@ parse_cmdline (conf_t conf, int argc, char **argv)
                 break;
             case '?':
                 if (optopt > 0) {
-                    printf ("option \"-%c\" is invalid\n", optopt);
+                    log_msg (LOG_ERR, "option \"-%c\" is invalid\n", optopt);
                 }
                 else {
-                    printf ("option \"%s\" is invalid\n", argv[optind - 1]);
+                    log_msg (LOG_ERR, "option \"%s\" is invalid\n",
+                        argv[optind - 1]);
                 }
+                exit (EXIT_FAILURE);
                 break;
             case ':':
                 if (optopt > 0) {
-                    printf ("option \"-%c\" is missing an argument\n", optopt);
+                    log_msg (LOG_ERR,
+                        "option \"-%c\" is missing an argument\n", optopt);
                 }
                 else {
-                    printf ("option \"%s\" is missing an argument\n",
+                    log_msg (LOG_ERR, "option \"%s\" is missing an argument\n",
                         argv[optind - 1]);
                 }
+                exit (EXIT_FAILURE);
                 break;
             default:
-                printf ("option \"-%c\" is not implemented\n", c);
+                log_msg (LOG_ERR, "option \"-%c\" is not implemented\n", c);
+                exit (EXIT_FAILURE);
                 break;
         }
     }

@@ -1,3 +1,11 @@
+2006-03-22  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* configure.ac: Added check for localtime_r().
+	* src/common/log.c, src/common/log.h: Added.
+	* src/conmand/Makefile.am: Added log.c & log.h.
+	* src/conmand/conmand.c(main): Added log_open_file() & log_close_all().
+	* src/conmand/conf.c, src/conmand/conf.h: Added log_msg().
+
 2006-03-14  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* src/conmand/Makefile.am: Added getopt in src/missing/.

@@ -52,6 +52,13 @@ AC_PROG_MAKE_SET
 X_AC_DEBUG
 
 ##
+# Checks for library functions.
+##
+AC_CHECK_FUNCS( \
+  localtime_r
+)
+
+##
 # Epilogue.
 ##
 AC_CONFIG_FILES( \

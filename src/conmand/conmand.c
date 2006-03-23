@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "conf.h"
+#include "log.h"
 
 
 /*****************************************************************************
@@ -41,9 +42,15 @@
 int
 main (int argc, char *argv[])
 {
-    conf = create_conf ();
+    log_open_file (stderr, argv[0], LOG_OPT_PRIORITY, LOG_DEBUG);
+
+    if (!(conf = create_conf ())) {
+        exit (EXIT_FAILURE);
+    }
     parse_cmdline (conf, argc, argv);
     destroy_conf (conf);
+
+    log_close_all ();
 
     exit (EXIT_SUCCESS);
 }
