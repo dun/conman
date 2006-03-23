@@ -42,11 +42,11 @@
  *  Internal Function Prototypes
  *****************************************************************************/
 
-static void display_help (char *arg0);
+static void _display_help (char *arg0);
 
-static void display_license (void);
+static void _display_license (void);
 
-static void display_version (void);
+static void _display_version (void);
 
 
 /*****************************************************************************
@@ -125,15 +125,15 @@ parse_cmdline (conf_t conf, int argc, char **argv)
         }
         switch (c) {
             case 'h':
-                display_help (argv[0]);
+                _display_help (argv[0]);
                 exit (EXIT_SUCCESS);
                 break;
             case 'L':
-                display_license ();
+                _display_license ();
                 exit (EXIT_SUCCESS);
                 break;
             case 'V':
-                display_version ();
+                _display_version ();
                 exit (EXIT_SUCCESS);
                 break;
             case '?':
@@ -171,7 +171,7 @@ parse_cmdline (conf_t conf, int argc, char **argv)
  *****************************************************************************/
 
 static void
-display_help (char *arg0)
+_display_help (char *arg0)
 {
 /*  Display usage information.
  */
@@ -199,7 +199,7 @@ display_help (char *arg0)
 
 
 static void
-display_license (void)
+_display_license (void)
 {
 /*  Display license information.
  */
@@ -223,7 +223,7 @@ display_license (void)
 
 
 static void
-display_version (void)
+_display_version (void)
 {
 /*  Display version information.
  */

@@ -1,5 +1,7 @@
 2006-03-22  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* src/conmand/conf.c: Prepended static function names with underscores.
+
 	* configure.ac: Added check for localtime_r().
 	* src/common/log.c, src/common/log.h: Added.
 	* src/conmand/Makefile.am: Added log.c & log.h.
