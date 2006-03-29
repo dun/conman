@@ -1,5 +1,8 @@
 2006-03-28  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-conf.c(write_pidfile): Fixed resource leak when an error
+	occurred while creating the pid file.
+
 	* log.c(log_set_syslog): Fixed bug where [ident] was potentially
 	dereferenced before NULL check.
 
