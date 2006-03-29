@@ -27,8 +27,7 @@ sbindir=	@sbindir@
 libdir=		@libdir@
 mandir=		@mandir@
 
-AC_OUTPUT=	Makefile config.h conman.spec \
-		man/conman.1 man/conman.conf.5 man/conmand.8
+AC_OUTPUT=	Makefile config.h man/conman.1 man/conman.conf.5 man/conmand.8
 
 CONF=		@CONMAN_CONF@
 PROGS=		conman conmand
@@ -111,9 +110,9 @@ clean:
 
 realclean: clean
 	-rm -f $(PROGS)
-	-rm -f *.tgz* *.rpm
 
 distclean: realclean
+	-rm -fr autom4te*.cache autoscan.*
 	-rm -f config.cache config.log config.status stamp-h Makefile.bak
 	-rm -f $(AC_OUTPUT)
 
@@ -131,9 +130,6 @@ Makefile: Makefile.in config.status
 
 config.status: META
 	./config.status --recheck
-
-$(PROJECT).spec: $(PROJECT).spec.in
-	./config.status $@
 
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.

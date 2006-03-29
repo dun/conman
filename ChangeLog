@@ -1,5 +1,8 @@
 2006-03-29  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* Makefile.in: Removed target for conman.spec.  Removed conman.spec
+	from $AC_OUTPUT to prevent it from being removed via distclean target.
+
 	* configure: Updated to autoconf-2.59.
 	* configure.ac: Removed conman.spec from AC_OUTPUT.
 
