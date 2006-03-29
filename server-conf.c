@@ -671,7 +671,7 @@ static void parse_console_directive(server_conf_t *conf, Lex l)
         log_msg(LOG_ERR, "CONFIG[%s:%d]: %s",
             conf->confFileName, lex_line(l), err);
         while (lex_prev(l) != LEX_EOL && lex_prev(l) != LEX_EOF)
-            lex_next(l);
+            (void) lex_next(l);
         return;
     }
 
@@ -802,7 +802,7 @@ static void parse_global_directive(server_conf_t *conf, Lex l)
         log_msg(LOG_ERR, "CONFIG[%s:%d]: %s",
             conf->confFileName, lex_line(l), err);
         while (lex_prev(l) != LEX_EOL && lex_prev(l) != LEX_EOF)
-            lex_next(l);
+            (void) lex_next(l);
     }
     return;
 }
@@ -1045,7 +1045,7 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
         log_msg(LOG_ERR, "CONFIG[%s:%d]: %s",
             conf->confFileName, lex_line(l), err);
         while (lex_prev(l) != LEX_EOL && lex_prev(l) != LEX_EOF)
-            lex_next(l);
+            (void) lex_next(l);
     }
     return;
 }
