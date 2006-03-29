@@ -1,3 +1,7 @@
+2006-03-29  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* conman.spec: Renamed from conman.spec.in.
+
 2006-03-28  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server-conf.c: Silenced coverity warnings for not checking
