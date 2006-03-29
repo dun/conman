@@ -101,10 +101,9 @@ void log_set_syslog(char *ident, int facility)
 {
     char *p;
 
-    if ((p = strrchr(ident, '/')))
-        ident = p + 1;
-
     if (ident) {
+        if ((p = strrchr(ident, '/')))
+            ident = p + 1;
         openlog(ident, LOG_NDELAY | LOG_PID, facility);
         log_syslog = 1;
     }
