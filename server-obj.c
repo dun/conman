@@ -1,7 +1,7 @@
 /*****************************************************************************\
  *  $Id$
  *****************************************************************************
- *  Copyright (C) 2001-2002 The Regents of the University of California.
+ *  Copyright (C) 2001-2006 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
  *  Written by Chris Dunlap <cdunlap@llnl.gov>.
  *  UCRL-CODE-2002-009.
@@ -45,7 +45,7 @@
 #include "list.h"
 #include "log.h"
 #include "server.h"
-#include "tselect.h"
+#include "tpoll.h"
 #include "util-file.h"
 #include "util-net.h"
 #include "util-str.h"
@@ -456,7 +456,7 @@ int connect_telnet_obj(obj_t *telnet)
              *      server.c:335: Unable to multiplex I/O: Bad file descriptor.
              *
              *  telnet->aux.telnet.timer =
-             *      timeout((CallBackF) disconnect_telnet_obj,
+             *      timeout((callback_f) disconnect_telnet_obj,
              *      telnet, TELNET_MIN_TIMEOUT * 1000);
              */
                 telnet->aux.telnet.conState = CONMAN_TELCON_PENDING;
@@ -526,7 +526,7 @@ int connect_telnet_obj(obj_t *telnet)
      *    disconnect_telnet_obj() will cancel the timer and the
      *    exponential backoff will continue.
      */
-    telnet->aux.telnet.timer = timeout((CallBackF) reset_telnet_delay,
+    telnet->aux.telnet.timer = timeout((callback_f) reset_telnet_delay,
         telnet, TELNET_MIN_TIMEOUT * 1000);
 
     send_telnet_cmd(telnet, DO, TELOPT_SGA);
@@ -580,7 +580,7 @@ void disconnect_telnet_obj(obj_t *telnet)
     /*  Set timer for establishing new connection using exponential backoff.
      */
     telnet->aux.telnet.conState = CONMAN_TELCON_DOWN;
-    telnet->aux.telnet.timer = timeout((CallBackF) connect_telnet_obj,
+    telnet->aux.telnet.timer = timeout((callback_f) connect_telnet_obj,
         telnet, telnet->aux.telnet.delay * 1000);
     if (telnet->aux.telnet.delay == 0)
         telnet->aux.telnet.delay = TELNET_MIN_TIMEOUT;
@@ -1172,7 +1172,7 @@ int shutdown_obj(obj_t *obj)
 }
 
 
-int read_from_obj(obj_t *obj, fd_set *pWriteSet)
+int read_from_obj(obj_t *obj, tpoll_t tp)
 {
 /*  Reads data from the obj's file descriptor and writes it out
  *    to the circular-buffer of each obj in its "readers" list.
@@ -1215,7 +1215,7 @@ again:
     else if (n == 0) {
         int rc = shutdown_obj(obj);
         if (obj->fd >= 0)
-            FD_SET(obj->fd, pWriteSet); /* ensure buffer is flushed */
+            tpoll_set(tp, obj->fd, POLLOUT);    /* ensure buffer is flushed */
         return(rc);
     }
     else {
@@ -1249,7 +1249,7 @@ again:
                     else
                         m = write_obj_data(reader, buf, n, 0);
                     if (m > 0)
-                        FD_SET(reader->fd, pWriteSet);
+                        tpoll_set(tp, reader->fd, POLLOUT);
                 }
             }
             list_iterator_destroy(i);

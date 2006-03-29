@@ -1,7 +1,7 @@
 /*****************************************************************************\
  *  $Id$
  *****************************************************************************
- *  Copyright (C) 2001-2002 The Regents of the University of California.
+ *  Copyright (C) 2001-2006 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
  *  Written by Chris Dunlap <cdunlap@llnl.gov>.
  *  UCRL-CODE-2002-009.
@@ -37,6 +37,7 @@
 #include <time.h>                       /* for time_t                        */
 #include "common.h"
 #include "list.h"
+#include "tpoll.h"
 
 
 #define DEFAULT_LOGOPT_SANITIZE         0
@@ -321,7 +322,7 @@ void unlink_obj(obj_t *obj);
 
 int shutdown_obj(obj_t *obj);
 
-int read_from_obj(obj_t *obj, fd_set *pWriteSet);
+int read_from_obj(obj_t *obj, tpoll_t tp);
 
 int write_obj_data(obj_t *obj, const void *src, int len, int isInfo);
 

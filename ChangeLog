@@ -1,3 +1,11 @@
+2006-03-28  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server.c(mux_io), server-obj.c(read_from_obj): Updated with tpoll.
+	* server.h: Changed prototype for read_from_obj().
+	* Makefile.in: Replaced tselect.o with tpoll.o.
+	* tpoll.c: Added from tselect.c.
+	* tpoll.h: Added from tselect.h.
+
 2005-02-24  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* strlcpy.c, strlcat.c: Updated to latest version from

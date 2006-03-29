@@ -1,7 +1,7 @@
 /*****************************************************************************\
  *  $Id$
  *****************************************************************************
- *  Copyright (C) 2001-2002 The Regents of the University of California.
+ *  Copyright (C) 2001-2006 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
  *  Written by Chris Dunlap <cdunlap@llnl.gov>.
  *  UCRL-CODE-2002-009.
@@ -49,7 +49,7 @@
 #include "list.h"
 #include "log.h"
 #include "server.h"
-#include "tselect.h"
+#include "tpoll.h"
 #include "util-file.h"
 #include "util-str.h"
 #include "util.h"
@@ -367,7 +367,7 @@ static void schedule_timestamp(server_conf_t *conf)
 
     /*  The timer id is not saved because this timer will never be canceled.
      */
-    abtimeout((CallBackF) timestamp_logfiles, conf, &tv);
+    abtimeout((callback_f) timestamp_logfiles, conf, &tv);
 
     return;
 }
@@ -474,10 +474,8 @@ static void mux_io(server_conf_t *conf)
 /*  Multiplexes I/O between all of the objs in the configuration.
  *  This routine is the heart of ConMan.
  */
+    tpoll_t tp;
     ListIterator i;
-    fd_set rset, wset;
-    struct timeval tval;
-    int maxfd;
     int n;
     obj_t *obj;
 
@@ -485,7 +483,10 @@ static void mux_io(server_conf_t *conf)
         log_msg(LOG_NOTICE, "No consoles are defined in this configuration");
         return;
     }
-
+    if (!(tp = tpoll_create(0))) {
+        log_msg(LOG_ERR, "Unable to multiplex I/O");
+        return;
+    }
     i = list_iterator_create(conf->objs);
 
     while (!done) {
@@ -499,10 +500,8 @@ static void mux_io(server_conf_t *conf)
             reconfig = 0;
         }
 
-        FD_ZERO(&rset);
-        FD_ZERO(&wset);
-        FD_SET(conf->ld, &rset);
-        maxfd = conf->ld;
+        tpoll_zero(tp);
+        tpoll_set(tp, conf->ld, POLLIN);
 
         list_iterator_reset(i);
         while ((obj = list_next(i))) {
@@ -517,47 +516,31 @@ static void mux_io(server_conf_t *conf)
                 && obj->aux.telnet.conState == CONMAN_TELCON_UP)
               || is_serial_obj(obj)
               || is_client_obj(obj)) {
-                FD_SET(obj->fd, &rset);
-                maxfd = MAX(maxfd, obj->fd);
+                tpoll_set(tp, obj->fd, POLLIN);
             }
             if (((obj->bufInPtr != obj->bufOutPtr) || (obj->gotEOF))
               && (!(is_client_obj(obj) && obj->aux.client.gotSuspend))) {
-                FD_SET(obj->fd, &wset);
-                maxfd = MAX(maxfd, obj->fd);
+                tpoll_set(tp, obj->fd, POLLOUT);
             }
             if (is_telnet_obj(obj)
               && obj->aux.telnet.conState == CONMAN_TELCON_PENDING) {
-                FD_SET(obj->fd, &rset);
-                FD_SET(obj->fd, &wset);
-                maxfd = MAX(maxfd, obj->fd);
+                tpoll_set(tp, obj->fd, POLLIN | POLLOUT);
             }
         }
-
-        /*  Specify a timeout to select() to prevent the following scenario:
-         *    Suppose select() blocks after spawning a new thread to handle
-         *    a CONNECT request.  This thread adds a client obj to the
-         *    conf->objs list to be handled by mux_io().  But read-activity
-         *    on this client's socket will not unblock select() because it
-         *    does not yet exist in select()'s read-set.
-         *  Although select() is to treat the timeval struct as a constant,
-         *    Linux systems reportedly modify it (cf. Stevens UNPv1 p151).
-         *    As such, initialize it before each call to select().
-         */
-        tval.tv_sec = 1;
-        tval.tv_usec = 0;
-
-        while ((n = tselect(maxfd+1, &rset, &wset, NULL)) < 0) {
-            if (errno != EINTR)
+        while ((n = tpoll(tp)) < 0) {
+            if (errno != EINTR) {
                 log_err(errno, "Unable to multiplex I/O");
-            else if (done || reconfig)
-                /* i need a */ break;
+            }
+            else if (done || reconfig) {
+                break;
+            }
         }
-        if (n <= 0)
-            /* should i */ continue;
-
-        if (FD_ISSET(conf->ld, &rset))
+        if (n <= 0) {
+            continue;
+        }
+        if (tpoll_is_set(tp, conf->ld, POLLIN)) {
             accept_client(conf);
-
+        }
         /*  If read_from_obj() or write_to_obj() returns -1,
          *    the obj's buffer has been flushed.  If it is a telnet obj,
          *    retain it and attempt to re-establish the connection;
@@ -570,31 +553,33 @@ static void mux_io(server_conf_t *conf)
                 continue;
             }
             if (is_telnet_obj(obj)
-              && (obj->aux.telnet.conState == CONMAN_TELCON_PENDING)
-              && (FD_ISSET(obj->fd, &rset) || FD_ISSET(obj->fd, &wset))) {
+              && tpoll_is_set(tp, obj->fd, POLLOUT)
+              && (obj->aux.telnet.conState == CONMAN_TELCON_PENDING)) {
                 connect_telnet_obj(obj);
                 continue;
             }
-            if (FD_ISSET(obj->fd, &rset)) {
-                if (read_from_obj(obj, &wset) < 0) {
+            if (tpoll_is_set(tp, obj->fd, POLLIN)) {
+                if (read_from_obj(obj, tp) < 0) {
                     list_delete(i);
                     continue;
                 }
-                if (obj->fd < 0)
+                if (obj->fd < 0) {
                     continue;
+                }
             }
-            if (FD_ISSET(obj->fd, &wset)) {
+            if (tpoll_is_set(tp, obj->fd, POLLOUT)) {
                 if (write_to_obj(obj) < 0) {
                     list_delete(i);
                     continue;
                 }
-                if (obj->fd < 0)
+                if (obj->fd < 0) {
                     continue;
+                }
             }
         }
     }
-
     list_iterator_destroy(i);
+    tpoll_destroy(tp);
     return;
 }
 
@@ -809,7 +794,7 @@ static void reset_console(obj_t *console, const char *cmd)
     if (!(arg = malloc(sizeof *arg)))
         out_of_memory();
     *arg = pid;
-    timeout((CallBackF) kill_console_reset, arg, RESET_CMD_TIMEOUT * 1000);
+    timeout((callback_f) kill_console_reset, arg, RESET_CMD_TIMEOUT * 1000);
 
     return;
 }

@@ -1,7 +1,7 @@
 /*****************************************************************************\
  *  $Id$
  *****************************************************************************
- *  Copyright (C) 2001-2002 The Regents of the University of California.
+ *  Copyright (C) 2001-2006 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
  *  Written by Chris Dunlap <cdunlap@llnl.gov>.
  *  UCRL-CODE-2002-009.
@@ -25,16 +25,16 @@
 \*****************************************************************************/
 
 
-#ifndef _TSELECT_H
-#define _TSELECT_H
+#ifndef _TPOLL_H
+#define _TPOLL_H
 
-
+#include <poll.h>
 #include <sys/time.h>
 
 
-/***********\
-**  Notes  **
-\***********/
+/******************************************************************************
+ *  Notes
+ *****************************************************************************/
 
 /*  These routines are not thread-safe.
  *  Only invoke them from within a single thread.
@@ -47,48 +47,44 @@
  */
 
 
-/****************\
-**  Data Types  **
-\****************/
+/******************************************************************************
+ *  Data Types
+ *****************************************************************************/
 
-typedef void (*CallBackF)(void *arg);
+typedef struct tpoll * tpoll_t;
+/*
+ *  Opaque data pointer for a tpoll object.
+ */
+
+typedef void (*callback_f) (void *arg);
 /*
  *  Function prototype for a timer callback function.
  */
 
 
-/***************\
-**  Functions  **
-\***************/
+/******************************************************************************
+ *  Functions
+ *****************************************************************************/
 
-int tselect(int maxfdp1, fd_set *rset, fd_set *wset, fd_set *xset);
-/*
- *  Like select(), but all timer events are specified with timeout().
- *  Returns the number of events ready, 0 if no remaining events, -1 or error.
- */
+tpoll_t tpoll_create (int n);
 
-int timeout(CallBackF callback, void *arg, int ms);
-/*
- *  Sets a timer event for tselect() specifying how long (in milliseconds)
- *    the timer should run before it expires.  At expiration, the callback
- *    function will be invoked with the specified arg.
- *  Returns a timer ID > 0 for use with untimeout(),
- *    or -1 on memory allocation failure.
- */
+void tpoll_destroy (tpoll_t tp);
 
-int abtimeout(CallBackF callback, void *arg, const struct timeval *tvp);
-/*
- *  Sets an "absolute" timer event for tselect() specifying when the timer
- *    should expire.  At expiration, the callback function will be invoked
- *    with the specified arg.
- *  Returns a timer ID > 0 for use with untimeout(),
- *    or -1 on memory allocation failure.
- */
+int tpoll_clear (tpoll_t tp, int fd, int events);
 
-void untimeout(int timerid);
-/*
- *  Cancels a timer event before it expires.
- */
+int tpoll_is_set (tpoll_t tp, int fd, int events);
+
+int tpoll_set (tpoll_t tp, int fd, int events);
+
+void tpoll_zero (tpoll_t tp);
+
+int tpoll (tpoll_t tp);
+
+int timeout (callback_f cb, void *arg, int ms);
+
+int abtimeout (callback_f cb, void *arg, const struct timeval *tvp);
+
+void untimeout (int id);
 
 
-#endif /* !_TSELECT_H */
+#endif /* !_TPOLL_H */
