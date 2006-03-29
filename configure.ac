@@ -4,7 +4,7 @@
 #******************************************************************************
 # $Id$
 #******************************************************************************
-# Copyright (C) 2001-2002 The Regents of the University of California.
+# Copyright (C) 2001-2006 The Regents of the University of California.
 # Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
 # Written by Chris Dunlap <cdunlap@llnl.gov>.
 # UCRL-CODE-2002-009.
@@ -303,7 +303,6 @@ dnl
 AC_OUTPUT_COMMANDS(echo "creating dependencies"; make depend >/dev/null)
 AC_OUTPUT([
   Makefile
-  conman.spec
   man/conman.1
   man/conman.conf.5
   man/conmand.8
