@@ -123,8 +123,6 @@ depend:
 tags: *.[ch]
 	-ctags *.[ch] 2>/dev/null
 
-include Make-rpm.mk
-
 
 # AUTO-REMAKE OF AUTOCONF-RELATED TARGETS
 
