@@ -272,7 +272,6 @@ PACKAGE_STRING=
 PACKAGE_BUGREPORT=
 
 ac_unique_file="common.h"
-ac_default_prefix=/usr
 # Factoring default headers for most tests.
 ac_includes_default="\
 #include <stdio.h>
@@ -852,7 +851,6 @@ Optional Packages:
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
   --with-dmalloc          use Gray Watson's dmalloc library
   --with-tcp-wrappers     use Wietse Venema's TCP Wrappers
-  --with-conman-conf=FILE default conf file of daemon [/etc/conman.conf]
   --with-conman-host=HOST default host name of daemon [127.0.0.1]
   --with-conman-port=PORT default port number of daemon [7890]
 
@@ -1329,7 +1327,6 @@ ac_config_sub="$SHELL $ac_aux_dir/config.sub"
 ac_configure="$SHELL $ac_aux_dir/configure" # This should be Cygnus configure.
 
           ac_config_headers="$ac_config_headers config.h"
-
 
 
 
@@ -4170,20 +4167,9 @@ echo "$as_me:$LINENO: result: ${tcp_wrappers=no}" >&5
 echo "${ECHO_T}${tcp_wrappers=no}" >&6
 
 
-echo "$as_me:$LINENO: checking for ConMan daemon conf file" >&5
-echo $ECHO_N "checking for ConMan daemon conf file... $ECHO_C" >&6
-
-# Check whether --with-conman-conf or --without-conman-conf was given.
-if test "${with_conman_conf+set}" = set; then
-  withval="$with_conman_conf"
-   if test -n "$withval" -a "$withval" != yes -a "$withval" != no; then
-      CONMAN_CONF="$withval"
-    fi
-
-
-fi;
-echo "$as_me:$LINENO: result: ${CONMAN_CONF=/etc/conman.conf}" >&5
-echo "${ECHO_T}${CONMAN_CONF=/etc/conman.conf}" >&6
+CONMAN_CONF_TMP1="`eval echo ${sysconfdir}/conman.conf`"
+CONMAN_CONF_TMP2="`echo $CONMAN_CONF_TMP1 | sed 's/^NONE/$ac_default_prefix/'`"
+CONMAN_CONF="`eval echo $CONMAN_CONF_TMP2`"
 
 cat >>confdefs.h <<_ACEOF
 #define CONMAN_CONF "$CONMAN_CONF"

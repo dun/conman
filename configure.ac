@@ -33,7 +33,6 @@ dnl
 AC_INIT(common.h)
 AC_CONFIG_AUX_DIR(auxdir)
 AC_CONFIG_HEADER(config.h)
-AC_PREFIX_DEFAULT(/usr)
 
 
 dnl Read package and version info from VERSION.
@@ -225,18 +224,12 @@ AC_MSG_RESULT(${tcp_wrappers=no})
 
 
 dnl Check for ConMan daemon conf file.
+dnl Force a double shell-expansion of the CONF var.
 dnl
-AC_MSG_CHECKING(for ConMan daemon conf file)
-AC_ARG_WITH(conman-conf,
-  AC_HELP_STRING([--with-conman-conf=FILE],
-    [default conf file of daemon [[/etc/conman.conf]]]),
-  [ if test -n "$withval" -a "$withval" != yes -a "$withval" != no; then
-      CONMAN_CONF="$withval"
-    fi
-  ]
-)
-AC_MSG_RESULT(${CONMAN_CONF=/etc/conman.conf})
-AC_DEFINE_UNQUOTED(CONMAN_CONF, "$CONMAN_CONF",
+CONMAN_CONF_TMP1="`eval echo ${sysconfdir}/conman.conf`"
+CONMAN_CONF_TMP2="`echo $CONMAN_CONF_TMP1 | sed 's/^NONE/$ac_default_prefix/'`"
+CONMAN_CONF="`eval echo $CONMAN_CONF_TMP2`"
+AC_DEFINE_UNQUOTED(CONMAN_CONF, ["$CONMAN_CONF"],
   [Define the default configuration file of the ConMan daemon])
 AC_SUBST(CONMAN_CONF)
 

@@ -26,10 +26,10 @@ bindir=		@bindir@
 sbindir=	@sbindir@
 libdir=		@libdir@
 mandir=		@mandir@
+sysconfdir=	@sysconfdir@
 
 AC_OUTPUT=	Makefile config.h man/conman.1 man/conman.conf.5 man/conmand.8
 
-CONF=		@CONMAN_CONF@
 PROGS=		conman conmand
 COMMON_OBJS1=	common.o list.o lex.o log.o
 COMMON_OBJS2=	util.o util-file.o util-net.o util-str.o
@@ -61,43 +61,49 @@ install: $(PROGS)
 	$(INSTALL) -m 755 conmen $(DESTDIR)$(bindir)/
 	$(INSTALL) -m 755 -d $(DESTDIR)$(sbindir)
 	$(INSTALL) -m 755 -s conmand $(DESTDIR)$(sbindir)/
-	@if test ! -f $(DESTDIR)$(CONF); then \
-	  echo $(INSTALL) -m 755 -d $(DESTDIR)/etc; \
-	  $(INSTALL) -m 755 -d $(DESTDIR)/etc; \
-	  echo $(INSTALL) -m 644 etc/conman.conf $(DESTDIR)$(CONF); \
-	  $(INSTALL) -m 644 etc/conman.conf $(DESTDIR)$(CONF); \
-	fi
-	@for d in /etc/logrotate.d; do \
-	  if test -d "$$d"; then \
-	    if test ! -f $(DESTDIR)$$d/conman; then \
-	      echo $(INSTALL) -m 755 -d $(DESTDIR)$$d; \
-	      $(INSTALL) -m 755 -d $(DESTDIR)$$d; \
-	      echo $(INSTALL) -m 644 etc/conman.logrotate $(DESTDIR)$$d/conman; \
-	      $(INSTALL) -m 644 etc/conman.logrotate $(DESTDIR)$$d/conman; \
-	    fi; \
-	    break; \
-	  fi; \
-	done
-	@for d in /etc/rc.d/init.d /etc/init.d /sbin/init.d; do \
-	  if test -d "$$d"; then \
-	    echo $(INSTALL) -m 755 -d $(DESTDIR)$$d; \
-	    $(INSTALL) -m 755 -d $(DESTDIR)$$d; \
-	    echo $(INSTALL) -m 755 etc/conman.init $(DESTDIR)$$d/conman; \
-	    $(INSTALL) -m 755 etc/conman.init $(DESTDIR)$$d/conman; \
-	    break; \
-	  fi; \
-	done
-	@for f in `cd lib >/dev/null && find * -name CVS -prune -o -type f -print`; do \
-	  echo $(INSTALL) -m 755 -d `dirname $(DESTDIR)$(libdir)/$(PROJECT)/$$f`; \
-	  $(INSTALL) -m 755 -d `dirname $(DESTDIR)$(libdir)/$(PROJECT)/$$f`; \
-	  echo $(INSTALL) -m 755 lib/$$f $(DESTDIR)$(libdir)/$(PROJECT)/$$f; \
-	  $(INSTALL) -m 755 lib/$$f $(DESTDIR)$(libdir)/$(PROJECT)/$$f; \
-	done
-	chmod 644 $(DESTDIR)$(libdir)/$(PROJECT)/*.exp
+	$(INSTALL) -m 755 -d $(DESTDIR)$(sysconfdir)
+	@if test -f $(DESTDIR)$(sysconfdir)/conman.conf; then \
+	   f="conman.conf.new"; \
+	 else \
+	   f="conman.conf"; \
+	 fi; \
+	 echo $(INSTALL) -m 600 etc/conman.conf $(DESTDIR)$(sysconfdir)/$$f; \
+	 $(INSTALL) -m 600 etc/conman.conf $(DESTDIR)$(sysconfdir)/$$f;
+	 $(INSTALL) -m 755 -d $(DESTDIR)$(sysconfdir)/logrotate.d
+	@if test -f $(DESTDIR)$(sysconfdir)/logrotate.d/conman; then \
+	   f="conman.new"; \
+	 else \
+	   f="conman"; \
+	 fi; \
+	 echo $(INSTALL) -m 644 etc/conman.logrotate \
+	   $(DESTDIR)$(sysconfdir)/logrotate.d/$$f; \
+	 $(INSTALL) -m 644 etc/conman.logrotate \
+	   $(DESTDIR)$(sysconfdir)/logrotate.d/$$f;
+	$(INSTALL) -m 755 -d $(DESTDIR)$(sysconfdir)/init.d
+	@if test -f $(DESTDIR)$(sysconfdir)/init.d/conman; then \
+	   f="conman.new"; \
+	 else \
+	   f="conman"; \
+	 fi; \
+	 echo $(INSTALL) -m 755 etc/conman.init \
+	   $(DESTDIR)$(sysconfdir)/init.d/$$f; \
+	 $(INSTALL) -m 755 etc/conman.init \
+	   $(DESTDIR)$(sysconfdir)/init.d/$$f;
+	@for f in `cd lib >/dev/null && \
+	     find * -name ".*" -prune -o -type f -print`; do \
+	   echo $(INSTALL) -m 755 -d \
+	     `dirname $(DESTDIR)$(prefix)/lib/$(PROJECT)/$$f`; \
+	   $(INSTALL) -m 755 -d \
+	     `dirname $(DESTDIR)$(prefix)/lib/$(PROJECT)/$$f`; \
+	   echo $(INSTALL) -m 755 \
+	     lib/$$f $(DESTDIR)$(prefix)/lib/$(PROJECT)/$$f; \
+	   $(INSTALL) -m 755 lib/$$f $(DESTDIR)$(prefix)/lib/$(PROJECT)/$$f; \
+	 done
+	chmod 644 $(DESTDIR)$(prefix)/lib/$(PROJECT)/*.exp
 	@for d in man1 man5 man8; do \
-	  echo $(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/$$d; \
-	  $(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/$$d; \
-	done
+	   echo $(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/$$d; \
+	   $(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/$$d; \
+	 done
 	$(INSTALL) -m 644 man/conman.1 \
 	  $(DESTDIR)$(mandir)/man1/conman.1
 	$(INSTALL) -m 644 man/conman.conf.5 \

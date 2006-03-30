@@ -1,3 +1,12 @@
+2006-03-30  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* configure.ac: Removed AC_PREFIX_DEFAULT and "--with-conman-conf".
+	Changed config file location to be based off of $sysconfdir.
+	* conman.spec: Rewrote scripts: removed %pre, changed %post & %preun,
+	added %postun.  Rewrote %files: replaced /etc with ${_sysconfdir}, and
+	${_libdir} with %{_prefix}/lib per Fedora's "More RPM Building Hints".
+	* Makefile.in: Rewrote install target.
+
 2006-03-29  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* etc/conman.init: Revamped.
