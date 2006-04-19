@@ -1,5 +1,7 @@
 2006-04-19  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-conf.c(write_pidfile): Fixed resource leak of file handle.
+
 	* server.h: Added tp to server_conf struct.  Updated prototypes for
 	connect_telnet_obj(), disconnect_telnet_obj(), shutdown_obj().
 	* server.c: Updated timers using new tpoll API.  Moved mux_io() local

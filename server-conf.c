@@ -1110,24 +1110,31 @@ static int write_pidfile(const char *pidfile)
     mask = umask(0);
     umask(mask | 022);
 
-    unlink(pidfile);                    /* ignore errors */
+    (void) unlink(pidfile);
     fp = fopen(pidfile, "w");
     umask(mask);
 
     if (!fp) {
         log_msg(LOG_ERR, "Unable to open pidfile \"%s\": %s",
             pidfile, strerror(errno));
+        goto err;
     }
-    else if (fprintf(fp, "%d\n", (int) getpid()) == EOF) {
+    if (fprintf(fp, "%d\n", (int) getpid()) == EOF) {
         log_msg(LOG_ERR, "Unable to write to pidfile \"%s\": %s",
             pidfile, strerror(errno));
+        goto err;
     }
-    else {
-        return(0);
+    if (fclose(fp) == EOF) {
+        log_msg(LOG_ERR, "Unable to close pidfile \"%s\": %s",
+            pidfile, strerror(errno));
+        goto err;
     }
+    return(0);
+
+err:
     if (fp) {
-        fclose(fp);
-        unlink(pidfile);                /* ignore errors */
+        (void) fclose(fp);
+        (void) unlink(pidfile);
     }
     return(-1);
 }
