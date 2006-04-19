@@ -47,6 +47,7 @@
 #include "list.h"
 #include "log.h"
 #include "server.h"
+#include "tpoll.h"
 #include "util-file.h"
 #include "util-str.h"
 
@@ -218,6 +219,8 @@ server_conf_t * create_server_conf(int argc, char *argv[])
     conf->port = 0;
     conf->ld = -1;
     conf->objs = list_create((ListDelF) destroy_obj);
+    if (!(conf->tp = tpoll_create(0)))
+        log_err(0, "Unable to create object for multiplexing I/O");
     conf->globalLogName = NULL;
     conf->globalLogopts.enableSanitize = DEFAULT_LOGOPT_SANITIZE;
     conf->globalLogopts.enableTimestamp = DEFAULT_LOGOPT_TIMESTAMP;
@@ -282,6 +285,8 @@ void destroy_server_conf(server_conf_t *conf)
     }
     if (conf->objs)
         list_destroy(conf->objs);
+    if (conf->tp)
+        tpoll_destroy(conf->tp);
     if (conf->globalLogName)
         free(conf->globalLogName);
     if (conf->confFileName)

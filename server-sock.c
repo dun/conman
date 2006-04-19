@@ -1,7 +1,7 @@
 /*****************************************************************************\
  *  $Id$
  *****************************************************************************
- *  Copyright (C) 2001-2002 The Regents of the University of California.
+ *  Copyright (C) 2001-2006 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
  *  Written by Chris Dunlap <cdunlap@llnl.gov>.
  *  UCRL-CODE-2002-009.
@@ -45,6 +45,7 @@
 #include "lex.h"
 #include "log.h"
 #include "server.h"
+#include "tpoll.h"
 #include "util-file.h"
 #include "util-net.h"
 #include "util-str.h"
@@ -84,7 +85,7 @@ static int send_rsp(req_t *req, int errnum, char *errmsg);
 static int perform_query_cmd(req_t *req);
 static int perform_monitor_cmd(req_t *req, server_conf_t *conf);
 static int perform_connect_cmd(req_t *req, server_conf_t *conf);
-static void check_console_state(obj_t *console, obj_t *client);
+static void check_console_state(obj_t *console, obj_t *client, tpoll_t tp);
 
 
 void process_client(client_arg_t *args)
@@ -820,7 +821,7 @@ static int perform_monitor_cmd(req_t *req, server_conf_t *conf)
     client = create_client_obj(conf, req);
     console = list_peek(req->consoles);
     assert(is_console_obj(console));
-    check_console_state(console, client);
+    check_console_state(console, client, conf->tp);
     link_objs(console, client);
     return(0);
 }
@@ -854,7 +855,7 @@ static int perform_connect_cmd(req_t *req, server_conf_t *conf)
          */
         console = list_peek(req->consoles);
         assert(is_console_obj(console));
-        check_console_state(console, client);
+        check_console_state(console, client, conf->tp);
         link_objs(client, console);
         link_objs(console, client);
     }
@@ -865,7 +866,7 @@ static int perform_connect_cmd(req_t *req, server_conf_t *conf)
         i = list_iterator_create(req->consoles);
         while ((console = list_next(i))) {
             assert(is_console_obj(console));
-            check_console_state(console, client);
+            check_console_state(console, client, conf->tp);
             link_objs(client, console);
         }
         list_iterator_destroy(i);
@@ -874,7 +875,7 @@ static int perform_connect_cmd(req_t *req, server_conf_t *conf)
 }
 
 
-static void check_console_state(obj_t *console, obj_t *client)
+static void check_console_state(obj_t *console, obj_t *client, tpoll_t tp)
 {
 /*  Checks the state of the console and warns the client if needed.
  *  This informs the newly-connected client if strange things are afoot.
@@ -906,7 +907,7 @@ static void check_console_state(obj_t *console, obj_t *client)
          *    non-blocking connect().
          */
         if (console->aux.telnet.conState == CONMAN_TELCON_DOWN)
-            connect_telnet_obj(console);
+            connect_telnet_obj(console, tp);
     }
     return;
 }

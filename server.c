@@ -72,7 +72,7 @@ static void mux_io(server_conf_t *conf);
 static void open_daemon_logfile(server_conf_t *conf);
 static void reopen_logfiles(server_conf_t *conf);
 static void accept_client(server_conf_t *conf);
-static void reset_console(obj_t *console, const char *cmd);
+static void reset_console(obj_t *console, const char *cmd, tpoll_t tp);
 static void kill_console_reset(pid_t *arg);
 
 
@@ -367,8 +367,10 @@ static void schedule_timestamp(server_conf_t *conf)
 
     /*  The timer id is not saved because this timer will never be canceled.
      */
-    abtimeout((callback_f) timestamp_logfiles, conf, &tv);
-
+    if (tpoll_timeout_absolute (conf->tp,
+            (callback_f) timestamp_logfiles, conf, &tv) < 0) {
+        log_err(0, "Unable to create timer for timestamping logfiles");
+    }
     return;
 }
 
@@ -457,7 +459,7 @@ static void open_objs(server_conf_t *conf)
         if (is_serial_obj(obj))
             open_serial_obj(obj);
         else if (is_telnet_obj(obj))
-            connect_telnet_obj(obj);
+            connect_telnet_obj(obj, conf->tp);
         else if (is_logfile_obj(obj))
             open_logfile_obj(obj, conf->enableZeroLogs);
         else
@@ -474,17 +476,14 @@ static void mux_io(server_conf_t *conf)
 /*  Multiplexes I/O between all of the objs in the configuration.
  *  This routine is the heart of ConMan.
  */
-    tpoll_t tp;
     ListIterator i;
     int n;
     obj_t *obj;
 
+    assert (conf->tp != NULL);
+
     if (list_is_empty(conf->objs)) {
         log_msg(LOG_NOTICE, "No consoles are defined in this configuration");
-        return;
-    }
-    if (!(tp = tpoll_create(0))) {
-        log_msg(LOG_ERR, "Unable to multiplex I/O");
         return;
     }
     i = list_iterator_create(conf->objs);
@@ -500,14 +499,14 @@ static void mux_io(server_conf_t *conf)
             reconfig = 0;
         }
 
-        tpoll_zero(tp);
-        tpoll_set(tp, conf->ld, POLLIN);
+        (void) tpoll_zero(conf->tp, TPOLL_ZERO_FDS);
+        tpoll_set(conf->tp, conf->ld, POLLIN);
 
         list_iterator_reset(i);
         while ((obj = list_next(i))) {
 
             if (obj->gotReset) {
-                reset_console(obj, conf->resetCmd);
+                reset_console(obj, conf->resetCmd, conf->tp);
             }
             if (obj->fd < 0) {
                 continue;
@@ -516,18 +515,18 @@ static void mux_io(server_conf_t *conf)
                 && obj->aux.telnet.conState == CONMAN_TELCON_UP)
               || is_serial_obj(obj)
               || is_client_obj(obj)) {
-                tpoll_set(tp, obj->fd, POLLIN);
+                tpoll_set(conf->tp, obj->fd, POLLIN);
             }
             if (((obj->bufInPtr != obj->bufOutPtr) || (obj->gotEOF))
               && (!(is_client_obj(obj) && obj->aux.client.gotSuspend))) {
-                tpoll_set(tp, obj->fd, POLLOUT);
+                tpoll_set(conf->tp, obj->fd, POLLOUT);
             }
             if (is_telnet_obj(obj)
               && obj->aux.telnet.conState == CONMAN_TELCON_PENDING) {
-                tpoll_set(tp, obj->fd, POLLIN | POLLOUT);
+                tpoll_set(conf->tp, obj->fd, POLLIN | POLLOUT);
             }
         }
-        while ((n = tpoll(tp)) < 0) {
+        while ((n = tpoll(conf->tp, 1000)) < 0) {
             if (errno != EINTR) {
                 log_err(errno, "Unable to multiplex I/O");
             }
@@ -538,7 +537,7 @@ static void mux_io(server_conf_t *conf)
         if (n <= 0) {
             continue;
         }
-        if (tpoll_is_set(tp, conf->ld, POLLIN)) {
+        if (tpoll_is_set(conf->tp, conf->ld, POLLIN)) {
             accept_client(conf);
         }
         /*  If read_from_obj() or write_to_obj() returns -1,
@@ -553,13 +552,13 @@ static void mux_io(server_conf_t *conf)
                 continue;
             }
             if (is_telnet_obj(obj)
-              && tpoll_is_set(tp, obj->fd, POLLOUT)
+              && tpoll_is_set(conf->tp, obj->fd, POLLOUT)
               && (obj->aux.telnet.conState == CONMAN_TELCON_PENDING)) {
-                connect_telnet_obj(obj);
+                connect_telnet_obj(obj, conf->tp);
                 continue;
             }
-            if (tpoll_is_set(tp, obj->fd, POLLIN)) {
-                if (read_from_obj(obj, tp) < 0) {
+            if (tpoll_is_set(conf->tp, obj->fd, POLLIN)) {
+                if (read_from_obj(obj, conf->tp) < 0) {
                     list_delete(i);
                     continue;
                 }
@@ -567,7 +566,7 @@ static void mux_io(server_conf_t *conf)
                     continue;
                 }
             }
-            if (tpoll_is_set(tp, obj->fd, POLLOUT)) {
+            if (tpoll_is_set(conf->tp, obj->fd, POLLOUT)) {
                 if (write_to_obj(obj) < 0) {
                     list_delete(i);
                     continue;
@@ -579,7 +578,6 @@ static void mux_io(server_conf_t *conf)
         }
     }
     list_iterator_destroy(i);
-    tpoll_destroy(tp);
     return;
 }
 
@@ -748,7 +746,7 @@ static void accept_client(server_conf_t *conf)
 }
 
 
-static void reset_console(obj_t *console, const char *cmd)
+static void reset_console(obj_t *console, const char *cmd, tpoll_t tp)
 {
 /*  Resets the 'console' obj by performing the reset 'cmd' in a subshell.
  */
@@ -794,8 +792,14 @@ static void reset_console(obj_t *console, const char *cmd)
     if (!(arg = malloc(sizeof *arg)))
         out_of_memory();
     *arg = pid;
-    timeout((callback_f) kill_console_reset, arg, RESET_CMD_TIMEOUT * 1000);
 
+    if (tpoll_timeout_relative (tp,
+            (callback_f) kill_console_reset, arg,
+            RESET_CMD_TIMEOUT * 1000) < 0) {
+        log_msg(LOG_ERR,
+            "Unable to create timer for resetting console [%s]",
+            console->name);
+    }
     return;
 }
 

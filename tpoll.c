@@ -1,31 +1,32 @@
 /*****************************************************************************
  *  $Id$
  *****************************************************************************
+ *  This file is part of ConMan, a remote console management program.
+ *  For details, see <http://www.llnl.gov/linux/conman/>.
+ *
  *  Copyright (C) 2001-2006 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
  *  Written by Chris Dunlap <cdunlap@llnl.gov>.
  *  UCRL-CODE-2002-009.
- *  
- *  This file is part of ConMan, a remote console management program.
- *  For details, see <http://www.llnl.gov/linux/conman/>.
- *  
- *  ConMan is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free
- *  Software Foundation; either version 2 of the License, or (at your option)
- *  any later version.
- *  
- *  ConMan is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- *  FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- *  details.
- *  
+ *
+ *  This is free software; you can redistribute it and/or modify it
+ *  under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This is distributed in the hope that it will be useful, but WITHOUT
+ *  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ *  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ *  for more details.
+ *
  *  You should have received a copy of the GNU General Public License along
- *  with ConMan; if not, write to the Free Software Foundation, Inc.,
- *  59 Temple Place, Suite 330, Boston, MA  02111-1307  USA.
- ***************************************************************************** 
- *  Based on the implementation in Jon C. Snader's
- *    "Effective TCP/IP Programming" (Tip #20).
- ***************************************************************************** 
+ *  with this program; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA.
+ *****************************************************************************
+ *  Based on ideas from:
+ *  - David R. Butenhof's "Programming with POSIX Threads" (Section 3.3.4)
+ *  - Jon C. Snader's "Effective TCP/IP Programming" (Tip #20)
+ *****************************************************************************
  *  Refer to "tpoll.h" for documentation on public functions.
  *****************************************************************************/
 
@@ -36,95 +37,87 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <poll.h>
-#include <stdio.h>
+#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/resource.h>
 #include <sys/time.h>
-#include <sys/types.h>
 #include <unistd.h>
 #include "log.h"
 #include "tpoll.h"
 
 
-/******************************************************************************
- *  Out of Memory
- *****************************************************************************/
-
-#ifdef WITH_OOMF
-#  undef out_of_memory
-   extern void * out_of_memory(void);
-#else /* !WITH_OOMF */
-#  ifndef out_of_memory
-#    define out_of_memory() (NULL)
-#  endif /* !out_of_memory */
-#endif /* WITH_OOMF */
-
-
-/******************************************************************************
+/*****************************************************************************
  *  Constants
  *****************************************************************************/
 
-#define TPOLL_ALLOC 4                   /* FIXME */
-#define TIMER_ALLOC 10
+#define TPOLL_ALLOC     256
 
 
-/******************************************************************************
+/*****************************************************************************
  *  Internal Data Types
  *****************************************************************************/
 
+typedef struct tpoll_timer * _tpoll_timer_t;
+
 struct tpoll {
-    struct pollfd  *fds;                /* poll fd array                     */
-    int             max_fd;             /* max fd in array in use            */
-    int             num_fds;            /* num of pollfd structs allocated   */
+    struct pollfd   *fd_array;          /* poll fd array                     */
+    int              fd_pipe[ 2 ];      /* signal pipe for unblocking poll() */
+    int              num_fds_alloc;     /* num pollfd structs allocated      */
+    int              num_fds_used;      /* num pollfd structs in use         */
+    int              max_fd;            /* max fd in array in use            */
+    _tpoll_timer_t   timers_active;     /* sorted list of active timers      */
+    int              timers_next_id;    /* next id to be assigned to a timer */
+    pthread_mutex_t  mutex;             /* locking primitive                 */
+    int              is_mutex_inited;   /* flag set when mutex initialized   */
 };
 
-struct timer {
-    int             id;                 /* timer ID                          */
-    callback_f      fnc;                /* callback function                 */
-    void           *arg;                /* callback function arg             */
-    struct timeval  tv;                 /* time at which timer expires       */
-    struct timer   *next;               /* next timer in list                */
+struct tpoll_timer {
+    int              id;                /* timer ID                          */
+    callback_f       fnc;               /* callback function                 */
+    void            *arg;               /* callback function arg             */
+    struct timeval   tv;                /* expiration time                   */
+    _tpoll_timer_t   next;              /* next timer in list                */
 };
 
-typedef struct timer * Timer;
 
-
-/******************************************************************************
+/*****************************************************************************
  *  Internal Prototypes
  *****************************************************************************/
 
 static int _tpoll_inc_nofile (int max, int min);
 
+static void _tpoll_init (tpoll_t tp, tpoll_zero_t how);
+
+static void _tpoll_signal_write (tpoll_t tp);
+
+static void _tpoll_signal_read (tpoll_t tp);
+
 static int _tpoll_grow (tpoll_t tp, int num_fds_req);
 
-static Timer _alloc_timer (void);
+static void _tpoll_get_timeval (struct timeval *tvp, int ms);
+
+static int _tpoll_diff_timeval (struct timeval *tvp1, struct timeval *tvp0);
 
 
-/******************************************************************************
- *  Internal Variables
- *****************************************************************************/
-
-static Timer active = NULL;
-static Timer inactive = NULL;
-
-
-/******************************************************************************
+/*****************************************************************************
  *  Functions
  *****************************************************************************/
 
 tpoll_t
 tpoll_create (int n)
 {
-/*  Creates a new object for multiplexing I/O over at least [n]
- *    file descriptors.  If [n] is 0, the default size will be used.
- *    The internal tables as well as the limit on the maximum number
- *    of files the process can have open will grow as needed.
- *  Returns an opaque ptr to this new object, or NULL on error.
+/*  Creates a new tpoll object for multiplexing timers as well as I/O over at
+ *    least [n] file descriptors.  If [n] is 0, the default size will be used.
+ *  The internal fd table as well as the limit on the maximum number of
+ *    files the process can have open will grow as needed.
+ *  Returns an opaque pointer to this new object, or NULL on error.
  */
-    tpoll_t tp;
+    tpoll_t tp = NULL;
     int     i;
+    int     e;
 
     assert (TPOLL_ALLOC > 0);
 
@@ -132,329 +125,539 @@ tpoll_create (int n)
         n = TPOLL_ALLOC;
     }
     if ((n = _tpoll_inc_nofile (n, n)) < 0) {
-        return (NULL);
+        goto err;
     }
     if (!(tp = malloc (sizeof (*tp)))) {
-        return (out_of_memory ());
+        goto err;
     }
-    if (!(tp->fds = malloc (n * sizeof (struct pollfd)))) {
-        free (tp);
-        return (out_of_memory ());
-    }
-    tp->num_fds = n;
-    tp->max_fd = -1;
+    tp->fd_pipe[ 0 ] = tp->fd_pipe[ 1 ] = -1;
+    tp->timers_active = NULL;
+    tp->is_mutex_inited = 0;
 
-    memset (tp->fds, 0, tp->num_fds * sizeof (struct pollfd));
-    for (i = 0; i < tp->num_fds; i++) {
-        tp->fds[i].fd = -1;
+    if (!(tp->fd_array = malloc (n * sizeof (struct pollfd)))) {
+        goto err;
     }
+    tp->num_fds_alloc = n;
+
+    if (pipe (tp->fd_pipe) < 0) {
+        goto err;
+    }
+    for (i = 0; i < 2; i++) {
+        int fval;
+        if (fcntl (tp->fd_pipe[ i ], F_SETFD, FD_CLOEXEC) < 0) {
+            goto err;
+        }
+        if ((fval = fcntl (tp->fd_pipe[ i ], F_GETFL, 0)) < 0) {
+            goto err;
+        }
+        if (fcntl (tp->fd_pipe[ i ], F_SETFL, fval | O_NONBLOCK) < 0) {
+            goto err;
+        }
+    }
+    if ((e = pthread_mutex_init (&tp->mutex, NULL)) != 0) {
+        errno = e;
+        goto err;
+    }
+    tp->is_mutex_inited = 1;
+
+    _tpoll_init (tp, TPOLL_ZERO_ALL);
     return (tp);
+
+err:
+    tpoll_destroy (tp);
+    return (NULL);
 }
 
 
 void
 tpoll_destroy (tpoll_t tp)
 {
-/*  Destroys the [tp] object for multiplexing I/O and its associated data.
+/*  Destroys the tpoll object [tp] and cancels all pending timers.
  */
+    int            i;
+    _tpoll_timer_t t;
+    int            e;
+
     if (!tp) {
         return;
     }
-    if (tp->fds) {
-        free (tp->fds);
-        tp->fds = NULL;
+    if (tp->is_mutex_inited) {
+        if ((e = pthread_mutex_lock (&tp->mutex)) != 0) {
+            log_err (errno = e, "Unable to lock tpoll mutex");
+        }
     }
-    tp->num_fds = 0;
-    tp->max_fd = -1;
+    if (tp->fd_array) {
+        free (tp->fd_array);
+        tp->fd_array = NULL;
+    }
+    for (i = 0; i < 2; i++) {
+        if (tp->fd_pipe[ i ] > -1) {
+            (void) close (tp->fd_pipe[ i ]);
+            tp->fd_pipe[ i ] = -1;
+        }
+    }
+    while (tp->timers_active) {
+        t = tp->timers_active;
+        tp->timers_active = t->next;
+        free (t);
+    }
+    if (tp->is_mutex_inited) {
+        if ((e = pthread_mutex_unlock (&tp->mutex)) != 0) {
+            log_err (errno = e, "Unable to unlock tpoll mutex");
+        }
+        if ((e = pthread_mutex_destroy (&tp->mutex)) != 0) {
+            log_err (errno = e, "Unable to destroy tpoll mutex");
+        }
+        tp->is_mutex_inited = 0;
+    }
     free (tp);
     return;
 }
 
 
 int
-tpoll_clear (tpoll_t tp, int fd, int events)
+tpoll_zero (tpoll_t tp, tpoll_zero_t how)
 {
-/*  Removes [events] from any existing events for [fd] within the [tp] object.
+/*  Re-initializes the tpoll object [tp].
+ *    If [how] is TPOLL_ZERO_ALL, everything is reset.
+ *    If [how] is TPOLL_ZERO_FDS, only the file descriptor events are reset.
+ *    If [how] is TPOLL_ZERO_TIMERS, only the pending timers are canceled.
+ *    If [how] is anything else, no action is taken.
  *  Returns 0 on success, or -1 on error.
  */
-    int i;
-
-    if (!tp) {
-        return (-1);
-    }
-    if (fd < 0) {
-        return (-1);
-    }
-    if (fd > tp->max_fd) {
-        return (0);
-    }
-    tp->fds[fd].events &= ~events;
-
-    if (tp->fds[fd].events != 0) {
-        return (0);
-    }
-    tp->fds[fd].revents = 0;
-    tp->fds[fd].fd = -1;
-
-    if (tp->max_fd != fd) {
-        return (0);
-    }
-    tp->max_fd = -1;
-    for (i = fd - 1; i >= 0; i--) {
-        if (tp->fds[i].fd >= 0) {
-            tp->max_fd = i;
-            break;
-        }
-    }
-    return (0);
-}
-
-
-int
-tpoll_is_set (tpoll_t tp, int fd, int events)
-{
-/*  Tests whether any of the bitwise-OR'd [events] have occurred for [fd]
- *    within the [tp] object.
- *  Returns true if any of the specified [events] have occurred,
- *    or 0 otherwise.
- */
-    if (!tp) {
-        return (-1);
-    }
-    if (fd < 0) {
-        return (-1);
-    }
-    if (fd > tp->max_fd) {
-        return (0);
-    }
-    return (tp->fds[fd].revents & events);
-}
-
-
-int
-tpoll_set (tpoll_t tp, int fd, int events)
-{
-/*  Adds [events] to any existing events for [fd] within the [tp] object.
- *    The internal tables as well as the limit on the maximum number
- *    of files the process can have open will grow as needed.
- *  Returns 0 on success, or -1 on error.
- */
-    if (!tp) {
-        return (-1);
-    }
-    if (fd < 0) {
-        return (-1);
-    }
-    if (fd >= tp->num_fds) {
-        if (_tpoll_grow (tp, fd + 1) < 0) {
-            return (-1);
-        }
-    }
-    if (fd > tp->max_fd) {
-        tp->max_fd = fd;
-    }
-    tp->fds[fd].fd = fd;
-    tp->fds[fd].events |= events;
-    return (0);
-}
-
-
-void
-tpoll_zero (tpoll_t tp)
-{
-/*  Re-initializes the [tp] object to the null set.
- */
-    int i;
-
-    if (!tp) {
-        return;
-    }
-    memset (tp->fds, 0, tp->num_fds * sizeof (struct pollfd));
-    for (i = 0; i < tp->num_fds; i++) {
-        tp->fds[i].fd = -1;
-    }
-    tp->max_fd = -1;
-    return;
-}
-
-
-int
-tpoll (tpoll_t tp)
-{
-/*  Similar to poll(), but file descriptors and timers are specified by
- *    auxiliary functions.
- *  Dispatches any timer events that have expired.
- *  Returns the number of events ready, or -1 or error.
- */
-    struct timeval  tv_now;
-    Timer           t;
-    int             ms_timeout;
-    int             n;
+    int e;
 
     if (!tp) {
         errno = EINVAL;
         return (-1);
     }
-    for (;;) {
-        if (gettimeofday (&tv_now, NULL) < 0) {
-            log_err (LOG_ERR, "Unable to get time of day");
-        }
-        /*  Dispatch timer events that have expired.
-         */
-        while (active && !timercmp (&tv_now, &active->tv, <)) {
-            t = active;
-            active = active->next;
-            /*
-             *  The timer must be removed from the active list before
-             *    the callback function is invoked in case it calls
-             *    tpoll_untimeout().  O/w, the current timer would be removed
-             *    by tpoll_untimeout(), and the next timer on the active list
-             *    would be removed when the callback function returned.
-             */
-            t->fnc (t->arg);
-            t->next = inactive;
-            inactive = t;
-        }
-        if (active) {
-            /*
-             *  Calculate time (in milliseconds) until next timer event.
-             */
-            if (gettimeofday (&tv_now, NULL) < 0) {
-                log_err (LOG_ERR, "Unable to get time of day");
-            }
-            ms_timeout = ((active->tv.tv_sec  - tv_now.tv_sec)  * 1000) +
-                         ((active->tv.tv_usec - tv_now.tv_usec) / 1000);
-        }
-        else if (tp->max_fd >= 0) {
-            /*
-             *  No additional timers, but I/O events exist.
-             */
-            ms_timeout = -1;
-        }
-        else {
-            /*
-             *  No additional timers and no I/O events exist.
-             */
-            return (0);
-        }
-        /*  Kludge to support mux_io() pthread brain-damage.
-         *  Specify a timeout to poll() to prevent the following scenario:
-         *    Suppose poll() blocks after a new thread is spawned to handle a
-         *    new connecting client.  This thread then adds a client obj to the
-         *    conf->objs list to be handled by mux_io().  But read-activity on
-         *    this client's socket will not unblock poll() because this fd does
-         *    not yet exist in poll()'s fd array.
-         */
-        ms_timeout = 1000;
+    if (how & ~TPOLL_ZERO_ALL) {
+        errno = EINVAL;
+        return (-1);
+    }
+    if ((e = pthread_mutex_lock (&tp->mutex)) != 0) {
+        log_err (errno = e, "Unable to lock tpoll mutex");
+    }
+    _tpoll_init (tp, how);
+    _tpoll_signal_write (tp);
 
-        if ((n = poll (tp->fds, tp->max_fd + 1, ms_timeout)) < 0) {
-            return (-1);
-        }
-        if (n > 0) {
-            return (n);
-        }
-        /*  Kludge to support mux_io() pthread brain-damage.
-         */
-        break;
+    if ((e = pthread_mutex_unlock (&tp->mutex)) != 0) {
+        log_err (errno = e, "Unable to unlock tpoll mutex");
     }
     return (0);
 }
 
 
 int
-timeout (callback_f cb, void *arg, int ms)
+tpoll_clear (tpoll_t tp, int fd, short int events)
 {
-/*  Sets a timer event for tpoll() specifying how long (in milliseconds)
- *    the timer should run before it expires.  At expiration, the callback
- *    function will be invoked with the specified arg.
- *  Returns a timer ID > 0 for use with untimeout(),
- *    or -1 on memory allocation failure.
+/*  Removes the bitwise-OR'd [events] from any existing events for file
+ *    descriptor [fd] within the tpoll object [tp].
+ *  Returns 0 on success, or -1 on error.
  */
-    struct timeval tv;
+    short int events_new;
+    int       i;
+    int       e;
 
-    assert (cb != NULL);
-    assert (ms >= 0);
+    if (!tp) {
+        errno = EINVAL;
+        return (-1);
+    }
+    if (fd < 0) {
+        errno = EINVAL;
+        return (-1);
+    }
+    if (events == 0) {
+        return (0);
+    }
+    if ((e = pthread_mutex_lock (&tp->mutex)) != 0) {
+        log_err (errno = e, "Unable to lock tpoll mutex");
+    }
+    if ((fd <= tp->max_fd) && (tp->fd_array[ fd ].fd > -1)) {
 
-    if (gettimeofday (&tv, NULL) < 0) {
-        log_err (LOG_ERR, "Unable to get time of day");
+        assert (tp->fd_array[ fd ].fd == fd);
+        events_new = tp->fd_array[ fd ].events & ~events;
+        if (tp->fd_array[ fd ].events != events_new) {
+
+            tp->fd_array[ fd ].events = events_new;
+
+            if (events_new == 0) {
+                tp->fd_array[ fd ].revents = 0;
+                tp->fd_array[ fd ].fd = -1;
+                tp->num_fds_used--;
+
+                if (tp->max_fd == fd) {
+                    for (i = fd - 1; i > -1; i--) {
+                        if (tp->fd_array[ i ].fd > -1) {
+                            break;
+                        }
+                    }
+                    tp->max_fd = i;
+                }
+            }
+            _tpoll_signal_write (tp);
+        }
     }
-    tv.tv_usec += ms * 1000;
-    if (tv.tv_usec >= 1000000) {
-        tv.tv_sec += tv.tv_usec / 1000000;
-        tv.tv_usec %= 1000000;
+    if ((e = pthread_mutex_unlock (&tp->mutex)) != 0) {
+        log_err (errno = e, "Unable to unlock tpoll mutex");
     }
-    return (abtimeout (cb, arg, &tv));
+    return (0);
 }
 
 
 int
-abtimeout (callback_f cb, void *arg, const struct timeval *tvp)
+tpoll_is_set (tpoll_t tp, int fd, short int events)
 {
-/*  Sets an "absolute" timer event for tpoll() specifying when the timer
- *    should expire.  At expiration, the callback function will be invoked
- *    with the specified arg.
- *  Returns a timer ID > 0 for use with untimeout(),
- *    or -1 on memory allocation failure.
+/*  Tests whether any of the bitwise-OR'd [events] have occurred for file
+ *    descriptor [fd] within the tpoll object [tp].
+ *  Returns true (ie, non-zero) if any of the specified [events] have occurred,
+ *    or 0 otherwise.
  */
-    static int  id = 1;
-    Timer       t;
-    Timer       tCurr;
-    Timer      *tPrevPtr;
+    int rc;
+    int e;
 
-    assert (cb != NULL);
-    assert (tvp != NULL);
-
-    if (!(t = _alloc_timer ())) {
+    if (!tp) {
+        errno = EINVAL;
         return (-1);
     }
-    t->id = id++;
-    if (id <= 0) {
-        id = 1;
+    if (fd < 0) {
+        errno = EINVAL;
+        return (-1);
+    }
+    if ((e = pthread_mutex_lock (&tp->mutex)) != 0) {
+        log_err (errno = e, "Unable to lock tpoll mutex");
+    }
+    if (fd > tp->max_fd) {
+        rc = 0;
+    }
+    else if (tp->fd_array[ fd ].fd < 0) {
+        rc = 0;
+    }
+    else {
+        assert (tp->fd_array[ fd ].fd == fd);
+        rc = tp->fd_array[ fd ].revents & events;
+    }
+    if ((e = pthread_mutex_unlock (&tp->mutex)) != 0) {
+        log_err (errno = e, "Unable to unlock tpoll mutex");
+    }
+    return (rc);
+}
+
+
+int
+tpoll_set (tpoll_t tp, int fd, short int events)
+{
+/*  Adds the bitwise-OR'd [events] to any existing events for file descriptor
+ *    [fd] within the tpoll object [tp].
+ *  The internal fd table as well as the limit on the maximum number of
+ *    files the process can have open will grow as needed.
+ *  Returns 0 on success, or -1 on error.
+ */
+    int       rc;
+    short int events_new;
+    int       e;
+
+    if (!tp) {
+        errno = EINVAL;
+        return (-1);
+    }
+    if (fd < 0) {
+        errno = EINVAL;
+        return (-1);
+    }
+    if (events == 0) {
+        return (0);
+    }
+    if ((e = pthread_mutex_lock (&tp->mutex)) != 0) {
+        log_err (errno = e, "Unable to lock tpoll mutex");
+    }
+    if ((fd >= tp->num_fds_alloc) && (_tpoll_grow (tp, fd + 1) < 0)) {
+        rc = -1;
+    }
+    else {
+        if (tp->fd_array[ fd ].fd < 0) {
+            assert (tp->fd_array[ fd ].events == 0);
+            assert (tp->fd_array[ fd ].revents == 0);
+            tp->fd_array[ fd ].fd = fd;
+            tp->num_fds_used++;
+            events_new = events;
+        }
+        else {
+            events_new = tp->fd_array[ fd ].events | events;
+        }
+        if (tp->fd_array[ fd ].events != events_new) {
+
+            tp->fd_array[ fd ].events = events_new;
+
+            if (fd > tp->max_fd) {
+                tp->max_fd = fd;
+            }
+            _tpoll_signal_write (tp);
+        }
+        rc = 0;
+    }
+    if ((e = pthread_mutex_unlock (&tp->mutex)) != 0) {
+        log_err (errno = e, "Unable to unlock tpoll mutex");
+    }
+    return (rc);
+}
+
+
+int
+tpoll_timeout_absolute (tpoll_t tp, callback_f cb, void *arg,
+    const struct timeval *tvp)
+{
+/*  Sets an "absolute" timer event for the tpoll object [tp] specifying when
+ *    the timer should expire.  At expiration time [tvp], the callback
+ *    function [cb] will be invoked with the argument [arg].
+ *  Returns a timer ID > 0 for use with tpoll_timeout_cancel(), or -1 on error.
+ */
+    _tpoll_timer_t  t;
+    _tpoll_timer_t *t_ptr;
+    int             rc;
+    int             e;
+
+    if (!tp) {
+        errno = EINVAL;
+        return (-1);
+    }
+    if (!cb) {
+        errno = EINVAL;
+        return (-1);
+    }
+    if (!tvp) {
+        errno = EINVAL;
+        return (-1);
+    }
+    if (!(t = malloc (sizeof *t))) {
+        return (-1);
     }
     t->fnc = cb;
     t->arg = arg;
     t->tv = *tvp;
 
-    tPrevPtr = &active;
-    tCurr = active;
-    while (tCurr && !timercmp (&t->tv, &tCurr->tv, <)) {
-        tPrevPtr = &tCurr->next;
-        tCurr = tCurr->next;
+    if ((e = pthread_mutex_lock (&tp->mutex)) != 0) {
+        log_err (errno = e, "Unable to lock tpoll mutex");
     }
-    *tPrevPtr = t;
-    t->next = tCurr;
-    return (t->id);
+    rc = t->id = tp->timers_next_id++;
+    if (tp->timers_next_id <= 0) {
+        tp->timers_next_id = 1;
+    }
+    t_ptr = &tp->timers_active;
+    while (*t_ptr && !timercmp (&t->tv, &(*t_ptr)->tv, <)) {
+        t_ptr = &((*t_ptr)->next);
+    }
+    if (*t_ptr == tp->timers_active) {
+        _tpoll_signal_write (tp);
+    }
+    t->next = *t_ptr;
+    *t_ptr = t;
+
+    if ((e = pthread_mutex_unlock (&tp->mutex)) != 0) {
+        log_err (errno = e, "Unable to unlock tpoll mutex");
+    }
+    return (rc);
 }
 
 
-void
-untimeout (int id)
+int
+tpoll_timeout_relative (tpoll_t tp, callback_f cb, void *arg, int ms)
 {
-/*  Cancels a timer event before it expires.
+/*  Sets a "relative" timer event for the tpoll object [tp] specifying the
+ *    duration (in milliseconds [ms]) before it expires.  At expiration, the
+ *    callback function [cb] will be invoked with the argument [arg].
+ *  Returns a timer ID > 0 for use with tpoll_timeout_cancel(), or -1 on error.
  */
-    Timer  tCurr;
-    Timer *tPrevPtr;
+    struct timeval tv;
 
-    if (id <= 0) {
-        return;
-    }
-    tPrevPtr = &active;
-    tCurr = active;
-    while (tCurr && (id != tCurr->id)) {
-        tPrevPtr = &tCurr->next;
-        tCurr = tCurr->next;
-    }
-    if (!tCurr) {                       /* timer id not active */
-        return;
-    }
-    *tPrevPtr = tCurr->next;
-    tCurr->next = inactive;
-    inactive = tCurr;
-    return;
+    _tpoll_get_timeval (&tv, ms);
+    return (tpoll_timeout_absolute (tp, cb, arg, &tv));
 }
 
 
-/******************************************************************************
+int
+tpoll_timeout_cancel (tpoll_t tp, int id)
+{
+/*  Cancels the timer event [id] from the tpoll object [tp].
+ *  Returns 1 if the timer was canceled, 0 if the timer was not found,
+ *    or -1 on error.
+ */
+    _tpoll_timer_t  t;
+    _tpoll_timer_t *t_ptr;
+    int             rc;
+    int             e;
+
+    if (!tp) {
+        errno = EINVAL;
+        return (-1);
+    }
+    if (id <= 0) {
+        errno = EINVAL;
+        return (-1);
+    }
+    if ((e = pthread_mutex_lock (&tp->mutex)) != 0) {
+        log_err (errno = e, "Unable to lock tpoll mutex");
+    }
+    t_ptr = &tp->timers_active;
+    while (*t_ptr && (id != (*t_ptr)->id)) {
+        t_ptr = &((*t_ptr)->next);
+    }
+    if (!*t_ptr) {
+        rc = 0;
+    }
+    else {
+        if (*t_ptr == tp->timers_active) {
+            _tpoll_signal_write (tp);
+        }
+        t = *t_ptr;
+        *t_ptr = t->next;
+        free (t);
+        rc = 1;
+    }
+    if ((e = pthread_mutex_unlock (&tp->mutex)) != 0) {
+        log_err (errno = e, "Unable to unlock tpoll mutex");
+    }
+    return (rc);
+}
+
+
+int
+tpoll (tpoll_t tp, int ms)
+{
+/*  Similar to poll(), but file descriptors and timers are specified by
+ *    auxiliary functions.
+ *  Examines the tpoll object [tp] to see if any file descriptors are ready
+ *    for I/O, and dispatches any timer events that have expired.
+ *  Blocks until I/O is ready on one or more file descriptors, or [ms]
+ *    milliseconds have passed.  Blocks indefinitely if I/O events are
+ *    specified and [ms] is -1.  While blocked, timers are still dispatched
+ *    once they expire.
+ *  Returns immediately if the [ms] timeout is 0, or if no I/O events are
+ *    specified and no timers remain and [ms] is -1.
+ *  Returns the number of file descriptors with I/O ready, 0 on timeout,
+ *    or -1 or error.
+ */
+    struct timeval  tv_timeout;
+    struct timeval  tv_now;
+    _tpoll_timer_t  t;
+    int             timeout;
+    int             ms_diff;
+    int             ms_to_next_timer;
+    int             ms_to_tv_timeout;
+    struct pollfd  *fd_array_bak;
+    int             n;
+    int             e;
+
+    if (!tp) {
+        errno = EINVAL;
+        return (-1);
+    }
+    if (ms > 0) {
+        _tpoll_get_timeval (&tv_timeout, ms);
+    }
+    if ((e = pthread_mutex_lock (&tp->mutex)) != 0) {
+        log_err (errno = e, "Unable to lock tpoll mutex");
+    }
+    for (;;) {
+        /*
+         *  Dispatch timer events that have expired.
+         */
+        _tpoll_get_timeval (&tv_now, 0);
+        while (tp->timers_active &&
+               !timercmp (&tp->timers_active->tv, &tv_now, >)) {
+
+            t = tp->timers_active;
+            tp->timers_active = t->next;
+            /*
+             *  Release the mutex while performing the callback function
+             *    in case it wants to set/cancel another timer.
+             */
+            if ((e = pthread_mutex_unlock (&tp->mutex)) != 0) {
+                log_err (errno = e, "Unable to unlock tpoll mutex");
+            }
+            t->fnc (t->arg);
+            free (t);
+
+            if ((e = pthread_mutex_lock (&tp->mutex)) != 0) {
+                log_err (errno = e, "Unable to lock tpoll mutex");
+            }
+        }
+        /*  Compute time millisecond timeout for poll().
+         */
+        if (ms == 0) {
+            timeout = 0;
+        }
+        else if ((ms < 0) && (!tp->timers_active)) {
+            if (tp->num_fds_used == 0) {
+                timeout = 0;            /* no fd events and no more timers */
+            }
+            else {
+                timeout = -1;           /* fd events but no more timers */
+            }
+        }
+        else {
+            _tpoll_get_timeval (&tv_now, 0);
+
+            if ((ms < 0) && (tp->timers_active)) {
+                ms_diff =
+                    _tpoll_diff_timeval (&tp->timers_active->tv, &tv_now);
+            }
+            else if ((ms > 0) && (!tp->timers_active)) {
+                ms_diff =
+                    _tpoll_diff_timeval (&tv_timeout, &tv_now);
+            }
+            else /* ((ms > 0) && (tp->timers_active)) */ {
+                ms_to_next_timer =
+                    _tpoll_diff_timeval (&tp->timers_active->tv, &tv_now);
+                ms_to_tv_timeout =
+                    _tpoll_diff_timeval (&tv_timeout, &tv_now);
+                ms_diff = (ms_to_next_timer < ms_to_tv_timeout) ?
+                    ms_to_next_timer : ms_to_tv_timeout;
+            }
+            timeout = (ms_diff >= 0) ? ms_diff : 0;
+        }
+        /*  Poll for events, discarding any on the "signaling pipe".
+         *    A copy of the fd_array ptr is made before calling poll() in order
+         *    to check if _tpoll_grow()'s realloc has changed the memory
+         *    address of the fd_array while the mutex was released.
+         */
+        fd_array_bak = tp->fd_array;
+
+        if ((e = pthread_mutex_unlock (&tp->mutex)) != 0) {
+            log_err (errno = e, "Unable to unlock tpoll mutex");
+        }
+        n = poll (tp->fd_array, tp->max_fd + 1, timeout);
+
+        if ((e = pthread_mutex_lock (&tp->mutex)) != 0) {
+            log_err (errno = e, "Unable to lock tpoll mutex");
+        }
+        if (n < 0) {
+            break;
+        }
+        if (tp->fd_array != fd_array_bak) {
+            _tpoll_signal_read (tp);
+            continue;
+        }
+        if ((n > 0) && (tp->fd_array[ tp->fd_pipe[ 0 ] ].revents & POLLIN)) {
+            _tpoll_signal_read (tp);
+            n--;
+        }
+        if (n > 0) {
+            assert (tp->num_fds_used > 0);
+            break;
+        }
+        if (timeout == 0) {
+            break;
+        }
+    }
+    if ((e = pthread_mutex_unlock (&tp->mutex)) != 0) {
+        log_err (errno = e, "Unable to unlock tpoll mutex");
+    }
+    return (n);
+}
+
+
+/*****************************************************************************
  *  Internal Functions
  *****************************************************************************/
 
@@ -468,6 +671,7 @@ _tpoll_inc_nofile (int max, int min)
     struct rlimit limit;
 
     if (max <= 0) {
+        errno = EINVAL;
         return (-1);
     }
     if (min > max) {
@@ -479,7 +683,10 @@ _tpoll_inc_nofile (int max, int min)
     if (max <= limit.rlim_cur) {
         return (max);
     }
-    if ((max > limit.rlim_max) && (min < limit.rlim_max)) {
+    if ((max > limit.rlim_max) && (min <= limit.rlim_max)) {
+        if (limit.rlim_cur == limit.rlim_max) {
+            return (limit.rlim_cur);
+        }
         limit.rlim_cur = limit.rlim_max;
     }
     else {
@@ -493,7 +700,106 @@ _tpoll_inc_nofile (int max, int min)
     }
     log_msg (LOG_INFO, "Increased the num open file limit to %d",
         limit.rlim_cur);
+    assert (limit.rlim_cur >= min);
     return (limit.rlim_cur);
+}
+
+
+static void
+_tpoll_init (tpoll_t tp, tpoll_zero_t how)
+{
+/*  Initializes the tpoll object [tp] to the empty set.
+ */
+    int            i;
+    _tpoll_timer_t t;
+
+    assert (tp != NULL);
+    assert (tp->fd_pipe[ 0 ] > -1);
+    assert (tp->num_fds_alloc > 0);
+    assert ((how & ~TPOLL_ZERO_ALL) == 0);
+
+    if (how & TPOLL_ZERO_FDS) {
+        memset (tp->fd_array, 0, tp->num_fds_alloc * sizeof (struct pollfd));
+        for (i = 0; i < tp->num_fds_alloc; i++) {
+            tp->fd_array[ i ].fd = -1;
+        }
+        tp->fd_array[ tp->fd_pipe[ 0 ] ].fd = tp->fd_pipe[ 0 ];
+        tp->fd_array[ tp->fd_pipe[ 0 ] ].events = POLLIN;
+        tp->max_fd = tp->fd_pipe[ 0 ];
+        tp->num_fds_used = 0;
+    }
+    if (how & TPOLL_ZERO_TIMERS) {
+        while (tp->timers_active) {
+            t = tp->timers_active;
+            tp->timers_active = t->next;
+            free (t);
+        }
+        tp->timers_next_id = 1;
+    }
+    return;
+}
+
+
+static void
+_tpoll_signal_write (tpoll_t tp)
+{
+/*  Signals the tpoll object [tp] that an fd or timer or somesuch has changed
+ *    and poll() needs to unblock and re-examine its state.
+ */
+    int           n;
+    unsigned char c = 0;
+
+    assert (tp != NULL);
+    assert (tp->fd_pipe[ 1 ] > -1);
+
+    for (;;) {
+        n = write (tp->fd_pipe[ 1 ], &c, 1);
+        if (n < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
+                break;
+            }
+            log_err (errno, "Unable to signal tpoll");
+        }
+        else if (n == 0) {
+            log_err (errno, "Got an unexpected 0 writing to tpoll's pipe");
+        }
+        break;
+    }
+    return;
+}
+
+
+static void
+_tpoll_signal_read (tpoll_t tp)
+{
+/*  Drains all signals sent to the tpoll object [tp].
+ */
+    int           n;
+    unsigned char c[ 16 ];
+
+    assert (tp != NULL);
+    assert (tp->fd_pipe[ 0 ] > -1);
+    assert (tp->fd_array[ tp->fd_pipe[ 0 ] ].fd == tp->fd_pipe[ 0 ]);
+
+    for (;;) {
+        n = read (tp->fd_pipe[ 0 ], &c, sizeof (c));
+        if (n < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
+                break;
+            }
+            log_err (errno, "Unable to drain signals from tpoll");
+        }
+        else if (n == 0) {
+            log_err (errno, "Got an unexpected EOF reading from tpoll's pipe");
+        }
+    }
+    return;
 }
 
 
@@ -503,8 +809,8 @@ _tpoll_grow (tpoll_t tp, int num_fds_req)
 /*  Attempts to grow [tp]'s pollfd array to at least [num_fds_req] structs.
  *  Returns 0 if the request is successful, -1 if not.
  */
-    struct pollfd *fds_tmp;
-    struct pollfd *fds_new;
+    struct pollfd *fd_array_tmp;
+    struct pollfd *fd_array_new;
     int            num_fds_tmp;
     int            num_fds_new;
     int            i;
@@ -512,10 +818,10 @@ _tpoll_grow (tpoll_t tp, int num_fds_req)
     assert (tp != NULL);
     assert (num_fds_req > 0);
 
-    if (num_fds_req <= tp->num_fds) {
+    if (num_fds_req <= tp->num_fds_alloc) {
         return (0);
     }
-    num_fds_tmp = tp->num_fds;
+    num_fds_tmp = tp->num_fds_alloc;
     while ((num_fds_tmp < num_fds_req) && (num_fds_tmp > 0)) {
         num_fds_tmp *= 2;
     }
@@ -525,40 +831,72 @@ _tpoll_grow (tpoll_t tp, int num_fds_req)
     if ((num_fds_tmp = _tpoll_inc_nofile (num_fds_tmp, num_fds_req)) < 0) {
         return (-1);
     }
-    if (!(fds_tmp = realloc (tp->fds, num_fds_tmp * sizeof (struct pollfd)))) {
+    /*  Force tpoll()'s poll to unblock before we realloc the fd_array.
+     *  Then tpoll() will have to re-acquire the mutex before continuing.
+     *  Since we currently have the mutex, we can now safely realloc fd_array.
+     */
+    _tpoll_signal_write (tp);
+    if (!(fd_array_tmp =
+            realloc (tp->fd_array, num_fds_tmp * sizeof (struct pollfd)))) {
         return (-1);
     }
-    fds_new = fds_tmp + tp->num_fds;
-    num_fds_new = num_fds_tmp - tp->num_fds;
-    memset (fds_new, 0, num_fds_new * sizeof (struct pollfd));
-    for (i = tp->num_fds; i < num_fds_tmp; i++) {
-        fds_tmp[i].fd = -1;
+    fd_array_new = fd_array_tmp + tp->num_fds_alloc;
+    num_fds_new = num_fds_tmp - tp->num_fds_alloc;
+    memset (fd_array_new, 0, num_fds_new * sizeof (struct pollfd));
+    for (i = tp->num_fds_alloc; i < num_fds_tmp; i++) {
+        fd_array_tmp[ i ].fd = -1;
     }
-    tp->fds = fds_tmp;
-    tp->num_fds = num_fds_tmp;
+    tp->fd_array = fd_array_tmp;
+    tp->num_fds_alloc = num_fds_tmp;
     return (0);
 }
 
 
-static Timer
-_alloc_timer (void)
+static void
+_tpoll_get_timeval (struct timeval *tvp, int ms)
 {
-/*  Returns a timer, or out_of_memory() if memory allocation fails.
+/*  Sets [tvp] to the current time.
+ *  If [ms] > 0, adds the number of milliseconds [ms] to [tvp].
  */
-    Timer t;
-    Timer tLast;
+    assert (tvp != NULL);
 
-    if (!inactive) {
-        if (!(inactive = malloc (TIMER_ALLOC * sizeof (struct timer)))) {
-            return (out_of_memory ());
-        }
-        tLast = inactive + TIMER_ALLOC - 1;
-        for (t = inactive; t < tLast; t++) {
-            t->next = t + 1;
-        }
-        tLast->next = NULL;
+    if (gettimeofday (tvp, NULL) < 0) {
+        log_err (0, "Unable to get time of day");
     }
-    t = inactive;
-    inactive = inactive->next;
-    return (t);
+    if (ms > 0) {
+        tvp->tv_sec += ms / 1000;
+        tvp->tv_usec += (ms % 1000) * 1000;
+        if (tvp->tv_usec >= 1000000) {
+            tvp->tv_sec += tvp->tv_usec / 1000000;
+            tvp->tv_usec %= 1000000;
+        }
+    }
+    return;
+}
+
+
+static int
+_tpoll_diff_timeval (struct timeval *tvp1, struct timeval *tvp0)
+{
+/*  Returns the millisecond difference between [tvp1] and [tvp0].
+ *  If either is NULL, the current time will be used in its place.
+ */
+    struct timeval tv;
+    int            ms;
+
+    if (!tvp0 || !tvp1) {
+        if (gettimeofday (&tv, NULL) < 0) {
+            log_err (0, "Unable to get time of day");
+        }
+        if (!tvp0) {
+            tvp0 = &tv;
+        }
+        if (!tvp1) {
+            tvp1 = &tv;
+        }
+    }
+    ms = ( (tvp1->tv_sec  - tvp0->tv_sec)  * 1000 ) +
+         ( (tvp1->tv_usec - tvp0->tv_usec) / 1000 ) ;
+
+    return (ms);
 }

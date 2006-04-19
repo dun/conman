@@ -1,3 +1,17 @@
+2006-04-19  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server.h: Added tp to server_conf struct.  Updated prototypes for
+	connect_telnet_obj(), disconnect_telnet_obj(), shutdown_obj().
+	* server.c: Updated timers using new tpoll API.  Moved mux_io() local
+	tpoll_t variable to server_conf struct.
+	* server-conf.c: Added code to create/destroy conf's tpoll object.
+	* server-obj.c: Updated timers using new tpoll API.  Added tpoll_t
+	parm to connect_telnet_obj(), disconnect_telnet_obj(), shutdown_obj().
+	* server-sock.c: Added tpoll_t parm to check_console_state().
+	* tpoll.c, tpoll.h: Revamped.  Changed API.  Made thread-safe.  Added
+	signaling pipe to unblock poll().  Changed timers to be dependent upon
+	the tpoll object.  Removed cache of inactive timers.
+
 2006-03-30  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* configure.ac: Removed AC_PREFIX_DEFAULT and "--with-conman-conf".

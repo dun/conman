@@ -410,7 +410,7 @@ obj_t * create_telnet_obj(server_conf_t *conf, char *name,
 }
 
 
-int connect_telnet_obj(obj_t *telnet)
+int connect_telnet_obj(obj_t *telnet, tpoll_t tp)
 {
 /*  Establishes a non-blocking connect with the specified (telnet) obj.
  *  Returns 0 if the connection is successfully completed; o/w, returns -1.
@@ -424,7 +424,7 @@ int connect_telnet_obj(obj_t *telnet)
     assert(telnet->aux.telnet.conState != CONMAN_TELCON_UP);
 
     if (telnet->aux.telnet.timer >= 0) {
-        untimeout(telnet->aux.telnet.timer);
+        (void) tpoll_timeout_cancel(tp, telnet->aux.telnet.timer);
         telnet->aux.telnet.timer = -1;
     }
 
@@ -462,7 +462,7 @@ int connect_telnet_obj(obj_t *telnet)
                 telnet->aux.telnet.conState = CONMAN_TELCON_PENDING;
             }
             else {
-                disconnect_telnet_obj(telnet);
+                disconnect_telnet_obj(telnet, tp);
             }
             return(-1);
         }
@@ -492,7 +492,7 @@ int connect_telnet_obj(obj_t *telnet)
              */
             close(telnet->fd);          /* ignore return code */
             telnet->fd = -1;
-            disconnect_telnet_obj(telnet);
+            disconnect_telnet_obj(telnet, tp);
             return(-1);
         }
         /* Success!  Continue after if/else expr. */
@@ -526,8 +526,8 @@ int connect_telnet_obj(obj_t *telnet)
      *    disconnect_telnet_obj() will cancel the timer and the
      *    exponential backoff will continue.
      */
-    telnet->aux.telnet.timer = timeout((callback_f) reset_telnet_delay,
-        telnet, TELNET_MIN_TIMEOUT * 1000);
+    telnet->aux.telnet.timer = tpoll_timeout_relative(tp,
+        (callback_f) reset_telnet_delay, telnet, TELNET_MIN_TIMEOUT * 1000);
 
     send_telnet_cmd(telnet, DO, TELOPT_SGA);
     send_telnet_cmd(telnet, DO, TELOPT_ECHO);
@@ -536,7 +536,7 @@ int connect_telnet_obj(obj_t *telnet)
 }
 
 
-void disconnect_telnet_obj(obj_t *telnet)
+void disconnect_telnet_obj(obj_t *telnet, tpoll_t tp)
 {
 /*  Closes the existing connection with the specified (telnet) obj
  *    and sets a timer for establishing a new connection.
@@ -551,7 +551,7 @@ void disconnect_telnet_obj(obj_t *telnet)
         telnet->aux.telnet.host, telnet->aux.telnet.port, telnet->name));
 
     if (telnet->aux.telnet.timer >= 0) {
-        untimeout(telnet->aux.telnet.timer);
+        (void) tpoll_timeout_cancel(tp, telnet->aux.telnet.timer);
         telnet->aux.telnet.timer = -1;
     }
     if (telnet->fd >= 0) {
@@ -580,8 +580,9 @@ void disconnect_telnet_obj(obj_t *telnet)
     /*  Set timer for establishing new connection using exponential backoff.
      */
     telnet->aux.telnet.conState = CONMAN_TELCON_DOWN;
-    telnet->aux.telnet.timer = timeout((callback_f) connect_telnet_obj,
-        telnet, telnet->aux.telnet.delay * 1000);
+    telnet->aux.telnet.timer = tpoll_timeout_relative(tp,
+        (callback_f) connect_telnet_obj, telnet,
+        telnet->aux.telnet.delay * 1000);
     if (telnet->aux.telnet.delay == 0)
         telnet->aux.telnet.delay = TELNET_MIN_TIMEOUT;
     else if (telnet->aux.telnet.delay < TELNET_MAX_TIMEOUT)
@@ -1120,7 +1121,7 @@ static int validate_obj_links(obj_t *obj)
 #endif /* !NDEBUG */
 
 
-int shutdown_obj(obj_t *obj)
+int shutdown_obj(obj_t *obj, tpoll_t tp)
 {
 /*  Shuts down the specified obj.
  *  Returns -1 if the obj is ready to be removed from the master objs list
@@ -1151,7 +1152,7 @@ int shutdown_obj(obj_t *obj)
      *    and attempt to establish a new one.
      */
     if (is_telnet_obj(obj)) {
-        disconnect_telnet_obj(obj);
+        disconnect_telnet_obj(obj, tp);
         return(0);
     }
 
@@ -1210,10 +1211,10 @@ again:
             return(0);
         log_msg(LOG_INFO, "Unable to read from [%s]: %s",
             obj->name, strerror(errno));
-        return(shutdown_obj(obj));
+        return(shutdown_obj(obj, tp));
     }
     else if (n == 0) {
-        int rc = shutdown_obj(obj);
+        int rc = shutdown_obj(obj, tp);
         if (obj->fd >= 0)
             tpoll_set(tp, obj->fd, POLLOUT);    /* ensure buffer is flushed */
         return(rc);

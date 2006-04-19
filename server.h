@@ -184,6 +184,7 @@ typedef struct server_conf {
     int              port;              /* port number on which to listen    */
     int              ld;                /* listening socket descriptor       */
     List             objs;              /* list of all server obj_t's        */
+    tpoll_t          tp;                /* tpoll obj for muxing i/o & timers */
     char            *globalLogName;     /* global log name (must contain &)  */
     logopt_t         globalLogopts;     /* global opts for logfile objects   */
     seropt_t         globalSeropts;     /* global opts for serial objects    */
@@ -300,9 +301,9 @@ int open_serial_obj(obj_t *serial);
 obj_t * create_telnet_obj(server_conf_t *conf, char *name,
     char *host, int port, char *errbuf, int errlen);
 
-int connect_telnet_obj(obj_t *telnet);
+int connect_telnet_obj(obj_t *telnet, tpoll_t tp);
 
-void disconnect_telnet_obj(obj_t *telnet);
+void disconnect_telnet_obj(obj_t *telnet, tpoll_t tp);
 
 void destroy_obj(obj_t *obj);
 
@@ -320,7 +321,7 @@ void unlink_objs(obj_t *src, obj_t *dst);
 
 void unlink_obj(obj_t *obj);
 
-int shutdown_obj(obj_t *obj);
+int shutdown_obj(obj_t *obj, tpoll_t tp);
 
 int read_from_obj(obj_t *obj, tpoll_t tp);
 
