@@ -200,7 +200,7 @@ err:
 void
 tpoll_destroy (tpoll_t tp)
 {
-/*  Destroys the tpoll object [tp] and cancels all pending timers.
+/*  Destroys the tpoll object [tp] and cancels all of its associated timers.
  */
     int            i;
     _tpoll_timer_t t;
@@ -249,7 +249,7 @@ tpoll_zero (tpoll_t tp, tpoll_zero_t how)
 /*  Re-initializes the tpoll object [tp].
  *    If [how] is TPOLL_ZERO_ALL, everything is reset.
  *    If [how] is TPOLL_ZERO_FDS, only the file descriptor events are reset.
- *    If [how] is TPOLL_ZERO_TIMERS, only the pending timers are canceled.
+ *    If [how] is TPOLL_ZERO_TIMERS, only the timers are canceled.
  *    If [how] is anything else, no action is taken.
  *  Returns 0 on success, or -1 on error.
  */
