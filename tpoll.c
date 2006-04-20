@@ -22,10 +22,6 @@
  *  You should have received a copy of the GNU General Public License along
  *  with this program; if not, write to the Free Software Foundation, Inc.,
  *  51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA.
- *****************************************************************************
- *  Based on ideas from:
- *  - David R. Butenhof's "Programming with POSIX Threads" (Section 3.3.4)
- *  - Jon C. Snader's "Effective TCP/IP Programming" (Tip #20)
  *****************************************************************************/
 
 
@@ -765,10 +761,10 @@ _tpoll_signal_write (tpoll_t tp)
             if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
                 break;
             }
-            log_err (errno, "Unable to signal tpoll");
+            log_err (errno, "Unable to write signal to tpoll");
         }
         else if (n == 0) {
-            log_err (errno, "Got an unexpected 0 writing to tpoll's pipe");
+            log_err (0, "Got an unexpected 0 writing to tpoll's pipe");
         }
         break;
     }
@@ -783,7 +779,7 @@ _tpoll_signal_read (tpoll_t tp)
 /*  Drains all signals sent to the tpoll object [tp].
  */
     int           n;
-    unsigned char c;
+    unsigned char c[ 2 ];
 
     assert (tp != NULL);
     assert (tp->fd_pipe[ 0 ] > -1);
@@ -801,11 +797,16 @@ _tpoll_signal_read (tpoll_t tp)
             if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
                 break;
             }
-            log_err (errno, "Unable to drain signals from tpoll");
+            log_err (errno, "Unable to read signal from tpoll");
         }
         else if (n == 0) {
-            log_err (errno, "Got an unexpected EOF reading from tpoll's pipe");
+            log_err (0, "Got an unexpected EOF reading from tpoll's pipe");
         }
+        else if (n == sizeof (c)) {
+            assert (1);                 /* is_signaled should prevent this */
+            continue;
+        }
+        break;
     }
     tp->is_signaled = 0;
     return;
