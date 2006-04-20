@@ -1,5 +1,7 @@
 2006-04-20  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* tpoll.c: Added implementation notes.
+
 	* tpoll.c(_tpoll_signal_read): Prevented requiring two read()s to
 	drain a signal from fd_pipe.
 

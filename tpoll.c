@@ -45,6 +45,34 @@
 
 
 /*****************************************************************************
+ *  Notes
+ *****************************************************************************
+ *  Based on ideas from:
+ *  - David R. Butenhof's "Programming with POSIX Threads" (Section 3.3.4)
+ *  - Jon C. Snader's "Effective TCP/IP Programming" (Tip #20)
+ *
+ *  This implementation is thread-safe.
+ *
+ *  This implementation assumes the set of file descriptors being polled is
+ *  densely populated up through the maximum file descriptor of interest; as
+ *  such, the fd_array[] is indexed by the file descriptor.  If this assumption
+ *  is not the case, performance can be increased by adding new file
+ *  descriptors to the first empty slot in fd_array[], and maintaining a hash
+ *  to map file descriptors onto the corresponding fd_array[] index.
+ *
+ *  This implementation assumes the number of concurrent active timers is
+ *  moderate; as such, active timers are stored in a linked-list in order of
+ *  increasing timevals (ie, the head of the list (timers_active) is the next
+ *  timer to expire).  It does not scale well to a large number of timers
+ *  because insertion and deletion are O(n), although dispatching is O(1).
+ *  Other possible implementations are heaps [Sedgewick 1998] which are
+ *  O(log n) for insertion, deletion, and dispatch; or hashed timing wheels
+ *  [Varghese and Lauck 1996] which can be as efficient as O(1) for insertion,
+ *  deletion, and dispatch.
+ */
+
+
+/*****************************************************************************
  *  Constants
  *****************************************************************************/
 
@@ -113,6 +141,7 @@ tpoll_create (int n)
  */
     tpoll_t tp = NULL;
     int     i;
+    int     fval;
     int     e;
 
     assert (TPOLL_ALLOC > 0);
@@ -140,7 +169,6 @@ tpoll_create (int n)
         goto err;
     }
     for (i = 0; i < 2; i++) {
-        int fval;
         if (fcntl (tp->fd_pipe[ i ], F_SETFD, FD_CLOEXEC) < 0) {
             goto err;
         }
