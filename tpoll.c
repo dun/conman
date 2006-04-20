@@ -171,9 +171,6 @@ tpoll_create (int n)
         goto err;
     }
     for (i = 0; i < 2; i++) {
-        if (fcntl (tp->fd_pipe[ i ], F_SETFD, FD_CLOEXEC) < 0) {
-            goto err;
-        }
         if ((fval = fcntl (tp->fd_pipe[ i ], F_GETFL, 0)) < 0) {
             goto err;
         }
