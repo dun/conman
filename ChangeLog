@@ -1,3 +1,7 @@
+2006-04-20  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* tpoll.c: Added is_signaled flag to tpoll struct.
+
 2006-04-19  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server-conf.c(write_pidfile): Fixed resource leak of file handle.

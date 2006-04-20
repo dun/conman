@@ -26,8 +26,6 @@
  *  Based on ideas from:
  *  - David R. Butenhof's "Programming with POSIX Threads" (Section 3.3.4)
  *  - Jon C. Snader's "Effective TCP/IP Programming" (Tip #20)
- *****************************************************************************
- *  Refer to "tpoll.h" for documentation on public functions.
  *****************************************************************************/
 
 
@@ -40,6 +38,7 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <pthread.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/resource.h>
@@ -71,7 +70,8 @@ struct tpoll {
     _tpoll_timer_t   timers_active;     /* sorted list of active timers      */
     int              timers_next_id;    /* next id to be assigned to a timer */
     pthread_mutex_t  mutex;             /* locking primitive                 */
-    int              is_mutex_inited;   /* flag set when mutex initialized   */
+    bool             is_signaled;       /* flag set when fd_pipe is signaled */
+    bool             is_mutex_inited;   /* flag set when mutex initialized   */
 };
 
 struct tpoll_timer {
@@ -132,6 +132,7 @@ tpoll_create (int n)
     }
     tp->fd_pipe[ 0 ] = tp->fd_pipe[ 1 ] = -1;
     tp->timers_active = NULL;
+    tp->is_signaled = 0;
     tp->is_mutex_inited = 0;
 
     if (!(tp->fd_array = malloc (n * sizeof (struct pollfd)))) {
@@ -752,6 +753,9 @@ _tpoll_signal_write (tpoll_t tp)
     assert (tp != NULL);
     assert (tp->fd_pipe[ 1 ] > -1);
 
+    if (tp->is_signaled) {
+        return;
+    }
     for (;;) {
         n = write (tp->fd_pipe[ 1 ], &c, 1);
         if (n < 0) {
@@ -768,6 +772,7 @@ _tpoll_signal_write (tpoll_t tp)
         }
         break;
     }
+    tp->is_signaled = 1;
     return;
 }
 
@@ -778,12 +783,15 @@ _tpoll_signal_read (tpoll_t tp)
 /*  Drains all signals sent to the tpoll object [tp].
  */
     int           n;
-    unsigned char c[ 16 ];
+    unsigned char c;
 
     assert (tp != NULL);
     assert (tp->fd_pipe[ 0 ] > -1);
     assert (tp->fd_array[ tp->fd_pipe[ 0 ] ].fd == tp->fd_pipe[ 0 ]);
 
+    if (!tp->is_signaled) {
+        return;
+    }
     for (;;) {
         n = read (tp->fd_pipe[ 0 ], &c, sizeof (c));
         if (n < 0) {
@@ -799,6 +807,7 @@ _tpoll_signal_read (tpoll_t tp)
             log_err (errno, "Got an unexpected EOF reading from tpoll's pipe");
         }
     }
+    tp->is_signaled = 0;
     return;
 }
 
