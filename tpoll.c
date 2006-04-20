@@ -94,6 +94,7 @@ struct tpoll {
     _tpoll_timer_t   timers_active;     /* sorted list of active timers      */
     int              timers_next_id;    /* next id to be assigned to a timer */
     pthread_mutex_t  mutex;             /* locking primitive                 */
+    bool             is_blocked;        /* flag set when blocking on poll()  */
     bool             is_signaled;       /* flag set when fd_pipe is signaled */
     bool             is_mutex_inited;   /* flag set when mutex initialized   */
 };
@@ -157,6 +158,7 @@ tpoll_create (int n)
     }
     tp->fd_pipe[ 0 ] = tp->fd_pipe[ 1 ] = -1;
     tp->timers_active = NULL;
+    tp->is_blocked = 0;
     tp->is_signaled = 0;
     tp->is_mutex_inited = 0;
 
@@ -651,6 +653,8 @@ tpoll (tpoll_t tp, int ms)
          */
         fd_array_bak = tp->fd_array;
 
+        tp->is_blocked = 1;
+
         if ((e = pthread_mutex_unlock (&tp->mutex)) != 0) {
             log_err (errno = e, "Unable to unlock tpoll mutex");
         }
@@ -659,7 +663,9 @@ tpoll (tpoll_t tp, int ms)
         if ((e = pthread_mutex_lock (&tp->mutex)) != 0) {
             log_err (errno = e, "Unable to lock tpoll mutex");
         }
-        if (n < 0) {
+        tp->is_blocked = 0;
+
+        if (n <= 0) {
             break;
         }
         if (tp->fd_array != fd_array_bak) {
@@ -782,7 +788,7 @@ _tpoll_signal_write (tpoll_t tp)
     assert (tp != NULL);
     assert (tp->fd_pipe[ 1 ] > -1);
 
-    if (tp->is_signaled) {
+    if (tp->is_signaled || !tp->is_blocked) {
         return;
     }
     for (;;) {
@@ -818,6 +824,7 @@ _tpoll_signal_read (tpoll_t tp)
     assert (tp != NULL);
     assert (tp->fd_pipe[ 0 ] > -1);
     assert (tp->fd_array[ tp->fd_pipe[ 0 ] ].fd == tp->fd_pipe[ 0 ]);
+    assert (tp->is_blocked == 0);
 
     if (!tp->is_signaled) {
         return;

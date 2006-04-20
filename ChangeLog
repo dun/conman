@@ -1,5 +1,9 @@
 2006-04-20  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* tpoll.c: Added is_blocked flag so tpoll can only be signaled while
+	potentially blocked on the internal poll().  Changed test so
+	additional poll() is not required on timeout.
+
 	* common.h: Disabled DO_CONF_ESCAPE_ERROR.
 
 	* tpoll.c: Documented locking protocol.
