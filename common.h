@@ -40,7 +40,7 @@
 /*  Ye old deprecated escape char for the server's configuration file.
  */
 #define DEPRECATED_CONF_ESCAPE  '&'
-#define DO_CONF_ESCAPE_ERROR    1
+#define DO_CONF_ESCAPE_ERROR    0
 
 /*  Name of daemon for TCP-Wrappers.
  */
