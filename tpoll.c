@@ -185,6 +185,9 @@ tpoll_create (int n)
     }
     tp->is_mutex_inited = 1;
 
+    /*  The mutex is not locked before calling _tpoll_init() because the
+     *    object handle (tp) has not yet been returned.
+     */
     _tpoll_init (tp, TPOLL_ZERO_ALL);
     return (tp);
 
@@ -734,6 +737,7 @@ static void
 _tpoll_init (tpoll_t tp, tpoll_zero_t how)
 {
 /*  Initializes the tpoll object [tp] to the empty set.
+ *  This routine assumes the [tp] mutex is already locked.
  */
     int            i;
     _tpoll_timer_t t;
@@ -770,6 +774,7 @@ _tpoll_signal_write (tpoll_t tp)
 {
 /*  Signals the tpoll object [tp] that an fd or timer or somesuch has changed
  *    and poll() needs to unblock and re-examine its state.
+ *  This routine assumes the [tp] mutex is already locked.
  */
     int           n;
     unsigned char c = 0;
@@ -805,6 +810,7 @@ static void
 _tpoll_signal_read (tpoll_t tp)
 {
 /*  Drains all signals sent to the tpoll object [tp].
+ *  This routine assumes the [tp] mutex is already locked.
  */
     int           n;
     unsigned char c[ 2 ];
@@ -846,6 +852,7 @@ _tpoll_grow (tpoll_t tp, int num_fds_req)
 {
 /*  Attempts to grow [tp]'s pollfd array to at least [num_fds_req] structs.
  *  Returns 0 if the request is successful, -1 if not.
+ *  This routine assumes the [tp] mutex is already locked.
  */
     struct pollfd *fd_array_tmp;
     struct pollfd *fd_array_new;
