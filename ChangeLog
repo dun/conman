@@ -1,3 +1,8 @@
+2006-04-22  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* tpoll.c: Changed _tpoll_signal_write() to _tpoll_signal_send().
+	Changed _tpoll_signal_read() to _tpoll_signal_recv().
+
 2006-04-20  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* tpoll.c(tpoll_create): Removed fcntl() to set FD_CLOEXEC.

@@ -116,9 +116,9 @@ static int _tpoll_inc_nofile (int max, int min);
 
 static void _tpoll_init (tpoll_t tp, tpoll_zero_t how);
 
-static void _tpoll_signal_write (tpoll_t tp);
+static void _tpoll_signal_send (tpoll_t tp);
 
-static void _tpoll_signal_read (tpoll_t tp);
+static void _tpoll_signal_recv (tpoll_t tp);
 
 static int _tpoll_grow (tpoll_t tp, int num_fds_req);
 
@@ -266,7 +266,7 @@ tpoll_zero (tpoll_t tp, tpoll_zero_t how)
         log_err (errno = e, "Unable to lock tpoll mutex");
     }
     _tpoll_init (tp, how);
-    _tpoll_signal_write (tp);
+    _tpoll_signal_send (tp);
 
     if ((e = pthread_mutex_unlock (&tp->mutex)) != 0) {
         log_err (errno = e, "Unable to unlock tpoll mutex");
@@ -322,7 +322,7 @@ tpoll_clear (tpoll_t tp, int fd, short int events)
                     tp->max_fd = i;
                 }
             }
-            _tpoll_signal_write (tp);
+            _tpoll_signal_send (tp);
         }
     }
     if ((e = pthread_mutex_unlock (&tp->mutex)) != 0) {
@@ -419,7 +419,7 @@ tpoll_set (tpoll_t tp, int fd, short int events)
             if (fd > tp->max_fd) {
                 tp->max_fd = fd;
             }
-            _tpoll_signal_write (tp);
+            _tpoll_signal_send (tp);
         }
         rc = 0;
     }
@@ -475,7 +475,7 @@ tpoll_timeout_absolute (tpoll_t tp, callback_f cb, void *arg,
         t_ptr = &((*t_ptr)->next);
     }
     if (*t_ptr == tp->timers_active) {
-        _tpoll_signal_write (tp);
+        _tpoll_signal_send (tp);
     }
     t->next = *t_ptr;
     *t_ptr = t;
@@ -534,7 +534,7 @@ tpoll_timeout_cancel (tpoll_t tp, int id)
     }
     else {
         if (*t_ptr == tp->timers_active) {
-            _tpoll_signal_write (tp);
+            _tpoll_signal_send (tp);
         }
         t = *t_ptr;
         *t_ptr = t->next;
@@ -666,11 +666,11 @@ tpoll (tpoll_t tp, int ms)
             break;
         }
         if (tp->fd_array != fd_array_bak) {
-            _tpoll_signal_read (tp);
+            _tpoll_signal_recv (tp);
             continue;
         }
         if ((n > 0) && (tp->fd_array[ tp->fd_pipe[ 0 ] ].revents & POLLIN)) {
-            _tpoll_signal_read (tp);
+            _tpoll_signal_recv (tp);
             n--;
         }
         if (n > 0) {
@@ -773,7 +773,7 @@ _tpoll_init (tpoll_t tp, tpoll_zero_t how)
 
 
 static void
-_tpoll_signal_write (tpoll_t tp)
+_tpoll_signal_send (tpoll_t tp)
 {
 /*  Signals the tpoll object [tp] that an fd or timer or somesuch has changed
  *    and poll() needs to unblock and re-examine its state.
@@ -810,7 +810,7 @@ _tpoll_signal_write (tpoll_t tp)
 
 
 static void
-_tpoll_signal_read (tpoll_t tp)
+_tpoll_signal_recv (tpoll_t tp)
 {
 /*  Drains all signals sent to the tpoll object [tp].
  *  This routine assumes the [tp] mutex is already locked.
@@ -884,7 +884,7 @@ _tpoll_grow (tpoll_t tp, int num_fds_req)
      *  Then tpoll() will have to re-acquire the mutex before continuing.
      *  Since we currently have the mutex, we can now safely realloc fd_array.
      */
-    _tpoll_signal_write (tp);
+    _tpoll_signal_send (tp);
     if (!(fd_array_tmp =
             realloc (tp->fd_array, num_fds_tmp * sizeof (struct pollfd)))) {
         return (-1);
