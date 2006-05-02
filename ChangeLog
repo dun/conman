@@ -1,5 +1,7 @@
 2006-05-02  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* etc/conman.init: Added fixes for AIX.
+
 	* tpoll.c, tpoll.h: Tweaked copyleft boilerplate.
 
 	* etc/conman.init: Revamped.
