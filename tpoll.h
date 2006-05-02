@@ -1,13 +1,13 @@
 /*****************************************************************************
  *  $Id$
  *****************************************************************************
- *  This file is part of ConMan, a remote console management program.
- *  For details, see <http://www.llnl.gov/linux/conman/>.
- *
  *  Copyright (C) 2001-2006 The Regents of the University of California.
- *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
+ *  Produced at Lawrence Livermore National Laboratory.
  *  Written by Chris Dunlap <cdunlap@llnl.gov>.
  *  UCRL-CODE-2002-009.
+ *
+ *  This file is part of ConMan, a remote console management program.
+ *  For details, see <http://www.llnl.gov/linux/conman/>.
  *
  *  This is free software; you can redistribute it and/or modify it
  *  under the terms of the GNU General Public License as published by

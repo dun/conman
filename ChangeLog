@@ -1,5 +1,7 @@
 2006-05-02  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* tpoll.c, tpoll.h: Tweaked copyleft boilerplate.
+
 	* etc/conman.init: Revamped.
 
 2006-04-22  Chris Dunlap  <cdunlap@llnl.gov>
