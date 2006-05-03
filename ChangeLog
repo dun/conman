@@ -2,9 +2,9 @@
 
 	* etc/conman.init: Removed use of "local" keyword for Solaris.
 
-	* etc/conman.init: Added tests for distro release files in
-	service_init() to prevent SuSE from being recognized as DEBIAN due to
-	/sbin/start-stop-daemon.
+	* etc/conman.init: Added tests for distro release/version files in
+	service_init() to prevent SuSE from being recognized as Debian due to
+	existence of /sbin/start-stop-daemon.
 
 	* etc/conman.init: Replaced "echo -n" with "printf" for AIX.
 
