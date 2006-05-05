@@ -1,5 +1,7 @@
 2006-05-05  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* etc/conman.sysconfig: Set svn:keywords & svn:eol-style props.
+
 	* etc/conman.init, etc/conman.sysconfig: Tweaked defs.
 
 2006-05-04  Chris Dunlap  <cdunlap@llnl.gov>
