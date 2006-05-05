@@ -21,16 +21,16 @@
 ### END INIT INFO
 ###############################################################################
 
-unset DESC DAEMON CONFIG OPTIONS PIDFILE USER NICE ENABLE_RELOAD
+unset DESC DAEMON CONFIG OPTIONS PIDFILE NICE USER ENABLE_RELOAD
 
 DESC="ConMan"
 DAEMON="/usr/sbin/conmand"
-CONFIG="/etc/conman.conf"
-OPTIONS="-c $CONFIG"
-#PIDFILE="/var/run/conmand.pid"
+#CONFIG=
+#OPTIONS=
+#PIDFILE=
 #NICE=
 #USER=
-#ENABLE_RELOAD="1"
+#ENABLE_RELOAD=
 
 PATH=/sbin:/usr/sbin:/usr/local/sbin:/bin:/usr/bin:/usr/local/bin
 DAEMON_NAME="`basename \"$DAEMON\"`"
@@ -83,7 +83,7 @@ service_init ()
     SYSTEM="LSB"
     . /lib/lsb/init-functions
   else
-    SYSTEM="UNKNOWN"
+    SYSTEM="OTHER"
   fi
 }
 
