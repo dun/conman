@@ -1,5 +1,9 @@
 2006-05-04  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* etc/conman.init: Added support for NICE & USER.
+	Changed ENABLE_SIGHUP_RELOAD to ENABLE_RELOAD.
+	Replaced use of "source" keyword with "." for AIX.
+
 	* Makefile.in: Added sysconfig to "install" target.
 	* etc/conman.sysconfig: Added.
 
