@@ -1,3 +1,7 @@
+2006-05-09  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* etc/conman.init: Replaced use of "which" with query_exec (Tru64).
+
 2006-05-05  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* etc/conman.sysconfig: Set svn:keywords & svn:eol-style props.
@@ -8,20 +12,20 @@
 
 	* etc/conman.init: Added support for NICE & USER.
 	Changed ENABLE_SIGHUP_RELOAD to ENABLE_RELOAD.
-	Replaced use of "source" keyword with "." for AIX.
+	Replaced use of "source" keyword with "." (AIX).
 
 	* Makefile.in: Added sysconfig to "install" target.
 	* etc/conman.sysconfig: Added.
 
 2006-05-02  Chris Dunlap  <cdunlap@llnl.gov>
 
-	* etc/conman.init: Removed use of "local" keyword for Solaris.
+	* etc/conman.init: Removed use of "local" keyword (Solaris).
 
 	* etc/conman.init: Added tests for distro release/version files in
 	service_init() to prevent SuSE from being recognized as Debian due to
 	existence of /sbin/start-stop-daemon.
 
-	* etc/conman.init: Replaced "echo -n" with "printf" for AIX.
+	* etc/conman.init: Replaced "echo -n" with "printf" (AIX).
 
 	* tpoll.c, tpoll.h: Tweaked copyleft boilerplate.
 
