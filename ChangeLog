@@ -1,5 +1,12 @@
 2006-05-09  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* etc/conman.init.in, etc/conman.sysconfig:
+	Renamed ENABLE_RELOAD to SIGHUP_RELOAD.
+	* etc/conman.init.in: Renamed from etc/conman.init.
+	Added prefix, exec_prefix, sbindir, and sysconfdir.
+	* Makefile.in: Added etc/conman.init to AC_OUTPUT.
+	* configure.ac: Added etc/conman.init to AC_CONFIG_FILES.
+
 	* etc/conman.init: Replaced use of "which" with query_exec (Tru64).
 
 2006-05-05  Chris Dunlap  <cdunlap@llnl.gov>

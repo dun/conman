@@ -34,4 +34,4 @@
 #   console log files to be closed and re-opened, but the configuration
 #   is not reloaded.
 ##
-# ENABLE_RELOAD="1"
+# SIGHUP_RELOAD="1"

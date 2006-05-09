@@ -4245,7 +4245,7 @@ _ACEOF
 
           ac_config_commands="$ac_config_commands default-1"
 
-                                        ac_config_files="$ac_config_files Makefile man/conman.1 man/conman.conf.5 man/conmand.8"
+                                                  ac_config_files="$ac_config_files Makefile etc/conman.init man/conman.1 man/conman.conf.5 man/conmand.8"
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
 # tests run on this system so they can be shared between configure
@@ -4782,6 +4782,7 @@ do
   case "$ac_config_target" in
   # Handling of arguments.
   "Makefile" ) CONFIG_FILES="$CONFIG_FILES Makefile" ;;
+  "etc/conman.init" ) CONFIG_FILES="$CONFIG_FILES etc/conman.init" ;;
   "man/conman.1" ) CONFIG_FILES="$CONFIG_FILES man/conman.1" ;;
   "man/conman.conf.5" ) CONFIG_FILES="$CONFIG_FILES man/conman.conf.5" ;;
   "man/conmand.8" ) CONFIG_FILES="$CONFIG_FILES man/conmand.8" ;;

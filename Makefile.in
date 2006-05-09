@@ -28,7 +28,8 @@ libdir=		@libdir@
 mandir=		@mandir@
 sysconfdir=	@sysconfdir@
 
-AC_OUTPUT=	Makefile config.h man/conman.1 man/conman.conf.5 man/conmand.8
+AC_OUTPUT=	Makefile config.h etc/conman.init \
+		man/conman.1 man/conman.conf.5 man/conmand.8
 
 PROGS=		conman conmand
 COMMON_OBJS1=	common.o list.o lex.o log.o

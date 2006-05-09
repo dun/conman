@@ -296,6 +296,7 @@ dnl
 AC_OUTPUT_COMMANDS(echo "creating dependencies"; make depend >/dev/null)
 AC_OUTPUT([
   Makefile
+  etc/conman.init
   man/conman.1
   man/conman.conf.5
   man/conmand.8
