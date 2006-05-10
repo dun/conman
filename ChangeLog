@@ -1,3 +1,9 @@
+2006-05-10  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* etc/conman.init.in: Changed query_pids ps format specifier from
+	"args" to "command" for OS X.  Replaced query_pids ps format specifier
+	for empty column headers (=) with "| tail +2" for OS X.
+
 2006-05-09  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* etc/conman.init.in, etc/conman.sysconfig:
