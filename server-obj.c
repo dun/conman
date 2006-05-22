@@ -344,26 +344,16 @@ obj_t * create_telnet_obj(server_conf_t *conf, char *name,
  */
     ListIterator i;
     obj_t *telnet;
-    struct sockaddr_in saddr;
     int n;
-    char buf[MAX_LINE];
 
     assert(conf != NULL);
     assert((name != NULL) && (name[0] != '\0'));
     assert((host != NULL) && (host[0] != '\0'));
 
-    memset(&saddr, 0, sizeof(saddr));
-    saddr.sin_family = AF_INET;
     if (port <= 0) {
         snprintf(errbuf, errlen, "specifies invalid port \"%d\"", port);
         return(NULL);
     }
-    saddr.sin_port = htons(port);
-    if (host_name_to_addr4(host, &saddr.sin_addr) < 0) {
-        snprintf(errbuf, errlen, "unable to resolve host \"%s\"", host);
-        return(NULL);
-    }
-
     /*  Check for duplicate console names and terminal server locations.
      */
     i = list_iterator_create(conf->objs);
@@ -372,27 +362,14 @@ obj_t * create_telnet_obj(server_conf_t *conf, char *name,
             snprintf(errbuf, errlen, "specifies duplicate console name");
             break;
         }
-        if (is_telnet_obj(telnet) && !memcmp(&saddr,
-          &telnet->aux.telnet.saddr, sizeof(telnet->aux.telnet.saddr))) {
-            snprintf(errbuf, errlen,
-                "specifies duplicate terminal server \"%s:%d\"", host, port);
-            break;
-        }
     }
     list_iterator_destroy(i);
     if (telnet != NULL)
         return(NULL);
 
-    if (host_addr4_to_name(&saddr.sin_addr, buf, sizeof(buf))) {
-        if ((host = strchr(buf, '.')))
-            *host = '\0';
-        host = buf;
-    }
-
     telnet = create_obj(conf, name, -1, CONMAN_OBJ_TELNET);
     telnet->aux.telnet.host = create_string(host);
     telnet->aux.telnet.port = port;
-    telnet->aux.telnet.saddr = saddr;
     telnet->aux.telnet.logfile = NULL;
     telnet->aux.telnet.timer = -1;
     telnet->aux.telnet.delay = TELNET_MIN_TIMEOUT;
@@ -415,6 +392,7 @@ int connect_telnet_obj(obj_t *telnet, tpoll_t tp)
 /*  Establishes a non-blocking connect with the specified (telnet) obj.
  *  Returns 0 if the connection is successfully completed; o/w, returns -1.
  */
+    struct sockaddr_in saddr;
     const int on = 1;
     char *now;
     char buf[MAX_LINE];
@@ -431,7 +409,17 @@ int connect_telnet_obj(obj_t *telnet, tpoll_t tp)
     if (telnet->aux.telnet.conState == CONMAN_TELCON_DOWN) {
         /*
          *  Initiate a non-blocking connection attempt.
+         *
+         *  FIXME: Schedule timer to re-attempt connect if h/n lookup fails?
          */
+        memset(&saddr, 0, sizeof(saddr));
+        saddr.sin_family = AF_INET;
+        saddr.sin_port = htons(telnet->aux.telnet.port);
+        if (host_name_to_addr4(telnet->aux.telnet.host, &saddr.sin_addr) < 0) {
+            log_msg(LOG_WARNING, "Unable to resolve hostname \"%s\" for [%s]",
+                telnet->aux.telnet.host, telnet->name);
+            return(-1);
+        }
         if ((telnet->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
             log_err(0, "Unable to create socket for [%s]", telnet->name);
         if (setsockopt(telnet->fd, SOL_SOCKET, SO_OOBINLINE,
@@ -448,8 +436,8 @@ int connect_telnet_obj(obj_t *telnet, tpoll_t tp)
         DPRINTF((10, "Connecting to <%s:%d> for [%s].\n",
             telnet->aux.telnet.host, telnet->aux.telnet.port, telnet->name));
 
-        if (connect(telnet->fd, (struct sockaddr *) &telnet->aux.telnet.saddr,
-          sizeof(telnet->aux.telnet.saddr)) < 0) {
+        if (connect(telnet->fd,
+                (struct sockaddr *) &saddr, sizeof(saddr)) < 0) {
             if (errno == EINPROGRESS) {
             /*
              *  FIXME: Bug exists in timeout of connect():

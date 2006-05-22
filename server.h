@@ -133,7 +133,6 @@ typedef enum telnet_option_state {      /* rfc1143 Telnet Q-Method opt state */
 typedef struct telnet_obj {             /* TELNET AUX OBJ DATA:              */
     char            *host;              /*  remote telnetd host name (or ip) */
     int              port;              /*  remote telnetd port number       */
-    sockaddr_t       saddr;             /*  n/w address of terminal server   */
     struct base_obj *logfile;           /*  log obj ref for console replay   */
     int              timer;             /*  timer id for reconnects          */
     int              delay;             /*  secs 'til next reconnect attempt */

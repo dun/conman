@@ -1,5 +1,9 @@
 2006-05-22  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-obj.c: Moved hostname resolution from create_telnet_obj() to
+	connect_telnet_obj().  Removed check for dup server based on hostname.
+	* server.h: Removed saddr from struct telnet_obj.
+
 	* server.c(open_objs): Increased RLIMIT_NOFILE.
 
 2006-05-10  Chris Dunlap  <cdunlap@llnl.gov>
