@@ -451,9 +451,20 @@ static void open_objs(server_conf_t *conf)
 {
 /*  Initially opens everything in the 'objs' list.
  */
+    int n;
+    struct rlimit limit;
     ListIterator i;
     obj_t *obj;
 
+    n = list_count(conf->objs) * 2;
+    if (getrlimit(RLIMIT_NOFILE, &limit) < 0)
+        log_err(errno, "Unable to get the num open file limit");
+    if (limit.rlim_cur < n) {
+        limit.rlim_cur = n;
+        limit.rlim_max = (n > limit.rlim_max) ? n : limit.rlim_max;
+        if (setrlimit(RLIMIT_NOFILE, &limit) < 0)
+            log_msg(LOG_ERR, "Unable to set the num open file limit to %d", n);
+    }
     i = list_iterator_create(conf->objs);
     while ((obj = list_next(i))) {
         if (is_serial_obj(obj))
