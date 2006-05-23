@@ -1,5 +1,7 @@
 2006-05-23  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server.c(mux_io): Added POLLHUP & POLLERR to force read_from_obj().
+
 	* server-obj.c(resolve_retry): Fixed assertion.
 
 	* server-obj.c(resolve_retry): Cleared aux.telnet.timer.

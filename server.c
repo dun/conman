@@ -568,7 +568,7 @@ static void mux_io(server_conf_t *conf)
                 connect_telnet_obj(obj, conf->tp);
                 continue;
             }
-            if (tpoll_is_set(conf->tp, obj->fd, POLLIN)) {
+            if (tpoll_is_set(conf->tp, obj->fd, POLLIN | POLLHUP | POLLERR)) {
                 if (read_from_obj(obj, conf->tp) < 0) {
                     list_delete(i);
                     continue;
