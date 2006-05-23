@@ -53,8 +53,15 @@
 #include "wrapper.h"
 
 
+struct resolve_retry_args {
+    obj_t *obj;
+    tpoll_t tp;
+};
+
+
 static obj_t * create_obj(
     server_conf_t *conf, char *name, int fd, enum obj_type type);
+static void resolve_retry(struct resolve_retry_args *args);
 static void reset_telnet_delay(obj_t *telnet);
 static char * sanitize_file_string(char *str);
 static char * find_trailing_int_str(char *str);
@@ -409,15 +416,27 @@ int connect_telnet_obj(obj_t *telnet, tpoll_t tp)
     if (telnet->aux.telnet.conState == CONMAN_TELCON_DOWN) {
         /*
          *  Initiate a non-blocking connection attempt.
-         *
-         *  FIXME: Schedule timer to re-attempt connect if h/n lookup fails?
          */
         memset(&saddr, 0, sizeof(saddr));
         saddr.sin_family = AF_INET;
         saddr.sin_port = htons(telnet->aux.telnet.port);
         if (host_name_to_addr4(telnet->aux.telnet.host, &saddr.sin_addr) < 0) {
+            struct resolve_retry_args *args =
+                malloc(sizeof(struct resolve_retry_args));
             log_msg(LOG_WARNING, "Unable to resolve hostname \"%s\" for [%s]",
                 telnet->aux.telnet.host, telnet->name);
+            if (!args) {
+                log_msg(LOG_ERR,
+                    "Unable to retry hostname resolution of \"%s\"",
+                    telnet->aux.telnet.host);
+            }
+            else {
+                args->obj = telnet;
+                args->tp = tp;
+                telnet->aux.telnet.timer =
+                    tpoll_timeout_relative(tp, (callback_f) resolve_retry,
+                    args, RESOLVE_RETRY_TIMEOUT * 1000);
+            }
             return(-1);
         }
         if ((telnet->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
@@ -576,6 +595,24 @@ void disconnect_telnet_obj(obj_t *telnet, tpoll_t tp)
     else if (telnet->aux.telnet.delay < TELNET_MAX_TIMEOUT)
         telnet->aux.telnet.delay =
             MIN(telnet->aux.telnet.delay * 2, TELNET_MAX_TIMEOUT);
+    return;
+}
+
+
+static void resolve_retry(struct resolve_retry_args *args)
+{
+/*  Re-attempts to connect a downed telnet object that previously failed
+ *    hostname resolution.
+ *  Canceling this timer will cause a memory leak of the args struct.
+ *  This is a kludge since connect_telnet_obj() requires 2 args.
+ *    Life would be easier if the tpoll obj was global.
+ */
+    assert(args != NULL);
+    assert(is_telnet_obj(telnet));
+
+    if (args->obj->aux.telnet.conState == CONMAN_TELCON_DOWN)
+        (void) connect_telnet_obj(args->obj, args->tp);
+    free(args);
     return;
 }
 

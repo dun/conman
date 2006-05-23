@@ -1,3 +1,8 @@
+2006-05-23  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server-obj.c: Added resolve_retry().
+	* server.h: Added RESOLVE_RETRY_TIMEOUT.
+
 2006-05-22  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server-obj.c: Moved hostname resolution from create_telnet_obj() to

@@ -50,6 +50,8 @@
 
 #define RESET_CMD_TIMEOUT               60
 
+#define RESOLVE_RETRY_TIMEOUT           1800
+
 #define TELNET_MIN_TIMEOUT              15
 #define TELNET_MAX_TIMEOUT              1800
 
