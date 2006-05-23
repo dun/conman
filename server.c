@@ -456,14 +456,15 @@ static void open_objs(server_conf_t *conf)
     ListIterator i;
     obj_t *obj;
 
-    n = list_count(conf->objs) * 2;
     if (getrlimit(RLIMIT_NOFILE, &limit) < 0)
         log_err(errno, "Unable to get the num open file limit");
+    n = MAX(limit.rlim_max, list_count(conf->objs) * 2);
     if (limit.rlim_cur < n) {
-        limit.rlim_cur = n;
-        limit.rlim_max = (n > limit.rlim_max) ? n : limit.rlim_max;
+        limit.rlim_cur = limit.rlim_max = n;
         if (setrlimit(RLIMIT_NOFILE, &limit) < 0)
             log_msg(LOG_ERR, "Unable to set the num open file limit to %d", n);
+        else
+            log_msg(LOG_INFO, "Increased the num open file limit to %d", n);
     }
     i = list_iterator_create(conf->objs);
     while ((obj = list_next(i))) {

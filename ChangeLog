@@ -1,5 +1,8 @@
 2006-05-23  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server.c(open_objs): Modified to increase RLIMIT_NOFILE to at least
+	the hard limit.
+
 	* server.c(mux_io): Added POLLHUP & POLLERR to force read_from_obj().
 
 	* server-obj.c(resolve_retry): Fixed assertion.
