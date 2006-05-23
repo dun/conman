@@ -354,7 +354,7 @@ obj_t * create_telnet_obj(server_conf_t *conf, char *name,
         snprintf(errbuf, errlen, "specifies invalid port \"%d\"", port);
         return(NULL);
     }
-    /*  Check for duplicate console names and terminal server locations.
+    /*  Check for duplicate console names.
      */
     i = list_iterator_create(conf->objs);
     while ((telnet = list_next(i))) {
