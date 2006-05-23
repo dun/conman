@@ -608,7 +608,7 @@ static void resolve_retry(struct resolve_retry_args *args)
  *    Life would be easier if the tpoll obj was global.
  */
     assert(args != NULL);
-    assert(is_telnet_obj(telnet));
+    assert(is_telnet_obj(args->obj));
 
     args->obj->aux.telnet.timer = -1;
     if (args->obj->aux.telnet.conState == CONMAN_TELCON_DOWN)
