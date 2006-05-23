@@ -1,5 +1,7 @@
 2006-05-23  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-obj.c(resolve_retry): Cleared aux.telnet.timer.
+
 	* server-obj.c: Added resolve_retry().
 	* server.h: Added RESOLVE_RETRY_TIMEOUT.
 

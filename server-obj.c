@@ -610,6 +610,7 @@ static void resolve_retry(struct resolve_retry_args *args)
     assert(args != NULL);
     assert(is_telnet_obj(telnet));
 
+    args->obj->aux.telnet.timer = -1;
     if (args->obj->aux.telnet.conState == CONMAN_TELCON_DOWN)
         (void) connect_telnet_obj(args->obj, args->tp);
     free(args);
