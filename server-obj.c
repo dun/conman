@@ -340,7 +340,7 @@ obj_t * create_telnet_obj(server_conf_t *conf, char *name,
  *    and later completed by mux_io().
  *  Returns the new object, or NULL on error.
  *
- *  FIXME: This telnet routines should be refactored into server-telnet.c.
+ *  FIXME: The telnet routines should be refactored into server-telnet.c.
  */
     ListIterator i;
     obj_t *telnet;
