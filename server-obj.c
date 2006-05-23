@@ -218,7 +218,7 @@ obj_t * create_serial_obj(server_conf_t *conf, char *name,
  *    Note: the console is open and set for non-blocking I/O.
  *  Returns the new object, or NULL on error.
  *
- *  FIXME: This serial routines should be refactored into server-serial.c.
+ *  FIXME: The serial routines should be refactored into server-serial.c.
  */
     ListIterator i;
     obj_t *serial;
