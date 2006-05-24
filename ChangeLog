@@ -1,5 +1,7 @@
 2006-05-24  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* FAQ: Added.
+
 	* NEWS: Added.
 
 	* server.c(mux_io): Fixed bug introduced during conversion to tpoll()
