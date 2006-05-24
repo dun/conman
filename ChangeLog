@@ -1,5 +1,7 @@
 2006-05-24  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* conman.spec: Added %doc's for FAQ & NEWS.
+
 	* FAQ: Added.
 
 	* NEWS: Added.

@@ -61,6 +61,8 @@ fi
 %doc ChangeLog
 %doc COPYING
 %doc DISCLAIMER
+%doc FAQ
+%doc NEWS
 %config(noreplace) %{_sysconfdir}/conman.conf
 %config(noreplace) %{_sysconfdir}/logrotate.d/conman
 %{_sysconfdir}/init.d/conman
