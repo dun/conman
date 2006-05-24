@@ -1,0 +1,48 @@
+Version ? (????-??-??):
+- Added support for >1024 file descriptors.
+- Increased limit for number of open files.
+- Decreased startup time by moving hostname resolution to connection attempt.
+- Added support to retry connection attempt if hostname resolution fails.
+- Replaced '--with-conman-conf' configure opt with use of '--sysconfdir'.
+- Enabled tcp-wrappers support by default if possible.
+- Fixed potential NULL dereference and resource leaks.
+- Rewrote init script.
+
+Version 0.1.8.8 (2003-10-07):
+- Changed behavior of timestamp logopt.
+
+Version 0.1.8.7 (2003-10-01):
+- Added timestamp logopt to enable timestamping each line of console log.
+- Changed sanitize logopt to ignore NULs on newline transition.
+
+Version 0.1.8.6 (2003-07-24):
+- Added fallback for determining daemon's pid via use of pidfile.
+- Added '-q' cmdline opt to daemon to query daemon's pid.
+- Decreased startup time.
+- Rewrote init script.
+
+Version 0.1.8.5 (2003-07-13):
+- Added support for '%' conversion specifiers.
+- Deprecated former '&' specifier.
+
+Version 0.1.8.4 (2003-04-03):
+- Fixed init script to properly name RedHat's subsys file lock.
+
+Version 0.1.8.3 (2002-09-04):
+- Increased init script ulimit to allow >1024 file descriptors.
+
+Version 0.1.8.2 (2002-08-13):
+- Added client escape character for sending raw DEL char via '&D'.
+
+Version 0.1.8.1 (2002-07-15):
+- Added telnet connection fix for ECHO and SUPPRESS GO AHEAD requests.
+
+Version 0.1.8 (2002-05-20):
+- Added GLOBAL LOG config directive.
+- Added SERVER LOGFILE & SERVER SYSLOG config directives.
+- Added '-L' cmdline opt for software license.
+- Fixed bug where relative-path'd pidfile was not removed at exit.
+- Fixed bug where relative-path'd logs were not re-opened on sighup.
+- Fixed bug where empty strings were not detected during config parsing.
+- Fixed bug where pidfile write was still attempted if its open had failed.
+- Updated manpages.
