@@ -564,7 +564,7 @@ static void mux_io(server_conf_t *conf)
                 continue;
             }
             if (is_telnet_obj(obj)
-              && tpoll_is_set(conf->tp, obj->fd, POLLOUT)
+              && tpoll_is_set(conf->tp, obj->fd, POLLIN | POLLOUT)
               && (obj->aux.telnet.conState == CONMAN_TELCON_PENDING)) {
                 connect_telnet_obj(obj, conf->tp);
                 continue;

@@ -1,3 +1,9 @@
+2006-05-24  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server.c(mux_io): Fixed bug introduced during conversion to tpoll()
+	where connect_telnet_obj() was not being called on POLLIN for a telnet
+	obj in the CONMAN_TELCON_PENDING state thereby causing loop to spin.
+
 2006-05-23  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server.c(open_objs): Modified to increase RLIMIT_NOFILE to at least
