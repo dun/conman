@@ -1,3 +1,6 @@
+Version 0.1.9.1 (2006-05-25):
+- Fixed rpm spec file to include sysconfig/defaults file.
+
 Version 0.1.9 (2006-05-25):
 - Added support for >1024 (FD_SETSIZE) file descriptors.
 - Increased limit for number of open files.
