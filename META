@@ -1,10 +1,4 @@
-##
-# $Id$
-##
-# Metadata for RPM/TAR makefile targets
-##
-  Meta:         1
-  Date:         2003-10-07
   Name:         conman
-  Version:      0.1.8.8
-# Release:      1
+  Version:      0.1.9
+  Date:         2006-05-25
+  Author:       Chris Dunlap <cdunlap@llnl.gov>

@@ -1,5 +1,5 @@
-Version ? (????-??-??):
-- Added support for >1024 file descriptors.
+Version 0.1.9 (2006-05-25):
+- Added support for >1024 (FD_SETSIZE) file descriptors.
 - Increased limit for number of open files.
 - Decreased startup time by moving hostname resolution to connection attempt.
 - Added support to retry connection attempt if hostname resolution fails.
