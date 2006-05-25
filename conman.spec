@@ -64,8 +64,7 @@ fi
 %doc FAQ
 %doc NEWS
 %config(noreplace) %{_sysconfdir}/conman.conf
-%config(noreplace) %{_sysconfdir}/logrotate.d/conman
-%{_sysconfdir}/init.d/conman
+%config(noreplace) %{_sysconfdir}/*/*
 %{_bindir}/*
 %{_sbindir}/*
 %{_prefix}/lib/*

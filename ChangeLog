@@ -1,5 +1,7 @@
 2006-05-25  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* conman.spec: Added "%{_sysconfdir}/*/*" to files.
+
 	* : Released 0.1.9.
 
 	* FAQ: Updated.
