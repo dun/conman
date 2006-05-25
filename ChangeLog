@@ -1,5 +1,7 @@
 2006-05-25  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* FAQ: Updated.
+
 	* META, NEWS: Updated for 0.1.9 release.
 
 	* man/conman.1.in, man/conman.conf.5.in, man/conmand.8.in:
