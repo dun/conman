@@ -709,11 +709,11 @@ static void reopen_logfiles(server_conf_t *conf)
 static void accept_client(server_conf_t *conf)
 {
 /*  Accepts a new client connection on the listening socket.
- *  The new socket connection must be accept()'d within the select() loop.
+ *  The new socket connection must be accept()'d within the poll() loop.
  *    O/w, the following scenario could occur:  Read activity would be
- *    select()'d on the listen socket.  A new thread would be created to
+ *    poll()'d on the listen socket.  A new thread would be created to
  *    process this request.  Before this new thread is scheduled and the
- *    socket connection is accept()'d, the select() loop begins its next
+ *    socket connection is accept()'d, the poll() loop begins its next
  *    iteration.  It notices read activity on the listen socket from the
  *    client that has not yet been accepted, so a new thread is created.
  *    Since the listen socket is set non-blocking, this new thread would
