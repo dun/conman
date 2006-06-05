@@ -1,3 +1,13 @@
+2006-06-04  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* tpoll.c(tpoll): Restructured computation for poll() timeout.
+	Fixed bugs causing for-loop to prematurely exit when inner poll()
+	timed-out.
+	* tpoll.c(_tpoll_diff_timeval): Changed calculation to round to the
+	next millisecond.  This prevents tpoll() from briefly spinning when
+	dispatching timers expiring in less than a millisecond.
+	* tpoll.c: Changed bool values from 1/0 to true/false.
+
 2006-05-25  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* NEWS: Changed format.
@@ -324,7 +334,7 @@
 2002-09-17  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* fd.c, fd.h, util-file.c, util-file.h: Renamed "util-file" to "fd".
-	Twiddled function names and prefixed w/ "fd_".	All callers changed.
+	Twiddled function names and prefixed w/ "fd_".  All callers changed.
 
 	* Makefile.in (clean, distclean): Tweaked.
 

@@ -153,14 +153,14 @@ tpoll_create (int n)
     if ((n = _tpoll_inc_nofile (n, n)) < 0) {
         goto err;
     }
-    if (!(tp = malloc (sizeof (*tp)))) {
+    if (!(tp = malloc (sizeof (struct tpoll)))) {
         goto err;
     }
     tp->fd_pipe[ 0 ] = tp->fd_pipe[ 1 ] = -1;
     tp->timers_active = NULL;
-    tp->is_blocked = 0;
-    tp->is_signaled = 0;
-    tp->is_mutex_inited = 0;
+    tp->is_blocked = false;
+    tp->is_signaled = false;
+    tp->is_mutex_inited = false;
 
     if (!(tp->fd_array = malloc (n * sizeof (struct pollfd)))) {
         goto err;
@@ -182,7 +182,7 @@ tpoll_create (int n)
         errno = e;
         goto err;
     }
-    tp->is_mutex_inited = 1;
+    tp->is_mutex_inited = true;
 
     /*  The mutex is not locked before calling _tpoll_init() because the
      *    object handle (tp) has not yet been returned.
@@ -235,7 +235,7 @@ tpoll_destroy (tpoll_t tp)
         if ((e = pthread_mutex_destroy (&tp->mutex)) != 0) {
             log_err (errno = e, "Unable to destroy tpoll mutex");
         }
-        tp->is_mutex_inited = 0;
+        tp->is_mutex_inited = false;
     }
     free (tp);
     return;
@@ -456,7 +456,7 @@ tpoll_timeout_absolute (tpoll_t tp, callback_f cb, void *arg,
         errno = EINVAL;
         return (-1);
     }
-    if (!(t = malloc (sizeof *t))) {
+    if (!(t = malloc (sizeof (struct tpoll_timer)))) {
         return (-1);
     }
     t->fnc = cb;
@@ -571,6 +571,7 @@ tpoll (tpoll_t tp, int ms)
     int             ms_diff;
     int             ms_to_next_timer;
     int             ms_to_tv_timeout;
+    bool            do_break_on_timeout;
     struct pollfd  *fd_array_bak;
     int             n;
     int             e;
@@ -597,7 +598,7 @@ tpoll (tpoll_t tp, int ms)
             tp->timers_active = t->next;
             /*
              *  Release the mutex while performing the callback function
-             *    in case it wants to set/cancel another timer.
+             *    in case the callback wants to set/cancel another timer.
              */
             if ((e = pthread_mutex_unlock (&tp->mutex)) != 0) {
                 log_err (errno = e, "Unable to unlock tpoll mutex");
@@ -609,17 +610,20 @@ tpoll (tpoll_t tp, int ms)
                 log_err (errno = e, "Unable to lock tpoll mutex");
             }
         }
-        /*  Compute time millisecond timeout for poll().
+        /*  Compute timeout for poll().
          */
         if (ms == 0) {
             timeout = 0;
+            do_break_on_timeout = true;
         }
         else if ((ms < 0) && (!tp->timers_active)) {
-            if (tp->num_fds_used == 0) {
-                timeout = 0;            /* no fd events and no more timers */
+            if (tp->num_fds_used > 0) {
+                timeout = -1;           /* fd events but no more timers */
+                do_break_on_timeout = false;
             }
             else {
-                timeout = -1;           /* fd events but no more timers */
+                timeout = 0;            /* no fd events and no more timers */
+                do_break_on_timeout = true;
             }
         }
         else {
@@ -628,20 +632,24 @@ tpoll (tpoll_t tp, int ms)
             if ((ms < 0) && (tp->timers_active)) {
                 ms_diff =
                     _tpoll_diff_timeval (&tp->timers_active->tv, &tv_now);
+                do_break_on_timeout = false;
             }
             else if ((ms > 0) && (!tp->timers_active)) {
                 ms_diff =
                     _tpoll_diff_timeval (&tv_timeout, &tv_now);
+                do_break_on_timeout = true;
             }
-            else /* ((ms > 0) && (tp->timers_active)) */ {
-                ms_to_next_timer =
+            else if (!timercmp (&tp->timers_active->tv, &tv_timeout, >)) {
+                ms_diff =
                     _tpoll_diff_timeval (&tp->timers_active->tv, &tv_now);
-                ms_to_tv_timeout =
-                    _tpoll_diff_timeval (&tv_timeout, &tv_now);
-                ms_diff = (ms_to_next_timer < ms_to_tv_timeout) ?
-                    ms_to_next_timer : ms_to_tv_timeout;
+                do_break_on_timeout = false;
             }
-            timeout = (ms_diff >= 0) ? ms_diff : 0;
+            else {
+                ms_diff =
+                    _tpoll_diff_timeval (&tv_timeout, &tv_now);
+                do_break_on_timeout = true;
+            }
+            timeout = (ms_diff > 0) ? ms_diff : 0;
         }
         /*  Poll for events, discarding any on the "signaling pipe".
          *    A copy of the fd_array ptr is made before calling poll() in order
@@ -650,7 +658,7 @@ tpoll (tpoll_t tp, int ms)
          */
         fd_array_bak = tp->fd_array;
 
-        tp->is_blocked = 1;
+        tp->is_blocked = true;
 
         if ((e = pthread_mutex_unlock (&tp->mutex)) != 0) {
             log_err (errno = e, "Unable to unlock tpoll mutex");
@@ -660,9 +668,9 @@ tpoll (tpoll_t tp, int ms)
         if ((e = pthread_mutex_lock (&tp->mutex)) != 0) {
             log_err (errno = e, "Unable to lock tpoll mutex");
         }
-        tp->is_blocked = 0;
+        tp->is_blocked = false;
 
-        if (n <= 0) {
+        if (n < 0) {
             break;
         }
         if (tp->fd_array != fd_array_bak) {
@@ -677,7 +685,7 @@ tpoll (tpoll_t tp, int ms)
             assert (tp->num_fds_used > 0);
             break;
         }
-        if (timeout == 0) {
+        if (do_break_on_timeout) {
             break;
         }
     }
@@ -804,7 +812,7 @@ _tpoll_signal_send (tpoll_t tp)
         }
         break;
     }
-    tp->is_signaled = 1;
+    tp->is_signaled = true;
     return;
 }
 
@@ -821,7 +829,7 @@ _tpoll_signal_recv (tpoll_t tp)
     assert (tp != NULL);
     assert (tp->fd_pipe[ 0 ] > -1);
     assert (tp->fd_array[ tp->fd_pipe[ 0 ] ].fd == tp->fd_pipe[ 0 ]);
-    assert (tp->is_blocked == 0);
+    assert (tp->is_blocked == false);
 
     if (!tp->is_signaled) {
         return;
@@ -846,7 +854,7 @@ _tpoll_signal_recv (tpoll_t tp)
         }
         break;
     }
-    tp->is_signaled = 0;
+    tp->is_signaled = false;
     return;
 }
 
@@ -946,6 +954,16 @@ _tpoll_diff_timeval (struct timeval *tvp1, struct timeval *tvp0)
     }
     ms = ( (tvp1->tv_sec  - tvp0->tv_sec)  * 1000 ) +
          ( (tvp1->tv_usec - tvp0->tv_usec) / 1000 ) ;
-
+    /*
+     *  Round to the next millisecond.
+     */
+    if ((tvp1->tv_sec >= tvp0->tv_sec) &&
+            (tvp1->tv_usec > tvp0->tv_usec)) {
+        ms++;
+    }
+    else if ((tvp1->tv_sec <= tvp0->tv_sec) &&
+            ( tvp1->tv_usec < tvp0->tv_usec)) {
+        ms--;
+    }
     return (ms);
 }
