@@ -1104,35 +1104,34 @@ static int write_pidfile(const char *pidfile)
     assert(pidfile != NULL);
     assert(pidfile[0] == '/');
 
-    /*  Protect pidfile against unauthorized writes by removing
+    (void) unlink(pidfile);
+    /*
+     *  Protect pidfile against unauthorized writes by removing
      *    group+other write-access from current mask.
      */
     mask = umask(0);
     umask(mask | 022);
-
-    (void) unlink(pidfile);
     fp = fopen(pidfile, "w");
     umask(mask);
 
     if (!fp) {
         log_msg(LOG_ERR, "Unable to open pidfile \"%s\": %s",
             pidfile, strerror(errno));
-        return(-1);
     }
-    if (fprintf(fp, "%d\n", (int) getpid()) == EOF) {
+    else if (fprintf(fp, "%d\n", (int) getpid()) == EOF) {
         log_msg(LOG_ERR, "Unable to write to pidfile \"%s\": %s",
             pidfile, strerror(errno));
         (void) fclose(fp);
-        (void) unlink(pidfile);
-        return(-1);
     }
-    if (fclose(fp) == EOF) {
+    else if (fclose(fp) == EOF) {
         log_msg(LOG_ERR, "Unable to close pidfile \"%s\": %s",
             pidfile, strerror(errno));
-        (void) unlink(pidfile);
-        return(-1);
     }
-    return(0);
+    else {
+        return(0);
+    }
+    (void) unlink(pidfile);
+    return(-1);
 }
 
 
