@@ -1,5 +1,7 @@
 2006-06-04  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* tpoll.c(tpoll): Removed unused variables.
+
 	* tpoll.c(tpoll): Restructured computation for poll() timeout.
 	  Fixed bugs causing for-loop to prematurely exit when inner poll()
 	  timed-out.

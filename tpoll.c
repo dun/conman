@@ -569,8 +569,6 @@ tpoll (tpoll_t tp, int ms)
     _tpoll_timer_t  t;
     int             timeout;
     int             ms_diff;
-    int             ms_to_next_timer;
-    int             ms_to_tv_timeout;
     bool            do_break_on_timeout;
     struct pollfd  *fd_array_bak;
     int             n;
@@ -888,7 +886,7 @@ _tpoll_grow (tpoll_t tp, int num_fds_req)
     if ((num_fds_tmp = _tpoll_inc_nofile (num_fds_tmp, num_fds_req)) < 0) {
         return (-1);
     }
-    /*  Force tpoll()'s poll to unblock before we realloc the fd_array.
+    /*  Force tpoll()'s poll() to unblock before we realloc the fd_array.
      *  Then tpoll() will have to re-acquire the mutex before continuing.
      *  Since we currently have the mutex, we can now safely realloc fd_array.
      */
