@@ -1,3 +1,9 @@
+2006-06-05  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* tpoll.c(_tpoll_inc_nofile): Removed since RLIMIT_NOFILE must already
+	  be increased before the file is opened which must occur before the fd
+	  can be added to tpoll.
+
 2006-06-04  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* tpoll.c(tpoll): Removed unused variables.

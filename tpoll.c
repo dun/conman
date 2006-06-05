@@ -112,8 +112,6 @@ struct tpoll_timer {
  *  Internal Prototypes
  *****************************************************************************/
 
-static int _tpoll_inc_nofile (int max, int min);
-
 static void _tpoll_init (tpoll_t tp, tpoll_zero_t how);
 
 static void _tpoll_signal_send (tpoll_t tp);
@@ -136,8 +134,6 @@ tpoll_create (int n)
 {
 /*  Creates a new tpoll object for multiplexing timers as well as I/O over at
  *    least [n] file descriptors.  If [n] is 0, the default size will be used.
- *  The internal fd table as well as the limit on the maximum number of
- *    files the process can have open will grow as needed.
  *  Returns an opaque pointer to this new object, or NULL on error.
  */
     tpoll_t tp = NULL;
@@ -149,9 +145,6 @@ tpoll_create (int n)
 
     if (n <= 0) {
         n = TPOLL_ALLOC;
-    }
-    if ((n = _tpoll_inc_nofile (n, n)) < 0) {
-        goto err;
     }
     if (!(tp = malloc (sizeof (struct tpoll)))) {
         goto err;
@@ -376,8 +369,7 @@ tpoll_set (tpoll_t tp, int fd, short int events)
 {
 /*  Adds the bitwise-OR'd [events] to any existing events for file descriptor
  *    [fd] within the tpoll object [tp].
- *  The internal fd table as well as the limit on the maximum number of
- *    files the process can have open will grow as needed.
+ *  The internal fd table will grow as needed.
  *  Returns 0 on success, or -1 on error.
  */
     int       rc;
@@ -698,50 +690,6 @@ tpoll (tpoll_t tp, int ms)
  *  Internal Functions
  *****************************************************************************/
 
-static int
-_tpoll_inc_nofile (int max, int min)
-{
-/*  Attempts to increase the maximum number of files the process can have open
- *    to at least [min] but no more than [max].
- *  Returns the new limit on the number of open files, or -1 on error.
- */
-    struct rlimit limit;
-
-    if (max <= 0) {
-        errno = EINVAL;
-        return (-1);
-    }
-    if (min > max) {
-        min = max;
-    }
-    if (getrlimit (RLIMIT_NOFILE, &limit) < 0) {
-        log_err (errno, "Unable to get the num open file limit");
-    }
-    if (max <= limit.rlim_cur) {
-        return (max);
-    }
-    if ((max > limit.rlim_max) && (min <= limit.rlim_max)) {
-        if (limit.rlim_cur == limit.rlim_max) {
-            return (limit.rlim_cur);
-        }
-        limit.rlim_cur = limit.rlim_max;
-    }
-    else {
-        limit.rlim_cur = max;
-        limit.rlim_max = (max > limit.rlim_max) ? max : limit.rlim_max;
-    }
-    if (setrlimit (RLIMIT_NOFILE, &limit) < 0) {
-        log_msg (LOG_ERR, "Unable to increase the num open file limit to %d",
-            limit.rlim_cur);
-        return (-1);
-    }
-    log_msg (LOG_INFO, "Increased the num open file limit to %d",
-        limit.rlim_cur);
-    assert (limit.rlim_cur >= min);
-    return (limit.rlim_cur);
-}
-
-
 static void
 _tpoll_init (tpoll_t tp, tpoll_zero_t how)
 {
@@ -882,9 +830,6 @@ _tpoll_grow (tpoll_t tp, int num_fds_req)
     }
     if (num_fds_tmp < num_fds_req) {
         num_fds_tmp = num_fds_req;
-    }
-    if ((num_fds_tmp = _tpoll_inc_nofile (num_fds_tmp, num_fds_req)) < 0) {
-        return (-1);
     }
     /*  Force tpoll()'s poll() to unblock before we realloc the fd_array.
      *  Then tpoll() will have to re-acquire the mutex before continuing.
