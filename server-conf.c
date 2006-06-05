@@ -1117,26 +1117,22 @@ static int write_pidfile(const char *pidfile)
     if (!fp) {
         log_msg(LOG_ERR, "Unable to open pidfile \"%s\": %s",
             pidfile, strerror(errno));
-        goto err;
+        return(-1);
     }
     if (fprintf(fp, "%d\n", (int) getpid()) == EOF) {
         log_msg(LOG_ERR, "Unable to write to pidfile \"%s\": %s",
             pidfile, strerror(errno));
-        goto err;
+        (void) fclose(fp);
+        (void) unlink(pidfile);
+        return(-1);
     }
     if (fclose(fp) == EOF) {
         log_msg(LOG_ERR, "Unable to close pidfile \"%s\": %s",
             pidfile, strerror(errno));
-        goto err;
+        (void) unlink(pidfile);
+        return(-1);
     }
     return(0);
-
-err:
-    if (fp) {
-        (void) fclose(fp);
-        (void) unlink(pidfile);
-    }
-    return(-1);
 }
 
 
