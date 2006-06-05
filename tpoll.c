@@ -463,7 +463,7 @@ tpoll_timeout_absolute (tpoll_t tp, callback_f cb, void *arg,
         tp->timers_next_id = 1;
     }
     t_ptr = &tp->timers_active;
-    while (*t_ptr && !timercmp (&t->tv, &(*t_ptr)->tv, <)) {
+    while (*t_ptr && !timercmp (tvp, &(*t_ptr)->tv, <)) {
         t_ptr = &((*t_ptr)->next);
     }
     if (*t_ptr == tp->timers_active) {
