@@ -1,5 +1,7 @@
 2006-06-05  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* tpoll.c(_tpoll_signal_recv): Removed unnecessary assertion.
+
 	* tpoll.c(_tpoll_inc_nofile): Removed since RLIMIT_NOFILE must already
 	  be increased before the file is opened which must occur before the fd
 	  can be added to tpoll.

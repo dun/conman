@@ -775,7 +775,6 @@ _tpoll_signal_recv (tpoll_t tp)
     assert (tp != NULL);
     assert (tp->fd_pipe[ 0 ] > -1);
     assert (tp->fd_array[ tp->fd_pipe[ 0 ] ].fd == tp->fd_pipe[ 0 ]);
-    assert (tp->is_blocked == false);
 
     if (!tp->is_signaled) {
         return;
