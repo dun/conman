@@ -667,7 +667,7 @@ tpoll (tpoll_t tp, int ms)
             _tpoll_signal_recv (tp);
             continue;
         }
-        if ((n > 0) && (tp->fd_array[ tp->fd_pipe[ 0 ] ].revents & POLLIN)) {
+        if (tp->fd_array[ tp->fd_pipe[ 0 ] ].revents & POLLIN) {
             _tpoll_signal_recv (tp);
             n--;
         }
