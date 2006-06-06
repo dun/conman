@@ -1,5 +1,7 @@
 2006-06-05  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* tpoll.c: Tweaked formatting.
+
 	* tpoll.c(tpoll): Optimized tests in computation for poll() timeout.
 	  Replaced do_break_on_timeout bool with tests at bottom of for-loop.
 

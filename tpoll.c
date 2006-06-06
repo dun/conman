@@ -581,8 +581,8 @@ tpoll (tpoll_t tp, int ms)
         /*
          *  Dispatch timer events that have expired.
          */
-        while (tp->timers_active &&
-               !timercmp (&tp->timers_active->tv, &tv_now, >)) {
+        while (tp->timers_active
+                && !timercmp (&tp->timers_active->tv, &tv_now, >)) {
 
             t = tp->timers_active;
             tp->timers_active = t->next;
@@ -605,7 +605,7 @@ tpoll (tpoll_t tp, int ms)
         if (ms == 0) {
             timeout = 0;
         }
-        else if ((ms < 0) && (!tp->timers_active)) {
+        else if ((ms < 0) && !tp->timers_active) {
             if (tp->num_fds_used > 0) {
                 timeout = -1;           /* fd events but no more timers */
             }
@@ -672,11 +672,12 @@ tpoll (tpoll_t tp, int ms)
             assert (tp->num_fds_used > 0);
             break;
         }
-        if (ms == 0 || (ms < 0 && !tp->num_fds_used && !tp->timers_active)) {
+        if ((ms == 0)
+                || ((ms < 0) && !tp->num_fds_used && !tp->timers_active)) {
             break;
         }
         _tpoll_get_timeval (&tv_now, 0);
-        if (ms > 0 && !timercmp (&tv_timeout, &tv_now, >)) {
+        if ((ms > 0) && !timercmp (&tv_timeout, &tv_now, >)) {
             break;
         }
     }
@@ -900,12 +901,12 @@ _tpoll_diff_timeval (struct timeval *tvp1, struct timeval *tvp0)
     /*
      *  Round to the next millisecond.
      */
-    if ((tvp1->tv_sec >= tvp0->tv_sec) &&
-            (tvp1->tv_usec > tvp0->tv_usec)) {
+    if ((tvp1->tv_sec >= tvp0->tv_sec)
+            && (tvp1->tv_usec > tvp0->tv_usec)) {
         ms++;
     }
-    else if ((tvp1->tv_sec <= tvp0->tv_sec) &&
-            ( tvp1->tv_usec < tvp0->tv_usec)) {
+    else if ((tvp1->tv_sec <= tvp0->tv_sec)
+            && (tvp1->tv_usec < tvp0->tv_usec)) {
         ms--;
     }
     return (ms);
