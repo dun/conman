@@ -561,7 +561,6 @@ tpoll (tpoll_t tp, int ms)
     _tpoll_timer_t  t;
     int             timeout;
     int             ms_diff;
-    bool            do_break_on_timeout;
     struct pollfd  *fd_array_bak;
     int             n;
     int             e;
@@ -576,11 +575,12 @@ tpoll (tpoll_t tp, int ms)
     if ((e = pthread_mutex_lock (&tp->mutex)) != 0) {
         log_err (errno = e, "Unable to lock tpoll mutex");
     }
+    _tpoll_get_timeval (&tv_now, 0);
+
     for (;;) {
         /*
          *  Dispatch timer events that have expired.
          */
-        _tpoll_get_timeval (&tv_now, 0);
         while (tp->timers_active &&
                !timercmp (&tp->timers_active->tv, &tv_now, >)) {
 
@@ -604,40 +604,37 @@ tpoll (tpoll_t tp, int ms)
          */
         if (ms == 0) {
             timeout = 0;
-            do_break_on_timeout = true;
         }
         else if ((ms < 0) && (!tp->timers_active)) {
             if (tp->num_fds_used > 0) {
                 timeout = -1;           /* fd events but no more timers */
-                do_break_on_timeout = false;
             }
             else {
                 timeout = 0;            /* no fd events and no more timers */
-                do_break_on_timeout = true;
             }
         }
         else {
             _tpoll_get_timeval (&tv_now, 0);
 
-            if ((ms < 0) && (tp->timers_active)) {
+            if (ms < 0) {
+                assert (tp->timers_active != NULL);
                 ms_diff =
                     _tpoll_diff_timeval (&tp->timers_active->tv, &tv_now);
-                do_break_on_timeout = false;
             }
-            else if ((ms > 0) && (!tp->timers_active)) {
+            else if (!tp->timers_active) {
+                assert (ms > 0);
                 ms_diff =
                     _tpoll_diff_timeval (&tv_timeout, &tv_now);
-                do_break_on_timeout = true;
             }
             else if (!timercmp (&tp->timers_active->tv, &tv_timeout, >)) {
+                assert (ms > 0);
                 ms_diff =
                     _tpoll_diff_timeval (&tp->timers_active->tv, &tv_now);
-                do_break_on_timeout = false;
             }
             else {
+                assert (ms > 0);
                 ms_diff =
                     _tpoll_diff_timeval (&tv_timeout, &tv_now);
-                do_break_on_timeout = true;
             }
             timeout = (ms_diff > 0) ? ms_diff : 0;
         }
@@ -675,7 +672,11 @@ tpoll (tpoll_t tp, int ms)
             assert (tp->num_fds_used > 0);
             break;
         }
-        if (do_break_on_timeout) {
+        if (ms == 0 || (ms < 0 && !tp->num_fds_used && !tp->timers_active)) {
+            break;
+        }
+        _tpoll_get_timeval (&tv_now, 0);
+        if (ms > 0 && !timercmp (&tv_timeout, &tv_now, >)) {
             break;
         }
     }

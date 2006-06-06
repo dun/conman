@@ -1,5 +1,8 @@
 2006-06-05  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* tpoll.c(tpoll): Optimized tests in computation for poll() timeout.
+	  Replaced do_break_on_timeout bool with tests at bottom of for-loop.
+
 	* tpoll.c(_tpoll_signal_recv): Fixed 0-assertion.
 
 	* tpoll.c(tpoll): Optimized test for read activity on fd_pipe.
