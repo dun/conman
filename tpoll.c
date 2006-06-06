@@ -794,7 +794,7 @@ _tpoll_signal_recv (tpoll_t tp)
             log_err (0, "Got an unexpected EOF reading from tpoll's pipe");
         }
         else if (n == sizeof (c)) {
-            assert (1);                 /* is_signaled should prevent this */
+            assert (0);                 /* is_signaled should prevent this */
             continue;
         }
         break;

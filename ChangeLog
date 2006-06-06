@@ -1,5 +1,7 @@
 2006-06-05  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* tpoll.c(_tpoll_signal_recv): Fixed 0-assertion.
+
 	* tpoll.c(tpoll): Optimized test for read activity on fd_pipe.
 
 	* tpoll.c(tpoll_timeout_absolute): Optimized var in timercmp().
