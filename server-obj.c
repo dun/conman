@@ -481,7 +481,7 @@ int connect_telnet_obj(obj_t *telnet, tpoll_t tp)
          *    (cf. Stevens UNPv1 15.3 p409)
          */
         int err = 0;
-        int len = sizeof(err);
+        socklen_t len = sizeof(err);
         int rc = getsockopt(telnet->fd, SOL_SOCKET, SO_ERROR,
             (void *) &err, &len);
         /*
