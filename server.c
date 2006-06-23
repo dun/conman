@@ -72,12 +72,16 @@ static void mux_io(server_conf_t *conf);
 static void open_daemon_logfile(server_conf_t *conf);
 static void reopen_logfiles(server_conf_t *conf);
 static void accept_client(server_conf_t *conf);
-static void reset_console(obj_t *console, const char *cmd, tpoll_t tp);
+static void reset_console(obj_t *console, const char *cmd);
 static void kill_console_reset(pid_t *arg);
-
 
 static int done = 0;
 static int reconfig = 0;
+
+/*  The 'tp_global' var is to allow timers to be set or canceled
+ *    without having to pass the conf's tp var through the call stack.
+ */
+tpoll_t tp_global = NULL;
 
 
 int main(int argc, char *argv[])
@@ -100,6 +104,7 @@ int main(int argc, char *argv[])
     posix_signal(SIGTERM, exit_handler);
 
     conf = create_server_conf(argc, argv);
+    tp_global  = conf->tp;
 
     if (conf->enableVerbose)
         display_configuration(conf);
@@ -367,7 +372,7 @@ static void schedule_timestamp(server_conf_t *conf)
 
     /*  The timer id is not saved because this timer will never be canceled.
      */
-    if (tpoll_timeout_absolute (conf->tp,
+    if (tpoll_timeout_absolute (tp_global,
             (callback_f) timestamp_logfiles, conf, &tv) < 0) {
         log_err(0, "Unable to create timer for timestamping logfiles");
     }
@@ -471,7 +476,7 @@ static void open_objs(server_conf_t *conf)
         if (is_serial_obj(obj))
             open_serial_obj(obj);
         else if (is_telnet_obj(obj))
-            connect_telnet_obj(obj, conf->tp);
+            connect_telnet_obj(obj);
         else if (is_logfile_obj(obj))
             open_logfile_obj(obj, conf->enableZeroLogs);
         else
@@ -518,7 +523,7 @@ static void mux_io(server_conf_t *conf)
         while ((obj = list_next(i))) {
 
             if (obj->gotReset) {
-                reset_console(obj, conf->resetCmd, conf->tp);
+                reset_console(obj, conf->resetCmd);
             }
             if (obj->fd < 0) {
                 continue;
@@ -566,7 +571,7 @@ static void mux_io(server_conf_t *conf)
             if (is_telnet_obj(obj)
               && tpoll_is_set(conf->tp, obj->fd, POLLIN | POLLOUT)
               && (obj->aux.telnet.conState == CONMAN_TELCON_PENDING)) {
-                connect_telnet_obj(obj, conf->tp);
+                connect_telnet_obj(obj);
                 continue;
             }
             if (tpoll_is_set(conf->tp, obj->fd, POLLIN | POLLHUP | POLLERR)) {
@@ -758,7 +763,7 @@ static void accept_client(server_conf_t *conf)
 }
 
 
-static void reset_console(obj_t *console, const char *cmd, tpoll_t tp)
+static void reset_console(obj_t *console, const char *cmd)
 {
 /*  Resets the 'console' obj by performing the reset 'cmd' in a subshell.
  */
@@ -805,7 +810,7 @@ static void reset_console(obj_t *console, const char *cmd, tpoll_t tp)
         out_of_memory();
     *arg = pid;
 
-    if (tpoll_timeout_relative (tp,
+    if (tpoll_timeout_relative (tp_global,
             (callback_f) kill_console_reset, arg,
             RESET_CMD_TIMEOUT * 1000) < 0) {
         log_msg(LOG_ERR,

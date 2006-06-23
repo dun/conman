@@ -53,21 +53,16 @@
 #include "wrapper.h"
 
 
-struct resolve_retry_args {
-    obj_t *obj;
-    tpoll_t tp;
-};
-
-
 static obj_t * create_obj(
     server_conf_t *conf, char *name, int fd, enum obj_type type);
-static void resolve_retry(struct resolve_retry_args *args);
 static void reset_telnet_delay(obj_t *telnet);
 static char * sanitize_file_string(char *str);
 static char * find_trailing_int_str(char *str);
 #ifndef NDEBUG
 static int validate_obj_links(obj_t *obj);
 #endif /* !NDEBUG */
+
+extern tpoll_t tp_global;               /* defined in server.c */
 
 
 static obj_t * create_obj(
@@ -394,7 +389,7 @@ obj_t * create_telnet_obj(server_conf_t *conf, char *name,
 }
 
 
-int connect_telnet_obj(obj_t *telnet, tpoll_t tp)
+int connect_telnet_obj(obj_t *telnet)
 {
 /*  Establishes a non-blocking connect with the specified (telnet) obj.
  *  Returns 0 if the connection is successfully completed; o/w, returns -1.
@@ -409,7 +404,7 @@ int connect_telnet_obj(obj_t *telnet, tpoll_t tp)
     assert(telnet->aux.telnet.conState != CONMAN_TELCON_UP);
 
     if (telnet->aux.telnet.timer >= 0) {
-        (void) tpoll_timeout_cancel(tp, telnet->aux.telnet.timer);
+        (void) tpoll_timeout_cancel(tp_global, telnet->aux.telnet.timer);
         telnet->aux.telnet.timer = -1;
     }
 
@@ -421,22 +416,11 @@ int connect_telnet_obj(obj_t *telnet, tpoll_t tp)
         saddr.sin_family = AF_INET;
         saddr.sin_port = htons(telnet->aux.telnet.port);
         if (host_name_to_addr4(telnet->aux.telnet.host, &saddr.sin_addr) < 0) {
-            struct resolve_retry_args *args =
-                malloc(sizeof(struct resolve_retry_args));
             log_msg(LOG_WARNING, "Unable to resolve hostname \"%s\" for [%s]",
                 telnet->aux.telnet.host, telnet->name);
-            if (!args) {
-                log_msg(LOG_ERR,
-                    "Unable to retry hostname resolution of \"%s\"",
-                    telnet->aux.telnet.host);
-            }
-            else {
-                args->obj = telnet;
-                args->tp = tp;
-                telnet->aux.telnet.timer =
-                    tpoll_timeout_relative(tp, (callback_f) resolve_retry,
-                    args, RESOLVE_RETRY_TIMEOUT * 1000);
-            }
+            telnet->aux.telnet.timer = tpoll_timeout_relative(tp_global,
+                (callback_f) connect_telnet_obj, telnet,
+                RESOLVE_RETRY_TIMEOUT * 1000);
             return(-1);
         }
         if ((telnet->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
@@ -469,7 +453,7 @@ int connect_telnet_obj(obj_t *telnet, tpoll_t tp)
                 telnet->aux.telnet.conState = CONMAN_TELCON_PENDING;
             }
             else {
-                disconnect_telnet_obj(telnet, tp);
+                disconnect_telnet_obj(telnet);
             }
             return(-1);
         }
@@ -499,7 +483,7 @@ int connect_telnet_obj(obj_t *telnet, tpoll_t tp)
              */
             close(telnet->fd);          /* ignore return code */
             telnet->fd = -1;
-            disconnect_telnet_obj(telnet, tp);
+            disconnect_telnet_obj(telnet);
             return(-1);
         }
         /* Success!  Continue after if/else expr. */
@@ -533,7 +517,7 @@ int connect_telnet_obj(obj_t *telnet, tpoll_t tp)
      *    disconnect_telnet_obj() will cancel the timer and the
      *    exponential backoff will continue.
      */
-    telnet->aux.telnet.timer = tpoll_timeout_relative(tp,
+    telnet->aux.telnet.timer = tpoll_timeout_relative(tp_global,
         (callback_f) reset_telnet_delay, telnet, TELNET_MIN_TIMEOUT * 1000);
 
     send_telnet_cmd(telnet, DO, TELOPT_SGA);
@@ -543,7 +527,7 @@ int connect_telnet_obj(obj_t *telnet, tpoll_t tp)
 }
 
 
-void disconnect_telnet_obj(obj_t *telnet, tpoll_t tp)
+void disconnect_telnet_obj(obj_t *telnet)
 {
 /*  Closes the existing connection with the specified (telnet) obj
  *    and sets a timer for establishing a new connection.
@@ -558,7 +542,7 @@ void disconnect_telnet_obj(obj_t *telnet, tpoll_t tp)
         telnet->aux.telnet.host, telnet->aux.telnet.port, telnet->name));
 
     if (telnet->aux.telnet.timer >= 0) {
-        (void) tpoll_timeout_cancel(tp, telnet->aux.telnet.timer);
+        (void) tpoll_timeout_cancel(tp_global, telnet->aux.telnet.timer);
         telnet->aux.telnet.timer = -1;
     }
     if (telnet->fd >= 0) {
@@ -587,7 +571,7 @@ void disconnect_telnet_obj(obj_t *telnet, tpoll_t tp)
     /*  Set timer for establishing new connection using exponential backoff.
      */
     telnet->aux.telnet.conState = CONMAN_TELCON_DOWN;
-    telnet->aux.telnet.timer = tpoll_timeout_relative(tp,
+    telnet->aux.telnet.timer = tpoll_timeout_relative(tp_global,
         (callback_f) connect_telnet_obj, telnet,
         telnet->aux.telnet.delay * 1000);
     if (telnet->aux.telnet.delay == 0)
@@ -595,25 +579,6 @@ void disconnect_telnet_obj(obj_t *telnet, tpoll_t tp)
     else if (telnet->aux.telnet.delay < TELNET_MAX_TIMEOUT)
         telnet->aux.telnet.delay =
             MIN(telnet->aux.telnet.delay * 2, TELNET_MAX_TIMEOUT);
-    return;
-}
-
-
-static void resolve_retry(struct resolve_retry_args *args)
-{
-/*  Re-attempts to connect a downed telnet object that previously failed
- *    hostname resolution.
- *  Canceling this timer will cause a memory leak of the args struct.
- *  This is a kludge since connect_telnet_obj() requires 2 args.
- *    Life would be easier if the tpoll obj was global.
- */
-    assert(args != NULL);
-    assert(is_telnet_obj(args->obj));
-
-    args->obj->aux.telnet.timer = -1;
-    if (args->obj->aux.telnet.conState == CONMAN_TELCON_DOWN)
-        (void) connect_telnet_obj(args->obj, args->tp);
-    free(args);
     return;
 }
 
@@ -1147,7 +1112,7 @@ static int validate_obj_links(obj_t *obj)
 #endif /* !NDEBUG */
 
 
-int shutdown_obj(obj_t *obj, tpoll_t tp)
+int shutdown_obj(obj_t *obj)
 {
 /*  Shuts down the specified obj.
  *  Returns -1 if the obj is ready to be removed from the master objs list
@@ -1178,7 +1143,7 @@ int shutdown_obj(obj_t *obj, tpoll_t tp)
      *    and attempt to establish a new one.
      */
     if (is_telnet_obj(obj)) {
-        disconnect_telnet_obj(obj, tp);
+        disconnect_telnet_obj(obj);
         return(0);
     }
 
@@ -1237,10 +1202,10 @@ again:
             return(0);
         log_msg(LOG_INFO, "Unable to read from [%s]: %s",
             obj->name, strerror(errno));
-        return(shutdown_obj(obj, tp));
+        return(shutdown_obj(obj));
     }
     else if (n == 0) {
-        int rc = shutdown_obj(obj, tp);
+        int rc = shutdown_obj(obj);
         if (obj->fd >= 0)
             tpoll_set(tp, obj->fd, POLLOUT);    /* ensure buffer is flushed */
         return(rc);

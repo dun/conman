@@ -302,9 +302,9 @@ int open_serial_obj(obj_t *serial);
 obj_t * create_telnet_obj(server_conf_t *conf, char *name,
     char *host, int port, char *errbuf, int errlen);
 
-int connect_telnet_obj(obj_t *telnet, tpoll_t tp);
+int connect_telnet_obj(obj_t *telnet);
 
-void disconnect_telnet_obj(obj_t *telnet, tpoll_t tp);
+void disconnect_telnet_obj(obj_t *telnet);
 
 void destroy_obj(obj_t *obj);
 
@@ -322,7 +322,7 @@ void unlink_objs(obj_t *src, obj_t *dst);
 
 void unlink_obj(obj_t *obj);
 
-int shutdown_obj(obj_t *obj, tpoll_t tp);
+int shutdown_obj(obj_t *obj);
 
 int read_from_obj(obj_t *obj, tpoll_t tp);
 

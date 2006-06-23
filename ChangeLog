@@ -1,3 +1,18 @@
+2006-06-22  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server-obj.c(disconnect_telnet_obj): Fixed bug where a timer was set
+	  for connect_telnet_obj() taking one arg, but connect_telnet_obj()
+	  required two args.
+	* server-obj.c(resolve_retry): Removed.
+	* server-obj.c: Removed tpoll_t parm from connect_telnet_obj(),
+	  disconnect_telnet_obj(), and shutdown_obj().
+	* server-sock.c: Removed tpoll_t parm from check_console_state().
+	* server.c: Added tp_global var to allow timers to be set or canceled
+	  without having to pass the conf's tp var through the call stack.
+	* server.c: Removed tpoll_t parm from reset_console().
+	* server.h: Reverted prototypes for connect_telnet_obj(),
+	  disconnect_telnet_obj(), and shutdown_obj().
+
 2006-06-07  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server-obj.c(connect_telnet_obj): Changed variable type of the
