@@ -1,3 +1,7 @@
+conman-0.1.9.2 (2006-06-26):
+- Fixed bug where a failed telnet connection would segfault the daemon.
+- Optimized main I/O polling loop.
+
 conman-0.1.9.1 (2006-05-25):
 - Fixed rpm spec file to include sysconfig/defaults file.
 

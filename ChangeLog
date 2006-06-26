@@ -1,3 +1,7 @@
+2006-06-26  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* META, NEWS: Updated for 0.1.9.2 release.
+
 2006-06-22  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server-obj.c(disconnect_telnet_obj): Fixed bug where a timer was set
