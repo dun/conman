@@ -1,3 +1,15 @@
+2006-07-11  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server.c: Changed the "no consoles are defined" msg into an err msg.
+	* server.c: Changed begin_daemonize() and end_daemonize() so
+	  grandchild process can return status to the parent via the pipe.
+	* log.c, log.h: Added log_daemonize_fd global.
+	* server-conf.c(process_server_conf): Changed ordering of ops to
+	  obtain fcntl lock on configuration file in order to remove potential
+	  race condition.
+	* server-conf.c(write_pidfile): Replaced pidfile asserts with runtime
+	  conditional checks.
+
 2006-06-26  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* : Released 0.1.9.2.

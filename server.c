@@ -108,6 +108,8 @@ int main(int argc, char *argv[])
 
     if (conf->enableVerbose)
         display_configuration(conf);
+    if (list_is_empty(conf->objs))
+        log_err(0, "No consoles are defined in \"%s\"", conf->confFileName);
     if (conf->tStampMinutes > 0)
         schedule_timestamp(conf);
 
@@ -148,7 +150,9 @@ static int begin_daemonize(void)
     struct rlimit limit;
     int fdPair[2];
     pid_t pid;
+    int n;
     char c;
+    int rc;
 
     /*  Clear file mode creation mask.
      */
@@ -169,6 +173,10 @@ static int begin_daemonize(void)
     if (pipe(fdPair) < 0)
         log_err(errno, "Unable to create pipe");
 
+    /*  Set the fd used by log_err() to return status back to the parent.
+     */
+    log_daemonize_fd = fdPair[1];
+
     /*  Automatically background the process and
      *    ensure child is not a process group leader.
      */
@@ -178,9 +186,10 @@ static int begin_daemonize(void)
     else if (pid > 0) {
         if (close(fdPair[1]) < 0)
             log_err(errno, "Unable to close write-pipe in parent");
-        if (read(fdPair[0], &c, 1) < 0)
-            log_err(errno, "Read failed while awaiting EOF from grandchild");
-        exit(0);
+        if ((n = read(fdPair[0], &c, 1)) < 0)
+            log_err(errno, "Unable to read status from grandchild");
+        rc = ((n == 1) && (c != 0)) ? 1 : 0;
+        exit(rc);
     }
     if (close(fdPair[0]) < 0)
         log_err(errno, "Unable to close read-pipe in child");
@@ -215,30 +224,30 @@ static void end_daemonize(int fd)
 /*  Completes the daemonization of the process,
  *    where 'fd' is the value returned by begin_daemonize().
  */
-    int devNull;
+    int devnull;
 
     /*  Ensure process does not keep a directory in use.
-     *
-     *  XXX: Avoid relative pathname from this point on!
+     *  Avoid relative pathname from this point on!
      */
     if (chdir("/") < 0)
         log_err(errno, "Unable to change to root directory");
 
     /*  Discard data to/from stdin, stdout, and stderr.
      */
-    if ((devNull = open("/dev/null", O_RDWR)) < 0)
+    if ((devnull = open("/dev/null", O_RDWR)) < 0)
         log_err(errno, "Unable to open \"/dev/null\"");
-    if (dup2(devNull, STDIN_FILENO) < 0)
+    if (dup2(devnull, STDIN_FILENO) < 0)
         log_err(errno, "Unable to dup \"/dev/null\" onto stdin");
-    if (dup2(devNull, STDOUT_FILENO) < 0)
+    if (dup2(devnull, STDOUT_FILENO) < 0)
         log_err(errno, "Unable to dup \"/dev/null\" onto stdout");
-    if (dup2(devNull, STDERR_FILENO) < 0)
+    if (dup2(devnull, STDERR_FILENO) < 0)
         log_err(errno, "Unable to dup \"/dev/null\" onto stderr");
-    if (close(devNull) < 0)
+    if (close(devnull) < 0)
         log_err(errno, "Unable to close \"/dev/null\"");
 
     /*  Signal grandparent process to terminate.
      */
+    log_daemonize_fd = -1;
     if ((fd >= 0) && (close(fd) < 0))
         log_err(errno, "Unable to close write-pipe in grandchild");
 
@@ -497,12 +506,9 @@ static void mux_io(server_conf_t *conf)
     int n;
     obj_t *obj;
 
-    assert (conf->tp != NULL);
+    assert(conf->tp != NULL);
+    assert(!list_is_empty(conf->objs));
 
-    if (list_is_empty(conf->objs)) {
-        log_msg(LOG_NOTICE, "No consoles are defined in this configuration");
-        return;
-    }
     i = list_iterator_create(conf->objs);
 
     while (!done) {

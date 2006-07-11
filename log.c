@@ -39,6 +39,7 @@
 #include <string.h>
 #include <syslog.h>
 #include <time.h>
+#include <unistd.h>
 #include "log.h"
 
 
@@ -51,6 +52,8 @@ static FILE * log_file = NULL;
 static int    log_file_priority = -1;
 static int    log_file_timestamp = 0;
 static int    log_syslog = 0;
+
+int           log_daemonize_fd = -1;
 
 
 static void log_aux(int priority, int errnum,
@@ -127,6 +130,10 @@ void log_err(int errnum, const char *format, ...)
     if (getenv("DEBUG"))
         abort();                        /* generate core for debugging */
 #endif /* !NDEBUG */
+    if (log_daemonize_fd > -1) {
+        int c = 1;
+        (void) write(log_daemonize_fd, &c, 1);
+    }
     exit(1);
 }
 

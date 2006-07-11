@@ -264,9 +264,7 @@ void destroy_server_conf(server_conf_t *conf)
     if (conf->logFmtName)
         free(conf->logFmtName);
     if (conf->pidFileName) {
-        if (unlink(conf->pidFileName) < 0)
-            log_msg(LOG_ERR, "Unable to delete pidfile \"%s\": %s",
-                conf->pidFileName, strerror(errno));
+        (void) unlink(conf->pidFileName);
         free(conf->pidFileName);
     }
     if (conf->resetCmd)
@@ -308,21 +306,16 @@ static void process_server_conf(server_conf_t *conf, int argc, char *argv[])
         signal_daemon(conf);
         exit(0);
     }
-    if ((pid = is_write_lock_blocked(conf->fd)) > 0) {
-        log_err(0, "Configuration \"%s\" in use by pid %d",
-            conf->confFileName, pid);
-    }
     /*  Must use a read lock here since the file is only open for reading.
-     *    But exclusive access is ensured by testing for a write lock above.
-     *  Truth be told, use of a read lock here provides a small window for
-     *    a race condition where multiple processes could obtain locks.
-     *    But since the config file could be read-only, this seems an
-     *    acceptable risk.  You've got to ask yourself one question:
-     *    Do I feel lucky?  Well, do ya, punk?
+     *    Exclusive access is ensured by testing for a write lock afterwards.
      */
     if (get_read_lock(conf->fd) < 0) {
         log_err(0, "Unable to lock configuration \"%s\"",
             conf->confFileName);
+    }
+    if ((pid = is_write_lock_blocked(conf->fd)) > 0) {
+        log_err(0, "Configuration \"%s\" in use by pid %d",
+            conf->confFileName, pid);
     }
     if (conf->pidFileName) {
         if (write_pidfile(conf->pidFileName) < 0) {
@@ -1094,16 +1087,20 @@ static int write_pidfile(const char *pidfile)
 /*  Creates the specified pidfile.
  *  Returns 0 on success, or -1 on error.
  *
- *  The pidfile must be created after daemonize() has finished forking.
+ *  The pidfile must be created after daemonize has finished forking.
  *  The pidfile must be specified with an absolute pathname; o/w, the
  *    unlink() call at exit will fail because the daemon has chdir()'d.
  */
     mode_t mask;
     FILE *fp;
 
-    assert(pidfile != NULL);
-    assert(pidfile[0] == '/');
-
+    if (pidfile == NULL) {
+        return(0);
+    }
+    if (pidfile[0] != '/') {
+        log_msg(0, "Unable to create relative-path pidfile \"%s\"", pidfile);
+        return(-1);
+    }
     (void) unlink(pidfile);
     /*
      *  Protect pidfile against unauthorized writes by removing

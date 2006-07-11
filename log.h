@@ -1,7 +1,7 @@
 /*****************************************************************************\
  *  $Id$
  *****************************************************************************
- *  Copyright (C) 2001-2002 The Regents of the University of California.
+ *  Copyright (C) 2001-2006 The Regents of the University of California.
  *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
  *  Written by Chris Dunlap <cdunlap@llnl.gov>.
  *  UCRL-CODE-2002-009.
@@ -35,6 +35,13 @@
 
 #include <stdio.h>
 #include <syslog.h>
+
+
+/*  Global used by the daemonize routines to allow the grandchild process to
+ *    return status back to the parent process.  This is set to a valid fd in
+ *    begin_daemonize() and then cleared in end_daemonize().
+ */
+extern int log_daemonize_fd;
 
 
 /*  DPRINTF((level, format, ...))
