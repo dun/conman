@@ -63,6 +63,7 @@ fi
 %doc DISCLAIMER
 %doc FAQ
 %doc NEWS
+%doc README
 %config(noreplace) %{_sysconfdir}/conman.conf
 %config(noreplace) %{_sysconfdir}/*/*
 %{_bindir}/*
