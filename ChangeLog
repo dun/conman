@@ -1,5 +1,7 @@
 2006-07-11  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server.c(main): Changed wording of "no consoles are defined" msg.
+
 	* README: Added.
 	* conman.spec: Added README.
 

@@ -109,7 +109,8 @@ int main(int argc, char *argv[])
     if (conf->enableVerbose)
         display_configuration(conf);
     if (list_is_empty(conf->objs))
-        log_err(0, "No consoles are defined in \"%s\"", conf->confFileName);
+        log_err(0, "Configuration \"%s\" has no consoles defined",
+            conf->confFileName);
     if (conf->tStampMinutes > 0)
         schedule_timestamp(conf);
 
