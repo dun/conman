@@ -1,5 +1,9 @@
 2006-07-12  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* DISCLAIMER: Updated.
+
+	* COPYING, INSTALL: Updated.
+
 	* auxdir/config.guess, auxdir/config.sub, auxdir/install-sh,
 	  auxdir/mkinstalldirs: Updated.
 
