@@ -1,28 +1,28 @@
-/*****************************************************************************\
+/*****************************************************************************
  *  $Id$
  *****************************************************************************
  *  Copyright (C) 2001-2006 The Regents of the University of California.
- *  Produced at Lawrence Livermore National Laboratory (cf, DISCLAIMER).
+ *  Produced at Lawrence Livermore National Laboratory.
  *  Written by Chris Dunlap <cdunlap@llnl.gov>.
  *  UCRL-CODE-2002-009.
- *  
- *  This file is part of ConMan, a remote console management program.
- *  For details, see <http://www.llnl.gov/linux/conman/>.
- *  
- *  ConMan is free software; you can redistribute it and/or modify it under
- *  the terms of the GNU General Public License as published by the Free
- *  Software Foundation; either version 2 of the License, or (at your option)
- *  any later version.
- *  
- *  ConMan is distributed in the hope that it will be useful, but WITHOUT ANY
- *  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- *  FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- *  details.
- *  
+ *
+ *  This file is part of ConMan: The Console Manager.
+ *  For details, see <http://home.gna.org/conman/>.
+ *
+ *  This is free software; you can redistribute it and/or modify it
+ *  under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This is distributed in the hope that it will be useful, but WITHOUT
+ *  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ *  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ *  for more details.
+ *
  *  You should have received a copy of the GNU General Public License along
- *  with ConMan; if not, write to the Free Software Foundation, Inc.,
- *  59 Temple Place, Suite 330, Boston, MA  02111-1307  USA.
-\*****************************************************************************/
+ *  with this program; if not, write to the Free Software Foundation, Inc.,
+ *  51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA.
+ *****************************************************************************/
 
 
 #ifdef HAVE_CONFIG_H
@@ -40,14 +40,15 @@
 
 
 const char *conman_license = \
+    "ConMan: The Console Manager\n\n"                                         \
     "Copyright (C) 2001-2006 The Regents of the University of California.\n"  \
     "Produced at Lawrence Livermore National Laboratory.\n"                   \
     "Written by Chris Dunlap <cdunlap@llnl.gov>.\n"                           \
-    "http://www.llnl.gov/linux/conman/\n"                                     \
+    "http://home.gna.org/conman/\n"                                           \
     "UCRL-CODE-2002-009\n\n"                                                  \
     "ConMan is free software; you can redistribute it and/or modify it\n"     \
     "under the terms of the GNU General Public License as published by\n"     \
-    "the Free Software Foundation.\n";
+    "the Free Software Foundation.\n\n";
 
 
 char *proto_strs[] = {
@@ -190,7 +191,7 @@ void get_tty_raw(struct termios *tty, int fd)
     /*  Ignore modem status lines for locally attached device.
      */
     tty->c_cflag |= CLOCAL;
-  
+
     /*  Disable echo, canonical mode, extended input processing, signal chars.
      */
     tty->c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);

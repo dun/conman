@@ -6,8 +6,8 @@
  *  Written by Chris Dunlap <cdunlap@llnl.gov>.
  *  UCRL-CODE-2002-009.
  *
- *  This file is part of ConMan, a remote console management program.
- *  For details, see <http://www.llnl.gov/linux/conman/>.
+ *  This file is part of ConMan: The Console Manager.
+ *  For details, see <http://home.gna.org/conman/>.
  *
  *  This is free software; you can redistribute it and/or modify it
  *  under the terms of the GNU General Public License as published by

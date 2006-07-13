@@ -4,10 +4,10 @@ Name:		conman
 Version:	0
 Release:	0
 
-Summary:	ConMan - The Console Manager
+Summary:	ConMan: The Console Manager
 Group:		Applications/Communications
 License:	GPL
-URL:		http://www.llnl.gov/linux/conman/
+URL:		http://home.gna.org/conman/
 
 BuildRoot:	%{_tmppath}/%{name}-%{version}
 

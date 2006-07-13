@@ -223,8 +223,4 @@ Foundation.
 .BR conman (1),
 .BR conmand (8).
 .PP
-The ConMan FTP site:
-  \fBftp://ftp.llnl.gov/pub/linux/conman/\fR
-.PP
-The ConMan Web page:
-  \fBhttp://www.llnl.gov/linux/conman/\fR
+\fBhttp://home.gna.org/conman/\fR
