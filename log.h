@@ -76,6 +76,15 @@ void log_set_syslog(char *ident, int facility);
  *  Note that only the trailing "filename" component of (ident) is used.
  */
 
+void log_set_err_pipe(int fd);
+/*
+ *  Sets the file-descriptor for the write-half of the daemonize pipe
+ *    connecting the original parent process to the forked grandchild process
+ *    under which the daemon will continue running.
+ *  If set (ie, fd >= 0), log_err() will return an error status back to the
+ *    original parent process.
+ */
+
 void log_err(int errnum, const char *format, ...);
 /*
  *  Generates a fatal-error message according to the printf-style (format)

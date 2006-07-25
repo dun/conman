@@ -52,8 +52,7 @@ static FILE * log_file = NULL;
 static int    log_file_priority = -1;
 static int    log_file_timestamp = 0;
 static int    log_syslog = 0;
-
-int           log_daemonize_fd = -1;
+static int    log_fd_daemonize = -1;
 
 
 static void log_aux(int priority, int errnum,
@@ -118,6 +117,13 @@ void log_set_syslog(char *ident, int facility)
 }
 
 
+void log_set_err_pipe(int fd)
+{
+    log_fd_daemonize = (fd >= 0) ? fd : -1;
+    return;
+}
+
+
 void log_err(int errnum, const char *format, ...)
 {
     va_list vargs;
@@ -127,12 +133,18 @@ void log_err(int errnum, const char *format, ...)
     va_end(vargs);
 
 #ifndef NDEBUG
-    if (getenv("DEBUG"))
-        abort();                        /* generate core for debugging */
+    /*  Generate core for debugging.
+     */
+    if (getenv("DEBUG")) {
+        abort();
+    }
 #endif /* !NDEBUG */
-    if (log_daemonize_fd > -1) {
-        int c = 1;
-        (void) write(log_daemonize_fd, &c, 1);
+
+    /*  Return error status across "daemonize" pipe.
+     */
+    if (log_fd_daemonize >= 0) {
+        unsigned char c = 1;
+        (void) write(log_fd_daemonize, &c, sizeof(c));
     }
     exit(1);
 }

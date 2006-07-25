@@ -152,8 +152,7 @@ static int begin_daemonize(void)
     int fdPair[2];
     pid_t pid;
     int n;
-    char c;
-    int rc;
+    unsigned char c;
 
     /*  Clear file mode creation mask.
      */
@@ -176,7 +175,7 @@ static int begin_daemonize(void)
 
     /*  Set the fd used by log_err() to return status back to the parent.
      */
-    log_daemonize_fd = fdPair[1];
+    log_set_err_pipe(fdPair[1]);
 
     /*  Automatically background the process and
      *    ensure child is not a process group leader.
@@ -186,14 +185,13 @@ static int begin_daemonize(void)
     }
     else if (pid > 0) {
         if (close(fdPair[1]) < 0)
-            log_err(errno, "Unable to close write-pipe in parent");
-        if ((n = read(fdPair[0], &c, 1)) < 0)
-            log_err(errno, "Unable to read status from grandchild");
-        rc = ((n == 1) && (c != 0)) ? 1 : 0;
-        exit(rc);
+            log_err(errno, "Unable to close write-pipe in parent process");
+        if ((n = read(fdPair[0], &c, sizeof (c))) < 0)
+            log_err(errno, "Unable to read status from grandchild process");
+        exit (((n == 1) && (c != 0)) ? 1 : 0);
     }
     if (close(fdPair[0]) < 0)
-        log_err(errno, "Unable to close read-pipe in child");
+        log_err(errno, "Unable to close read-pipe in child process");
 
     /*  Become a session leader and process group leader
      *    with no controlling tty.
@@ -246,11 +244,14 @@ static void end_daemonize(int fd)
     if (close(devnull) < 0)
         log_err(errno, "Unable to close \"/dev/null\"");
 
+    /*  Clear the fd used by log_err() to return status back to the parent.
+     */
+    log_set_err_pipe(-1);
+
     /*  Signal grandparent process to terminate.
      */
-    log_daemonize_fd = -1;
     if ((fd >= 0) && (close(fd) < 0))
-        log_err(errno, "Unable to close write-pipe in grandchild");
+        log_err(errno, "Unable to close write-pipe in grandchild process");
 
     return;
 }
