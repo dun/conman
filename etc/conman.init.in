@@ -22,10 +22,12 @@
 ###############################################################################
 
 unset DESC DAEMON CONFIG OPTIONS PIDFILE NICE USER SIGHUP_RELOAD
+
 prefix="@prefix@"
 exec_prefix="@exec_prefix@"
 sbindir="@sbindir@"
 sysconfdir="@sysconfdir@"
+localstatedir="@localstatedir@"
 
 DESC="ConMan"
 DAEMON="$sbindir/conmand"
@@ -40,7 +42,7 @@ DAEMON="$sbindir/conmand"
 
 PATH=/sbin:/usr/sbin:/usr/local/sbin:/bin:/usr/bin:/usr/local/bin
 DAEMON_NAME="`basename \"$DAEMON\"`"
-SERVICE_NAME="`echo $0 | perl -pe 's,(.*/)?(.*?)(\.init)?$,$2,'`"
+SERVICE_NAME="`basename \"$0\" .init`"
 SIGTERM_TIMEOUT="3"
 
 # Read configuration defaults to override variables:
@@ -70,17 +72,16 @@ service_init ()
   STATUS=0
   [ -n "$SIGHUP_RELOAD" -a "$SIGHUP_RELOAD" != 0 ] \
     && RELOAD=1 || unset RELOAD
-  expr "$NICE" : '[0-9]*$' >/dev/null 2>&1 && NICE="+$NICE"
-  [ -n "$USER" -a "`id -u 2>/dev/null`" -ne 0 ] && unset USER
+  expr -- "$NICE" : '[0-9]*$' >/dev/null 2>&1 && NICE="+$NICE"
+  [ "`id | sed 's/^uid=\([0-9]*\).*/\1/'`" -ne 0 ] && unset USER
 
   if [ -f /etc/debian_version -a -x /sbin/start-stop-daemon ]; then
     SYSTEM="DEBIAN"
   elif [ -f /etc/redhat-release -a -r /etc/init.d/functions ]; then
     SYSTEM="REDHAT"
     . /etc/init.d/functions
-    RH_SUBSYS_BASENAME="`echo $0 | perl -pe 's,(.*/)?([SK][0-9]{2})?(.*),$3,'`"
-    RH_SUBSYS="/var/lock/subsys/$RH_SUBSYS_BASENAME"
-    INITLOG_ARGS=""                     # disable RH suppression of stderr msgs
+    RH_SUBSYS_BASE="`basename \"$0\" | sed 's/^[SK][0-9][0-9]*//'`"
+    RH_SUBSYS="/var/lock/subsys/$RH_SUBSYS_BASE"
   elif [ -f /etc/SuSE-release -a -r /etc/rc.status ]; then
     SYSTEM="SUSE"
     . /etc/rc.status
@@ -119,42 +120,52 @@ service_start ()
   case $SYSTEM in
     DEBIAN)
       printf "$DAEMON_NAME"
-      start-stop-daemon --start --quiet \
-        ${NICE:+"--nicelevel"} ${NICE:+"$NICE"} \
-        ${USER:+"--chuid"} ${USER:+"$USER"} \
-        ${PIDFILE:+"--pidfile"} ${PIDFILE:+"$PIDFILE"} \
-        --exec "$DAEMON" -- $OPTIONS
-      STATUS=$?
+      if $0 status >/dev/null 2>&1; then
+        STATUS=0
+      else
+        ERROR=`start-stop-daemon --start --quiet \
+          ${NICE:+"--nicelevel"} ${NICE:+"$NICE"} \
+          ${USER:+"--chuid"} ${USER:+"$USER"} \
+          ${PIDFILE:+"--pidfile"} ${PIDFILE:+"$PIDFILE"} \
+          --exec "$DAEMON" -- $OPTIONS 2>&1`
+        STATUS=$?
+      fi
       [ $STATUS -eq 0 ] && echo "." || echo " (failed)."
+      [ $STATUS -ne 0 -a -n "$ERROR" ] && echo "$ERROR"
       ;;
     REDHAT)
-      if [ "$PIDFILE" == "/var/run/$DAEMON_NAME.pid" -a -r "$PIDFILE" ] \
-          || ! status "$DAEMON" >/dev/null; then
+      if $0 status >/dev/null 2>&1; then
+        STATUS=0
+      else
         daemon ${NICE:+"$NICE"} ${USER:+"--user"} ${USER:+"$USER"} \
           "$DAEMON" $OPTIONS
         STATUS=$?
-      else
-        STATUS=0
       fi
       echo
-      [ $STATUS -eq 0 ] && touch "$RH_SUBSYS" 2>/dev/null
+      [ $STATUS -eq 0 ] && touch "$RH_SUBSYS" >/dev/null 2>&1
       ;;
     SUSE)
-      startproc ${NICE:+"-n"} ${NICE:+"$NICE"} ${USER:+"-u"} ${USER:+"$USER"} \
-        ${PIDFILE:+"-p"} ${PIDFILE:+"$PIDFILE"} "$DAEMON" $OPTIONS
+      ERROR=`startproc ${NICE:+"-n"} ${NICE:+"$NICE"} \
+        ${USER:+"-u"} ${USER:+"$USER"} \
+        ${PIDFILE:+"-p"} ${PIDFILE:+"$PIDFILE"} \
+        "$DAEMON" $OPTIONS 2>&1`
       rc_status -v
+      STATUS=$?
+      [ $STATUS -ne 0 -a -n "$ERROR" ] && echo "$ERROR"
       ;;
     LSB)
       if [ -n "$USER" ]; then
-        su "$USER" -c "/sbin/start_daemon ${NICE:+\"-n\"} ${NICE:+\"$NICE\"} \
-          ${PIDFILE:+\"-p\"} ${PIDFILE:+\"$PIDFILE\"} \"$DAEMON\" $OPTIONS" \
-          2>/dev/null
+        ERROR=`su "$USER" -c "/sbin/start_daemon \
+          ${NICE:+\"-n\"} ${NICE:+\"$NICE\"} \
+          ${PIDFILE:+\"-p\"} ${PIDFILE:+\"$PIDFILE\"} \
+          \"$DAEMON\" $OPTIONS" 2>&1`
       else
-        start_daemon ${NICE:+"-n"} ${NICE:+"$NICE"} \
-          ${PIDFILE:+"-p"} ${PIDFILE:+"$PIDFILE"} "$DAEMON" $OPTIONS
+        ERROR=`start_daemon ${NICE:+"-n"} ${NICE:+"$NICE"} \
+          ${PIDFILE:+"-p"} ${PIDFILE:+"$PIDFILE"} "$DAEMON" $OPTIONS 2>&1`
       fi
       STATUS=$?
       [ $STATUS -eq 0 ] && log_success_msg || log_failure_msg
+      [ $STATUS -ne 0 -a -n "$ERROR" ] && echo "$ERROR"
       ;;
     *)
       pids=`query_pids "$DAEMON" "$PIDFILE"`
@@ -164,13 +175,14 @@ service_start ()
       else
         [ -n "$NICE" ] && nice="nice -n $NICE"
         if [ -n "$USER" ]; then
-          su "$USER" -c "$nice \"$DAEMON\" $OPTIONS" 2>/dev/null
+          ERROR=`su "$USER" -c "$nice \"$DAEMON\" $OPTIONS" 2>&1`
         else
-          $nice "$DAEMON" $OPTIONS 2>/dev/null
+          ERROR=`$nice "$DAEMON" $OPTIONS 2>&1`
         fi
         STATUS=$?
       fi
       [ $STATUS -eq 0 ] && echo "success" || echo "failed"
+      [ $STATUS -ne 0 -a -n "$ERROR" ] && echo "$ERROR"
       ;;
   esac
 }
@@ -187,17 +199,26 @@ service_stop ()
   case $SYSTEM in
     DEBIAN)
       printf "$DAEMON_NAME"
-      start-stop-daemon --stop --quiet \
-        ${PIDFILE:+"--pidfile"} ${PIDFILE:+"$PIDFILE"} --name "$DAEMON_NAME" \
-        ${SIGTERM_TIMEOUT:+"--retry"} ${SIGTERM_TIMEOUT:+"$SIGTERM_TIMEOUT"}
-      STATUS=$?
+      if ! $0 status >/dev/null 2>&1; then
+        STATUS=0
+      else
+        start-stop-daemon --stop --quiet \
+          ${PIDFILE:+"--pidfile"} ${PIDFILE:+"$PIDFILE"} \
+          --name "$DAEMON_NAME" ${SIGTERM_TIMEOUT:+"--retry"} \
+          ${SIGTERM_TIMEOUT:+"$SIGTERM_TIMEOUT"} >/dev/null 2>&1
+        STATUS=$?
+      fi
       [ $STATUS -eq 0 ] && echo "." || echo " (failed)."
       ;;
     REDHAT)
-      killproc "$DAEMON"
-      STATUS=$?
+      if ! $0 status >/dev/null 2>&1; then
+        STATUS=0
+      else
+        killproc "$DAEMON"
+        STATUS=$?
+      fi
       echo
-      [ $STATUS -eq 0 ] && rm -f "$RH_SUBSYS" 2>/dev/null
+      [ $STATUS -eq 0 ] && rm -f "$RH_SUBSYS" >/dev/null 2>&1
       ;;
     SUSE)
       killproc ${PIDFILE:+"-p"} ${PIDFILE:+"$PIDFILE"} \
@@ -228,8 +249,11 @@ service_restart ()
 # According to LSB, running "restart" on a service already stopped or not
 #   running should be considered successful.
 ##
-  $0 status >/dev/null && $0 stop
-  $0 start
+  if $0 status >/dev/null 2>&1; then
+    $0 stop && $0 start
+  else
+    $0 start
+  fi
 
   case $SYSTEM in
     SUSE)
@@ -255,11 +279,11 @@ service_try_restart ()
       STATUS=$?
       ;;
     SUSE)
-      $0 status >/dev/null && $0 restart || rc_reset
+      $0 status >/dev/null 2>&1 && $0 restart || rc_reset
       rc_status
       ;;
     DEBIAN|LSB|*)
-      $0 status >/dev/null && $0 restart || :
+      $0 status >/dev/null 2>&1 && $0 restart || :
       STATUS=$?
       ;;
   esac
@@ -278,7 +302,8 @@ service_reload ()
       printf "$DAEMON_NAME"
       if [ -n "$RELOAD" ]; then
         start-stop-daemon --stop --quiet --signal HUP \
-          ${PIDFILE:+"--pidfile"} ${PIDFILE:+"$PIDFILE"} --name "$DAEMON_NAME"
+          ${PIDFILE:+"--pidfile"} ${PIDFILE:+"$PIDFILE"} \
+          --name "$DAEMON_NAME" >/dev/null 2>&1
         STATUS=$?
       fi
       [ $STATUS -eq 0 ] && echo "." || echo " (failed)."
@@ -401,7 +426,7 @@ query_pids ()
   else
     pids=`(ps awx -o pid -o command || ps -e -f -o pid -o args) 2>/dev/null \
       | tail +2 | egrep "( |/)$PROCNAME( |$)" | grep -v egrep \
-      | awk '{print $1}' | sort -n | tr '\012' ' '`
+      | sed 's/ *\([0-9]*\).*/\1/' | sort -n | tr '\012' ' '`
     [ -n "$pids" ] && rc=0 || rc=1
   fi
 
@@ -409,8 +434,8 @@ query_pids ()
   if [ -n "$pids" -a -r "$PIDFILE" ]; then
     read pid_line < "$PIDFILE"
     for pid in $pid_line; do
-      expr "$pid" : '[0-9]*$' >/dev/null 2>&1 \
-        && expr " $pids " : ".* $pid .*" >/dev/null 2>&1 \
+      expr -- "$pid" : '[0-9]*$' >/dev/null 2>&1 \
+        && expr -- " $pids " : ".* $pid .*" >/dev/null 2>&1 \
         && pids_running="$pids_running $pid"
     done
     [ -n "$pids_running" ] && pids=$pids_running
@@ -425,16 +450,15 @@ query_exec ()
 # Returns 0 if EXECNAME is an executable file within the PATH.
 ##
   EXECNAME="$1"
-  IFS_BAK="$IFS"
   rc=1
 
+  IFS_BAK="$IFS"
   IFS=:
   for dir in $PATH; do
     [ -x "$dir/$EXECNAME" ] || continue
     rc=0
     break
   done
-
   IFS="$IFS_BAK"
   return $rc
 }
@@ -449,7 +473,7 @@ signal_process ()
   pids=`query_pids "$DAEMON" "$PIDFILE"`
   [ $? -ne 0 -o -z "$pids" ] && return 2
 
-  kill ${SIGNUM:+"-$SIGNUM"} $pids 2>/dev/null
+  kill ${SIGNUM:+"-$SIGNUM"} $pids >/dev/null 2>&1
   [ $? -ne 0 ] && return 1
   [ -n "$SIGNUM" ] && return 0
 
@@ -458,8 +482,10 @@ signal_process ()
   [ -z "$SIGTERM_TIMEOUT" ] && return 1
 
   sleep "$SIGTERM_TIMEOUT"
-  kill -KILL $pids 2>/dev/null
-  [ $? -ne 0 ] && return 1 || return 0
+  kill -KILL $pids >/dev/null 2>&1
+  pids=`query_pids "$DAEMON" "$PIDFILE"`
+  [ $? -ne 0 -o -z "$pids" ] && return 0
+  return 1
 }
 
 ###############################################################################
