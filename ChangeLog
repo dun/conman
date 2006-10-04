@@ -20,7 +20,7 @@
 
 2006-07-11  Chris Dunlap  <cdunlap@llnl.gov>
 
-	* server.c(main): Changed wording of "no consoles are defined" msg.
+	* server.c (main): Changed wording of "no consoles are defined" msg.
 
 	* README: Added.
 	* conman.spec: Added README.
@@ -29,10 +29,10 @@
 	* server.c: Changed begin_daemonize() and end_daemonize() so
 	  grandchild process can return status to the parent via the pipe.
 	* log.c, log.h: Added log_daemonize_fd global.
-	* server-conf.c(process_server_conf): Changed ordering of ops to
+	* server-conf.c (process_server_conf): Changed ordering of ops to
 	  obtain fcntl lock on configuration file in order to remove potential
 	  race condition.
-	* server-conf.c(write_pidfile): Replaced pidfile asserts with runtime
+	* server-conf.c (write_pidfile): Replaced pidfile asserts with runtime
 	  conditional checks.
 
 2006-06-26  Chris Dunlap  <cdunlap@llnl.gov>
@@ -43,10 +43,10 @@
 
 2006-06-22  Chris Dunlap  <cdunlap@llnl.gov>
 
-	* server-obj.c(disconnect_telnet_obj): Fixed bug where a timer was set
+	* server-obj.c (disconnect_telnet_obj): Fixed bug where a timer was set
 	  for connect_telnet_obj() taking one arg, but connect_telnet_obj()
 	  required two args.
-	* server-obj.c(resolve_retry): Removed.
+	* server-obj.c (resolve_retry): Removed.
 	* server-obj.c: Removed tpoll_t parm from connect_telnet_obj(),
 	  disconnect_telnet_obj(), and shutdown_obj().
 	* server-sock.c: Removed tpoll_t parm from check_console_state().
@@ -58,40 +58,40 @@
 
 2006-06-07  Chris Dunlap  <cdunlap@llnl.gov>
 
-	* server-obj.c(connect_telnet_obj): Changed variable type of the
+	* server-obj.c (connect_telnet_obj): Changed variable type of the
 	  fifth argument passed to getsockopt() from int to socklen_t.
 
 2006-06-05  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* tpoll.c: Tweaked formatting.
 
-	* tpoll.c(tpoll): Optimized tests in computation for poll() timeout.
+	* tpoll.c (tpoll): Optimized tests in computation for poll() timeout.
 	  Replaced do_break_on_timeout bool with tests at bottom of for-loop.
 
-	* tpoll.c(_tpoll_signal_recv): Fixed 0-assertion.
+	* tpoll.c (_tpoll_signal_recv): Fixed 0-assertion.
 
-	* tpoll.c(tpoll): Optimized test for read activity on fd_pipe.
+	* tpoll.c (tpoll): Optimized test for read activity on fd_pipe.
 
-	* tpoll.c(tpoll_timeout_absolute): Optimized var in timercmp().
+	* tpoll.c (tpoll_timeout_absolute): Optimized var in timercmp().
 
-	* server-conf.c(write_pidfile): Restructured.
+	* server-conf.c (write_pidfile): Restructured.
 
-	* server-conf.c(write_pidfile): Fixed double-free of file pointer.
+	* server-conf.c (write_pidfile): Fixed double-free of file pointer.
 
-	* tpoll.c(_tpoll_signal_recv): Removed unnecessary assertion.
+	* tpoll.c (_tpoll_signal_recv): Removed unnecessary assertion.
 
-	* tpoll.c(_tpoll_inc_nofile): Removed since RLIMIT_NOFILE must already
+	* tpoll.c (_tpoll_inc_nofile): Removed since RLIMIT_NOFILE must already
 	  be increased before the file is opened which must occur before the fd
 	  can be added to tpoll.
 
 2006-06-04  Chris Dunlap  <cdunlap@llnl.gov>
 
-	* tpoll.c(tpoll): Removed unused variables.
+	* tpoll.c (tpoll): Removed unused variables.
 
-	* tpoll.c(tpoll): Restructured computation for poll() timeout.
+	* tpoll.c (tpoll): Restructured computation for poll() timeout.
 	  Fixed bugs causing for-loop to prematurely exit when inner poll()
 	  timed-out.
-	* tpoll.c(_tpoll_diff_timeval): Changed calculation to round to the
+	* tpoll.c (_tpoll_diff_timeval): Changed calculation to round to the
 	  next millisecond.  This prevents tpoll() from briefly spinning when
 	  dispatching timers expiring in less than a millisecond.
 	* tpoll.c: Changed bool values from 1/0 to true/false.
@@ -123,21 +123,21 @@
 
 	* NEWS: Added.
 
-	* server.c(mux_io): Fixed bug introduced during conversion to tpoll()
+	* server.c (mux_io): Fixed bug introduced during conversion to tpoll()
 	  where connect_telnet_obj() was not being called on POLLIN for a
 	  telnet obj in the CONMAN_TELCON_PENDING state thereby causing loop
 	  to spin.
 
 2006-05-23  Chris Dunlap  <cdunlap@llnl.gov>
 
-	* server.c(open_objs): Modified to increase RLIMIT_NOFILE to at least
+	* server.c (open_objs): Modified to increase RLIMIT_NOFILE to at least
 	  the hard limit.
 
-	* server.c(mux_io): Added POLLHUP & POLLERR to force read_from_obj().
+	* server.c (mux_io): Added POLLHUP & POLLERR to force read_from_obj().
 
-	* server-obj.c(resolve_retry): Fixed assertion.
+	* server-obj.c (resolve_retry): Fixed assertion.
 
-	* server-obj.c(resolve_retry): Cleared aux.telnet.timer.
+	* server-obj.c (resolve_retry): Cleared aux.telnet.timer.
 
 	* server-obj.c: Added resolve_retry().
 	* server.h: Added RESOLVE_RETRY_TIMEOUT.
@@ -149,7 +149,7 @@
 	  hostname.
 	* server.h: Removed saddr from struct telnet_obj.
 
-	* server.c(open_objs): Increased RLIMIT_NOFILE.
+	* server.c (open_objs): Increased RLIMIT_NOFILE.
 
 2006-05-10  Chris Dunlap  <cdunlap@llnl.gov>
 
@@ -204,7 +204,7 @@
 
 2006-04-20  Chris Dunlap  <cdunlap@llnl.gov>
 
-	* tpoll.c(tpoll_create): Removed fcntl() to set FD_CLOEXEC.
+	* tpoll.c (tpoll_create): Removed fcntl() to set FD_CLOEXEC.
 
 	* tpoll.c: Added is_blocked flag so tpoll can only be signaled while
 	  potentially blocked on the internal poll().  Changed test so
@@ -216,14 +216,14 @@
 
 	* tpoll.c: Added implementation notes.
 
-	* tpoll.c(_tpoll_signal_read): Prevented requiring two read()s to
+	* tpoll.c (_tpoll_signal_read): Prevented requiring two read()s to
 	  drain a signal from fd_pipe.
 
 	* tpoll.c: Added is_signaled flag to tpoll struct.
 
 2006-04-19  Chris Dunlap  <cdunlap@llnl.gov>
 
-	* server-conf.c(write_pidfile): Fixed resource leak of file handle.
+	* server-conf.c (write_pidfile): Fixed resource leak of file handle.
 
 	* server.h: Added tp to server_conf struct.  Updated prototypes for
 	  connect_telnet_obj(), disconnect_telnet_obj(), shutdown_obj().
@@ -271,15 +271,15 @@
 
 	* common.c: Updated [conman_license] copyright date range.
 
-	* server-conf.c(write_pidfile): Fixed resource leak when an error
+	* server-conf.c (write_pidfile): Fixed resource leak when an error
 	  occurred while creating the pid file.
 
-	* log.c(log_set_syslog): Fixed bug where [ident] was potentially
+	* log.c (log_set_syslog): Fixed bug where [ident] was potentially
 	  dereferenced before NULL check.
 
 	* AUTHORS: Added.
 
-	* server.c(mux_io), server-obj.c(read_from_obj): Updated with tpoll.
+	* server.c (mux_io), server-obj.c (read_from_obj): Updated with tpoll.
 	* server.h: Changed prototype for read_from_obj().
 	* Makefile.in: Replaced tselect.o with tpoll.o.
 	* tpoll.c: Added from tselect.c.
