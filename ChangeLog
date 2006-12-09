@@ -1,3 +1,8 @@
+2006-12-09  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* man/conman.1.in, man/conman.conf.5.in, man/conmand.8.in:
+	  Minor formatting and grammar tweaks.
+
 2006-09-27  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* etc/conman.init.in: Updated to version from munge-0.5.4.

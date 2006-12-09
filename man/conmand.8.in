@@ -71,8 +71,8 @@ The client/server communications are not yet encrypted.
 .SH NOTES
 Log messages are sent to standard-error until after the configuration file
 has been read, at which time future messages are discarded unless either
-the \fBlogfile\fR or \fBsyslog\fR keyword has been specified (cf,
-\fBconman.conf\fR(5)).
+the \fBlogfile\fR or \fBsyslog\fR keyword has been specified (cf.,
+\fBconman.conf(5)\fR).
 .PP
 If the configuration file is modified while the daemon is running and a
 \fBpidfile\fR was not originally specified, the '\fB-k\fR' and '\fB-r\fR'

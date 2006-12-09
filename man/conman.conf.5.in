@@ -30,12 +30,12 @@ absolute pathname.
 .TP
 \fBlogfile\fR \fB=\fR "\fIfile\fR[,\fIpriority\fR]"
 Specifies the file to which log messages are appended.  This string undergoes
-conversion specifier expansion (cf, \fBCONVERSION SPECIFICATIONS\fR).
+conversion specifier expansion (cf., \fBCONVERSION SPECIFICATIONS\fR).
 If an absolute pathname is not specified, the file's location is relative
 to \fBlogdir\fR (assuming it has been previously defined).  This file will
 be created if it does not already exist.  The filename may optionally be
 followed by a comma and a minimum priority at which messages will be logged.
-Refer to \fBsyslog.conf\fR(5) for a list of priorities.  The default priority
+Refer to \fBsyslog.conf(5)\fR for a list of priorities.  The default priority
 is \fBinfo\fR.  If this keyword is used in conjunction with the \fBsyslog\fR
 keyword, messages will be sent to both locations.
 .TP
@@ -56,20 +56,20 @@ Specifies the port on which the daemon will listen for client connections.
 Specifies a command string to be invoked by a subshell upon receipt
 of the client's "reset" escape.  Multiple commands within a string
 may be separated with semicolons.  This string undergoes conversion
-specifier expansion (cf, \fBCONVERSION SPECIFICATIONS\fR) and will be
+specifier expansion (cf., \fBCONVERSION SPECIFICATIONS\fR) and will be
 invoked multiple times if the client is connected to multiple consoles.
 .TP
 \fBsyslog\fR \fB=\fR "\fIfacility\fR"
 Specifies that log messages are to be sent to the system logger
-(\fBsyslogd\fR) at the given facility.  Refer to \fBsyslog.conf\fR(5) for a
+(\fBsyslogd\fR) at the given facility.  Refer to \fBsyslog.conf(5)\fR for a
 list of facilities.  If this keyword is used in conjunction with the
 \fBlogfile\fR keyword, messages will be sent to both locations.
 .TP
 \fBtcpwrappers\fR \fB=\fR (\fBon\fR|\fBoff\fR)
 Specifies whether the daemon will use TCP-Wrappers when accepting client
 connections.  Support for this feature must be enabled at compile-time (via
-configure's "--with-tcp-wrappers" option).  Refer to \fBhosts_access\fR(5)
-and \fBhosts_options\fR(5) for more details.  The default is \fBoff\fR.
+configure's "--with-tcp-wrappers" option).  Refer to \fBhosts_access(5)\fR
+and \fBhosts_options(5)\fR for more details.  The default is \fBoff\fR.
 .TP
 \fBtimestamp\fR \fB=\fR \fIinteger\fB (\fBm\fR|\fBh\fR|\fBd\fR)
 Specifies the interval between timestamps written to the individual console
@@ -83,17 +83,17 @@ following key/value pairs:
 .TP
 \fBlog\fR \fB=\fR "\fIfile\fR"
 Specifies the default log file to use for each \fBconsole\fR directive.
-This string undergoes conversion specifier expansion (cf, \fBCONVERSION
+This string undergoes conversion specifier expansion (cf., \fBCONVERSION
 SPECIFICATIONS\fR) and must contain either '\fB%N\fR' or '\fB%D\fR'.
 If an absolute pathname is not given, the file's location is relative to
 \fBlogdir\fR (assuming it has been previously defined).
 .TP
 \fBlogopts\fR \fB=\fR "(\fBsanitize\fR|\fBnosanitize\fR),(\fBtimestamp\fR|\fBnotimestamp\fR)"
 Specifies global options for the console log files.  These options can be
-overridden on an per-console basis by specifying the \fBCONSOLE\fR
+overridden on a per-console basis by specifying the \fBCONSOLE\fR
 \fBlogopts\fR keyword.  Note that options affecting the output of the console's
 logfile also affect the output of the console's log-replay escape.  The valid
-logoptions include the following:
+\fBlogopts\fR include the following:
 .br
 .sp
 \fBsanitize\fR or \fBnosanitize\fR - sanitized log files convert non-printable
@@ -110,7 +110,7 @@ The default is "\fBnosanitize\fR,\fBnotimestamp\fR".
 .TP
 \fBseropts\fR \fB=\fR "\fIbps\fR[,\fIdatabits\fR[\fIparity\fR[\fIstopbits\fR]]]"
 Specifies global options for local serial devices.  These options can be
-overridden on an per-console basis by specifying the \fBCONSOLE\fR
+overridden on a per-console basis by specifying the \fBCONSOLE\fR
 \fBseropts\fR keyword.
 .br
 .sp
@@ -148,16 +148,16 @@ connection is specified with the "\fIhost\fR:\fIport\fR" format (where
 .TP
 \fBlog\fR \fB=\fR "\fIfile\fR"
 Specifies the file where console output is logged.  This string undergoes
-conversion specifier expansion (cf, \fBCONVERSION SPECIFICATIONS\fR).
+conversion specifier expansion (cf., \fBCONVERSION SPECIFICATIONS\fR).
 If an absolute pathname is not given, the file's location is relative to
 \fBlogdir\fR (assuming it has been previously defined).  An empty log string
-(ie, log="") disables logging, overriding the global log name.
+(ie, \fBlog\fR="") disables logging, overriding the global log name.
 .TP
 \fBlogopts\fR \fB=\fR "\fIstring\fR"
-This keyword is optional (cf, \fBGLOBAL DIRECTIVES\fR).
+This keyword is optional (cf., \fBGLOBAL DIRECTIVES\fR).
 .TP
 \fBseropts\fR \fB=\fR "\fIstring\fR"
-This keyword is optional (cf, \fBGLOBAL DIRECTIVES\fR).
+This keyword is optional (cf., \fBGLOBAL DIRECTIVES\fR).
 
 .SH CONVERSION SPECIFICATIONS
 A conversion specifier is a two-character sequence beginning with

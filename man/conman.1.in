@@ -45,7 +45,7 @@ theft as their connections are terminated.
 .B \-F \fIfile\fR
 Read console names/patterns from file.  Only one console name may be
 specified per line.  Leading and trailing whitespace, blank lines, and
-comments (ie, lines beginning with a '#') are ignored.
+comments (i.e., lines beginning with a '#') are ignored.
 .TP
 .B \-h
 Display a summary of the command-line options.
@@ -131,7 +131,7 @@ The following environment variables override the default settings.
 .SM CONMAN_HOST
 Specifies the hostname or IP address at which to contact \fBconmand\fR, but
 may be overridden by the '\fB-d\fR' command-line option.  A port number
-separated by a colon may follow the hostname (ie, \fIhost:port\fR), although
+separated by a colon may follow the hostname (i.e., \fIhost:port\fR), although
 the CONMAN_PORT environment variable takes precedence.  If not set, the
 default host [@CONMAN_HOST@] will be used.
 .TP
