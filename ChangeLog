@@ -1,3 +1,8 @@
+2006-12-10  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* man/conman.1.in, man/conman.conf.5.in, man/conmand.8.in:
+	  Changed .TH manual title.
+
 2006-12-09  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* man/conman.1.in, man/conman.conf.5.in, man/conmand.8.in:

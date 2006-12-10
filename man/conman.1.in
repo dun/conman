@@ -1,6 +1,6 @@
 .\" $Id$
 
-.TH CONMAN 1 "@DATE@" "@PROJECT@-@VERSION@" "LLNL"
+.TH CONMAN 1 "@DATE@" "@PROJECT@-@VERSION@" "ConMan: The Console Manager"
 
 .SH NAME
 conman \- ConMan client
