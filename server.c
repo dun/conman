@@ -662,6 +662,7 @@ static void open_daemon_logfile(server_conf_t *conf)
 
     assert(conf->logFileName != NULL);
     assert(conf->logFileName[0] == '/');
+    assert(!conf->enableForeground);
 
     /*  Only truncate logfile at startup if needed.
      */
