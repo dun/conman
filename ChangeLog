@@ -1,3 +1,28 @@
+2006-12-13  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server.c: Added calls to process_cmdline() and process_config().
+	  Changed daemonization to be controlled by enableForeground flag.
+	* server-conf.c (create_server_conf): Changed prototype.
+	  Replaced implicit call to process_server_conf() with explicit calls
+	  to process_cmdline() and process_config() in server.c:main().
+	* server-conf.c (process_server_conf): Removed.
+	* server-conf.c (process_cmdline): Replaced parse_server_cmd_line().
+	  Added '-F' cmdline opt.
+	* server-conf.c (process_config): Replaced parse_server_conf_file().
+	  Added calls from process_server_conf() to signal_daemon(), obtain
+	  lock on config file, and write pidfile.
+	* server-conf.c (display_server_help): Documented '-F' cmdline opt.
+	* log.c: Changed use of "daemonize" pipe to return both error priority
+	  and message across fork() and back to shell.
+	* server.h: Added enableForeground to struct server_conf.
+	  Added prototypes for process_cmdline() and process_config().
+	  Updated prototype for create_server_conf().
+	* man/conman.conf.5.in: Updated entry for 'logfile' server directive
+	  to note that messages are logged to the file only if the daemon is
+	  not running in the foreground.
+	* man/conmand.8.in: Documented '-F' cmdline opt.
+	* NEWS: Updated.
+
 2006-12-10  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* man/conman.1.in, man/conman.conf.5.in, man/conmand.8.in:

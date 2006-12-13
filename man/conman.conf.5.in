@@ -29,15 +29,16 @@ Specifies a directory prefix for log files that are not defined via an
 absolute pathname.
 .TP
 \fBlogfile\fR \fB=\fR "\fIfile\fR[,\fIpriority\fR]"
-Specifies the file to which log messages are appended.  This string undergoes
-conversion specifier expansion (cf., \fBCONVERSION SPECIFICATIONS\fR).
-If an absolute pathname is not specified, the file's location is relative
-to \fBlogdir\fR (assuming it has been previously defined).  This file will
-be created if it does not already exist.  The filename may optionally be
-followed by a comma and a minimum priority at which messages will be logged.
-Refer to \fBsyslog.conf(5)\fR for a list of priorities.  The default priority
-is \fBinfo\fR.  If this keyword is used in conjunction with the \fBsyslog\fR
-keyword, messages will be sent to both locations.
+Specifies the file to which log messages are appended if the daemon is not
+running in the foreground.  This string undergoes conversion specifier
+expansion (cf., \fBCONVERSION SPECIFICATIONS\fR).  If an absolute pathname is
+not specified, the file's location is relative to \fBlogdir\fR (assuming it has
+been previously defined).  This file will be created if it does not already
+exist.  The filename may optionally be followed by a comma and a minimum
+priority at which messages will be logged.  Refer to \fBsyslog.conf(5)\fR for a
+list of priorities.  The default priority is \fBinfo\fR.  If this keyword is
+used in conjunction with the \fBsyslog\fR keyword, messages will be sent to
+both locations.
 .TP
 \fBloopback\fR \fB=\fR (\fBon\fR|\fBoff\fR)
 Specifies whether the daemon will bind its socket to the loopback address,

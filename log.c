@@ -48,14 +48,14 @@
 #endif /* !MAX_LINE */
 
 
-static FILE * log_file = NULL;
+static FILE * log_file_fp = NULL;
 static int    log_file_priority = -1;
 static int    log_file_timestamp = 0;
 static int    log_syslog = 0;
 static int    log_fd_daemonize = -1;
 
 
-static void log_aux(int priority, int errnum,
+static void log_aux(int errnum, int priority, char *msgbug, int msgbuflen,
     const char *format, va_list vargs);
 
 static const char * log_prefix(int priority);
@@ -69,8 +69,9 @@ void dprintf(int level, const char *format, ...)
     int i = 0;
 
     if (debug_level < 0) {
-        if ((p = getenv("DEBUG")))
+        if ((p = getenv("DEBUG"))) {
             i = atoi(p);
+        }
         debug_level = (i > 0) ? i : 0;
     }
     if ((level > 0) && (level <= debug_level)) {
@@ -85,13 +86,13 @@ void dprintf(int level, const char *format, ...)
 void log_set_file(FILE *fp, int priority, int timestamp)
 {
     if (fp && !ferror(fp)) {
-        log_file = fp;
+        log_file_fp = fp;
         log_file_priority = (priority > 0) ? priority : 0;
         log_file_timestamp = !!timestamp;
         setvbuf(fp, NULL, _IONBF, 0);   /* set stream unbuffered */
     }
     else {
-        log_file = NULL;
+        log_file_fp = NULL;
         log_file_priority = -1;
         log_file_timestamp = 0;
     }
@@ -104,8 +105,9 @@ void log_set_syslog(char *ident, int facility)
     char *p;
 
     if (ident) {
-        if ((p = strrchr(ident, '/')))
+        if ((p = strrchr(ident, '/'))) {
             ident = p + 1;
+        }
         openlog(ident, LOG_NDELAY | LOG_PID, facility);
         log_syslog = 1;
     }
@@ -126,12 +128,29 @@ void log_set_err_pipe(int fd)
 
 void log_err(int errnum, const char *format, ...)
 {
+    int priority = LOG_ERR;
     va_list vargs;
+    char msg[MAX_LINE];
+    signed char c;
+    int n;
+    char *p;
 
     va_start(vargs, format);
-    log_aux(LOG_ERR, errnum, format, vargs);
+    log_aux(errnum, priority, msg, sizeof(msg), format, vargs);
     va_end(vargs);
 
+    /*  Return error priority and message across "daemonize" pipe.
+     */
+    if (log_fd_daemonize >= 0) {
+        c = (signed char) priority;
+        n = write(log_fd_daemonize, &c, sizeof(c));
+        if ((n > 0) && (msg != NULL) && (log_file_fp != stderr)) {
+            if ((p = strchr(msg, '\n'))) {
+                *p = '\0';
+            }
+            (void) write(log_fd_daemonize, msg, strlen(msg) + 1);
+        }
+    }
 #ifndef NDEBUG
     /*  Generate core for debugging.
      */
@@ -140,12 +159,6 @@ void log_err(int errnum, const char *format, ...)
     }
 #endif /* !NDEBUG */
 
-    /*  Return error status across "daemonize" pipe.
-     */
-    if (log_fd_daemonize >= 0) {
-        unsigned char c = 1;
-        (void) write(log_fd_daemonize, &c, sizeof(c));
-    }
     exit(1);
 }
 
@@ -155,22 +168,22 @@ void log_msg(int priority, const char *format, ...)
     va_list vargs;
 
     va_start(vargs, format);
-    log_aux(priority, 0, format, vargs);
+    log_aux(0, priority, NULL, 0, format, vargs);
     va_end(vargs);
 
     return;
 }
 
 
-static void log_aux(int priority, int errnum,
+static void log_aux(int errnum, int priority, char *msgbuf, int msgbuflen,
     const char *format, va_list vargs)
 {
     time_t t;
     struct tm *tm_ptr;
     const char *prefix;
-    char buf[MAX_LINE];
-    char *pbuf;
-    char *sbuf;
+    char buf[MAX_LINE];                 /* buf starting with timestamp       */
+    char *pbuf;                         /* buf starting with priority string */
+    char *sbuf;                         /* buf starting with message         */
     char *p;
     int len;
     int n;
@@ -194,40 +207,55 @@ static void log_aux(int priority, int errnum,
 
     if ((prefix = log_prefix(priority))) {
         int m = 10 - strlen(prefix);
-        if (m <= 0)
+        if (m <= 0) {
             m = 1;
+        }
         assert(strlen(prefix) < 10);
         n = snprintf(p, len, "%s:%*c", prefix, m, 0x20);
-        if ((n < 0) || (n >= len))
+        if ((n < 0) || (n >= len)) {
             n = len - 1;
+        }
         p = sbuf += n;
         len -= n;
     }
 
     n = vsnprintf(p, len, format, vargs);
-    if ((n < 0) || (n >= len))
+    if ((n < 0) || (n >= len)) {
         n = len - 1;
+    }
     p += n;
     len -= n;
 
     if (format[strlen(format) - 1] != '\n') {
         if ((errnum > 0) && (len > 0)) {
             n = snprintf(p, len, ": %s", strerror(errnum));
-            if ((n < 0) || (n >= len))
+            if ((n < 0) || (n >= len)) {
                 n = len - 1;
+            }
             p += n;
             len -= n;
         }
         strcat(p, "\n");
     }
 
+    if (msgbuf && (msgbuflen > 0)) {
+        if (sbuf) {
+            strncpy(msgbuf, sbuf, msgbuflen);
+            msgbuf[msgbuflen - 1] = '\0';
+        }
+        else {
+            msgbuf[0] = '\0';
+        }
+    }
+
     if (log_syslog) {
         syslog(priority, "%s", sbuf);
     }
-    if (log_file && (priority <= log_file_priority)) {
-        if (fprintf(log_file, "%s", log_file_timestamp ? buf : pbuf) == EOF) {
+    if (log_file_fp && (priority <= log_file_priority)) {
+        n = fprintf(log_file_fp, "%s", log_file_timestamp ? buf : pbuf);
+        if (n == EOF) {
             syslog(LOG_CRIT, "Logging stopped due to error");
-            log_file = NULL;
+            log_file_fp = NULL;
         }
     }
     return;

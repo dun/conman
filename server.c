@@ -56,10 +56,8 @@
 #include "wrapper.h"
 
 
-#ifdef NDEBUG
 static int begin_daemonize(void);
 static void end_daemonize(int fd);
-#endif /* NDEBUG */
 static void display_configuration(server_conf_t *conf);
 static void exit_handler(int signum);
 static void sig_chld_handler(int signum);
@@ -86,16 +84,14 @@ tpoll_t tp_global = NULL;
 
 int main(int argc, char *argv[])
 {
-    int fd;
+    int fd = -1;
     server_conf_t *conf;
+    int log_priority = LOG_NOTICE;
 
-#ifdef NDEBUG
-    log_set_file(stderr, LOG_WARNING, 0);
-    fd = begin_daemonize();
-#else /* NDEBUG */
-    log_set_file(stderr, LOG_DEBUG, 0);
-    fd = -1;                            /* suppress unused variable warning */
+#ifndef NDEBUG
+    log_priority = LOG_DEBUG;
 #endif /* NDEBUG */
+    log_set_file(stderr, log_priority, 0);
 
     posix_signal(SIGCHLD, sig_chld_handler);
     posix_signal(SIGHUP, sig_hup_handler);
@@ -103,29 +99,39 @@ int main(int argc, char *argv[])
     posix_signal(SIGPIPE, SIG_IGN);
     posix_signal(SIGTERM, exit_handler);
 
-    conf = create_server_conf(argc, argv);
+    conf = create_server_conf();
+    process_cmdline(conf, argc, argv);
+    if (!conf->enableForeground) {
+        fd = begin_daemonize();
+    }
+    process_config(conf);
+
     tp_global  = conf->tp;
 
-    if (conf->enableVerbose)
+    if (conf->enableVerbose) {
         display_configuration(conf);
-    if (list_is_empty(conf->objs))
+    }
+    if (list_is_empty(conf->objs)) {
         log_err(0, "Configuration \"%s\" has no consoles defined",
             conf->confFileName);
-    if (conf->tStampMinutes > 0)
+    }
+    if (conf->tStampMinutes > 0) {
         schedule_timestamp(conf);
-
+    }
     create_listen_socket(conf);
 
-    if (conf->syslogFacility > 0)
-        log_set_syslog(argv[0], conf->syslogFacility);
-    if (conf->logFileName)
-        open_daemon_logfile(conf);
-
-#ifdef NDEBUG
-    end_daemonize(fd);
-    if (!conf->logFileName)
-        log_set_file(NULL, 0, 0);
-#endif /* NDEBUG */
+    if (!conf->enableForeground) {
+        if (conf->syslogFacility > 0) {
+            log_set_syslog(argv[0], conf->syslogFacility);
+        }
+        if (conf->logFileName) {
+            open_daemon_logfile(conf);
+        }
+        else {
+            log_set_file(NULL, 0, 0);
+        }
+        end_daemonize(fd);
+    }
 
     log_msg(LOG_NOTICE, "Starting ConMan daemon %s (pid %d)",
         VERSION, (int) getpid());
@@ -140,7 +146,6 @@ int main(int argc, char *argv[])
 }
 
 
-#ifdef NDEBUG
 static int begin_daemonize(void)
 {
 /*  Begins the daemonization of the process.
@@ -149,10 +154,11 @@ static int begin_daemonize(void)
  *  Returns an 'fd' to pass to end_daemonize() to complete the daemonization.
  */
     struct rlimit limit;
-    int fdPair[2];
+    int fds[2];
     pid_t pid;
     int n;
-    unsigned char c;
+    signed char priority;
+    char ebuf[1024];
 
     /*  Clear file mode creation mask.
      */
@@ -162,20 +168,20 @@ static int begin_daemonize(void)
      */
     limit.rlim_cur = 0;
     limit.rlim_max = 0;
-    if (setrlimit(RLIMIT_CORE, &limit) < 0)
+    if (setrlimit(RLIMIT_CORE, &limit) < 0) {
         log_err(errno, "Unable to prevent creation of core file");
-
+    }
     /*  Create pipe for IPC so parent process will wait to terminate until
      *    signaled by grandchild process.  This allows messages written to
      *    stdout/stderr by the grandchild to be properly displayed before
      *    the parent process returns control to the shell.
      */
-    if (pipe(fdPair) < 0)
-        log_err(errno, "Unable to create pipe");
-
+    if (pipe(fds) < 0) {
+        log_err(errno, "Unable to create daemon pipe");
+    }
     /*  Set the fd used by log_err() to return status back to the parent.
      */
-    log_set_err_pipe(fdPair[1]);
+    log_set_err_pipe(fds[1]);
 
     /*  Automatically background the process and
      *    ensure child is not a process group leader.
@@ -184,21 +190,41 @@ static int begin_daemonize(void)
         log_err(errno, "Unable to create child process");
     }
     else if (pid > 0) {
-        if (close(fdPair[1]) < 0)
+        log_set_err_pipe(-1);
+        /*
+         *  FIXME:
+         *    The following log_err()s don't necessarily indicate the daemon
+         *    has failed since the grandchild process may still be running.
+         *    This could confuse the user.  Should they be warnings instead?
+         */
+        if (close(fds[1]) < 0) {
             log_err(errno, "Unable to close write-pipe in parent process");
-        if ((n = read(fdPair[0], &c, sizeof (c))) < 0)
+        }
+        if ((n = read(fds[0], &priority, sizeof(priority))) < 0) {
             log_err(errno, "Unable to read status from grandchild process");
-        exit (((n == 1) && (c != 0)) ? 1 : 0);
+        }
+        if ((n > 0) && (priority >= 0)) {
+            if ((n = read(fds[0], ebuf, sizeof(ebuf))) < 0) {
+                log_err(errno,
+                    "Unable to read error message from grandchild process");
+            }
+            if ((n > 0) && (ebuf[0] != '\0')) {
+                log_set_file(stderr, priority, 0);
+                log_msg(priority, "%s", ebuf);
+            }
+            exit(1);
+        }
+        exit(0);
     }
-    if (close(fdPair[0]) < 0)
+    if (close(fds[0]) < 0) {
         log_err(errno, "Unable to close read-pipe in child process");
-
+    }
     /*  Become a session leader and process group leader
      *    with no controlling tty.
      */
-    if (setsid() < 0)
+    if (setsid() < 0) {
         log_err(errno, "Unable to disassociate controlling tty");
-
+    }
     /*  Ignore SIGHUP to keep child from terminating when
      *    the session leader (ie, the parent) terminates.
      */
@@ -207,55 +233,57 @@ static int begin_daemonize(void)
     /*  Abdicate session leader position in order to guarantee
      *    daemon cannot automatically re-acquire a controlling tty.
      */
-    if ((pid = fork()) < 0)
+    if ((pid = fork()) < 0) {
         log_err(errno, "Unable to create grandchild process");
-    else if (pid > 0)
+    }
+    else if (pid > 0) {
         exit(0);
-
-    return(fdPair[1]);
+    }
+    return(fds[1]);
 }
-#endif /* NDEBUG */
 
 
-#ifdef NDEBUG
 static void end_daemonize(int fd)
 {
 /*  Completes the daemonization of the process,
  *    where 'fd' is the value returned by begin_daemonize().
  */
-    int devnull;
+    int dev_null;
 
     /*  Ensure process does not keep a directory in use.
      *  Avoid relative pathname from this point on!
      */
-    if (chdir("/") < 0)
+    if (chdir("/") < 0) {
         log_err(errno, "Unable to change to root directory");
-
+    }
     /*  Discard data to/from stdin, stdout, and stderr.
      */
-    if ((devnull = open("/dev/null", O_RDWR)) < 0)
+    if ((dev_null = open("/dev/null", O_RDWR)) < 0) {
         log_err(errno, "Unable to open \"/dev/null\"");
-    if (dup2(devnull, STDIN_FILENO) < 0)
+    }
+    if (dup2(dev_null, STDIN_FILENO) < 0) {
         log_err(errno, "Unable to dup \"/dev/null\" onto stdin");
-    if (dup2(devnull, STDOUT_FILENO) < 0)
+    }
+    if (dup2(dev_null, STDOUT_FILENO) < 0) {
         log_err(errno, "Unable to dup \"/dev/null\" onto stdout");
-    if (dup2(devnull, STDERR_FILENO) < 0)
+    }
+    if (dup2(dev_null, STDERR_FILENO) < 0) {
         log_err(errno, "Unable to dup \"/dev/null\" onto stderr");
-    if (close(devnull) < 0)
+    }
+    if (close(dev_null) < 0) {
         log_err(errno, "Unable to close \"/dev/null\"");
-
+    }
     /*  Clear the fd used by log_err() to return status back to the parent.
      */
     log_set_err_pipe(-1);
 
     /*  Signal grandparent process to terminate.
      */
-    if ((fd >= 0) && (close(fd) < 0))
+    if ((fd >= 0) && (close(fd) < 0)) {
         log_err(errno, "Unable to close write-pipe in grandchild process");
-
+    }
     return;
 }
-#endif /* NDEBUG */
 
 
 static void exit_handler(int signum)
@@ -278,8 +306,9 @@ static void sig_chld_handler(int signum)
 {
     pid_t pid;
 
-    while ((pid = waitpid(-1, NULL, WNOHANG)) > 0)
+    while ((pid = waitpid(-1, NULL, WNOHANG)) > 0) {
         DPRINTF((5, "Process %d terminated.\n", (int) pid));
+    }
     return;
 }
 
@@ -294,9 +323,11 @@ static void display_configuration(server_conf_t *conf)
     int gotOptions = 0;
 
     i = list_iterator_create(conf->objs);
-    while ((obj = list_next(i)))
-        if (is_console_obj(obj))
+    while ((obj = list_next(i))) {
+        if (is_console_obj(obj)) {
             n++;
+        }
+    }
     list_iterator_destroy(i);
 
     fprintf(stderr, "\nStarting ConMan daemon %s (pid %d)\n",
@@ -375,8 +406,9 @@ static void schedule_timestamp(server_conf_t *conf)
     }
     tm.tm_sec = 0;
 
-    if ((t = mktime(&tm)) == ((time_t) -1))
+    if ((t = mktime(&tm)) == ((time_t) -1)) {
         log_err(errno, "Unable to determine time of next logfile timestamp");
+    }
     tv.tv_sec = t;
     tv.tv_usec = 0;
     conf->tStampNext = t;
@@ -404,8 +436,9 @@ static void timestamp_logfiles(server_conf_t *conf)
     now = create_long_time_string(0);
     i = list_iterator_create(conf->objs);
     while ((logfile = list_next(i))) {
-        if (!is_logfile_obj(logfile))
+        if (!is_logfile_obj(logfile)) {
             continue;
+        }
         snprintf(buf, sizeof(buf), "%sConsole [%s] log at %s%s",
             CONMAN_MSG_PREFIX, logfile->aux.logfile.console->name,
             now, CONMAN_MSG_SUFFIX);
@@ -418,9 +451,9 @@ static void timestamp_logfiles(server_conf_t *conf)
 
     /*  If any logfile objs exist, schedule a timer for the next timestamp.
      */
-    if (gotLogs)
+    if (gotLogs) {
         schedule_timestamp(conf);
-
+    }
     return;
 }
 
@@ -433,9 +466,9 @@ static void create_listen_socket(server_conf_t *conf)
     struct sockaddr_in addr;
     const int on = 1;
 
-    if ((ld = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    if ((ld = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         log_err(errno, "Unable to create listening socket");
-
+    }
     set_fd_nonblocking(ld);
     set_fd_closed_on_exec(ld);
 
@@ -443,21 +476,22 @@ static void create_listen_socket(server_conf_t *conf)
     addr.sin_family = AF_INET;
     addr.sin_port = htons(conf->port);
 
-    if (conf->enableLoopBack)
+    if (conf->enableLoopBack) {
         addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    else
+    }
+    else {
         addr.sin_addr.s_addr = htonl(INADDR_ANY);
-
+    }
     if (setsockopt(ld, SOL_SOCKET, SO_REUSEADDR,
-      (const void *) &on, sizeof(on)) < 0)
+      (const void *) &on, sizeof(on)) < 0) {
         log_err(errno, "Unable to set REUSEADDR socket option");
-
-    if (bind(ld, (struct sockaddr *) &addr, sizeof(addr)) < 0)
+    }
+    if (bind(ld, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
         log_err(errno, "Unable to bind to port %d", conf->port);
-
-    if (listen(ld, 10) < 0)
+    }
+    if (listen(ld, 10) < 0) {
         log_err(errno, "Unable to listen on port %d", conf->port);
-
+    }
     conf->ld = ld;
     return;
 }
@@ -472,27 +506,34 @@ static void open_objs(server_conf_t *conf)
     ListIterator i;
     obj_t *obj;
 
-    if (getrlimit(RLIMIT_NOFILE, &limit) < 0)
+    if (getrlimit(RLIMIT_NOFILE, &limit) < 0) {
         log_err(errno, "Unable to get the num open file limit");
+    }
     n = MAX(limit.rlim_max, list_count(conf->objs) * 2);
     if (limit.rlim_cur < n) {
         limit.rlim_cur = limit.rlim_max = n;
-        if (setrlimit(RLIMIT_NOFILE, &limit) < 0)
+        if (setrlimit(RLIMIT_NOFILE, &limit) < 0) {
             log_msg(LOG_ERR, "Unable to set the num open file limit to %d", n);
-        else
+        }
+        else {
             log_msg(LOG_INFO, "Increased the num open file limit to %d", n);
+        }
     }
     i = list_iterator_create(conf->objs);
     while ((obj = list_next(i))) {
-        if (is_serial_obj(obj))
+        if (is_serial_obj(obj)) {
             open_serial_obj(obj);
-        else if (is_telnet_obj(obj))
+        }
+        else if (is_telnet_obj(obj)) {
             connect_telnet_obj(obj);
-        else if (is_logfile_obj(obj))
+        }
+        else if (is_logfile_obj(obj)) {
             open_logfile_obj(obj, conf->enableZeroLogs);
-        else
+        }
+        else {
             log_err(0, "INTERNAL: Unrecognized object [%s] type=%d",
                 obj->name, obj->type);
+        }
     }
     list_iterator_destroy(i);
     return;
@@ -625,8 +666,9 @@ static void open_daemon_logfile(server_conf_t *conf)
     /*  Only truncate logfile at startup if needed.
      */
     if (once) {
-        if (conf->enableZeroLogs)
+        if (conf->enableZeroLogs) {
             mode = "w";
+        }
         once = 0;
     }
     /*  Perform conversion specifier expansion if needed.
@@ -668,9 +710,10 @@ static void open_daemon_logfile(server_conf_t *conf)
     if (get_write_lock(fd) < 0) {
         log_msg(LOG_WARNING, "Unable to lock daemon logfile \"%s\"",
             conf->logFileName);
-        if (fclose(fp) == EOF)
+        if (fclose(fp) == EOF) {
             log_msg(LOG_WARNING, "Unable to close daemon logfile \"%s\"",
                 conf->logFileName);
+        }
         goto err;
     }
     set_fd_closed_on_exec(fd);
@@ -678,10 +721,12 @@ static void open_daemon_logfile(server_conf_t *conf)
      *  Transition to new log file.
      */
     log_set_file(fp, conf->logFileLevel, 1);
-    if (conf->logFilePtr)
-        if (fclose(conf->logFilePtr) == EOF)
+    if (conf->logFilePtr) {
+        if (fclose(conf->logFilePtr) == EOF) {
             log_msg(LOG_WARNING, "Unable to close daemon logfile \"%s\"",
                 conf->logFileName);
+        }
+    }
     conf->logFilePtr = fp;
     return;
 
@@ -689,10 +734,12 @@ err:
     /*  Abandon old log file and go logless.
      */
     log_set_file(NULL, 0, 0);
-    if (conf->logFilePtr)
-        if (fclose(conf->logFilePtr) == EOF)
+    if (conf->logFilePtr) {
+        if (fclose(conf->logFilePtr) == EOF) {
             log_msg(LOG_WARNING, "Unable to close daemon logfile \"%s\"",
                 conf->logFileName);
+        }
+    }
     conf->logFilePtr = NULL;
     return;
 }
@@ -707,14 +754,16 @@ static void reopen_logfiles(server_conf_t *conf)
 
     i = list_iterator_create(conf->objs);
     while ((logfile = list_next(i))) {
-        if (!is_logfile_obj(logfile))
+        if (!is_logfile_obj(logfile)) {
             continue;
+        }
         open_logfile_obj(logfile, 0);   /* do not truncate the logfile */
     }
     list_iterator_destroy(i);
 
-    open_daemon_logfile(conf);
-
+    if (!conf->enableForeground) {
+        open_daemon_logfile(conf);
+    }
     return;
 }
 
@@ -739,34 +788,38 @@ static void accept_client(server_conf_t *conf)
     pthread_t tid;
 
     while ((sd = accept(conf->ld, NULL, NULL)) < 0) {
-        if (errno == EINTR)
+        if (errno == EINTR) {
             continue;
-        if ((errno == EAGAIN) || (errno == EWOULDBLOCK))
+        }
+        if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
             return;
-        if (errno == ECONNABORTED)
+        }
+        if (errno == ECONNABORTED) {
             return;
+        }
         log_err(errno, "Unable to accept new connection");
     }
     DPRINTF((5, "Accepted new client on fd=%d.\n", sd));
 
     if (conf->enableKeepAlive) {
         if (setsockopt(sd, SOL_SOCKET, SO_KEEPALIVE,
-          (const void *) &on, sizeof(on)) < 0)
+          (const void *) &on, sizeof(on)) < 0) {
             log_err(errno, "Unable to set KEEPALIVE socket option");
+        }
     }
-
     /*  Create a tmp struct to hold two args to pass to the thread.
      *  Note that the thread is responsible for freeing this memory.
      */
-    if (!(args = malloc(sizeof(client_arg_t))))
+    if (!(args = malloc(sizeof(client_arg_t)))) {
         out_of_memory();
+    }
     args->sd = sd;
     args->conf = conf;
 
     if ((rc = pthread_create(&tid, NULL,
-      (PthreadFunc) process_client, args)) != 0)
+      (PthreadFunc) process_client, args)) != 0) {
         log_err(rc, "Unable to create new thread");
-
+    }
     return;
 }
 
@@ -814,8 +867,9 @@ static void reset_console(obj_t *console, const char *cmd)
      *  The callback function's arg must be allocated on the heap since
      *    local vars on the stack will be lost once this routine returns.
      */
-    if (!(arg = malloc(sizeof *arg)))
+    if (!(arg = malloc(sizeof *arg))) {
         out_of_memory();
+    }
     *arg = pid;
 
     if (tpoll_timeout_relative (tp_global,
@@ -842,10 +896,12 @@ static void kill_console_reset(pid_t *arg)
     assert(pid > 0);
     free(arg);
 
-    if (kill(pid, 0) < 0)               /* process is no longer running */
+    if (kill(pid, 0) < 0) {             /* process is no longer running */
         return;
-    if (kill(-pid, SIGKILL) == 0)       /* kill entire process group */
+    }
+    if (kill(-pid, SIGKILL) == 0) {     /* kill entire process group */
         log_msg(LOG_NOTICE, "ResetCmd process pid=%d exceeded %ds time limit",
             (int) pid, RESET_CMD_TIMEOUT);
+    }
     return;
 }

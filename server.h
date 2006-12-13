@@ -194,6 +194,7 @@ typedef struct server_conf {
     unsigned         enableTCPWrap:1;   /* true if TCP-Wrappers is enabled   */
     unsigned         enableVerbose:1;   /* true if verbose output requested  */
     unsigned         enableZeroLogs:1;  /* true if console logs are zero'd   */
+    unsigned         enableForeground:1;/* true if daemon should not fork    */
 } server_conf_t;
 
 typedef struct client_args {
@@ -255,9 +256,13 @@ typedef struct client_args {
 **  server-conf.c  **
 \*******************/
 
-server_conf_t * create_server_conf(int argc, char *argv[]);
+server_conf_t * create_server_conf(void);
 
 void destroy_server_conf(server_conf_t *conf);
+
+void process_cmdline(server_conf_t *conf, int argc, char *argv[]);
+
+void process_config(server_conf_t *conf);
 
 
 /******************\

@@ -18,6 +18,9 @@ configuration file as well as listening for connections from clients.
 .B \-c \fIfile\fR
 Specify a configuration file, overriding the default location [@CONMAN_CONF@].
 .TP
+.B \-F
+Run the daemon in the foreground.
+.TP
 .B \-h
 Display a summary of the command-line options.
 .TP
