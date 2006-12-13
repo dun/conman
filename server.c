@@ -93,20 +93,20 @@ int main(int argc, char *argv[])
 #endif /* NDEBUG */
     log_set_file(stderr, log_priority, 0);
 
-    posix_signal(SIGCHLD, sig_chld_handler);
-    posix_signal(SIGHUP, SIG_IGN);
-    posix_signal(SIGINT, exit_handler);
-    posix_signal(SIGPIPE, SIG_IGN);
-    posix_signal(SIGTERM, exit_handler);
-
     conf = create_server_conf();
+    tp_global = conf->tp;
+
     process_cmdline(conf, argc, argv);
     if (!conf->enableForeground) {
         fd = begin_daemonize();
     }
-    process_config(conf);
+    posix_signal(SIGCHLD, sig_chld_handler);
+    posix_signal(SIGHUP, sig_hup_handler);
+    posix_signal(SIGINT, exit_handler);
+    posix_signal(SIGPIPE, SIG_IGN);
+    posix_signal(SIGTERM, exit_handler);
 
-    tp_global  = conf->tp;
+    process_config(conf);
 
     if (conf->enableVerbose) {
         display_configuration(conf);
@@ -132,7 +132,6 @@ int main(int argc, char *argv[])
         }
         end_daemonize(fd);
     }
-    posix_signal(SIGHUP, sig_hup_handler);
 
     log_msg(LOG_NOTICE, "Starting ConMan daemon %s (pid %d)",
         VERSION, (int) getpid());

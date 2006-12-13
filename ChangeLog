@@ -1,7 +1,9 @@
 2006-12-13  Chris Dunlap  <cdunlap@llnl.gov>
 
-	* server.c (main): Fixed bug where sighup handler was not
-	  re-established after daemonization.
+	* server.c (main): Moved signal handlers after initial daemonization.
+
+	* server.c (main): Fixed bug introduced by previous commit where
+	  sighup handler was not re-established after daemonization.
 
 	* server.c: Added calls to process_cmdline() and process_config().
 	  Changed daemonization to be controlled by enableForeground flag.
