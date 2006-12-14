@@ -1,5 +1,7 @@
 2006-12-13  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-esc.c (process_telnet_cmd): Removed outdated comments.
+
 	* server.c (open_daemon_logfile): Added assert for !enableForeground.
 
 	* server.c (main): Moved signal handlers after initial daemonization.

@@ -570,7 +570,6 @@ static int process_telnet_cmd(obj_t *telnet, int cmd, int opt)
     assert(telnet->aux.telnet.conState == CONMAN_TELCON_UP);
 
     if (!TELCMD_OK(cmd)) {
-        /*  FIXME: Changed from LOG_WARNING to LOG_DEBUG. 20030403 */
         log_msg(LOG_DEBUG,
             "Received invalid telnet cmd %#.2x from console [%s]",
             cmd, telnet->name);
@@ -581,7 +580,6 @@ static int process_telnet_cmd(obj_t *telnet, int cmd, int opt)
         (TELOPT_OK(opt) ? telopts[opt - TELOPT_FIRST] : ""), telnet->name));
 
     if (!TELOPT_OK(opt)) {
-        /*  FIXME: Changed from LOG_WARNING to LOG_DEBUG. 20030403 */
         log_msg(LOG_DEBUG,
             "Received invalid telnet opt %#.2x from console [%s]",
             opt, telnet->name);
