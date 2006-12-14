@@ -123,15 +123,6 @@ typedef enum telnet_connect_state {     /* state of n/w connection (2 bits)  */
     CONMAN_TELCON_UP
 } telcon_state_t;
 
-typedef enum telnet_option_state {      /* rfc1143 Telnet Q-Method opt state */
-    CONMAN_TELOPT_NO,
-    CONMAN_TELOPT_YES,
-    CONMAN_TELOPT_WANT_NO_EMP,
-    CONMAN_TELOPT_WANT_NO_OPP,
-    CONMAN_TELOPT_WANT_YES_EMP,
-    CONMAN_TELOPT_WANT_YES_OPP
-} telopt_state_t;
-
 typedef struct telnet_obj {             /* TELNET AUX OBJ DATA:              */
     char            *host;              /*  remote telnetd host name (or ip) */
     int              port;              /*  remote telnetd port number       */
@@ -139,7 +130,6 @@ typedef struct telnet_obj {             /* TELNET AUX OBJ DATA:              */
     int              timer;             /*  timer id for reconnects          */
     int              delay;             /*  secs 'til next reconnect attempt */
     int              iac;               /*  -1, or last char if in IAC seq   */
-    unsigned char    optState[NTELOPTS];/*  rfc1143 Q-Method option state    */
     unsigned         conState:2;        /*  telcon_state_t of n/w connection */
     unsigned         enableKeepAlive:1; /*  true if using TCP keep-alive     */
 } telnet_obj_t;

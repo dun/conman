@@ -585,9 +585,7 @@ static int process_telnet_cmd(obj_t *telnet, int cmd, int opt)
             opt, telnet->name);
         return(-1);
     }
-    /*  Perform telnet option negotiation via the Q-Method.
-     *
-     *  NOT_IMPLEMENTED_YET
+    /*  FIXME: Perform telnet option negotiation via rfc1143 Q-Method.
      */
     switch(cmd) {
     case DONT:

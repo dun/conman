@@ -346,7 +346,6 @@ obj_t * create_telnet_obj(server_conf_t *conf, char *name,
  */
     ListIterator i;
     obj_t *telnet;
-    int n;
 
     assert(conf != NULL);
     assert((name != NULL) && (name[0] != '\0'));
@@ -376,8 +375,6 @@ obj_t * create_telnet_obj(server_conf_t *conf, char *name,
     telnet->aux.telnet.timer = -1;
     telnet->aux.telnet.delay = TELNET_MIN_TIMEOUT;
     telnet->aux.telnet.iac = -1;
-    for (n=0; n<NTELOPTS; n++)
-        telnet->aux.telnet.optState[n] = CONMAN_TELOPT_NO;
     telnet->aux.telnet.conState = CONMAN_TELCON_DOWN;
     /*
      *  Dup 'enableKeepAlive' to prevent passing 'conf'
