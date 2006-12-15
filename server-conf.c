@@ -238,12 +238,10 @@ server_conf_t * create_server_conf(void)
      *    we need to prepend relative paths with the cwd.
      */
     if (!getcwd(buf, sizeof(buf))) {
-        log_msg(LOG_WARNING, "Unable to determine working directory");
+        log_err(errno, "Unable to determine working directory");
     }
-    else {
-        conf->cwd = create_string(buf);
-        conf->logDirName = create_string(buf);
-    }
+    conf->cwd = create_string(buf);
+    conf->logDirName = create_string(buf);
     return(conf);
 }
 
@@ -868,6 +866,7 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
     int tok;
     int done = 0;
     char err[MAX_LINE] = "";
+    struct stat st;
     char *p;
     int n;
 
@@ -910,19 +909,24 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
                 conf->logDirName = create_string(conf->cwd);
             }
             else {
-                if (conf->logDirName) {
-                    free(conf->logDirName);
+                p = (lex_text(l)[0] != '/')
+                    ? create_format_string("%s/%s", conf->cwd, lex_text(l))
+                    : create_string(lex_text(l));
+                if (lstat(p, &st) < 0) {
+                    snprintf(err, sizeof(err), "cannot stat %s \"%s\": %s",
+                        server_conf_strs[LEX_UNTOK(tok)], p, strerror(errno));
+                    free(p);
                 }
-                if ((lex_text(l)[0] != '/') && (conf->cwd)) {
-                    conf->logDirName = create_format_string("%s/%s",
-                        conf->cwd, lex_text(l));
+                else if (!S_ISDIR(st.st_mode)) {
+                    snprintf(err, sizeof(err), "%s \"%s\" not a directory",
+                        server_conf_strs[LEX_UNTOK(tok)], p);
+                    free(p);
                 }
                 else {
-                    conf->logDirName = create_string(lex_text(l));
-                }
-                p = conf->logDirName + strlen(conf->logDirName) - 1;
-                while ((p >= conf->logDirName) && (*p == '/')) {
-                    *p-- = '\0';
+                    if (conf->logDirName) {
+                        free(conf->logDirName);
+                    }
+                    conf->logDirName = p;
                 }
             }
             break;
@@ -993,7 +997,7 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
                 if (conf->pidFileName) {
                     free(conf->pidFileName);
                 }
-                if ((lex_text(l)[0] != '/') && (conf->cwd)) {
+                if (lex_text(l)[0] != '/') {
                     conf->pidFileName = create_format_string("%s/%s",
                         conf->cwd, lex_text(l));
                 }

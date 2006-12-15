@@ -1,5 +1,9 @@
 2006-12-14  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-conf.c (parse_server_directive): Changed LogDir processing to
+	  check and ensure directory exists.
+	* server-conf.c (create_server_conf): Die if getcwd() fails.
+
 	* server.h: Removed unused optState[] from struct telnet_obj.
 	* server-obj.c (create_telnet_obj): Removed initialization of
 	  aux.telnet.optState[].
