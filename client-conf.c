@@ -68,7 +68,7 @@ client_conf_t * create_client_conf(void)
     /*  Who am I?
      */
     uid = getuid();
-    if ((p = getenv("USER")) || (p = getenv("LOGNAME")) || (p = getlogin()))
+    if ((p = getlogin()) || (p = getenv("USER")) || (p = getenv("LOGNAME")))
         passp = getpwnam(p);
     if ((p == NULL) || (passp == NULL) || (passp->pw_uid != uid))
         if (!(passp = getpwuid(uid)))
