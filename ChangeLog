@@ -1,3 +1,7 @@
+2007-01-03  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* : Updated copyright date range.
+
 2006-12-14  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server-conf.c (parse_server_directive): Changed LogDir processing to
