@@ -51,9 +51,37 @@ char * create_format_string(const char *fmt, ...);
  *  Note that the caller is responsible for freeing this string.
  */
 
+int set_string(char **dst, const char *src);
+/*
+ *  Replaces the (dst) string with (src), freeing (dst) if present.
+ *  Returns 0 on success, -1 on error.
+ */
+
 void destroy_string(char *str);
 /*
  *  Destroys the string (str).
+ */
+
+int is_empty_string(const char *str);
+/*
+ *  Returns  1 if (str) is empty (ie, contains only whitespace or the NUL).
+ *  Returns  0 if (str) is non empty.
+ *  Returns -1 if (str) is NULL.
+ */
+
+int parse_string(char *src, char **dst_p, char **ptr_p, char *quote_p);
+/*
+ *  Parses the next word in (src), storing a pointer to the word in (dst_p).
+ *    Leading and trailing whitespace is ignored (unless quoted).  The (ptr_p)
+ *    is the address of a char-pointer that should initially point to NULL;
+ *    this is used to maintain state between repeated calls in parsing the
+ *    same (src) string.
+ *  If the next word is a quoted string (delimited by either ['] or ["]),
+ *    the quotation marks are removed.  If (quote_p) is non-NULL, it will be
+ *    set to the character used to delimit the string.
+ *  Returns 1 on success, 0 if there are no more words, and -1 on error
+ *    (eg, an invalid argument or a quoted string that is not terminated).
+ *  Note that (src) is modified by this routine!
  */
 
 size_t append_format_string(char *dst, size_t size, const char *fmt, ...);
@@ -66,12 +94,13 @@ size_t append_format_string(char *dst, size_t size, const char *fmt, ...);
  */
 
 int substitute_string(char *dst, size_t dstlen, const char *src,
-    char c, char *sub);
+    char c, const char *sub);
 /*
  *  Copies the (src) string into the (dst) buffer of size (dstlen),
- *    substituting all occurrences of char (c) with the string (sub).
+ *    substituting all occurrences of "%c" (ie, the character specified by 'c'
+ *    preceded by '%') with the constant string (sub).
  *  Returns the length of the resulting string in (dst),
- *    or -1 if truncation occurred.
+ *    or -1 on error (eg, an invalid argument or truncated result).
  *  Always NUL terminates the dst string (unless dstlen == 0).
  */
 
