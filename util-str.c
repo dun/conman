@@ -113,8 +113,8 @@ int is_empty_string(const char *str)
     if (!str) {
         return(-1);
     }
-    while (*str) {
-        if (!isspace((int) *str++)) {
+    for (; *str; str++) {
+        if (!isspace((int) *str)) {
             return(0);
         }
     }

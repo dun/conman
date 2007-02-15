@@ -1,5 +1,7 @@
 2007-02-14  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* util-str.c (is_empty_string): Tweaked.
+
 	* util-str.c, util-str.h:
 	  Added set_string(), is_empty_string(), parse_string().
 	  Changed substitute_string() to substitute "%c" sequences.
