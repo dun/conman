@@ -48,12 +48,15 @@
 #define DEFAULT_SEROPT_PARITY           0
 #define DEFAULT_SEROPT_STOPBITS         1
 
+#define PROCESS_MAX_COUNT               3
+#define PROCESS_MIN_TIMEOUT             60
+
 #define RESET_CMD_TIMEOUT               60
 
 #define RESOLVE_RETRY_TIMEOUT           1800
 
-#define TELNET_MIN_TIMEOUT              15
 #define TELNET_MAX_TIMEOUT              1800
+#define TELNET_MIN_TIMEOUT              15
 
 
 /*  Under Solaris and Tru64, NTELOPTS is only defined when TELOPTS is defined.
@@ -66,9 +69,10 @@
 #endif /* NTELOPTS */
 
 
-enum obj_type {                         /* type of auxiliary obj (2 bits)    */
+enum obj_type {                         /* type of auxiliary obj (3 bits)    */
     CONMAN_OBJ_CLIENT,
     CONMAN_OBJ_LOGFILE,
+    CONMAN_OBJ_PROCESS,
     CONMAN_OBJ_SERIAL,
     CONMAN_OBJ_TELNET
 };
@@ -97,8 +101,19 @@ typedef struct logfile_obj {            /* LOGFILE AUX OBJ DATA:             */
     char            *fmtName;           /*  name with conversion specifiers  */
     logopt_t         opts;              /*  local options                    */
     unsigned         gotProcessing:1;   /*  true if input processing req'd   */
+    unsigned         gotTruncate:1;     /*  true if ZeroLogs is enabled      */
     unsigned         lineState:2;       /*  log_line_state_t CR/LF state     */
 } logfile_obj_t;
+
+typedef struct process_obj {            /* PROCESS AUX OBJ DATA              */
+    char           **argv;              /*  NULL-term'd ary of ptrs to strs  */
+    char            *prog;              /*  reference to basename of argv[0] */
+    int              count;             /*  num attempts at process exec     */
+    int              timer;             /*  timer id for repeated attempts   */
+    pid_t            pid;               /*  pid of forked process            */
+    time_t           tStart;            /*  time at which process was exec'd */
+    struct base_obj *logfile;           /*  log obj ref for console replay   */
+} process_obj_t;
 
 typedef struct serial_opt {             /* SERIAL OBJ OPTIONS:               */
     speed_t          bps;               /*  bps def for cfset*speed()        */
@@ -113,8 +128,6 @@ typedef struct serial_obj {             /* SERIAL AUX OBJ DATA:              */
     struct base_obj *logfile;           /*  log obj ref for console replay   */
     struct termios   tty;               /*  saved cooked tty mode            */
 } serial_obj_t;
-
-typedef struct sockaddr_in sockaddr_t;
 
 typedef enum telnet_connect_state {     /* state of n/w connection (2 bits)  */
     CONMAN_TELCON_NONE,
@@ -137,6 +150,7 @@ typedef struct telnet_obj {             /* TELNET AUX OBJ DATA:              */
 typedef union aux_obj {
     client_obj_t     client;
     logfile_obj_t    logfile;
+    process_obj_t    process;
     serial_obj_t     serial;
     telnet_obj_t     telnet;
 } aux_obj_t;
@@ -150,7 +164,7 @@ typedef struct base_obj {               /* BASE OBJ:                         */
     pthread_mutex_t  bufLock;           /*  lock protecting access to buf    */
     List             readers;           /*  list of objs that read from me   */
     List             writers;           /*  list of objs that write to me    */
-    unsigned         type:2;            /*  enum obj_type of auxiliary obj   */
+    unsigned         type:3;            /*  enum obj_type of auxiliary obj   */
     unsigned         gotBufWrap:1;      /*  true if circular-buf has wrapped */
     unsigned         gotEOF:1;          /*  true if obj got EOF on last read */
     unsigned         gotReset:1;        /*  true if resetting a console obj  */
@@ -158,8 +172,9 @@ typedef struct base_obj {               /* BASE OBJ:                         */
 } obj_t;
 
 typedef struct server_conf {
-    char            *cwd;               /* cwd when daemon was started       */
     char            *confFileName;      /* configuration file name           */
+    char            *cwd;               /* cwd when daemon was started       */
+    char            *execDirName;       /* dir prefix for relpath proc exec  */
     char            *logDirName;        /* dir prefix for relative logfiles  */
     char            *logFileName;       /* file to which logmsgs are written */
     char            *logFmtName;        /* name with conversion specifiers   */
@@ -177,8 +192,8 @@ typedef struct server_conf {
     List             objs;              /* list of all server obj_t's        */
     tpoll_t          tp;                /* tpoll obj for muxing i/o & timers */
     char            *globalLogName;     /* global log name (must contain &)  */
-    logopt_t         globalLogopts;     /* global opts for logfile objects   */
-    seropt_t         globalSeropts;     /* global opts for serial objects    */
+    logopt_t         globalLogOpts;     /* global opts for logfile objects   */
+    seropt_t         globalSerOpts;     /* global opts for serial objects    */
     unsigned         enableKeepAlive:1; /* true if using TCP keep-alive      */
     unsigned         enableLoopBack:1;  /* true if only listening on loopback*/
     unsigned         enableTCPWrap:1;   /* true if TCP-Wrappers is enabled   */
@@ -193,10 +208,6 @@ typedef struct client_args {
 } client_arg_t;
 
 
-/***********\
-**  Notes  **
-\***********/
-
 /*  Concering object READERS and WRITERS:
  *
  *  - an object's readers are those objects that read from it
@@ -208,7 +219,7 @@ typedef struct client_args {
  *  into the circular write-buffer of each object listed in its readers list.
  *  Data in an object's write-buffer is written out to its file descriptor.
  *
- *  CONSOLE objects: (aka SERIAL/TELNET objects)
+ *  CONSOLE objects: (aka PROCESS/SERIAL/TELNET objects)
  *  - readers list can contain at most one logfile object
  *    and any number of R/O or R/W client objects
  *  - writers list can contain any number of R/W or W/O client objects
@@ -231,21 +242,19 @@ typedef struct client_args {
  */
 
 
-/************\
-**  Macros  **
-\************/
-
+/*  Macros
+ */
 #define is_client_obj(OBJ)   (OBJ->type == CONMAN_OBJ_CLIENT)
 #define is_logfile_obj(OBJ)  (OBJ->type == CONMAN_OBJ_LOGFILE)
+#define is_process_obj(OBJ)  (OBJ->type == CONMAN_OBJ_PROCESS)
 #define is_serial_obj(OBJ)   (OBJ->type == CONMAN_OBJ_SERIAL)
 #define is_telnet_obj(OBJ)   (OBJ->type == CONMAN_OBJ_TELNET)
-#define is_console_obj(OBJ)  (is_serial_obj(OBJ) || is_telnet_obj(OBJ))
+#define is_console_obj(OBJ)  \
+    (is_process_obj(OBJ) || is_serial_obj(OBJ) || is_telnet_obj(OBJ))
 
 
-/*******************\
-**  server-conf.c  **
-\*******************/
-
+/*  server-conf.c
+ */
 server_conf_t * create_server_conf(void);
 
 void destroy_server_conf(server_conf_t *conf);
@@ -255,59 +264,44 @@ void process_cmdline(server_conf_t *conf, int argc, char *argv[]);
 void process_config(server_conf_t *conf);
 
 
-/******************\
-**  server-esc.c  **
-\******************/
-
+/*  server-esc.c
+ */
 int process_client_escapes(obj_t *client, void *src, int len);
 
-int process_telnet_escapes(obj_t *telnet, void *src, int len);
 
-int send_telnet_cmd(obj_t *telnet, int cmd, int opt);
-
-
-/**********************\
-**  server-logfile.c  **
-\**********************/
-
+/*  server-logfile.c
+ */
 int parse_logfile_opts(logopt_t *opts, const char *str,
-    const char *conf, int line, char *errbuf, int errlen);
+    char *errbuf, int errlen);
 
-int open_logfile_obj(obj_t *logfile, int gotTrunc);
+obj_t * create_logfile_obj(server_conf_t *conf, char *name,
+    obj_t *console, logopt_t *opts, char *errbuf, int errlen);
+
+int open_logfile_obj(obj_t *logfile);
 
 obj_t * get_console_logfile_obj(obj_t *console);
 
 int write_log_data(obj_t *log, const void *src, int len);
 
 
-/******************\
-**  server-obj.c  **
-\******************/
+/*  server-obj.c
+ */
+obj_t * create_obj(server_conf_t *conf, char *name,
+    int fd, enum obj_type type);
 
 obj_t * create_client_obj(server_conf_t *conf, req_t *req);
 
-obj_t * create_logfile_obj(server_conf_t *conf, char *name,
-    obj_t *console, logopt_t *opts, char *errbuf, int errlen);
-
-obj_t * create_serial_obj(server_conf_t *conf, char *name,
-    char *dev, seropt_t *opts, char *errbuf, int errlen);
-
-int open_serial_obj(obj_t *serial);
-
-obj_t * create_telnet_obj(server_conf_t *conf, char *name,
-    char *host, int port, char *errbuf, int errlen);
-
-int connect_telnet_obj(obj_t *telnet);
-
-void disconnect_telnet_obj(obj_t *telnet);
-
 void destroy_obj(obj_t *obj);
+
+void reopen_obj(obj_t *obj);
 
 int format_obj_string(char *buf, int buflen, obj_t *obj, const char *fmt);
 
 int compare_objs(obj_t *obj1, obj_t *obj2);
 
 int find_obj(obj_t *obj, obj_t *key);
+
+int write_notify_msg(obj_t *console, int priority, char *fmt, ...);
 
 void notify_console_objs(obj_t *console, char *msg);
 
@@ -326,21 +320,42 @@ int write_obj_data(obj_t *obj, const void *src, int len, int isInfo);
 int write_to_obj(obj_t *obj);
 
 
-/*********************\
-**  server-serial.c  **
-\*********************/
+/*  server-process.c
+ */
+obj_t * create_process_obj(server_conf_t *conf, char *name, List args,
+    char *errbuf, int errlen);
 
+int open_process_obj(obj_t *process);
+
+
+/*  server-serial.c
+ */
 int parse_serial_opts(
     seropt_t *opts, const char *str, char *errbuf, int errlen);
 
 void set_serial_opts(struct termios *tty, obj_t *serial, seropt_t *opts);
 
+obj_t * create_serial_obj(server_conf_t *conf, char *name,
+    char *dev, seropt_t *opts, char *errbuf, int errlen);
 
-/*******************\
-**  server-sock.c  **
-\*******************/
+int open_serial_obj(obj_t *serial);
 
+
+/*  server-sock.c
+ */
 void process_client(client_arg_t *args);
+
+
+/*  server-telnet.c
+ */
+obj_t * create_telnet_obj(server_conf_t *conf, char *name,
+    char *host, int port, char *errbuf, int errlen);
+
+int open_telnet_obj(obj_t *telnet);
+
+int process_telnet_escapes(obj_t *telnet, void *src, int len);
+
+int send_telnet_cmd(obj_t *telnet, int cmd, int opt);
 
 
 #endif /* !_SERVER_H */

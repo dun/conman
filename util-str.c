@@ -84,7 +84,7 @@ char * create_format_string(const char *fmt, ...)
 }
 
 
-int set_string(char **dst, const char *src)
+int replace_string(char **dst, const char *src)
 {
     if (!dst) {
         return(-1);
@@ -289,17 +289,18 @@ char * create_short_time_string(time_t t)
 }
 
 
-char * create_time_delta_string(time_t t)
+char * create_time_delta_string(time_t t0, time_t t1)
 {
-    time_t now;
     long n;
     int years, weeks, days, hours, minutes, seconds;
     char buf[25];
 
-    if (time(&now) == (time_t) -1) {
-        log_err(errno, "time() failed");
+    if (t1 == (time_t) -1) {
+        if (time(&t1) == (time_t) -1) {
+            log_err(errno, "time() failed");
+        }
     }
-    n = difftime(now, t);
+    n = difftime(t1, t0);
     assert(n >= 0);
 
     seconds = n % 60;

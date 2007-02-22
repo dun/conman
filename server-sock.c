@@ -674,7 +674,7 @@ static int check_busy_consoles(req_t *req)
             gotBcast = list_is_empty(writer->writers);
             tty = writer->aux.client.req->tty;
             x_pthread_mutex_unlock(&writer->bufLock);
-            delta = create_time_delta_string(t);
+            delta = create_time_delta_string(t, -1);
 
             snprintf(buf, sizeof(buf),
                 "Console [%s] open %s by <%s@%s>%s%s (idle %s).\n",
@@ -820,8 +820,8 @@ static int perform_monitor_cmd(req_t *req, server_conf_t *conf)
     client = create_client_obj(conf, req);
     console = list_peek(req->consoles);
     assert(is_console_obj(console));
-    check_console_state(console, client);
     link_objs(console, client);
+    check_console_state(console, client);
     return(0);
 }
 
@@ -854,9 +854,9 @@ static int perform_connect_cmd(req_t *req, server_conf_t *conf)
          */
         console = list_peek(req->consoles);
         assert(is_console_obj(console));
-        check_console_state(console, client);
         link_objs(client, console);
         link_objs(console, client);
+        check_console_state(console, client);
     }
     else {
         /*
@@ -865,8 +865,8 @@ static int perform_connect_cmd(req_t *req, server_conf_t *conf)
         i = list_iterator_create(req->consoles);
         while ((console = list_next(i))) {
             assert(is_console_obj(console));
-            check_console_state(console, client);
             link_objs(client, console);
+            check_console_state(console, client);
         }
         list_iterator_destroy(i);
     }
@@ -877,36 +877,49 @@ static int perform_connect_cmd(req_t *req, server_conf_t *conf)
 static void check_console_state(obj_t *console, obj_t *client)
 {
 /*  Checks the state of the console and warns the client if needed.
- *  This informs the newly-connected client if strange things are afoot.
+ *  Informs the newly-connected client if strange things are afoot.
+ *  Attempts an immediate reconnect if the console connection is down.
  */
     char buf[MAX_LINE];
 
     assert(is_console_obj(console));
     assert(is_client_obj(client));
 
-    /*  If linking a client to a downed telnet session,
-     *    notify the client and attempt an immediate reconnect of the console.
-     */
-    if (is_telnet_obj(console)
-      && (console->aux.telnet.conState != CONMAN_TELCON_UP)) {
-
+    if (is_process_obj(console) && (console->fd < 0)) {
+        snprintf(buf, sizeof(buf),
+            "%sConsole [%s] is currently disconnected from \"%s\"%s",
+            CONMAN_MSG_PREFIX, console->name, console->aux.process.prog,
+            CONMAN_MSG_SUFFIX);
+        strcpy(&buf[sizeof(buf) - 3], "\r\n");
+        write_obj_data(client, buf, strlen(buf), 1);
+        open_process_obj(console);
+    }
+    else if (is_serial_obj(console) && (console->fd < 0)) {
+        snprintf(buf, sizeof(buf),
+            "%sConsole [%s] is currently disconnected from \"%s\"%s",
+            CONMAN_MSG_PREFIX, console->name, console->aux.serial.dev,
+            CONMAN_MSG_SUFFIX);
+        strcpy(&buf[sizeof(buf) - 3], "\r\n");
+        write_obj_data(client, buf, strlen(buf), 1);
+        open_serial_obj(console);
+    }
+    else if (is_telnet_obj(console)
+            && (console->aux.telnet.conState != CONMAN_TELCON_UP)) {
         snprintf(buf, sizeof(buf),
             "%sConsole [%s] is currently disconnected from <%s:%d>%s",
             CONMAN_MSG_PREFIX, console->name, console->aux.telnet.host,
             console->aux.telnet.port, CONMAN_MSG_SUFFIX);
         strcpy(&buf[sizeof(buf) - 3], "\r\n");
         write_obj_data(client, buf, strlen(buf), 1);
-        /*
-         *  Reset the timeout delay.
-         */
         console->aux.telnet.delay = TELNET_MIN_TIMEOUT;
         /*
-         *  DO NOT call connect_telnet_obj() while in the PENDING state
-         *    since it will be misinterpreted as the completion of the
-         *    non-blocking connect().
+         *  Do not call connect_telnet_obj() while in the PENDING state since
+         *    it would be misinterpreted as the completion of the non-blocking
+         *    connect().
          */
-        if (console->aux.telnet.conState == CONMAN_TELCON_DOWN)
-            connect_telnet_obj(console);
+        if (console->aux.telnet.conState == CONMAN_TELCON_DOWN) {
+            open_telnet_obj(console);
+        }
     }
     return;
 }

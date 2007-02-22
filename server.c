@@ -29,7 +29,6 @@
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include <arpa/telnet.h>
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -307,7 +306,7 @@ static void sig_chld_handler(int signum)
     pid_t pid;
 
     while ((pid = waitpid(-1, NULL, WNOHANG)) > 0) {
-        DPRINTF((5, "Process %d terminated.\n", (int) pid));
+        log_msg(LOG_DEBUG, "Process %d terminated", (int) pid);
     }
     return;
 }
@@ -501,39 +500,32 @@ static void open_objs(server_conf_t *conf)
 {
 /*  Initially opens everything in the 'objs' list.
  */
-    int n;
     struct rlimit limit;
     ListIterator i;
     obj_t *obj;
 
     if (getrlimit(RLIMIT_NOFILE, &limit) < 0) {
-        log_err(errno, "Unable to get the num open file limit");
+        log_err(errno, "Unable to get open file limit");
     }
-    n = MAX(limit.rlim_max, list_count(conf->objs) * 2);
-    if (limit.rlim_cur < n) {
-        limit.rlim_cur = limit.rlim_max = n;
+    if (limit.rlim_cur < limit.rlim_max) {
+        limit.rlim_cur = limit.rlim_max;
         if (setrlimit(RLIMIT_NOFILE, &limit) < 0) {
-            log_msg(LOG_ERR, "Unable to set the num open file limit to %d", n);
+            log_msg(LOG_ERR,
+                "Unable to set open file limit to %d", limit.rlim_cur);
         }
         else {
-            log_msg(LOG_INFO, "Increased the num open file limit to %d", n);
+            log_msg(LOG_INFO,
+                "Increased open file limit to %d", limit.rlim_cur);
         }
     }
+    else {
+        log_msg(LOG_INFO,
+            "Found open file limit set to %d", limit.rlim_cur);
+    }
+
     i = list_iterator_create(conf->objs);
     while ((obj = list_next(i))) {
-        if (is_serial_obj(obj)) {
-            open_serial_obj(obj);
-        }
-        else if (is_telnet_obj(obj)) {
-            connect_telnet_obj(obj);
-        }
-        else if (is_logfile_obj(obj)) {
-            open_logfile_obj(obj, conf->enableZeroLogs);
-        }
-        else {
-            log_err(0, "INTERNAL: Unrecognized object [%s] type=%d",
-                obj->name, obj->type);
-        }
+        reopen_obj(obj);
     }
     list_iterator_destroy(i);
     return;
@@ -580,6 +572,7 @@ static void mux_io(server_conf_t *conf)
             if ((is_telnet_obj(obj)
                 && obj->aux.telnet.conState == CONMAN_TELCON_UP)
               || is_serial_obj(obj)
+              || is_process_obj(obj)
               || is_client_obj(obj)) {
                 tpoll_set(conf->tp, obj->fd, POLLIN);
             }
@@ -620,7 +613,7 @@ static void mux_io(server_conf_t *conf)
             if (is_telnet_obj(obj)
               && tpoll_is_set(conf->tp, obj->fd, POLLIN | POLLOUT)
               && (obj->aux.telnet.conState == CONMAN_TELCON_PENDING)) {
-                connect_telnet_obj(obj);
+                open_telnet_obj(obj);
                 continue;
             }
             if (tpoll_is_set(conf->tp, obj->fd, POLLIN | POLLHUP | POLLERR)) {
@@ -758,7 +751,7 @@ static void reopen_logfiles(server_conf_t *conf)
         if (!is_logfile_obj(logfile)) {
             continue;
         }
-        open_logfile_obj(logfile, 0);   /* do not truncate the logfile */
+        open_logfile_obj(logfile);
     }
     list_iterator_destroy(i);
 
@@ -829,7 +822,7 @@ static void reset_console(obj_t *console, const char *cmd)
 {
 /*  Resets the 'console' obj by performing the reset 'cmd' in a subshell.
  */
-    char cmdbuf[MAX_LINE];
+    char buf[MAX_LINE];
     pid_t pid;
     pid_t *arg;
 
@@ -837,10 +830,9 @@ static void reset_console(obj_t *console, const char *cmd)
     assert(console->gotReset);
     assert(cmd != NULL);
 
-    DPRINTF((5, "Resetting console [%s].\n", console->name));
     console->gotReset = 0;
 
-    if (format_obj_string(cmdbuf, sizeof(cmdbuf), console, cmd) < 0) {
+    if (format_obj_string(buf, sizeof(buf), console, cmd) < 0) {
         log_msg(LOG_NOTICE, "Unable to reset console [%s]: command too long",
             console->name);
         return;
@@ -855,7 +847,7 @@ static void reset_console(obj_t *console, const char *cmd)
         close(STDIN_FILENO);            /* ignore errors on close() */
         close(STDOUT_FILENO);
         close(STDERR_FILENO);
-        execl("/bin/sh", "sh", "-c", cmdbuf, NULL);
+        execl("/bin/sh", "sh", "-c", buf, NULL);
         _exit(127);                     /* execl() error */
     }
     /*  Both parent and child call setpgid() to make the child a process
@@ -863,6 +855,16 @@ static void reset_console(obj_t *console, const char *cmd)
      *    both we avoid a race condition.  (cf. APUE 9.4 p244)
      */
     setpgid(pid, 0);
+
+    /*  FIXME: Have perform_reset() store the client info instead of a bool
+     *  for gotReset.  Then remove the notify_objs msg from perform_reset()
+     *  and replace it with the following:
+     */
+    log_msg(LOG_INFO, "Reset console [%s] (pid %d)", console->name, pid);
+    snprintf(buf, sizeof(buf), "%sConsole [%s] reset (pid %d)%s",
+        CONMAN_MSG_PREFIX, console->name, (int) pid, CONMAN_MSG_SUFFIX);
+    strcpy(&buf[sizeof(buf) - 3], "\r\n");
+    notify_console_objs(console, buf);
 
     /*  Set a timer to ensure the reset cmd does not exceed its time limit.
      *  The callback function's arg must be allocated on the heap since

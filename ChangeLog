@@ -1,3 +1,46 @@
+2007-02-22  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server.c: Added support for process objs.
+	* server.c (open_objs): Set RLIMIT_NOFILE to rlim_max.
+	* server.h:
+	  Added process_obj struct.  Updated obj_type enum & aux_obj union.
+	  Added is_process_obj macro.  Updated is_console_obj macro.
+	  Added gotTruncate to logfile_obj struct.
+	  Added execDirName to server_conf struct.
+	  Added PROCESS_MAX_COUNT & PROCESS_MIN_TIMEOUT defines.
+	  Updated prototypes.
+	* server-conf.c: Added ExecDir keyword to config file.
+	* server-conf.c (parse_console_directive): Restructured.
+	* server-conf.c (process_console): Added.
+	* server-conf.c (is_empty_string): Moved to util-str.c.
+	* server-esc.c (process_telnet_escapes, send_telnet_cmd,
+	  process_telnet_cmd): Moved to server-telnet.c
+	* server-logfile.c (parse_logfile_opts): Changed prototype.
+	* server-logfile.c (open_logfile_obj): Added support for process obj.
+	* server-logfile.c: Added create_logfile_obj().
+	* server-obj.c (create_obj, destroy_obj):
+	  Added support for process obj.
+	* server-obj.c (create_logfile_obj): Moved to server-logfile.c.
+	* server-obj.c (create_serial_obj, open_serial_obj):
+	  Moved to server-serial.c.
+	* server-obj.c (create_telnet_obj, connect_telnet_obj,
+	  disconnect_telnet_obj, reset_telnet_delay): Moved to server-telnet.c.
+	* server-obj.c (reopen_obj, write_notify_msg): Added.
+	* server-obj.c (shutdown_obj): Added support to reopen console objs.
+	* server-process.c: Added create_process_obj() & open_process_obj().
+	* server-serial.c: Added create_serial_obj() & open_serial_obj().
+	* server-sock.c (check_console_states):
+	  Added checks for process and serial consoles.
+	* server-telnet.c: Added create_telnet_obj(), open_telnet_obj(),
+	  connect_telnet_obj(), disconnect_telnet_obj(), reset_telnet_delay(),
+	  process_telnet_escapes(), send_telnet_cmd(), process_telnet_cmd().
+	* etc/conman.conf, man/conman.conf.5.in: Added SERVER EXECDIR keyword.
+	  Documented the use of external process-based connections for the
+	  CONSOLE DEV keyword.
+	* util-str.c, util-str.h: Changed set_string() to replace_string().
+	  Changed prototype for create_time_delta_string().
+	* Makefile.in: Added server-process.o & server-telnet.o.
+
 2007-02-14  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* util-str.c (is_empty_string): Tweaked.

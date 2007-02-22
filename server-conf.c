@@ -58,6 +58,7 @@ enum server_conf_toks {
  */
     SERVER_CONF_CONSOLE = LEX_TOK_OFFSET,
     SERVER_CONF_DEV,
+    SERVER_CONF_EXECDIR,
     SERVER_CONF_GLOBAL,
     SERVER_CONF_KEEPALIVE,
     SERVER_CONF_LOG,
@@ -85,6 +86,7 @@ static char *server_conf_strs[] = {
  */
     "CONSOLE",
     "DEV",
+    "EXECDIR",
     "GLOBAL",
     "KEEPALIVE",
     "LOG",
@@ -156,15 +158,24 @@ static tag_t logFacilities[] = {
     { NULL,         -1 }
 };
 
+typedef struct console_strs {
+    char *name;
+    char *dev;
+    char *log;
+    char *lopts;
+    char *sopts;
+} console_strs_t;
+
 
 static void display_server_help(char *prog);
 static void signal_daemon(server_conf_t *conf);
 static void parse_console_directive(server_conf_t *conf, Lex l);
+static int process_console(server_conf_t *conf, console_strs_t *con_p,
+    char *errbuf, int errbuflen);
 static void parse_global_directive(server_conf_t *conf, Lex l);
 static void parse_server_directive(server_conf_t *conf, Lex l);
 static int read_pidfile(const char *pidfile);
 static int write_pidfile(const char *pidfile);
-static int is_empty_string(const char *s);
 static int lookup_syslog_priority(const char *priority);
 static int lookup_syslog_facility(const char *facility);
 
@@ -179,6 +190,7 @@ server_conf_t * create_server_conf(void)
     }
     conf->cwd = NULL;
     conf->confFileName = create_string(CONMAN_CONF);
+    conf->execDirName = NULL;
     conf->logDirName = NULL;
     conf->logFileName = NULL;
     conf->logFmtName = NULL;
@@ -220,12 +232,12 @@ server_conf_t * create_server_conf(void)
         log_err(0, "Unable to create object for multiplexing I/O");
     }
     conf->globalLogName = NULL;
-    conf->globalLogopts.enableSanitize = DEFAULT_LOGOPT_SANITIZE;
-    conf->globalLogopts.enableTimestamp = DEFAULT_LOGOPT_TIMESTAMP;
-    conf->globalSeropts.bps = DEFAULT_SEROPT_BPS;
-    conf->globalSeropts.databits = DEFAULT_SEROPT_DATABITS;
-    conf->globalSeropts.parity = DEFAULT_SEROPT_PARITY;
-    conf->globalSeropts.stopbits = DEFAULT_SEROPT_STOPBITS;
+    conf->globalLogOpts.enableSanitize = DEFAULT_LOGOPT_SANITIZE;
+    conf->globalLogOpts.enableTimestamp = DEFAULT_LOGOPT_TIMESTAMP;
+    conf->globalSerOpts.bps = DEFAULT_SEROPT_BPS;
+    conf->globalSerOpts.databits = DEFAULT_SEROPT_DATABITS;
+    conf->globalSerOpts.parity = DEFAULT_SEROPT_PARITY;
+    conf->globalSerOpts.stopbits = DEFAULT_SEROPT_STOPBITS;
     conf->enableKeepAlive = 1;
     conf->enableLoopBack = 0;
     conf->enableTCPWrap = 0;
@@ -241,6 +253,7 @@ server_conf_t * create_server_conf(void)
         log_err(errno, "Unable to determine working directory");
     }
     conf->cwd = create_string(buf);
+    conf->execDirName = create_string(buf);
     conf->logDirName = create_string(buf);
     return(conf);
 }
@@ -251,28 +264,15 @@ void destroy_server_conf(server_conf_t *conf)
     if (!conf) {
         return;
     }
-    if (conf->cwd) {
-        free(conf->cwd);
-    }
-    if (conf->logDirName) {
-        free(conf->logDirName);
-    }
-    if (conf->logFileName) {
-        free(conf->logFileName);
-    }
-    if (conf->logFmtName) {
-        free(conf->logFmtName);
-    }
     if (conf->pidFileName) {
-        (void) unlink(conf->pidFileName);
-        free(conf->pidFileName);
-    }
-    if (conf->resetCmd) {
-        free(conf->resetCmd);
+        if (unlink(conf->pidFileName) < 0) {
+            log_msg(LOG_ERR, "Unable to delete pid file \"%s\": %s",
+                conf->pidFileName, strerror(errno));
+        }
     }
     if (conf->fd >= 0) {
         if (close(conf->fd) < 0) {
-            log_msg(LOG_ERR, "Unable to close \"%s\": %s",
+            log_msg(LOG_ERR, "Unable to close config file \"%s\": %s",
                 conf->confFileName, strerror(errno));
         }
         conf->fd = -1;
@@ -290,12 +290,16 @@ void destroy_server_conf(server_conf_t *conf)
     if (conf->tp) {
         tpoll_destroy(conf->tp);
     }
-    if (conf->globalLogName) {
-        free(conf->globalLogName);
-    }
-    if (conf->confFileName) {
-        free(conf->confFileName);
-    }
+    destroy_string(conf->confFileName);
+    destroy_string(conf->cwd);
+    destroy_string(conf->execDirName);
+    destroy_string(conf->globalLogName);
+    destroy_string(conf->logDirName);
+    destroy_string(conf->logFileName);
+    destroy_string(conf->logFmtName);
+    destroy_string(conf->pidFileName);
+    destroy_string(conf->resetCmd);
+
     free(conf);
     return;
 }
@@ -309,9 +313,7 @@ void process_cmdline(server_conf_t *conf, int argc, char *argv[])
     while ((c = getopt(argc, argv, "c:FhkLp:qrvVz")) != -1) {
         switch(c) {
         case 'c':
-            if (conf->confFileName) {
-                free(conf->confFileName);
-            }
+            destroy_string(conf->confFileName);
             conf->confFileName = create_string(optarg);
             break;
         case 'F':
@@ -564,27 +566,14 @@ static void parse_console_directive(server_conf_t *conf, Lex l)
  *    [LOG="<file>"] [LOGOPTS="<str>"] [SEROPTS="<str>"]
  */
     char *directive;                    /* name of directive being parsed */
-    int line;                           /* line# where directive begins */
+    int line;                           /* line # where directive begins */
     int tok;
     int done = 0;
-    int gotEmptyLogName = 0;
     char err[MAX_LINE] = "";
-    char name[MAX_LINE] = "";
-    char dev[MAX_LINE] = "";
-    char log[MAX_LINE] = "";
-    char *p;
-    obj_t *console;
-    obj_t *logfile;
-    logopt_t logopts;
-    seropt_t seropts;
+    console_strs_t con = { NULL, NULL, NULL, NULL, NULL };
 
     directive = server_conf_strs[LEX_UNTOK(lex_prev(l))];
     line = lex_line(l);
-
-    /*  Set options to global values which may be overridden.
-     */
-    logopts = conf->globalLogopts;
-    seropts = conf->globalSeropts;
 
     while (!done && !*err) {
         tok = lex_next(l);
@@ -601,7 +590,7 @@ static void parse_console_directive(server_conf_t *conf, Lex l)
                     server_conf_strs[LEX_UNTOK(tok)]);
             }
             else {
-                strlcpy(name, lex_text(l), sizeof(name));
+                replace_string(&con.name, lex_text(l));
             }
             break;
 
@@ -616,7 +605,7 @@ static void parse_console_directive(server_conf_t *conf, Lex l)
                     server_conf_strs[LEX_UNTOK(tok)]);
             }
             else {
-                strlcpy(dev, lex_text(l), sizeof(dev));
+                replace_string(&con.dev, lex_text(l));
             }
             break;
 
@@ -629,10 +618,6 @@ static void parse_console_directive(server_conf_t *conf, Lex l)
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             }
-            else if (is_empty_string(lex_text(l))) {
-                gotEmptyLogName = 1;
-                *log = '\0';
-            }
 #ifdef DO_CONF_ESCAPE_ERROR
             else if (strchr(lex_text(l), DEPRECATED_CONF_ESCAPE)) {
                 snprintf(err, sizeof(err),
@@ -641,14 +626,16 @@ static void parse_console_directive(server_conf_t *conf, Lex l)
                     DEPRECATED_CONF_ESCAPE);
             }
 #endif /* DO_CONF_ESCAPE_ERROR */
+            else if (is_empty_string(lex_text(l))) {
+                replace_string(&con.log, "");
+            }
+            else if ((lex_text(l)[0] != '/') && (conf->logDirName)) {
+                destroy_string(con.log);
+                con.log = create_format_string("%s/%s",
+                    conf->logDirName, lex_text(l));
+            }
             else {
-                if ((lex_text(l)[0] != '/') && (conf->logDirName)) {
-                    snprintf(log, sizeof(log), "%s/%s",
-                        conf->logDirName, lex_text(l));
-                }
-                else {
-                    strlcpy(log, lex_text(l), sizeof(log));
-                }
+                replace_string(&con.log, lex_text(l));
             }
             break;
 
@@ -663,8 +650,7 @@ static void parse_console_directive(server_conf_t *conf, Lex l)
                     server_conf_strs[LEX_UNTOK(tok)]);
             }
             else {
-                parse_logfile_opts(&logopts, lex_text(l),
-                    conf->confFileName, lex_line(l), err, sizeof(err));
+                replace_string(&con.lopts, lex_text(l));
             }
             break;
 
@@ -679,7 +665,7 @@ static void parse_console_directive(server_conf_t *conf, Lex l)
                     server_conf_strs[LEX_UNTOK(tok)]);
             }
             else {
-                parse_serial_opts(&seropts, lex_text(l), err, sizeof(err));
+                replace_string(&con.sopts, lex_text(l));
             }
             break;
 
@@ -697,55 +683,171 @@ static void parse_console_directive(server_conf_t *conf, Lex l)
             break;
         }
     }
-
-    if ((!*name || !*dev) && !*err) {
+    if ((!*con.name || !*con.dev) && !*err) {
         snprintf(err, sizeof(err), "incomplete %s directive", directive);
     }
+    process_console(conf, &con, err, sizeof(err));
+
     if (*err) {
         log_msg(LOG_ERR, "CONFIG[%s:%d]: %s",
             conf->confFileName, lex_line(l), err);
         while (lex_prev(l) != LEX_EOL && lex_prev(l) != LEX_EOF) {
             (void) lex_next(l);
         }
-        return;
     }
-
-    if ((p = strchr(dev, ':'))) {
-        *p++ = '\0';
-        if (!(console = create_telnet_obj(
-                conf, name, dev, atoi(p), err, sizeof(err)))) {
-            log_msg(LOG_ERR, "CONFIG[%s:%d]: console [%s] %s",
-                conf->confFileName, line, name, err);
-        }
-    }
-    else if (!(console = create_serial_obj(
-            conf, name, dev, &seropts, err, sizeof(err)))) {
-        log_msg(LOG_ERR, "CONFIG[%s:%d]: console [%s] %s",
-            conf->confFileName, line, name, err);
-    }
-
-    if (!*log && !gotEmptyLogName && conf->globalLogName) {
-        if ((conf->globalLogName[0] != '/') && (conf->logDirName)) {
-            snprintf(log, sizeof(log), "%s/%s",
-                conf->logDirName, conf->globalLogName);
-        }
-        else {
-            strlcpy(log, conf->globalLogName, sizeof(log));
-        }
-    }
-
-    if (console && *log) {
-        if (!(logfile = create_logfile_obj(
-                conf, log, console, &logopts, err, sizeof(err)))) {
-            log_msg(LOG_ERR, "CONFIG[%s:%d]: console [%s] cannot log to "
-                "specified file: %s", conf->confFileName, line,
-                console->name, err);
-        }
-        else {
-            link_objs(console, logfile);
-        }
-    }
+    destroy_string(con.name);
+    destroy_string(con.dev);
+    destroy_string(con.log);
+    destroy_string(con.lopts);
+    destroy_string(con.sopts);
     return;
+}
+
+
+static int process_console(server_conf_t *conf, console_strs_t *con_p,
+    char *errbuf, int errbuflen)
+{
+    List         args = NULL;
+    char        *p;
+    char        *q;
+    char         quote;
+    int          rc;
+    char         buf[MAX_LINE];
+    char        *arg0;
+    int          n;
+    struct stat  st;
+    obj_t       *console;
+    seropt_t     seropts;
+    logopt_t     logopts;
+    obj_t       *logfile;
+
+    assert(conf != NULL);
+    assert(con_p != NULL);
+    assert(con_p->name != NULL);
+    assert(con_p->dev != NULL);
+    assert(errbuf != NULL);
+    assert(errbuflen > 0);
+
+    errbuf[ 0 ] = '\0';
+    if (!(args = list_create((ListDelF) destroy_string))) {
+        out_of_memory();
+    }
+    q = NULL;
+    while ((rc = parse_string(con_p->dev, &p, &q, &quote)) > 0) {
+        if (quote != '\'') {
+            if (substitute_string(buf, sizeof(buf), p, 'N', con_p->name) < 0) {
+                snprintf(errbuf, errbuflen,
+                    "console [%s] dev string substitution failed",
+                    con_p->name);
+                goto err;
+            }
+            p = buf;
+        }
+        list_append(args, create_string(p));
+    }
+    if (rc < 0) {
+        snprintf(errbuf, errbuflen,
+            "console [%s] dev string parse error", con_p->name);
+        goto err;
+    }
+    if (!(arg0 = list_peek(args))) {
+        snprintf(errbuf, errbuflen,
+            "console [%s] dev string is empty", con_p->name);
+        goto err;
+    }
+    if ((p = strchr(arg0, ':'))
+            && ((n = strspn(p+1, "0123456789")) > 0)
+            && (p[ n + 1 ] == '\0')) {
+        *p++ = '\0';
+        if (list_count(args) != 1) {
+            snprintf(errbuf, errbuflen,
+                "console [%s] dev string has too many args", con_p->name);
+            goto err;
+        }
+        if (!(console = create_telnet_obj(
+                conf, con_p->name, arg0, atoi(p), errbuf, errbuflen))) {
+            goto err;
+        }
+    }
+    else {
+        if (arg0[ 0 ] != '/') {
+            p = list_pop(args);
+            arg0 = list_push(args,
+                create_format_string("%s/%s", conf->execDirName, arg0));
+            free(p);
+        }
+        if (stat(arg0, &st) < 0) {
+            snprintf(errbuf, errbuflen,
+                "console [%s] device \"%s\" stat error: %s",
+                con_p->name, arg0, strerror(errno));
+            goto err;
+        }
+        else if (S_ISCHR(st.st_mode)) {
+            if (list_count(args) != 1) {
+                snprintf(errbuf, errbuflen,
+                    "console [%s] dev string has too many args", con_p->name);
+                goto err;
+            }
+            seropts = conf->globalSerOpts;
+            if (con_p->sopts && parse_serial_opts(
+                        &seropts, con_p->sopts, errbuf, errbuflen) < 0) {
+                goto err;
+            }
+            if (!(console = create_serial_obj(
+                    conf, con_p->name, arg0, &seropts, errbuf, errbuflen))) {
+                goto err;
+            }
+        }
+        else if (S_ISREG(st.st_mode)) {
+            if (!(st.st_mode & S_IXUSR)) {
+                snprintf(errbuf, errbuflen,
+                    "console [%s] device \"%s\" is not executable",
+                    con_p->name, arg0);
+                goto err;
+            }
+            if (!(console = create_process_obj(
+                    conf, con_p->name, args, errbuf, errbuflen))) {
+                goto err;
+            }
+        }
+        else {
+            snprintf(errbuf, errbuflen,
+                "console [%s] device \"%s\" type unrecognized",
+                con_p->name, arg0);
+            goto err;
+        }
+    }
+    if ((con_p->log && con_p->log[ 0 ] != '\0')
+            || (!con_p->log && conf->globalLogName)) {
+        if (con_p->log) {
+            strlcpy(buf, con_p->log, sizeof(buf));
+        }
+        else if ((conf->globalLogName[ 0 ] != '/') && (conf->logDirName)) {
+            snprintf(buf, sizeof(buf), "%s/%s",
+                conf->logDirName, conf->globalLogName);
+            buf[ sizeof(buf) - 1 ] = '\0';
+        }
+        else {
+            strlcpy(buf, conf->globalLogName, sizeof(buf));
+        }
+        logopts = conf->globalLogOpts;
+        if (con_p->lopts && parse_logfile_opts(
+                    &logopts, con_p->lopts, errbuf, errbuflen) < 0) {
+            goto err;
+        }
+        if (!(logfile = create_logfile_obj(
+                conf, buf, console, &logopts, errbuf, errbuflen))) {
+            goto err;
+        }
+        link_objs(console, logfile);
+    }
+    list_destroy(args);
+    return(0);
+
+err:
+    list_destroy(args);
+    errbuf[ errbuflen - 1 ] = '\0';
+    return(-1);
 }
 
 
@@ -775,10 +877,8 @@ static void parse_global_directive(server_conf_t *conf, Lex l)
                 /*
                  *  Unset global log name if string is empty.
                  */
-                if (conf->globalLogName) {
-                    free(conf->globalLogName);
-                    conf->globalLogName = NULL;
-                }
+                destroy_string(conf->globalLogName);
+                conf->globalLogName = NULL;
             }
 #ifdef DO_CONF_ESCAPE_ERROR
             else if (strchr(lex_text(l), DEPRECATED_CONF_ESCAPE)) {
@@ -795,9 +895,7 @@ static void parse_global_directive(server_conf_t *conf, Lex l)
                     directive, server_conf_strs[LEX_UNTOK(tok)]);
             }
             else {
-                if (conf->globalLogName) {
-                    free(conf->globalLogName);
-                }
+                destroy_string(conf->globalLogName);
                 conf->globalLogName = create_string(lex_text(l));
             }
             break;
@@ -813,8 +911,8 @@ static void parse_global_directive(server_conf_t *conf, Lex l)
                     server_conf_strs[LEX_UNTOK(tok)]);
             }
             else {
-                parse_logfile_opts(&conf->globalLogopts, lex_text(l),
-                    conf->confFileName, lex_line(l), err, sizeof(err));
+                parse_logfile_opts(&conf->globalLogOpts, lex_text(l),
+                    err, sizeof(err));
             }
             break;
 
@@ -829,7 +927,7 @@ static void parse_global_directive(server_conf_t *conf, Lex l)
                     server_conf_strs[LEX_UNTOK(tok)]);
             }
             else {
-                parse_serial_opts(&conf->globalSeropts, lex_text(l),
+                parse_serial_opts(&conf->globalSerOpts, lex_text(l),
                     err, sizeof(err));
             }
             break;
@@ -876,6 +974,40 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
         tok = lex_next(l);
         switch(tok) {
 
+        case SERVER_CONF_EXECDIR:
+            if (lex_next(l) != '=') {
+                snprintf(err, sizeof(err), "expected '=' after %s keyword",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            }
+            else if ((lex_next(l) != LEX_STR)) {
+                snprintf(err, sizeof(err), "expected STRING for %s value",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            }
+            else if (is_empty_string(lex_text(l))) {
+                destroy_string(conf->execDirName);
+                conf->execDirName = create_string(conf->cwd);
+            }
+            else {
+                p = (lex_text(l)[0] != '/')
+                    ? create_format_string("%s/%s", conf->cwd, lex_text(l))
+                    : create_string(lex_text(l));
+                if (lstat(p, &st) < 0) {
+                    snprintf(err, sizeof(err), "cannot stat %s \"%s\": %s",
+                        server_conf_strs[LEX_UNTOK(tok)], p, strerror(errno));
+                    free(p);
+                }
+                else if (!S_ISDIR(st.st_mode)) {
+                    snprintf(err, sizeof(err), "%s \"%s\" not a directory",
+                        server_conf_strs[LEX_UNTOK(tok)], p);
+                    free(p);
+                }
+                else {
+                    destroy_string(conf->execDirName);
+                    conf->execDirName = p;
+                }
+            }
+            break;
+
         case SERVER_CONF_KEEPALIVE:
             if (lex_next(l) != '=') {
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
@@ -903,9 +1035,7 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
                     server_conf_strs[LEX_UNTOK(tok)]);
             }
             else if (is_empty_string(lex_text(l))) {
-                if (conf->logDirName) {
-                    free(conf->logDirName);
-                }
+                destroy_string(conf->logDirName);
                 conf->logDirName = create_string(conf->cwd);
             }
             else {
@@ -923,9 +1053,7 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
                     free(p);
                 }
                 else {
-                    if (conf->logDirName) {
-                        free(conf->logDirName);
-                    }
+                    destroy_string(conf->logDirName);
                     conf->logDirName = p;
                 }
             }
@@ -942,9 +1070,7 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
                     server_conf_strs[LEX_UNTOK(tok)]);
             }
             else {
-                if (conf->logFileName) {
-                    free(conf->logFileName);
-                }
+                destroy_string(conf->logFileName);
                 if ((lex_text(l)[0] != '/') && (conf->logDirName)) {
                     conf->logFileName = create_format_string("%s/%s",
                         conf->logDirName, lex_text(l));
@@ -994,9 +1120,7 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
                     server_conf_strs[LEX_UNTOK(tok)]);
             }
             else {
-                if (conf->pidFileName) {
-                    free(conf->pidFileName);
-                }
+                destroy_string(conf->pidFileName);
                 if (lex_text(l)[0] != '/') {
                     conf->pidFileName = create_format_string("%s/%s",
                         conf->cwd, lex_text(l));
@@ -1044,9 +1168,7 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
             }
 #endif /* DO_CONF_ESCAPE_ERROR */
             else {
-                if (conf->resetCmd) {
-                    free(conf->resetCmd);
-                }
+                destroy_string(conf->resetCmd);
                 conf->resetCmd = create_string(lex_text(l));
             }
             break;
@@ -1247,23 +1369,6 @@ static int write_pidfile(const char *pidfile)
     }
     (void) unlink(pidfile);
     return(-1);
-}
-
-
-static int is_empty_string(const char *s)
-{
-/*  Returns non-zero if the string is empty (ie, contains only white-space).
- */
-    const char *p;
-
-    assert(s != NULL);
-
-    for (p=s; *p; p++) {
-        if (!isspace((int) *p)) {
-            return(0);
-        }
-    }
-    return(1);
 }
 
 

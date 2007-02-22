@@ -51,7 +51,7 @@ char * create_format_string(const char *fmt, ...);
  *  Note that the caller is responsible for freeing this string.
  */
 
-int set_string(char **dst, const char *src);
+int replace_string(char **dst, const char *src);
 /*
  *  Replaces the (dst) string with (src), freeing (dst) if present.
  *  Returns 0 on success, -1 on error.
@@ -122,12 +122,12 @@ char * create_short_time_string(time_t t);
  *  Note that the caller is responsible for freeing this string.
  */
 
-char * create_time_delta_string(time_t t);
+char * create_time_delta_string(time_t t0, time_t t1);
 /*
  *  Creates and returns a new string indicating the time delta
- *    between time (t) and the current time.
- *  The difference is broken-down into years, weeks, days, hours,
- *    minutes, and seconds.
+ *    between time (t0) and (t1); if (t1) == -1, the current time is used.
+ *  The difference is broken-down into years, weeks, days, hours, minutes,
+ *    and seconds.
  *  Note that the caller is responsible for freeing this string.
  */
 

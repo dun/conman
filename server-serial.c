@@ -31,11 +31,18 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <termios.h>
+#include <unistd.h>
+#include "common.h"
+#include "list.h"
 #include "log.h"
 #include "server.h"
+#include "util-file.h"
+#include "util-str.h"
 
 
 typedef struct bps_tag {
@@ -276,4 +283,133 @@ void set_serial_opts(struct termios *tty, obj_t *serial, seropt_t *opts)
     }
 
     return;
+}
+
+
+obj_t * create_serial_obj(server_conf_t *conf, char *name,
+    char *dev, seropt_t *opts, char *errbuf, int errlen)
+{
+/*  Creates a new serial device object and adds it to the master objs list.
+ *    Note: the console is open and set for non-blocking I/O.
+ *  Returns the new object, or NULL on error.
+ */
+    ListIterator i;
+    obj_t *serial;
+
+    assert(conf != NULL);
+    assert((name != NULL) && (name[0] != '\0'));
+    assert((dev != NULL) && (dev[0] != '\0'));
+    assert(opts != NULL);
+
+    /*  Check for duplicate console and device names.
+     *  While the write-lock will protect against two separate daemons
+     *    using the same device, it will not protect against two console
+     *    objects within the same daemon process using the same device.
+     *    So that check is performed here.
+     */
+    i = list_iterator_create(conf->objs);
+    while ((serial = list_next(i))) {
+        if (is_console_obj(serial) && !strcmp(serial->name, name)) {
+            snprintf(errbuf, errlen,
+                "console [%s] specifies duplicate console name", name);
+            break;
+        }
+        if (is_serial_obj(serial) && !strcmp(serial->aux.serial.dev, dev)) {
+            snprintf(errbuf, errlen,
+                "console [%s] specifies duplicate device \"%s\"", name, dev);
+            break;
+        }
+    }
+    list_iterator_destroy(i);
+    if (serial != NULL) {
+        return(NULL);
+    }
+    serial = create_obj(conf, name, -1, CONMAN_OBJ_SERIAL);
+    serial->aux.serial.dev = create_string(dev);
+    serial->aux.serial.opts = *opts;
+    serial->aux.serial.logfile = NULL;
+    /*
+     *  Add obj to the master conf->objs list.
+     */
+    list_append(conf->objs, serial);
+
+    return(serial);
+}
+
+
+int open_serial_obj(obj_t *serial)
+{
+/*  (Re)opens the specified 'serial' obj.
+ *  Returns 0 if the serial console is successfully opened; o/w, returns -1.
+ *
+ *  FIXME: Check to see if "downed" serial consoles are ever resurrected.
+ */
+    int fd;
+    int flags;
+    struct termios tty;
+
+    assert(serial != NULL);
+    assert(is_serial_obj(serial));
+
+    if (serial->fd >= 0) {
+        write_notify_msg(serial, LOG_INFO,
+            "Console [%s] disconnected from \"%s\"",
+            serial->name, serial->aux.serial.dev);
+        set_tty_mode(&serial->aux.serial.tty, serial->fd);
+        if (close(serial->fd) < 0)      /* log err and continue */
+            log_msg(LOG_WARNING, "Unable to close [%s] device \"%s\": %s",
+                serial->name, serial->aux.serial.dev, strerror(errno));
+        serial->fd = -1;
+    }
+    flags = O_RDWR | O_NONBLOCK | O_NOCTTY;
+    if ((fd = open(serial->aux.serial.dev, flags)) < 0) {
+        log_msg(LOG_WARNING, "Unable to open [%s] device \"%s\": %s",
+            serial->name, serial->aux.serial.dev, strerror(errno));
+        goto err;
+    }
+    if (get_write_lock(fd) < 0) {
+        log_msg(LOG_WARNING, "Unable to lock [%s] device \"%s\"",
+            serial->name, serial->aux.serial.dev);
+        goto err;
+    }
+    if (!isatty(fd)) {
+        log_msg(LOG_WARNING, "[%s] device \"%s\" not a terminal",
+            serial->name, serial->aux.serial.dev);
+        goto err;
+    }
+    /*  According to the UNIX Programming FAQ v1.37
+     *    <http://www.faqs.org/faqs/unix-faq/programmer/faq/>
+     *    (Section 3.6: How to Handle a Serial Port or Modem),
+     *    systems seem to differ as to whether a nonblocking
+     *    open on a tty will affect subsequent read()s.
+     *    Play it safe and be explicit!
+     */
+    set_fd_nonblocking(fd);
+    set_fd_closed_on_exec(fd);
+    /*
+     *  Note that while the initial state of the console dev's termios
+     *    are saved, the 'opts' settings are not.  This is because the
+     *    settings do not change until the obj is destroyed, at which time
+     *    the termios is reverted back to its initial state.
+     *
+     *  FIXME: Re-evaluate this thinking since a SIGHUP should attempt
+     *         to resurrect "downed" serial objs.
+     */
+    get_tty_mode(&serial->aux.serial.tty, fd);
+    get_tty_raw(&tty, fd);
+    set_serial_opts(&tty, serial, &serial->aux.serial.opts);
+    set_tty_mode(&tty, fd);
+    serial->fd = fd;
+    /*
+     *  Success!
+     */
+    write_notify_msg(serial, LOG_INFO, "Console [%s] connected to \"%s\"",
+        serial->name, serial->aux.serial.dev);
+    return(0);
+
+err:
+    if (fd >= 0) {
+        close(fd);                      /* ignore errors */
+    }
+    return(-1);
 }

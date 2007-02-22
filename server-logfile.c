@@ -44,7 +44,7 @@
 
 
 int parse_logfile_opts(logopt_t *opts, const char *str,
-    const char *conf, int line, char *errbuf, int errlen)
+    char *errbuf, int errlen)
 {
 /*  Parses 'str' for logfile device options 'opts'.
  *    The 'opts' struct should be initialized to a default value.
@@ -89,9 +89,7 @@ int parse_logfile_opts(logopt_t *opts, const char *str,
         else if (!strcasecmp(tok, "notimestamp"))
             optsTmp.enableTimestamp = 0;
         else {
-            log_msg(LOG_ERR,
-                "CONFIG[%s:%d]: ignoring unrecognized token '%s'",
-                conf, line, tok);
+            log_msg(LOG_WARNING, "ignoring unrecognized token '%s'", tok);
         }
         tok = strtok(NULL, separators);
     }
@@ -100,10 +98,112 @@ int parse_logfile_opts(logopt_t *opts, const char *str,
 }
 
 
-int open_logfile_obj(obj_t *logfile, int gotTrunc)
+obj_t * create_logfile_obj(server_conf_t *conf, char *name,
+    obj_t *console, logopt_t *opts, char *errbuf, int errlen)
 {
-/*  (Re)opens the specified 'logfile' obj; the logfile will be truncated
- *    if 'gotTrunc' is true (ie, non-zero).
+/*  Creates a new logfile object and adds it to the master objs list.
+ *    Note: the logfile is open and set for non-blocking I/O.
+ *  Note: the logfile will later be opened and set for non-blocking I/O
+ *    by main:open_objs:reopen_obj:open_logfile_obj().
+ *  Returns the new object, or NULL on error.
+ */
+    ListIterator i;
+    obj_t *logfile;
+    char buf[MAX_LINE];
+    char *pname;
+    obj_t *obj;
+
+    assert(conf != NULL);
+    assert((name != NULL) && (name[0] != '\0'));
+    assert(console != NULL);
+    assert(opts != NULL);
+
+    /*  Check for duplicate logfile names.
+     *  While the write-lock will protect against two separate daemons
+     *    using the same logfile, it will not protect against two logfile
+     *    objects within the same daemon process using the same filename.
+     *    So that check is performed here.
+     */
+    if (strchr(name, '%')
+            && (format_obj_string(buf, sizeof(buf), console, name) >= 0)) {
+        pname = buf;
+    }
+    else {
+        pname = name;
+    }
+
+    i = list_iterator_create(conf->objs);
+    while ((logfile = list_next(i))) {
+        if (!is_logfile_obj(logfile)) {
+            continue;
+        }
+        if (!strcmp(logfile->name, pname)) {
+            break;
+        }
+    }
+    list_iterator_destroy(i);
+
+    if (logfile) {
+        snprintf(errbuf, errlen, "console [%s] already logging to \"%s\"",
+            logfile->aux.logfile.console->name, pname);
+        return(NULL);
+    }
+    logfile = create_obj(conf, name, -1, CONMAN_OBJ_LOGFILE);
+    logfile->aux.logfile.console = console;
+    logfile->aux.logfile.lineState = CONMAN_LOG_LINE_INIT;
+    logfile->aux.logfile.opts = *opts;
+    logfile->aux.logfile.gotTruncate = !!conf->enableZeroLogs;
+
+    if (logfile->aux.logfile.opts.enableSanitize
+            || logfile->aux.logfile.opts.enableTimestamp) {
+        logfile->aux.logfile.gotProcessing = 1;
+    }
+    else {
+        logfile->aux.logfile.gotProcessing = 0;
+    }
+
+    if (strchr(name, '%')) {
+        logfile->aux.logfile.fmtName = create_string(name);
+    }
+    else {
+        logfile->aux.logfile.fmtName = NULL;
+    }
+
+    if (is_process_obj(console)) {
+        console->aux.process.logfile = logfile;
+    }
+    else if (is_serial_obj(console)) {
+        console->aux.serial.logfile = logfile;
+    }
+    else if (is_telnet_obj(console)) {
+        console->aux.telnet.logfile = logfile;
+    }
+    else {
+        log_err(0, "INTERNAL: Unrecognized console [%s] type=%d",
+            console->name, console->type);
+    }
+    /*  Add obj to the master conf->objs list
+     *    before its corresponding console obj.
+     */
+    i = list_iterator_create(conf->objs);
+    while ((obj = list_next(i))) {
+        if (obj == console) {
+            list_insert(i, logfile);
+            break;
+        }
+    }
+    list_iterator_destroy(i);
+    if (!obj) {
+        log_err(0, "INTERNAL: Console [%s] object not found in master list",
+            console->name);
+    }
+    return(logfile);
+}
+
+
+int open_logfile_obj(obj_t *logfile)
+{
+/*  (Re)opens the specified 'logfile' obj.
  *  Since this logfile can be re-opened after the daemon has chdir()'d,
  *    it must be specified with an absolute pathname.
  *  Returns 0 if the logfile is successfully opened; o/w, returns -1.
@@ -141,8 +241,13 @@ int open_logfile_obj(obj_t *logfile, int gotTrunc)
         logfile->name = create_string(buf);
     }
     flags = O_WRONLY | O_CREAT | O_APPEND | O_NONBLOCK;
-    if (gotTrunc)
+    /*
+     *  Only truncate on the initial open if ZeroLogs was enabled.
+     */
+    if (logfile->aux.logfile.gotTruncate) {
+        logfile->aux.logfile.gotTruncate = 0;
         flags |= O_TRUNC;
+    }
     if ((logfile->fd = open(logfile->name, flags, S_IRUSR | S_IWUSR)) < 0) {
         log_msg(LOG_WARNING, "Unable to open logfile \"%s\": %s",
             logfile->name, strerror(errno));
@@ -189,16 +294,22 @@ obj_t * get_console_logfile_obj(obj_t *console)
     assert(console != NULL);
     assert(is_console_obj(console));
 
-    if (is_serial_obj(console))
+    if (is_process_obj(console)) {
+        logfile = console->aux.process.logfile;
+    }
+    else if (is_serial_obj(console)) {
         logfile = console->aux.serial.logfile;
-    else if (is_telnet_obj(console))
+    }
+    else if (is_telnet_obj(console)) {
         logfile = console->aux.telnet.logfile;
-    else
+    }
+    else {
         log_err(0, "INTERNAL: Unrecognized console [%s] type=%d",
             console->name, console->type);
-
-    if (!logfile || (logfile->fd < 0))
+    }
+    if (!logfile || (logfile->fd < 0)) {
         return(NULL);
+    }
     assert(is_logfile_obj(logfile));
     return(logfile);
 }

@@ -25,14 +25,10 @@
  *****************************************************************************/
 
 
-#define TELCMDS
-#define TELOPTS
-
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
-#include <arpa/telnet.h>
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
@@ -54,7 +50,6 @@ static void perform_log_replay(obj_t *client);
 static void perform_quiet_toggle(obj_t *client);
 static void perform_reset(obj_t *client);
 static void perform_suspend(obj_t *client);
-static int process_telnet_cmd(obj_t *telnet, int cmd, int opt);
 
 
 int process_client_escapes(obj_t *client, void *src, int len)
@@ -150,6 +145,8 @@ static void perform_serial_break(obj_t *client)
         DPRINTF((5, "Performing serial-break on console [%s].\n",
             console->name));
 
+        /*  FIXME: handle process obj
+         */
         if (is_serial_obj(console)) {
             if (tcsendbreak(console->fd, 0) < 0)
                 log_err(errno, "Unable to send serial-break to console [%s]",
@@ -426,185 +423,4 @@ static void perform_suspend(obj_t *client)
     DPRINTF((5, "%s output to client [%s].\n",
         (gotSuspend ? "Suspending" : "Resuming"), client->name));
     return;
-}
-
-
-int process_telnet_escapes(obj_t *telnet, void *src, int len)
-{
-/*  Processes the buffer (src) of length (len) received from
- *    a terminal server for IAC escape character sequences.
- *  Escape character sequences are removed from the buffer
- *    and immediately processed.
- *  Returns the new length of the modified buffer.
- */
-    const unsigned char *last = (unsigned char *) src + len;
-    unsigned char *p, *q;
-
-    assert(is_telnet_obj(telnet));
-    assert(telnet->fd >= 0);
-    assert(telnet->aux.telnet.conState == CONMAN_TELCON_UP);
-
-    if (!src || len <= 0)
-        return(0);
-
-    for (p=q=src; p<last; p++) {
-        switch(telnet->aux.telnet.iac) {
-        case -1:
-            if (*p == IAC)
-                telnet->aux.telnet.iac = *p;
-            else
-                *q++ = *p;
-            break;
-        case IAC:
-            switch (*p) {
-            case IAC:
-                *q++ = *p;
-                telnet->aux.telnet.iac = -1;
-                break;
-            case DONT:
-                /* fall-thru */
-            case DO:
-                /* fall-thru */
-            case WONT:
-                /* fall-thru */
-            case WILL:
-                /* fall-thru */
-            case SB:
-                telnet->aux.telnet.iac = *p;
-                break;
-            case SE:
-                telnet->aux.telnet.iac = -1;
-                break;
-            default:
-                process_telnet_cmd(telnet, *p, -1);
-                telnet->aux.telnet.iac = -1;
-                break;
-            }
-            break;
-        case DONT:
-            /* fall-thru */
-        case DO:
-            /* fall-thru */
-        case WONT:
-            /* fall-thru */
-        case WILL:
-            process_telnet_cmd(telnet, telnet->aux.telnet.iac, *p);
-            telnet->aux.telnet.iac = -1;
-            break;
-        case SB:
-            /*
-             *  Ignore subnegotiation opts.  Consume bytes until IAC SE.
-             *    Remain in the SB state until an IAC is found; then reset
-             *    the state to IAC assuming the next byte will be the SE cmd.
-             */
-            if (*p == IAC)
-                telnet->aux.telnet.iac = *p;
-            break;
-        default:
-            log_err(0, "Reached invalid state %#.2x%.2x for console [%s]",
-                telnet->aux.telnet.iac, *p, telnet->name);
-            break;
-        }
-    }
-
-    assert((q >= (unsigned char *) src) && (q <= p));
-    len = q - (unsigned char *) src;
-    assert(len >= 0);
-    return(len);
-}
-
-
-int send_telnet_cmd(obj_t *telnet, int cmd, int opt)
-{
-/*  Sends the given telnet (cmd) and (opt) to the (telnet) console;
- *    if (cmd) does not require an option, set (opt) = -1.
- *  Returns 0 if the command is successfully "sent" (ie, written into
- *    the obj's buffer), or -1 on error.
- */
-    unsigned char buf[3];
-    unsigned char *p = buf;
-
-    assert(is_telnet_obj(telnet));
-    assert(cmd > 0);
-
-    /*  This is a no-op if the telnet connection is not yet established.
-     */
-    if ((telnet->fd < 0) || (telnet->aux.telnet.conState != CONMAN_TELCON_UP))
-        return(0);
-
-    *p++ = IAC;
-    if (!TELCMD_OK(cmd)) {
-        log_msg(LOG_WARNING, "Invalid telnet cmd=%#.2x for console [%s]",
-            cmd, telnet->name);
-        return(-1);
-    }
-    *p++ = cmd;
-    if ((cmd == DONT) || (cmd == DO) || (cmd == WONT) || (cmd == WILL)) {
-        if (!TELOPT_OK(opt)) {
-            log_msg(LOG_WARNING,
-                "Invalid telnet cmd %s opt=%#.2x for console [%s]",
-                telcmds[cmd - TELCMD_FIRST], opt, telnet->name);
-            return(-1);
-        }
-        *p++ = opt;
-    }
-
-    assert((p > buf) && ((p - buf) <= sizeof(buf)));
-    if (write_obj_data(telnet, buf, p - buf, 0) <= 0)
-        return(-1);
-    DPRINTF((10, "Sent telnet cmd %s%s%s to console [%s].\n",
-        telcmds[cmd - TELCMD_FIRST], ((p - buf > 2) ? " " : ""),
-        ((p - buf > 2) ? telopts[opt - TELOPT_FIRST] : ""), telnet->name));
-    return(0);
-}
-
-
-static int process_telnet_cmd(obj_t *telnet, int cmd, int opt)
-{
-/*  Processes the given telnet cmd received from the (telnet) console.
- *  Telnet option negotiation is performed using the Q-Method (rfc1143).
- *  Returns 0 if the command is valid, or -1 on error.
- */
-    assert(is_telnet_obj(telnet));
-    assert(telnet->fd >= 0);
-    assert(telnet->aux.telnet.conState == CONMAN_TELCON_UP);
-
-    if (!TELCMD_OK(cmd)) {
-        log_msg(LOG_DEBUG,
-            "Received invalid telnet cmd %#.2x from console [%s]",
-            cmd, telnet->name);
-        return(-1);
-    }
-    DPRINTF((10, "Received telnet cmd %s%s%s from console [%s].\n",
-        telcmds[cmd - TELCMD_FIRST], (TELOPT_OK(opt) ? " " : ""),
-        (TELOPT_OK(opt) ? telopts[opt - TELOPT_FIRST] : ""), telnet->name));
-
-    if (!TELOPT_OK(opt)) {
-        log_msg(LOG_DEBUG,
-            "Received invalid telnet opt %#.2x from console [%s]",
-            opt, telnet->name);
-        return(-1);
-    }
-    /*  FIXME: Perform telnet option negotiation via rfc1143 Q-Method.
-     */
-    switch(cmd) {
-    case DONT:
-        /* fall-thru */
-    case DO:
-        if ((opt != TELOPT_ECHO) && (opt != TELOPT_SGA))
-            send_telnet_cmd(telnet, WONT, opt);
-        break;
-    case WONT:
-        /* fall-thru */
-    case WILL:
-        if ((opt != TELOPT_ECHO) && (opt != TELOPT_SGA))
-            send_telnet_cmd(telnet, DONT, opt);
-        break;
-    default:
-        log_msg(LOG_INFO, "Ignoring telnet cmd %s%s%s from console [%s]",
-            telcmds[cmd - TELCMD_FIRST], (TELOPT_OK(opt) ? " " : ""),
-            (TELOPT_OK(opt) ? telopts[opt - TELOPT_FIRST] : ""), telnet->name);
-        break;
-    }
-    return(0);
 }

@@ -9,16 +9,20 @@ conman.conf \- ConMan daemon configuration file
 The \fBconman.conf\fR configuration file is used to specify the consoles
 being managed by \fBconmand\fR.
 .PP
-Comments are introduced by a hash sign (#), and continue until the end of
-the line.  Blank lines and white-space are ignored.  Directives are
-terminated by a newline, but may span multiple lines by escaping it (ie,
-immediately preceding the newline with a backslash).  Strings may be either
-single-quoted or double-quoted, but they may not contain newlines.
+Comments are introduced by a hash sign (#), and continue until the end
+of the line.  Blank lines and white-space are ignored.  Directives are
+terminated by a newline, but may span multiple lines by escaping it (i.e.,
+immediately preceding the newline with a backslash).  Strings may be
+either single-quoted or double-quoted, but they may not contain newlines.
 Keywords are case-insensitive.
 
 .SH SERVER DIRECTIVES
 These directives begin with the \fBSERVER\fR keyword followed by one of the
 following key/value pairs:
+.TP
+\fBexecdir\fR \fB=\fR "\fIdirectory\fR"
+Specifies a directory prefix for local serial-port and external process-based
+console devices that are not defined via an absolute pathname.
 .TP
 \fBkeepalive\fR \fB=\fR (\fBon\fR|\fBoff\fR)
 Specifies whether the daemon will use TCP keep-alives for detecting dead
@@ -73,10 +77,10 @@ configure's "--with-tcp-wrappers" option).  Refer to \fBhosts_access(5)\fR
 and \fBhosts_options(5)\fR for more details.  The default is \fBoff\fR.
 .TP
 \fBtimestamp\fR \fB=\fR \fIinteger\fB (\fBm\fR|\fBh\fR|\fBd\fR)
-Specifies the interval between timestamps written to the individual console
-log files.  The interval is an integer that may be followed by a
+Specifies the interval between timestamps written to the individual
+console log files.  The interval is an integer that may be followed by a
 single-character modifier; '\fBm\fR' for minutes (the default), '\fBh\fR'
-for hours, or '\fBd\fR' for days.  The default is 0 (ie, no timestamps).
+for hours, or '\fBd\fR' for days.  The default is 0 (i.e., no timestamps).
 
 .SH GLOBAL DIRECTIVES
 These directives begin with the \fBGLOBAL\fR keyword followed by one of the
@@ -142,17 +146,21 @@ Specifies the name used by clients to refer to the console.  This keyword
 is required.
 .TP
 \fBdev\fR \fB=\fR "\fIstring\fR"
-Specifies the location of the device.  A local serial-port connection is
-specified with the pathname of the tty device.  A remote terminal-server
-connection is specified with the "\fIhost\fR:\fIport\fR" format (where
-\fIhost\fR is either a hostname or IP address).  This keyword is required.
+Specifies the type and location of the device.  A local serial-port
+connection is defined by the pathname of the character device file.  A remote
+terminal-server connection is defined by the "\fIhost\fR:\fIport\fR" format
+(where "\fIhost\fR" is either a hostname or IPv4 address).  An external
+process-based connection is defined by the "\fIpath args\fR" format (where
+"\fIpath\fR" is a pathname to an executable file/script and any additional
+"\fIargs\fR" are space-delimited).  The '%N' character sequence will be
+replaced by the console name.  This keyword is required.
 .TP
 \fBlog\fR \fB=\fR "\fIfile\fR"
 Specifies the file where console output is logged.  This string undergoes
 conversion specifier expansion (cf., \fBCONVERSION SPECIFICATIONS\fR).
 If an absolute pathname is not given, the file's location is relative to
 \fBlogdir\fR (assuming it has been previously defined).  An empty log string
-(ie, \fBlog\fR="") disables logging, overriding the global log name.
+(i.e., \fBlog\fR="") disables logging, overriding the global log name.
 .TP
 \fBlogopts\fR \fB=\fR "\fIstring\fR"
 This keyword is optional (cf., \fBGLOBAL DIRECTIVES\fR).

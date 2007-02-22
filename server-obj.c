@@ -32,44 +32,33 @@
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
-#include <fcntl.h>
-#include <netinet/in.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
-#include <termios.h>
 #include <time.h>
 #include <unistd.h>
 #include "common.h"
 #include "list.h"
 #include "log.h"
 #include "server.h"
-#include "tpoll.h"
 #include "util-file.h"
-#include "util-net.h"
 #include "util-str.h"
 #include "util.h"
 #include "wrapper.h"
 
 
-static obj_t * create_obj(
-    server_conf_t *conf, char *name, int fd, enum obj_type type);
-static void reset_telnet_delay(obj_t *telnet);
 static char * sanitize_file_string(char *str);
 static char * find_trailing_int_str(char *str);
 #ifndef NDEBUG
 static int validate_obj_links(obj_t *obj);
 #endif /* !NDEBUG */
 
-extern tpoll_t tp_global;               /* defined in server.c */
 
-
-static obj_t * create_obj(
+obj_t * create_obj(
     server_conf_t *conf, char *name, int fd, enum obj_type type)
 {
-/*  Creates an object of the specified (type) opened on (fd) and adds it
- *    to the master objs list.
+/*  Creates an object of the specified (type) opened on (fd).
  */
     obj_t *obj;
 
@@ -77,6 +66,7 @@ static obj_t * create_obj(
     assert(name != NULL);
     assert(type==CONMAN_OBJ_CLIENT
         || type==CONMAN_OBJ_LOGFILE
+        || type==CONMAN_OBJ_PROCESS
         || type==CONMAN_OBJ_SERIAL
         || type==CONMAN_OBJ_TELNET);
 
@@ -97,10 +87,6 @@ static obj_t * create_obj(
      *  Besides, the base obj remains the same size due to the bitfields.
      */
     obj->gotReset = 0;
-
-    /*  Add obj to the master conf->objs list.
-     */
-    list_append(conf->objs, obj);
 
     DPRINTF((10, "Created object [%s].\n", obj->name));
     return(obj);
@@ -135,467 +121,11 @@ obj_t * create_client_obj(server_conf_t *conf, req_t *req)
     client->aux.client.gotEscape = 0;
     client->aux.client.gotSuspend = 0;
 
+    /*  Add obj to the master conf->objs list.
+     */
+    list_append(conf->objs, client);
+
     return(client);
-}
-
-
-obj_t * create_logfile_obj(server_conf_t *conf, char *name,
-    obj_t *console, logopt_t *opts, char *errbuf, int errlen)
-{
-/*  Creates a new logfile object and adds it to the master objs list.
- *    Note: the logfile is open and set for non-blocking I/O.
- *  Returns the new object, or NULL on error.
- *
- *  FIXME: This routine should pro'ly be moved to server_logfile.c.
- */
-    ListIterator i;
-    obj_t *logfile;
-    char buf[MAX_LINE];
-    char *pname;
-
-    assert(conf != NULL);
-    assert((name != NULL) && (name[0] != '\0'));
-    assert(console != NULL);
-    assert(opts != NULL);
-
-    /*  Check for duplicate logfile names.
-     *  While the write-lock will protect against two separate daemons
-     *    using the same logfile, it will not protect against two logfile
-     *    objects within the same daemon process using the same filename.
-     *    So that check is performed here.
-     */
-    if (strchr(name, '%') &&
-      (format_obj_string(buf, sizeof(buf), console, name) >= 0)) {
-        pname = buf;
-    }
-    else {
-        pname = name;
-    }
-
-    i = list_iterator_create(conf->objs);
-    while ((logfile = list_next(i))) {
-        if (!is_logfile_obj(logfile))
-            continue;
-        if (!strcmp(logfile->name, pname))
-            break;
-    }
-    list_iterator_destroy(i);
-
-    if (logfile) {
-        snprintf(errbuf, errlen, "console [%s] already logging to \"%s\"",
-            logfile->aux.logfile.console->name, pname);
-        return(NULL);
-    }
-    logfile = create_obj(conf, name, -1, CONMAN_OBJ_LOGFILE);
-    logfile->aux.logfile.console = console;
-    logfile->aux.logfile.lineState = CONMAN_LOG_LINE_INIT;
-    logfile->aux.logfile.opts = *opts;
-
-    if (   (logfile->aux.logfile.opts.enableSanitize)
-        || (logfile->aux.logfile.opts.enableTimestamp) )
-        logfile->aux.logfile.gotProcessing = 1;
-    else
-        logfile->aux.logfile.gotProcessing = 0;
-
-    if (strchr(name, '%'))
-        logfile->aux.logfile.fmtName = create_string(name);
-    else
-        logfile->aux.logfile.fmtName = NULL;
-
-    if (is_serial_obj(console))
-        console->aux.serial.logfile = logfile;
-    else if (is_telnet_obj(console))
-        console->aux.telnet.logfile = logfile;
-    else
-        log_err(0, "INTERNAL: Unrecognized console [%s] type=%d",
-            console->name, console->type);
-    return(logfile);
-}
-
-
-obj_t * create_serial_obj(server_conf_t *conf, char *name,
-    char *dev, seropt_t *opts, char *errbuf, int errlen)
-{
-/*  Creates a new serial device object and adds it to the master objs list.
- *    Note: the console is open and set for non-blocking I/O.
- *  Returns the new object, or NULL on error.
- *
- *  FIXME: The serial routines should be refactored into server-serial.c.
- */
-    ListIterator i;
-    obj_t *serial;
-
-    assert(conf != NULL);
-    assert((name != NULL) && (name[0] != '\0'));
-    assert((dev != NULL) && (dev[0] != '\0'));
-    assert(opts != NULL);
-
-    /*  Check for duplicate console and device names.
-     *  While the write-lock will protect against two separate daemons
-     *    using the same device, it will not protect against two console
-     *    objects within the same daemon process using the same device.
-     *    So that check is performed here.
-     */
-    i = list_iterator_create(conf->objs);
-    while ((serial = list_next(i))) {
-        if (is_console_obj(serial) && !strcmp(serial->name, name)) {
-            snprintf(errbuf, errlen, "specifies duplicate console name");
-            break;
-        }
-        if (is_serial_obj(serial) && !strcmp(serial->aux.serial.dev, dev)) {
-            snprintf(errbuf, errlen, "specifies duplicate device \"%s\"", dev);
-            break;
-        }
-    }
-    list_iterator_destroy(i);
-    if (serial != NULL) {
-        return(NULL);
-    }
-    serial = create_obj(conf, name, -1, CONMAN_OBJ_SERIAL);
-    serial->aux.serial.dev = create_string(dev);
-    serial->aux.serial.opts = *opts;
-    serial->aux.serial.logfile = NULL;
-    return(serial);
-}
-
-
-int open_serial_obj(obj_t *serial)
-{
-/*  (Re)opens the specified 'serial' obj.
- *  Returns 0 if the serial console is successfully opened; o/w, returns -1.
- *
- *  FIXME: Check to see if "downed" serial consoles are ever resurrected.
- */
-    int fd;
-    int flags;
-    struct termios tty;
-
-    assert(serial != NULL);
-    assert(is_serial_obj(serial));
-
-    if (serial->fd >= 0) {
-        set_tty_mode(&serial->aux.serial.tty, serial->fd);
-        if (close(serial->fd) < 0)      /* log err and continue */
-            log_msg(LOG_WARNING, "Unable to close [%s] device \"%s\": %s",
-                serial->name, serial->aux.serial.dev, strerror(errno));
-        serial->fd = -1;
-    }
-    flags = O_RDWR | O_NONBLOCK | O_NOCTTY;
-    if ((fd = open(serial->aux.serial.dev, flags)) < 0) {
-        log_msg(LOG_WARNING, "Unable to open [%s] device \"%s\": %s",
-            serial->name, serial->aux.serial.dev, strerror(errno));
-        goto err;
-    }
-    if (get_write_lock(fd) < 0) {
-        log_msg(LOG_WARNING, "Unable to lock [%s] device \"%s\"",
-            serial->name, serial->aux.serial.dev);
-        goto err;
-    }
-    if (!isatty(fd)) {
-        log_msg(LOG_WARNING, "[%s] device \"%s\" not a terminal",
-            serial->name, serial->aux.serial.dev);
-        goto err;
-    }
-    /*  According to the UNIX Programming FAQ v1.37
-     *    <http://www.faqs.org/faqs/unix-faq/programmer/faq/>
-     *    (Section 3.6: How to Handle a Serial Port or Modem),
-     *    systems seem to differ as to whether a nonblocking
-     *    open on a tty will affect subsequent read()s.
-     *    Play it safe and be explicit!
-     */
-    set_fd_nonblocking(fd);
-    set_fd_closed_on_exec(fd);
-    /*
-     *  Note that while the initial state of the console dev's termios
-     *    are saved, the 'opts' settings are not.  This is because the
-     *    settings do not change until the obj is destroyed, at which time
-     *    the termios is reverted back to its initial state.
-     *
-     *  FIXME: Re-evaluate this thinking since a SIGHUP should attempt
-     *         to resurrect "downed" serial objs.
-     */
-    get_tty_mode(&serial->aux.serial.tty, fd);
-    get_tty_raw(&tty, fd);
-    set_serial_opts(&tty, serial, &serial->aux.serial.opts);
-    set_tty_mode(&tty, fd);
-    serial->fd = fd;
-    /*
-     *  Success!
-     */
-    log_msg(LOG_INFO, "Console [%s] connected to \"%s\"",
-        serial->name, serial->aux.serial.dev);
-    return(0);
-
-err:
-    if (fd >= 0) {
-        close(fd);                      /* ignore errors */
-    }
-    return(-1);
-}
-
-
-obj_t * create_telnet_obj(server_conf_t *conf, char *name,
-    char *host, int port, char *errbuf, int errlen)
-{
-/*  Creates a new terminal server object and adds it to the master objs list.
- *  Note: a non-blocking connect is initiated for the remote host:port
- *    and later completed by mux_io().
- *  Returns the new object, or NULL on error.
- *
- *  FIXME: The telnet routines should be refactored into server-telnet.c.
- */
-    ListIterator i;
-    obj_t *telnet;
-
-    assert(conf != NULL);
-    assert((name != NULL) && (name[0] != '\0'));
-    assert((host != NULL) && (host[0] != '\0'));
-
-    if (port <= 0) {
-        snprintf(errbuf, errlen, "specifies invalid port \"%d\"", port);
-        return(NULL);
-    }
-    /*  Check for duplicate console names.
-     */
-    i = list_iterator_create(conf->objs);
-    while ((telnet = list_next(i))) {
-        if (is_console_obj(telnet) && !strcmp(telnet->name, name)) {
-            snprintf(errbuf, errlen, "specifies duplicate console name");
-            break;
-        }
-    }
-    list_iterator_destroy(i);
-    if (telnet != NULL)
-        return(NULL);
-
-    telnet = create_obj(conf, name, -1, CONMAN_OBJ_TELNET);
-    telnet->aux.telnet.host = create_string(host);
-    telnet->aux.telnet.port = port;
-    telnet->aux.telnet.logfile = NULL;
-    telnet->aux.telnet.timer = -1;
-    telnet->aux.telnet.delay = TELNET_MIN_TIMEOUT;
-    telnet->aux.telnet.iac = -1;
-    telnet->aux.telnet.conState = CONMAN_TELCON_DOWN;
-    /*
-     *  Dup 'enableKeepAlive' to prevent passing 'conf'
-     *    to connect_telnet_obj().
-     */
-    telnet->aux.telnet.enableKeepAlive = conf->enableKeepAlive;
-
-    return(telnet);
-}
-
-
-int connect_telnet_obj(obj_t *telnet)
-{
-/*  Establishes a non-blocking connect with the specified (telnet) obj.
- *  Returns 0 if the connection is successfully completed; o/w, returns -1.
- */
-    struct sockaddr_in saddr;
-    const int on = 1;
-    char *now;
-    char buf[MAX_LINE];
-
-    assert(telnet != NULL);
-    assert(is_telnet_obj(telnet));
-    assert(telnet->aux.telnet.conState != CONMAN_TELCON_UP);
-
-    if (telnet->aux.telnet.timer >= 0) {
-        (void) tpoll_timeout_cancel(tp_global, telnet->aux.telnet.timer);
-        telnet->aux.telnet.timer = -1;
-    }
-
-    if (telnet->aux.telnet.conState == CONMAN_TELCON_DOWN) {
-        /*
-         *  Initiate a non-blocking connection attempt.
-         */
-        memset(&saddr, 0, sizeof(saddr));
-        saddr.sin_family = AF_INET;
-        saddr.sin_port = htons(telnet->aux.telnet.port);
-        if (host_name_to_addr4(telnet->aux.telnet.host, &saddr.sin_addr) < 0) {
-            log_msg(LOG_WARNING, "Unable to resolve hostname \"%s\" for [%s]",
-                telnet->aux.telnet.host, telnet->name);
-            telnet->aux.telnet.timer = tpoll_timeout_relative(tp_global,
-                (callback_f) connect_telnet_obj, telnet,
-                RESOLVE_RETRY_TIMEOUT * 1000);
-            return(-1);
-        }
-        if ((telnet->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-            log_err(0, "Unable to create socket for [%s]", telnet->name);
-        if (setsockopt(telnet->fd, SOL_SOCKET, SO_OOBINLINE,
-          (const void *) &on, sizeof(on)) < 0)
-            log_err(errno, "Unable to set OOBINLINE socket option");
-        if (telnet->aux.telnet.enableKeepAlive) {
-            if (setsockopt(telnet->fd, SOL_SOCKET, SO_KEEPALIVE,
-              (const void *) &on, sizeof(on)) < 0)
-                log_err(errno, "Unable to set KEEPALIVE socket option");
-        }
-        set_fd_nonblocking(telnet->fd);
-        set_fd_closed_on_exec(telnet->fd);
-
-        DPRINTF((10, "Connecting to <%s:%d> for [%s].\n",
-            telnet->aux.telnet.host, telnet->aux.telnet.port, telnet->name));
-
-        if (connect(telnet->fd,
-                (struct sockaddr *) &saddr, sizeof(saddr)) < 0) {
-            if (errno == EINPROGRESS) {
-            /*
-             *  FIXME: Bug exists in timeout of connect():
-             *      server.c:335: Unable to multiplex I/O: Bad file descriptor.
-             *
-             *  telnet->aux.telnet.timer =
-             *      timeout((callback_f) disconnect_telnet_obj,
-             *      telnet, TELNET_MIN_TIMEOUT * 1000);
-             */
-                telnet->aux.telnet.conState = CONMAN_TELCON_PENDING;
-            }
-            else {
-                disconnect_telnet_obj(telnet);
-            }
-            return(-1);
-        }
-        /* Success!  Continue after if/else expr. */
-    }
-    else if (telnet->aux.telnet.conState == CONMAN_TELCON_PENDING) {
-        /*
-         *  Did the non-blocking connect complete successfully?
-         *    (cf. Stevens UNPv1 15.3 p409)
-         */
-        int err = 0;
-        socklen_t len = sizeof(err);
-        int rc = getsockopt(telnet->fd, SOL_SOCKET, SO_ERROR,
-            (void *) &err, &len);
-        /*
-         *  If an error occurred, Berkeley-derived implementations
-         *    return 0 with the pending error in 'err'.  But Solaris
-         *    returns -1 with the pending error in 'errno'.  Sigh...
-         */
-        if (rc < 0)
-            err = errno;
-        if (err) {
-            /*
-             *  On some systems (eg, Tru64), the close() of a socket
-             *    that failed to connect() will return with an error of
-             *    "invalid argument".  So close & ignore the return code here.
-             */
-            close(telnet->fd);          /* ignore return code */
-            telnet->fd = -1;
-            disconnect_telnet_obj(telnet);
-            return(-1);
-        }
-        /* Success!  Continue after if/else expr. */
-    }
-    else {
-        log_err(0, "Console [%s] is in an unknown telnet state=%d",
-            telnet->aux.telnet.conState);
-    }
-
-    /*  Success!
-     */
-    log_msg(LOG_INFO, "Console [%s] connected to <%s:%d>", telnet->name,
-        telnet->aux.telnet.host, telnet->aux.telnet.port);
-
-    /*  Notify linked objs when transitioning into an UP state.
-     */
-    now = create_short_time_string(0);
-    snprintf(buf, sizeof(buf), "%sConsole [%s] connected to <%s:%d> at %s%s",
-        CONMAN_MSG_PREFIX, telnet->name, telnet->aux.telnet.host,
-        telnet->aux.telnet.port, now, CONMAN_MSG_SUFFIX);
-    free(now);
-    strcpy(&buf[sizeof(buf) - 3], "\r\n");
-    notify_console_objs(telnet, buf);
-    telnet->aux.telnet.conState = CONMAN_TELCON_UP;
-    /*
-     *  Insist that the connection must be up for a minimum length of time
-     *    before resetting the reconnect delay back to zero.  This protects
-     *    against the server spinning on reconnects if the connection is
-     *    being automatically terminated by something like TCP-Wrappers.
-     *  If the connection is terminated before the timer expires,
-     *    disconnect_telnet_obj() will cancel the timer and the
-     *    exponential backoff will continue.
-     */
-    telnet->aux.telnet.timer = tpoll_timeout_relative(tp_global,
-        (callback_f) reset_telnet_delay, telnet, TELNET_MIN_TIMEOUT * 1000);
-
-    send_telnet_cmd(telnet, DO, TELOPT_SGA);
-    send_telnet_cmd(telnet, DO, TELOPT_ECHO);
-
-    return(0);
-}
-
-
-void disconnect_telnet_obj(obj_t *telnet)
-{
-/*  Closes the existing connection with the specified (telnet) obj
- *    and sets a timer for establishing a new connection.
- */
-    char buf[MAX_LINE];
-    char *now;
-
-    assert(telnet != NULL);
-    assert(is_telnet_obj(telnet));
-
-    DPRINTF((10, "Disconnecting from <%s:%d> for [%s].\n",
-        telnet->aux.telnet.host, telnet->aux.telnet.port, telnet->name));
-
-    if (telnet->aux.telnet.timer >= 0) {
-        (void) tpoll_timeout_cancel(tp_global, telnet->aux.telnet.timer);
-        telnet->aux.telnet.timer = -1;
-    }
-    if (telnet->fd >= 0) {
-        if (close(telnet->fd) < 0)
-            log_err(errno, "Unable to close connection to <%s:%d> for [%s]",
-                telnet->aux.telnet.host, telnet->aux.telnet.port,
-                telnet->name);
-        telnet->fd = -1;
-    }
-
-    /*  Notify linked objs when transitioning from an UP state.
-     */
-    if (telnet->aux.telnet.conState == CONMAN_TELCON_UP) {
-        log_msg(LOG_NOTICE, "Console [%s] disconnected from <%s:%d>",
-            telnet->name, telnet->aux.telnet.host, telnet->aux.telnet.port);
-        now = create_short_time_string(0);
-        snprintf(buf, sizeof(buf),
-            "%sConsole [%s] disconnected from <%s:%d> at %s%s",
-            CONMAN_MSG_PREFIX, telnet->name, telnet->aux.telnet.host,
-            telnet->aux.telnet.port, now, CONMAN_MSG_SUFFIX);
-        free(now);
-        strcpy(&buf[sizeof(buf) - 3], "\r\n");
-        notify_console_objs(telnet, buf);
-    }
-
-    /*  Set timer for establishing new connection using exponential backoff.
-     */
-    telnet->aux.telnet.conState = CONMAN_TELCON_DOWN;
-    telnet->aux.telnet.timer = tpoll_timeout_relative(tp_global,
-        (callback_f) connect_telnet_obj, telnet,
-        telnet->aux.telnet.delay * 1000);
-    if (telnet->aux.telnet.delay == 0)
-        telnet->aux.telnet.delay = TELNET_MIN_TIMEOUT;
-    else if (telnet->aux.telnet.delay < TELNET_MAX_TIMEOUT)
-        telnet->aux.telnet.delay =
-            MIN(telnet->aux.telnet.delay * 2, TELNET_MAX_TIMEOUT);
-    return;
-}
-
-
-static void reset_telnet_delay(obj_t *telnet)
-{
-/*  Resets the telnet obj's delay between reconnect attempts.
- *  By resetting this delay after a minimum length of time, the server is
- *    protected against spinning on reconnects where the connection is
- *    being automatically terminated by something like TCP-Wrappers.
- */
-    assert(is_telnet_obj(telnet));
-
-    telnet->aux.telnet.delay = 0;
-    /*
-     *  Also reset the timer ID since this routine is only invoked
-     *    by a timer when it expires.
-     */
-    telnet->aux.telnet.timer = -1;
-    return;
 }
 
 
@@ -605,13 +135,15 @@ void destroy_obj(obj_t *obj)
  *  This routine should only be called via the obj's list destructor, thereby
  *    ensuring it will be removed from the master objs list before destruction.
  */
+    char **pp;
+
     assert(obj != NULL);
     DPRINTF((10, "Destroying object [%s].\n", obj->name));
 
 /*  FIXME? Ensure obj buf is flushed (if not suspended) before destruction.
  *
- *  assert(obj->bufInPtr == obj->bufOutPtr); */
-
+ *  assert(obj->bufInPtr == obj->bufOutPtr);
+ */
     switch(obj->type) {
     case CONMAN_OBJ_CLIENT:
         if (obj->aux.client.req) {
@@ -626,6 +158,13 @@ void destroy_obj(obj_t *obj)
         if (obj->aux.logfile.fmtName)
             free(obj->aux.logfile.fmtName);
         break;
+    case CONMAN_OBJ_PROCESS:
+        for (pp = obj->aux.process.argv; *pp != NULL; pp++) {
+            free(*pp);
+        }
+        /*  Do not destroy obj->aux.process.logfile since it is only a ref.
+         */
+        break;
     case CONMAN_OBJ_SERIAL:
         /*
          *  According to the UNIX Programming FAQ v1.37
@@ -636,8 +175,6 @@ void destroy_obj(obj_t *obj)
          *    or s/w handshaking), the process can hang _unkillably_
          *    in the close() call until the output drains.
          *    Play it safe and discard any pending output.
-         */
-        /*  FIXME: Changed tcflush() to non-fatal error. 20030403
          */
         if (obj->fd >= 0) {
             set_tty_mode(&obj->aux.serial.tty, obj->fd);
@@ -680,6 +217,33 @@ void destroy_obj(obj_t *obj)
         free(obj->name);
     }
     free(obj);
+    return;
+}
+
+
+void reopen_obj(obj_t *obj)
+{
+    assert(obj != NULL);
+
+    if (is_logfile_obj(obj)) {
+        open_logfile_obj(obj);
+    }
+    else if (is_process_obj(obj)) {
+        open_process_obj(obj);
+    }
+    else if (is_serial_obj(obj)) {
+        open_serial_obj(obj);
+    }
+    else if (is_telnet_obj(obj)) {
+        open_telnet_obj(obj);
+    }
+    else if (is_client_obj(obj)) {
+        ; /* no-op */
+    }
+    else {
+        log_err(0, "INTERNAL: Cannot re-open unrecognized object [%s] type=%d",
+            obj->name, obj->type);
+    }
     return;
 }
 
@@ -891,6 +455,52 @@ int find_obj(obj_t *obj, obj_t *key)
 }
 
 
+int write_notify_msg(obj_t *console, int priority, char *fmt, ...)
+{
+/*  Writes a notification message to the daemon logfile and all attached
+ *    readers & writers of (console).
+ */
+    int      n;
+    char     buf[MAX_LINE];
+    char    *p;
+    int      len;
+    va_list  vargs;
+    char    *now;
+
+    assert(console != NULL);
+    assert(is_console_obj(console));
+    assert(fmt != NULL);
+
+    p = buf;
+    len = sizeof(buf);
+    n = snprintf(p, len, "%s", CONMAN_MSG_PREFIX);
+    if ((n < 0) || (n >= sizeof(buf))) {
+        return(-1);
+    }
+    p += n;
+    len -= n;
+
+    va_start(vargs, fmt);
+    n = vsnprintf(p, len, fmt, vargs);
+    va_end(vargs);
+    if ((n < 0) || (n >= sizeof(buf))) {
+        return(-1);
+    }
+    log_msg(priority, "%s", p);
+    p += n;
+    len -= n;
+
+    now = create_short_time_string(0);
+    n = snprintf(p, len, " at %s%s", now, CONMAN_MSG_SUFFIX);
+    free(now);
+    if ((n < 0) || (n >= sizeof(buf))) {
+        return(-1);
+    }
+    notify_console_objs(console, buf);
+    return(0);
+}
+
+
 void notify_console_objs(obj_t *console, char *msg)
 {
 /*  Notifies all readers & writers of (console) with the informational (msg).
@@ -901,18 +511,21 @@ void notify_console_objs(obj_t *console, char *msg)
 
     assert(is_console_obj(console));
 
-    if (!msg || !strlen(msg))
+    if (!msg || !strlen(msg)) {
         return;
-
+    }
     i = list_iterator_create(console->readers);
-    while ((obj = list_next(i)))
+    while ((obj = list_next(i))) {
         write_obj_data(obj, msg, strlen(msg), 1);
+    }
     list_iterator_destroy(i);
 
     i = list_iterator_create(console->writers);
-    while ((obj = list_next(i)))
-        if (!list_find_first(console->readers, (ListFindF) find_obj, obj))
+    while ((obj = list_next(i))) {
+        if (!list_find_first(console->readers, (ListFindF) find_obj, obj)) {
             write_obj_data(obj, msg, strlen(msg), 1);
+        }
+    }
     list_iterator_destroy(i);
     return;
 }
@@ -1006,13 +619,14 @@ void unlink_objs(obj_t *src, obj_t *dst)
     char *tty;
     char buf[MAX_LINE];
 
-    if (list_delete_all(src->readers, (ListFindF) find_obj, dst))
+    if (list_delete_all(src->readers, (ListFindF) find_obj, dst)) {
         DPRINTF((10, "Removing [%s] from [%s] readers.\n",
             dst->name, src->name));
-    if ((n = list_delete_all(dst->writers, (ListFindF) find_obj, src)))
+    }
+    if ((n = list_delete_all(dst->writers, (ListFindF) find_obj, src))) {
         DPRINTF((10, "Removing [%s] from [%s] writers.\n",
             src->name, dst->name));
-
+    }
     /*  If a "writable" client is being unlinked from a console ...
      */
     if ((n > 0) && is_client_obj(src) && is_console_obj(dst)) {
@@ -1037,12 +651,12 @@ void unlink_objs(obj_t *src, obj_t *dst)
      *    and the obj will be closed once its buffer is empty.
      */
     if (is_client_obj(src)
-      && list_is_empty(src->readers) && list_is_empty(src->writers)) {
+            && list_is_empty(src->readers) && list_is_empty(src->writers)) {
         assert(is_console_obj(dst));
         src->gotEOF = 1;
     }
     else if (is_client_obj(dst)
-      && list_is_empty(dst->readers) && list_is_empty(dst->writers)) {
+            && list_is_empty(dst->readers) && list_is_empty(dst->writers)) {
         assert(is_console_obj(src));
         dst->gotEOF = 1;
     }
@@ -1061,11 +675,12 @@ void unlink_obj(obj_t *obj)
  */
     obj_t *x;
 
-    while ((x = list_peek(obj->writers)))
+    while ((x = list_peek(obj->writers))) {
         unlink_objs(x, obj);
-    while ((x = list_peek(obj->readers)))
+    }
+    while ((x = list_peek(obj->readers))) {
         unlink_objs(obj, x);
-
+    }
     return;
 }
 
@@ -1119,44 +734,41 @@ int shutdown_obj(obj_t *obj)
 
     /*  An inactive obj should not be destroyed.
      */
-    if (obj->fd < 0)
+    if (obj->fd < 0) {
         return(0);
-
-    if (close(obj->fd) < 0)
+    }
+    if (close(obj->fd) < 0) {
         log_err(errno, "Unable to close object [%s]", obj->name);
+    }
     obj->fd = -1;
 
     /*  Flush the obj's buffer.
      */
     obj->bufInPtr = obj->bufOutPtr = obj->buf;
 
+    /*  Prepare this obj for destruction by unlinking it from all others.
+     *    It will be removed from the master objs list by mux_io(),
+     *    and the objs list destructor will destroy the obj.
+     */
+    if (is_client_obj(obj)) {
+        unlink_obj(obj);
+        return(-1);
+    }
     /*  If a logfile obj is shut down, close the file but retain the obj;
      *    an attempt to reopen it will be made if the daemon is reconfigured.
      */
-    if (is_logfile_obj(obj))
-        return(0);
-
-    /*  If a telnet obj is shut down, close the existing connection
-     *    and attempt to establish a new one.
-     */
-    if (is_telnet_obj(obj)) {
-        disconnect_telnet_obj(obj);
+    if (is_logfile_obj(obj)) {
         return(0);
     }
-
-    if (is_serial_obj(obj))
-        log_msg(LOG_INFO, "Console [%s] disconnected from \"%s\"",
-            obj->name, obj->aux.serial.dev);
-
-    /*  Prepare this obj for destruction by unlinking it from all others.
+    /*  If a console obj is shut down, close the existing connection
+     *    and re-open a new one.
      */
-    unlink_obj(obj);
-
-    /*  The obj is now ready for destruction.  It will be removed from the
-     *    master objs list by mux_io(), and the objs list destructor will
-     *    destroy the obj.
-     */
-    DPRINTF((10, "Shutdown object [%s].\n", obj->name));
+    if (is_console_obj(obj)) {
+        reopen_obj(obj);
+        return(0);
+    }
+    log_err(0, "Unable to shutdown unrecognized object [%s] type=%d",
+        obj->name, obj->type);
     return(-1);
 }
 
@@ -1167,17 +779,16 @@ int read_from_obj(obj_t *obj, tpoll_t tp)
  *    to the circular-buffer of each obj in its "readers" list.
  *  Returns >=0 on success, or -1 if the obj is ready to be destroyed.
  *
- *  The ptr to select()'s write-set is an optimization used to "prime"
- *    the set for write_to_obj().  This allows data read to be written out
- *    to those objs not yet traversed during the current list iteration,
- *    thereby reducing the latency.  Without it, these objs would be
- *    select()'d on the next list iteration in mux_io()'s outer-loop.
+ *  The tpoll (tp) ref is an optimization used to "prime" the set for
+ *    write_to_obj().  This allows data read to be written out to those objs
+ *    not yet traversed during the current list iteration, thereby reducing the
+ *    latency.  Without it, these objs would be tpoll()'d on the next list
+ *    iteration in mux_io()'s outer-loop.
  *  An obj's circular-buffer is empty when (bufInPtr == bufOutPtr).
  *    Thus, it can hold at most (MAX_BUF_SIZE - 1) bytes of data.
  *  But if the obj is a logfile, its data can grow as a result of the
  *    additional processing.  This routine's internal buffer is reduced
  *    somewhat to reduce the likelihood of log data being dropped.
- *  FIXME: cbuf should eliminate the need to limit the size of buf[].
  */
     unsigned char buf[(MAX_BUF_SIZE / 2) - 1];
     int n, m;
@@ -1188,23 +799,26 @@ int read_from_obj(obj_t *obj, tpoll_t tp)
 
     /*  Do not read from an active telnet obj that is not yet in the UP state.
      */
-    if (is_telnet_obj(obj) && obj->aux.telnet.conState != CONMAN_TELCON_UP)
+    if (is_telnet_obj(obj) && obj->aux.telnet.conState != CONMAN_TELCON_UP) {
         return(0);
-
+    }
 again:
     if ((n = read(obj->fd, buf, sizeof(buf))) < 0) {
-        if (errno == EINTR)
+        if (errno == EINTR) {
             goto again;
-        if ((errno == EAGAIN) || (errno == EWOULDBLOCK))
+        }
+        if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
             return(0);
+        }
         log_msg(LOG_INFO, "Unable to read from [%s]: %s",
             obj->name, strerror(errno));
         return(shutdown_obj(obj));
     }
     else if (n == 0) {
         int rc = shutdown_obj(obj);
-        if (obj->fd >= 0)
+        if (obj->fd >= 0) {
             tpoll_set(tp, obj->fd, POLLOUT);    /* ensure buffer is flushed */
+        }
         return(rc);
     }
     else {
@@ -1213,15 +827,15 @@ again:
         if (is_client_obj(obj)) {
             x_pthread_mutex_lock(&obj->bufLock);
             time(&obj->aux.client.timeLastRead);
-            if (obj->aux.client.timeLastRead == (time_t) -1)
+            if (obj->aux.client.timeLastRead == (time_t) -1) {
                 log_err(errno, "time() failed");
+            }
             x_pthread_mutex_unlock(&obj->bufLock);
             n = process_client_escapes(obj, buf, n);
         }
         else if (is_telnet_obj(obj)) {
             n = process_telnet_escapes(obj, buf, n);
         }
-
         /*  Ensure the buffer still contains data
          *    after the escape characters have been processed.
          */
@@ -1233,12 +847,15 @@ again:
                  *    no more data can be written into its buffer.
                  */
                 if (!reader->gotEOF) {
-                    if (is_logfile_obj(reader))
+                    if (is_logfile_obj(reader)) {
                         m = write_log_data(reader, buf, n);
-                    else
+                    }
+                    else {
                         m = write_obj_data(reader, buf, n, 0);
-                    if (m > 0)
+                    }
+                    if (m > 0) {
                         tpoll_set(tp, reader->fd, POLLOUT);
+                    }
                 }
             }
             list_iterator_destroy(i);
@@ -1261,9 +878,9 @@ int write_obj_data(obj_t *obj, const void *src, int len, int isInfo)
     int avail;
     int n, m;
 
-    if (!src || len <= 0 || obj->fd < 0)
+    if (!src || len <= 0) {
         return(0);
-
+    }
     /*  If the obj's gotEOF flag is set,
      *    no more data can be written into its buffer.
      */
@@ -1271,21 +888,20 @@ int write_obj_data(obj_t *obj, const void *src, int len, int isInfo)
         DPRINTF((1, "Attempted to write to [%s] after EOF.\n", obj->name));
         return(0);
     }
-
-    /*  If the obj is a disconnected telnet connection,
-     *    data will simply be discarded so perform a no-op here.
+    /*  If the obj is a disconnected console connection,
+     *    data will be discarded so perform a no-op here.
      */
-    if (is_telnet_obj(obj) && obj->aux.telnet.conState != CONMAN_TELCON_UP) {
+    if ((is_telnet_obj(obj) && obj->aux.telnet.conState != CONMAN_TELCON_UP)
+            || (is_console_obj(obj) && (obj->fd < 0))) {
         DPRINTF((1, "Attempted to write to disconnected [%s].\n", obj->name));
         return(0);
     }
-
     /*  An obj's circular-buffer is empty when (bufInPtr == bufOutPtr).
      *    Thus, it can hold at most (MAX_BUF_SIZE - 1) bytes of data.
      */
-    if (len >= MAX_BUF_SIZE)
+    if (len >= MAX_BUF_SIZE) {
         len = MAX_BUF_SIZE - 1;
-
+    }
     x_pthread_mutex_lock(&obj->bufLock);
 
     /*  Do nothing if this is an informational message
@@ -1295,7 +911,6 @@ int write_obj_data(obj_t *obj, const void *src, int len, int isInfo)
         x_pthread_mutex_unlock(&obj->bufLock);
         return(0);
     }
-
     /*  Assert the buffer's input and output ptrs are valid upon entry.
      */
     assert(obj->bufInPtr >= obj->buf);
@@ -1321,7 +936,6 @@ int write_obj_data(obj_t *obj, const void *src, int len, int isInfo)
         avail = (&obj->buf[MAX_BUF_SIZE] - obj->bufInPtr) +
             (obj->bufOutPtr - obj->buf) - 1;
     }
-
     /*  Copy first chunk of data (ie, up to the end of the buffer).
      */
     m = MIN(len, &obj->buf[MAX_BUF_SIZE] - obj->bufInPtr);
@@ -1338,25 +952,24 @@ int write_obj_data(obj_t *obj, const void *src, int len, int isInfo)
             obj->gotBufWrap = 1;
         }
     }
-
     /*  Copy second chunk of data (ie, from the beginning of the buffer).
      */
     if (n > 0) {
         memcpy(obj->bufInPtr, src, n);
         obj->bufInPtr += n;             /* Hokey-Pokey not needed here */
     }
-
     /*  Check to see if any data in circular-buffer was overwritten.
      */
     if (len > avail) {
-        if (!is_client_obj(obj) || !obj->aux.client.gotSuspend)
+        if (!is_client_obj(obj) || !obj->aux.client.gotSuspend) {
             log_msg(LOG_NOTICE, "Overwrote %d bytes in buffer for %s",
                 len-avail, obj->name);
+        }
         obj->bufOutPtr = obj->bufInPtr + 1;
-        if (obj->bufOutPtr == &obj->buf[MAX_BUF_SIZE])
+        if (obj->bufOutPtr == &obj->buf[MAX_BUF_SIZE]) {
             obj->bufOutPtr = obj->buf;
+        }
     }
-
     /*  Assert the buffer's input and output ptrs are valid upon exit.
      */
     assert(obj->bufInPtr >= obj->buf);
@@ -1372,7 +985,6 @@ int write_obj_data(obj_t *obj, const void *src, int len, int isInfo)
     if (isInfo && is_logfile_obj(obj)) {
         obj->aux.logfile.lineState = CONMAN_LOG_LINE_INIT;
     }
-
     return(len);
 }
 
@@ -1419,15 +1031,12 @@ int write_to_obj(obj_t *obj)
     else {
         avail = &obj->buf[MAX_BUF_SIZE] - obj->bufOutPtr;
     }
-
     if (avail > 0) {
 again:
         if ((n = write(obj->fd, obj->bufOutPtr, avail)) < 0) {
-            if (errno == EINTR)
+            if (errno == EINTR) {
                 goto again;
-            /*
-             *  FIXME: Mirror read_from_obj() construct here when dethreaded.
-             */
+            }
             if ((errno != EAGAIN) && (errno != EWOULDBLOCK)) {
                 log_msg(LOG_INFO, "Unable to write to [%s]: %s",
                     obj->name, strerror(errno));
@@ -1441,8 +1050,9 @@ again:
             /*
              *  Do the hokey-pokey and perform a circular-buffer wrap-around.
              */
-            if (obj->bufOutPtr == &obj->buf[MAX_BUF_SIZE])
+            if (obj->bufOutPtr == &obj->buf[MAX_BUF_SIZE]) {
                 obj->bufOutPtr = obj->buf;
+            }
         }
     }
 
@@ -1452,9 +1062,9 @@ again:
      *    Thus, the object is ready to be closed, so return a code to
      *    notify mux_io() that the obj can be deleted from the objs list.
      */
-    if (obj->gotEOF && (obj->bufInPtr == obj->bufOutPtr))
+    if (obj->gotEOF && (obj->bufInPtr == obj->bufOutPtr)) {
         isDead = 1;
-
+    }
     /*  Assert the buffer's input and output ptrs are valid upon exit.
      */
     assert(obj->bufInPtr >= obj->buf);
