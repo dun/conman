@@ -1,3 +1,7 @@
+2007-02-23  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server.c (open_objs): Tweaked log msg verbage.
+
 2007-02-22  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server.c (exit_handler, sig_hup_handler, sig_chld_handler):

@@ -515,8 +515,7 @@ static void open_objs(server_conf_t *conf)
         }
     }
     else {
-        log_msg(LOG_INFO,
-            "Found open file limit set to %d", limit.rlim_cur);
+        log_msg(LOG_INFO, "Open file limit set to %d", limit.rlim_cur);
     }
 
     i = list_iterator_create(conf->objs);
