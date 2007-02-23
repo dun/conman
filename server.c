@@ -59,8 +59,8 @@ static int begin_daemonize(void);
 static void end_daemonize(int fd);
 static void display_configuration(server_conf_t *conf);
 static void exit_handler(int signum);
-static void sig_chld_handler(int signum);
 static void sig_hup_handler(int signum);
+static void sig_chld_handler(int signum);
 static void schedule_timestamp(server_conf_t *conf);
 static void timestamp_logfiles(server_conf_t *conf);
 static void create_listen_socket(server_conf_t *conf);
@@ -287,16 +287,14 @@ static void end_daemonize(int fd)
 
 static void exit_handler(int signum)
 {
-    log_msg(LOG_NOTICE, "Exiting on signal=%d", signum);
-    done = 1;
+    done = signum;
     return;
 }
 
 
 static void sig_hup_handler(int signum)
 {
-    log_msg(LOG_NOTICE, "Performing reconfig on signal=%d", signum);
-    reconfig = 1;
+    reconfig = signum;
     return;
 }
 
@@ -305,9 +303,7 @@ static void sig_chld_handler(int signum)
 {
     pid_t pid;
 
-    while ((pid = waitpid(-1, NULL, WNOHANG)) > 0) {
-        log_msg(LOG_DEBUG, "Process %d terminated", (int) pid);
-    }
+    while ((pid = waitpid(-1, NULL, WNOHANG)) > 0) {;}
     return;
 }
 
@@ -553,6 +549,7 @@ static void mux_io(server_conf_t *conf)
              *  FIXME: A reconfig should pro'ly resurrect "downed" serial objs
              *         and reset reconnect timers of "downed" telnet objs.
              */
+            log_msg(LOG_NOTICE, "Performing reconfig on signal=%d", reconfig);
             reopen_logfiles(conf);
             reconfig = 0;
         }
@@ -636,6 +633,7 @@ static void mux_io(server_conf_t *conf)
             }
         }
     }
+    log_msg(LOG_NOTICE, "Exiting on signal=%d", done);
     list_iterator_destroy(i);
     return;
 }

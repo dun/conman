@@ -1,5 +1,10 @@
 2007-02-22  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server.c (exit_handler, sig_hup_handler, sig_chld_handler):
+	  Removed log_msg() from signal handlers to protect against held lock
+	  being interrupted resulting in a deadlock.
+	* server.c (mux_io): Added log_msg()s from signal handlers.
+
 	* log.c (log_aux):
 	  Replaced thread-unsafe localtime() with thread-safe get_localtime().
 
