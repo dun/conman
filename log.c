@@ -41,6 +41,7 @@
 #include <time.h>
 #include <unistd.h>
 #include "log.h"
+#include "util-str.h"
 
 
 #ifndef MAX_LINE
@@ -179,7 +180,7 @@ static void log_aux(int errnum, int priority, char *msgbuf, int msgbuflen,
     const char *format, va_list vargs)
 {
     time_t t;
-    struct tm *tm_ptr;
+    struct tm tm;
     const char *prefix;
     char buf[MAX_LINE];                 /* buf starting with timestamp       */
     char *pbuf;                         /* buf starting with priority string */
@@ -191,19 +192,15 @@ static void log_aux(int errnum, int priority, char *msgbuf, int msgbuflen,
     p = sbuf = pbuf = buf;
     len = sizeof(buf) - 1;              /* reserve char for terminating '\n' */
 
-    /*  XXX: localtime() is not thread-safe.
-     */
-    if (time(&t) != ((time_t) -1)) {
-        if ((tm_ptr = localtime(&t)) != NULL) {
-            n = strftime(p, len, "%Y-%m-%d %H:%M:%S ", tm_ptr);
-            if (n == 0) {
-                *p = '\0';
-                len = 0;
-            }
-            p = sbuf = pbuf += n;
-            len -= n;
-        }
+    t = 0;
+    get_localtime(&t, &tm);
+    n = strftime(p, len, "%Y-%m-%d %H:%M:%S ", &tm);
+    if (n == 0) {
+        *p = '\0';
+        len = 0;
     }
+    p = sbuf = pbuf += n;
+    len -= n;
 
     if ((prefix = log_prefix(priority))) {
         int m = 10 - strlen(prefix);

@@ -1,5 +1,8 @@
 2007-02-22  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* log.c (log_aux):
+	  Replaced thread-unsafe localtime() with thread-safe get_localtime().
+
 	* server.c: Added support for process objs.
 	* server.c (open_objs): Set RLIMIT_NOFILE to rlim_max.
 	* server.h:
