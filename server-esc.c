@@ -145,9 +145,22 @@ static void perform_serial_break(obj_t *client)
         DPRINTF((5, "Performing serial-break on console [%s].\n",
             console->name));
 
-        /*  FIXME: handle process obj
+        /*  For process-based consoles, the serial-break will be replaced with
+         *    the "&B" character sequence.  The default escape character '&'
+         *    will always be used here since the client-server protocol does
+         *    not transmit the escape character being used by the client.
+         *  This character sequence can be intercepted by the script
+         *    controlling the console.  An Expect script spawning a telnet
+         *    connection could perform the following action:
+         *      interact "&B" { send "\035send brk\r\n" }
          */
-        if (is_serial_obj(console)) {
+        if (is_process_obj(console)) {
+            unsigned char brk[2];
+            brk[0] = DEFAULT_CLIENT_ESCAPE;
+            brk[1] = ESC_CHAR_BREAK;
+            write_obj_data(console, &brk, 2, 0);
+        }
+        else if (is_serial_obj(console)) {
             if (tcsendbreak(console->fd, 0) < 0)
                 log_err(errno, "Unable to send serial-break to console [%s]",
                     console->name);

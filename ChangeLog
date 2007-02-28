@@ -1,3 +1,10 @@
+2007-02-27  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server-esc.c (perform_serial_break): Added support to perform a
+	  serial-break on process-based consoles by sending "&B" to the
+	  console.  The script controlling the process can intercept this
+	  sequence to perform an appropriate action.
+
 2007-02-23  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server.c (open_objs): Tweaked log msg verbage.
@@ -63,7 +70,7 @@
 
 2007-01-03  Chris Dunlap  <cdunlap@llnl.gov>
 
-	* client-conf.c (create_client_conf): Made getlogin() the  preferred
+	* client-conf.c (create_client_conf): Made getlogin() the preferred
 	  method for ascertaining the client's username.
 
 	* : Updated copyright date range.
