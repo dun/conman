@@ -1,0 +1,105 @@
+###############################################################################
+# $Id$
+###############################################################################
+# Copyright (C) 2001-2007 The Regents of the University of California.
+# Produced at Lawrence Livermore National Laboratory.
+# Written by Chris Dunlap <cdunlap@llnl.gov>.
+# UCRL-CODE-2002-009.
+#
+# This file is part of ConMan: The Console Manager.
+# For details, see <http://home.gna.org/conman/>.
+###############################################################################
+# This script performs the initial authentication step to access a console on
+# a Cyclades terminal server using the telnet protocol (protocol socket_server)
+# and local authentication (authtype local).
+#
+# It can be specified in "conman.conf" in the following manner:
+#
+#   CONSOLE name="zot" dev="/path/to/cyclades-telnet.exp HOST PORT USER PSWD"
+#
+# HOST is the hostname of the terminal server.
+# PORT is the port number associated with the console.
+# USER is the username being authenticated.
+# PSWD is the corresponding password.
+#
+# Since this command-line will persist in the process listing for the duration
+# of the connection, passing the USER & PSWD in this manner is not recommended.
+###############################################################################
+
+##
+# Command-line arguments can be overridden by uncommenting the lines below
+#   to specify the username and password for the initial authentication step.
+##
+  set host [ lindex $argv 0 ]
+  set port [ lindex $argv 1 ]
+  set user [ lindex $argv 2 ]
+  set pswd [ lindex $argv 3 ]
+# set user "foo"
+# set pswd "bar"
+
+##
+# Set "exp_internal" to 1 to print diagnostics describing internal operations.
+#   This is helpful in diagnosing pattern-match failures.
+##
+  exp_internal 0
+
+##
+# Set "log_user" to 1 to show the underlying dialogue that takes place during
+#   the initial authentication step.
+##
+  log_user 0
+
+##
+# The "timeout" specifies the number of seconds before the authentication step
+#   times-out and terminates the connection.
+##
+set timeout 10
+
+if [ catch "spawn telnet $host $port" reason ] {
+  send_user "Error: failed to spawn telnet process: $reason.\r\n"
+  exit 1
+}
+expect {
+  -gl "Authentication failure" {
+    send_user "Error: Permission denied.\r\n"
+    exit 1
+  }
+  -gl "Connection refused" {
+    send_user "Error: Connection refused.\r\n"
+    exit 1
+  }
+  -re "(ttyS\[0-9]*) is being used by \\((.*)\\)" {
+    send_user "Error: Console session for $expect_out(1,string) in use by $expect_out(2,string).\r\n"
+    exit 1
+  }
+  -gl "is being used by" {
+    send_user "Error: Console session already in use.\r\n"
+    exit 1
+  }
+  -gl "closed by remote host" {
+    send_user "Error: Connection closed by remote host.\r\n"
+    exit 1
+  }
+  eof {
+    send_user "Error: Connection closed by remote host.\r\n"
+    exit 1
+  }
+  timeout {
+    send_user "Error: Timed-out.\r\n"
+    exit 1
+  }
+  -gl "\r\n$host login: \$" {
+    send "$user\r"
+    exp_continue -continue_timer
+  }
+  -gl "Password: \$" {
+    send "$pswd\r"
+    send "\r"
+    exp_continue -continue_timer
+  }
+  -re "(:|#|%|\\\$) \$" {
+    ;
+  }
+}
+send_user "Connection established via external telnet process.\r\n"
+interact
