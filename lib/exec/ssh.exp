@@ -10,7 +10,7 @@
 # This file is part of ConMan: The Console Manager.
 # For details, see <http://home.gna.org/conman/>.
 ###############################################################################
-# This script accesses a console using the SSH protocol.
+# This script connects to a console using the SSH protocol.
 #
 # It can be specified in "conman.conf" in the following manner:
 #
