@@ -1,5 +1,7 @@
 2007-03-06  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* lib/exec/ssh.exp: Tweaked documentation.
+
 	* lib/exec/ibm-hs20.exp: Added documentation for interact patterns.
 
 	* lib/exec, lib/exec/cyclades-ssh.exp, lib/exec/cyclades-telnet.exp,
