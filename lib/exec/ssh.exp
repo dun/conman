@@ -12,7 +12,7 @@
 ###############################################################################
 # This script connects to a console using the SSH protocol.
 #
-# It can be specified in "conman.conf" in the following manner:
+# This script can be specified in "conman.conf" in the following manner:
 #
 #   CONSOLE name="zot" dev="/path/to/ssh.exp HOST PORT USER PSWD"
 #

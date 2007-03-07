@@ -13,7 +13,7 @@
 # This script performs the initial authentication step to access a console on
 # an IBM BladeCenter HS20 Type 8843 blade server using the telnet protocol.
 #
-# It can be specified in "conman.conf" in the following manner:
+# This script can be specified in "conman.conf" in the following manner:
 #
 #   CONSOLE name="zot" dev="/path/to/ibm-hs20.exp HOST PORT USER PSWD"
 #
@@ -109,7 +109,7 @@ send_user "Connection established via external telnet process.\r\n"
 # The "&B" character sequence will be replaced with a serial-break.
 # The space-backspace sequence will be sent after an hour with no input
 #   activity in order to keep the connection alive.  Without it, the blade
-#   server disconnects connections that have been idle for ~63min.
+#   server terminates connections that have been idle for ~63min.
 ##
 interact {
   "&B" {

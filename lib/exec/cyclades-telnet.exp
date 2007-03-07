@@ -14,7 +14,7 @@
 # a Cyclades terminal server using the telnet protocol (protocol socket_server)
 # and local authentication (authtype local).
 #
-# It can be specified in "conman.conf" in the following manner:
+# This script can be specified in "conman.conf" in the following manner:
 #
 #   CONSOLE name="zot" dev="/path/to/cyclades-telnet.exp HOST PORT USER PSWD"
 #
