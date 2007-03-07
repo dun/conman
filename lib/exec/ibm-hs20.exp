@@ -105,6 +105,12 @@ expect {
   }
 }
 send_user "Connection established via external telnet process.\r\n"
+##
+# The "&B" character sequence will be replaced with a serial-break.
+# The space-backspace sequence will be sent after an hour with no input
+#   activity in order to keep the connection alive.  Without it, the blade
+#   server disconnects connections that have been idle for ~63min.
+##
 interact {
   "&B" {
     send "\035send brk\r\n"
