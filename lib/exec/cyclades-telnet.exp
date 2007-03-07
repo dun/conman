@@ -54,7 +54,7 @@
 # The "timeout" specifies the number of seconds before the authentication step
 #   times-out and terminates the connection.
 ##
-set timeout 10
+  set timeout 10
 
 if [ catch "spawn telnet $host $port" reason ] {
   send_user "Error: failed to spawn telnet process: $reason.\r\n"
