@@ -28,17 +28,6 @@
 ###############################################################################
 
 ##
-# Command-line arguments can be overridden by uncommenting the lines below
-#   to specify the username and password for the initial authentication step.
-##
-  set host [ lindex $argv 0 ]
-  set port [ lindex $argv 1 ]
-  set user [ lindex $argv 2 ]
-  set pswd [ lindex $argv 3 ]
-# set user "foo"
-# set pswd "bar"
-
-##
 # Set "exp_internal" to 1 to print diagnostics describing internal operations.
 #   This is helpful in diagnosing pattern-match failures.
 ##
@@ -55,6 +44,22 @@
 #   times-out and terminates the connection.
 ##
   set timeout 10
+
+##
+# Command-line argument defaults should be specified here.  In this manner,
+#   you can avoid exposing the username and password on the command line.
+##
+# set user "foo"
+# set pswd "bar"
+#
+  set host [ lindex $argv 0 ]
+  set port [ lindex $argv 1 ]
+  set user [ lindex $argv 2 ]
+  set pswd [ lindex $argv 3 ]
+
+##
+
+set authenticated 0
 
 if [ catch "spawn telnet $host $port" reason ] {
   send_user "Error: failed to spawn telnet process: $reason.\r\n"
@@ -86,20 +91,35 @@ expect {
     exit 1
   }
   timeout {
-    send_user "Error: Timed-out.\r\n"
-    exit 1
+    if {$authenticated == 0} {
+      send_user "Error: Timed-out.\r\n"
+      exit 1
+    }
   }
-  -gl "\r\n$host login: \$" {
-    send "$user\r"
-    exp_continue -continue_timer
+  -nocase -gl "login: \$" {
+    if {$authenticated == 0} {
+      send "$user\r"
+      exp_continue -continue_timer
+    }
   }
-  -gl "Password: \$" {
-    send "$pswd\r"
-    send "\r"
-    exp_continue -continue_timer
+  -nocase -gl "password: \$" {
+    if {$authenticated == 0} {
+      send "$pswd\r"
+      send "\r"
+      incr authenticated
+      exp_continue -continue_timer
+    } else {
+      send_user "Error: Permission denied.\r\n"
+      exit 1
+    }
   }
   -re "(:|#|%|\\\$) \$" {
-    ;
+    if {$authenticated == 0} {
+      exp_continue -continue_timer
+    }
+  }
+  -re "\[^\r]*\r\n" {
+    exp_continue -continue_timer
   }
 }
 send_user "Connection established via external telnet process.\r\n"

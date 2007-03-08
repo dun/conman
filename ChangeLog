@@ -1,6 +1,14 @@
 2007-03-07  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* lib/exec/cyclades-ssh.exp, lib/exec/cyclades-telnet.exp,
+	  lib/exec/ibm-hs20.exp, lib/exec/ssh.exp: Added state variable to
+	  track when authentication step was complete.  Added pattern to eat
+	  unmatched lines in order to reduce size of pattern match buffer.
+	  Made username and password globs case-insensitive.
+	* lib/exec/ibm-hs20.exp:
+	  Fixed bug with $port instead of $blade being set to argv[1].
+
+	* lib/exec/cyclades-ssh.exp, lib/exec/cyclades-telnet.exp,
 	  lib/exec/ibm-hs20.exp, lib/exec/ssh.exp: Tweaked documentation.
 
 2007-03-06  Chris Dunlap  <cdunlap@llnl.gov>
