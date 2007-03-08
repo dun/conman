@@ -16,7 +16,7 @@
 #
 # This script can be specified in "conman.conf" in the following manner:
 #
-#   CONSOLE name="zot" dev="/path/to/ipmi.exp HOST USER PSWD"
+#   CONSOLE name="zot" dev="/path/to/freeipmi.exp HOST USER PSWD"
 #
 # HOST is the hostname of the remote server.
 # USER is the username being authenticated.
