@@ -113,7 +113,7 @@ expect {
       exit 1
     }
   }
-  -re "(:|#|%|\\\$) \$" {
+  -re "\[^\n]*(:|#|%|\\\$) \$" {
     if {$authenticated == 0} {
       exp_continue -continue_timer
     }
