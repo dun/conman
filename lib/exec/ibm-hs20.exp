@@ -58,7 +58,7 @@
 
 ##
 
-set env(PATH) "/bin:/usr/bin:/sbin:/usr/sbin"
+set env(PATH) "/bin:/usr/bin"
 set connected 0
 
 if [ catch "spawn telnet $host" reason ] {
