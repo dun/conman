@@ -1,0 +1,99 @@
+#!/usr/bin/expect -f
+###############################################################################
+# $Id$
+###############################################################################
+# Copyright (C) 2001-2007 The Regents of the University of California.
+# Produced at Lawrence Livermore National Laboratory.
+# Written by Chris Dunlap <cdunlap@llnl.gov>.
+# UCRL-CODE-2002-009.
+#
+# This file is part of ConMan: The Console Manager.
+# For details, see <http://home.gna.org/conman/>.
+###############################################################################
+# This script connects to a console using the IPMI Serial-Over-LAN protocol.
+# The "ipmiconsole" command is part of GNU FreeIPMI available from
+# <http://savannah.gnu.org/projects/freeipmi/>.
+#
+# This script can be specified in "conman.conf" in the following manner:
+#
+#   CONSOLE name="zot" dev="/path/to/ipmi.exp HOST USER PSWD"
+#
+# HOST is the hostname of the remote server.
+# USER is the username being authenticated.
+# PSWD is the corresponding password.
+#
+# Since this command-line will persist in the process listing for the duration
+# of the connection, passing the USER & PSWD in this manner is not recommended.
+###############################################################################
+
+##
+# Set "exp_internal" to 1 to print diagnostics describing internal operations.
+#   This is helpful in diagnosing pattern-match failures.
+##
+  exp_internal 0
+
+##
+# Set "log_user" to 1 to show the underlying dialogue that takes place during
+#   the initial authentication step.
+##
+  log_user 0
+
+##
+# The "timeout" specifies the number of seconds before the authentication step
+#   times-out and terminates the connection.
+##
+  set timeout 5
+
+##
+# Command-line argument defaults should be specified here.  In this manner,
+#   you can avoid exposing the username and password on the command line.
+##
+# set user "foo"
+# set pswd "bar"
+#
+  set host [ lindex $argv 0 ]
+  set user [ lindex $argv 1 ]
+  set pswd [ lindex $argv 2 ]
+
+##
+
+set authenticated 0
+
+if [ catch "spawn ipmiconsole -h $host -u $user -P" reason ] {
+  send_user "Error: failed to spawn ipmiconsole process: $reason.\r\n"
+  exit 1
+}
+expect {
+  -nocase -re "^\\\[error received]: (\[^\r\n]*)" {
+    send_user "Error: $expect_out(1,string)\r\n"
+    exit 1
+  }
+  eof {
+    send_user "Error: Connection closed by remote host.\r\n"
+    exit 1
+  }
+  timeout {
+    if {$authenticated == 0} {
+      send_user "Error: Timed-out.\r\n"
+      exit 1
+    }
+  }
+  -nocase -gl "Password:" {
+    if {$authenticated == 0} {
+      send "$pswd\r"
+      send "\r"
+      incr authenticated
+      exp_continue -continue_timer
+    }
+  }
+  -re "\[^\n]*(:|#|%|\\\$) \$" {
+    if {$authenticated == 0} {
+      exp_continue -continue_timer
+    }
+  }
+  -re "\[^\r]*\r\n" {
+    exp_continue -continue_timer
+  }
+}
+send_user "Connection established via external ipmiconsole process.\r\n"
+interact

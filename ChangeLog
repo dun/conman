@@ -1,5 +1,7 @@
 2007-03-07  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* lib/exec/ipmi.exp: Added.
+
 	* lib/exec/cyclades-ssh.exp, lib/exec/cyclades-telnet.exp,
 	  lib/exec/ssh.exp: Tweaked pattern for prompt.
 
