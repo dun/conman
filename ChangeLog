@@ -1,5 +1,8 @@
 2007-03-07  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* lib/exec/cyclades-ssh.exp, lib/exec/cyclades-telnet.exp,
+	  lib/exec/ibm-hs20.exp, lib/exec/ipmi.exp, lib/exec/ssh.exp: Set PATH.
+
 	* lib/exec/ipmi.exp: Added.
 
 	* lib/exec/cyclades-ssh.exp, lib/exec/cyclades-telnet.exp,

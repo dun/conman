@@ -59,6 +59,8 @@
 
 ##
 
+set env(PATH) "/bin:/usr/bin:/sbin:/usr/sbin"
+
 set authenticated 0
 
 if [ catch "spawn telnet $host $port" reason ] {
