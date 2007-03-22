@@ -16,11 +16,12 @@
 #
 # This script can be specified in "conman.conf" in the following manner:
 #
-#   CONSOLE name="zot" dev="/path/to/freeipmi.exp HOST USER PSWD"
+#   CONSOLE name="zot" dev="/path/to/freeipmi.exp HOST USER PSWD [KEY]"
 #
 # HOST is the hostname of the remote server.
 # USER is the username being authenticated.
 # PSWD is the corresponding password.
+# KEY  is the optional key-generation key "Kg" for IPMIv2 authentication.
 #
 # Since this command-line will persist in the process listing for the duration
 # of the connection, passing the USER & PSWD in this manner is not recommended.
@@ -46,25 +47,52 @@
 
 ##
 # Command-line argument defaults should be specified here.  In this manner,
-#   you can avoid exposing the username and password on the command line.
+#   you can avoid exposing the username, password, and key on the command line.
 ##
 # set user "foo"
 # set pswd "bar"
-#
-  set host [ lindex $argv 0 ]
-  set user [ lindex $argv 1 ]
-  set pswd [ lindex $argv 2 ]
+# set key  "zot"
 
 ##
 
 set env(PATH) "/bin:/usr/bin:/sbin:/usr/sbin"
 set authenticated 0
 
-if [ catch "spawn ipmiconsole -h $host -u $user -P" reason ] {
+if { $argc > 0 } {
+  set host [ lindex $argv 0 ]
+}
+if { $argc > 1 } {
+  set user [ lindex $argv 1 ]
+}
+if { $argc > 2 } {
+  set pswd [ lindex $argv 2 ]
+}
+if { $argc > 3 } {
+  set key  [ lindex $argv 3 ]
+}
+if { ! [ info exists host ] } {
+  send_user "Error: Unspecified hostname.\r\n"
+  exit 1
+} elseif { ! [ info exists user ] } {
+  send_user "Error: Unspecified username.\r\n"
+  exit 1
+} elseif { ! [ info exists pswd ] } {
+  send_user "Error: Unspecified password.\r\n"
+  exit 1
+}
+set cmd [ list ipmiconsole -h $host -u $user -P ]
+if { [ info exists key ] } {
+  lappend cmd -k $key
+}
+
+if [ catch "spawn $cmd" reason ] {
   send_user "Error: failed to spawn ipmiconsole process: $reason.\r\n"
   exit 1
 }
 expect {
+  -nocase -re "\\\[SOL established]" {
+    ;
+  }
   -nocase -re "^\\\[error received]: (\[^\r\n]*)" {
     send_user "Error: $expect_out(1,string)\r\n"
     exit 1

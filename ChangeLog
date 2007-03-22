@@ -1,3 +1,10 @@
+2007-03-21  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* lib/exec/freeipmi.exp: Added support for key-generation key "Kg".
+	  Changed behavior for cmdline-args overriding variable defaults.
+	  Added SOL-established pattern to avoid unnecessary timeout.
+	  Added check for required variables.
+
 2007-03-08  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* lib/exec/freeipmi.exp, lib/exec/ipmi.exp:
