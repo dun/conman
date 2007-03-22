@@ -1,3 +1,9 @@
+2007-03-22  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* lib/exec/freeipmi.exp: Added usage message if no args are given.
+	  Removed sending additional CR after password in order to generate
+	  output; this is no longer needed with the SOL-established message.
+
 2007-03-21  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* lib/exec/freeipmi.exp: Added support for key-generation key "Kg".
