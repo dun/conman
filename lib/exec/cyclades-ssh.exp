@@ -47,21 +47,46 @@
 
 ##
 # Command-line argument defaults should be specified here.  In this manner,
-#   you can avoid exposing the username and password on the command line.
+#   you can avoid exposing sensitive information on the command line.
 ##
 # set user "foo"
 # set pswd "bar"
-#
-  set host [ lindex $argv 0 ]
-  set port [ lindex $argv 1 ]
-  set user [ lindex $argv 2 ]
-  set pswd [ lindex $argv 3 ]
 
 ##
 
 set env(PATH) "/bin:/usr/bin"
 set authenticated 0
 
+if { ! $argc } {
+  set prog [ lindex [ split $argv0 "/" ] end ]
+  send_user "Usage: $prog <host> <port> <user> <pswd>\r\n"
+  exit 1
+}
+if { $argc > 0 } {
+  set host [ lindex $argv 0 ]
+}
+if { $argc > 1 } {
+  set port [ lindex $argv 1 ]
+}
+if { $argc > 2 } {
+  set user [ lindex $argv 2 ]
+}
+if { $argc > 3 } {
+  set pswd [ lindex $argv 3 ]
+}
+if { ! [ info exists host ] } {
+  send_user "Error: Unspecified hostname.\r\n"
+  exit 1
+} elseif { ! [ info exists port ] } {
+  send_user "Error: Unspecified port number.\r\n"
+  exit 1
+} elseif { ! [ info exists user ] } {
+  send_user "Error: Unspecified username.\r\n"
+  exit 1
+} elseif { ! [ info exists pswd ] } {
+  send_user "Error: Unspecified password.\r\n"
+  exit 1
+}
 if [ catch "spawn ssh -l $user:$port $host" reason ] {
   send_user "Error: failed to spawn ssh process: $reason.\r\n"
   exit 1

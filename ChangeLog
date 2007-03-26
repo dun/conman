@@ -1,3 +1,10 @@
+2007-03-26  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* lib/exec/cyclades-ssh.exp, lib/exec/cyclades-telnet.exp,
+	  lib/exec/ibm-hs20.exp, lib/exec/ssh.exp:
+	  Changed behavior for cmdline-args overriding variable defaults.
+	  Added check for required variables.
+
 2007-03-22  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* lib/exec/freeipmi.exp: Added usage message if no args are given.
