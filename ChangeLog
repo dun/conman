@@ -1,5 +1,7 @@
 2007-03-26  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* lib/exec/ssh.exp: Added pattern to match error text returned by ssh.
+
 	* lib/exec/cyclades-ssh.exp, lib/exec/cyclades-telnet.exp,
 	  lib/exec/ibm-hs20.exp, lib/exec/ssh.exp:
 	  Changed behavior for cmdline-args overriding variable defaults.

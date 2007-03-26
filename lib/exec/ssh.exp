@@ -95,6 +95,10 @@ expect {
     send_user "Error: Permission denied.\r\n"
     exit 1
   }
+  -re "^ssh: (\[^\r\n]*)\[\r\n]*\$" {
+    send_user "Error: $expect_out(1,string).\r\n"
+    exit 1
+  }
   eof {
     send_user "Error: Connection closed by remote host.\r\n"
     exit 1
