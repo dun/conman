@@ -1,0 +1,146 @@
+#!/usr/bin/expect -f
+###############################################################################
+# $Id$
+###############################################################################
+# Copyright (C) 2001-2007 The Regents of the University of California.
+# Produced at Lawrence Livermore National Laboratory.
+# Written by Chris Dunlap <cdunlap@llnl.gov>.
+# UCRL-CODE-2002-009.
+#
+# This file is part of ConMan: The Console Manager.
+# For details, see <http://home.gna.org/conman/>.
+###############################################################################
+# This script connects to a console using the IPMI Serial-Over-LAN protocol.
+# IPMItool is available from <http://ipmitool.sourceforge.net/>.
+#
+# This script can be specified in "conman.conf" in the following manner:
+#
+#   CONSOLE name="zot" dev="/path/to/ipmitool.exp HOST USER PSWD [KEY]"
+#
+# HOST is the hostname of the remote server.
+# USER is the username being authenticated.
+# PSWD is the corresponding password.
+# KEY  is the optional key-generation key "Kg" for IPMIv2 authentication.
+#
+# Since this command-line will persist in the process listing for the duration
+# of the connection, passing USER/PSWD/KEY in this manner is not recommended.
+###############################################################################
+
+##
+# Set "exp_internal" to 1 to print diagnostics describing internal operations.
+#   This is helpful in diagnosing pattern-match failures.
+##
+  exp_internal 0
+
+##
+# Set "log_user" to 1 to show the underlying dialogue that takes place during
+#   the initial authentication step.
+##
+  log_user 0
+
+##
+# The "timeout" specifies the number of seconds before the authentication step
+#   times-out and terminates the connection.
+##
+  set timeout 5
+
+##
+# Command-line argument defaults should be specified here.  In this manner,
+#   you can avoid exposing sensitive information on the command line.
+##
+# set user "foo"
+# set pswd "bar"
+# set key  "zot"
+
+##
+
+set env(PATH) "/bin:/usr/bin:/sbin:/usr/sbin"
+set env(PATH) "/bin:/usr/bin:/sbin:/usr/sbin:/home/dun/ipmitool/bin"
+set authenticated 0
+
+if { ! $argc } {
+  set prog [ lindex [ split $argv0 "/" ] end ]
+  send_user "Usage: $prog <host> <user> <pswd> \[<key>]\r\n"
+  exit 1
+}
+if { $argc > 0 } {
+  set host [ lindex $argv 0 ]
+}
+if { $argc > 1 } {
+  set user [ lindex $argv 1 ]
+}
+if { $argc > 2 } {
+  set pswd [ lindex $argv 2 ]
+}
+if { $argc > 3 } {
+  set key  [ lindex $argv 3 ]
+}
+if { ! [ info exists host ] } {
+  send_user "Error: Unspecified hostname.\r\n"
+  exit 1
+} elseif { ! [ info exists user ] } {
+  send_user "Error: Unspecified username.\r\n"
+  exit 1
+} elseif { ! [ info exists pswd ] } {
+  send_user "Error: Unspecified password.\r\n"
+  exit 1
+}
+set cmd [ list ipmitool -e \& -I lanplus -H $host -U $user -a ]
+if { [ info exists key ] } {
+  lappend cmd -k $key
+}
+if [ catch "spawn $cmd sol deactivate" reason ] {
+  send_user "Error: Failed to spawn ipmitool process: $reason.\r\n"
+  exit 1
+}
+expect {
+  -nocase -gl "Password:" {
+      send "$pswd\r"
+      exp_continue -continue_timer
+  }
+  timeout {
+    send_user "Error: Timed-out.\r\n"
+    exit 1
+  }
+}
+wait
+
+if [ catch "spawn $cmd sol activate" reason ] {
+  send_user "Error: Failed to spawn ipmitool process: $reason.\r\n"
+  exit 1
+}
+expect {
+  -nocase -re "\\\[SOL Session operational" {
+    ;
+  }
+  -nocase -re "^Error: (\[^\r\n]*)" {
+    send_user "Error: $expect_out(1,string)\r\n"
+    exit 1
+  }
+  -nocase -gl "SOL payload already active on another session" {
+    send_user "Error: Console session already in use.\r\n"
+    exit 1
+  }
+  eof {
+    send_user "Error: Connection closed by remote host.\r\n"
+    exit 1
+  }
+  timeout {
+    if {$authenticated == 0} {
+      send_user "Error: Timed-out.\r\n"
+      exit 1
+    }
+  }
+  -nocase -gl "Password:" {
+    if {$authenticated == 0} {
+      send "$pswd\r"
+      incr authenticated
+      exp_continue -continue_timer
+    }
+  }
+  -re "\[^\r]*\r\n" {
+    exp_continue -continue_timer
+  }
+}
+send_user "Connection established via external ipmitool process.\r\n"
+interact
