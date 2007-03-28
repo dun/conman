@@ -1,5 +1,8 @@
 2007-03-27  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* lib/exec/freeipmi.exp: Replaced use of ipmiconsole cmdline opt "-k"
+	  with "-K" in order to avoid exposing key on command-line.
+
 	* lib/exec/freeipmi.exp: Removed pattern for shell prompt since it is
 	  no longer needed with the SOL-established pattern.
 

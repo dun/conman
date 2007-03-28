@@ -57,6 +57,7 @@
 
 set env(PATH) "/bin:/usr/bin:/sbin:/usr/sbin"
 set authenticated 0
+set keyed 1
 
 if { ! $argc } {
   set prog [ lindex [ split $argv0 "/" ] end ]
@@ -87,7 +88,8 @@ if { ! [ info exists host ] } {
 }
 set cmd [ list ipmiconsole -h $host -u $user -P ]
 if { [ info exists key ] } {
-  lappend cmd -k $key
+  lappend cmd -K
+  set keyed 0
 }
 if [ catch "spawn $cmd" reason ] {
   send_user "Error: Failed to spawn ipmiconsole process: $reason.\r\n"
@@ -106,7 +108,7 @@ expect {
     exit 1
   }
   timeout {
-    if {$authenticated == 0} {
+    if {($authenticated == 0) || ($keyed == 0)} {
       send_user "Error: Timed-out.\r\n"
       exit 1
     }
@@ -115,6 +117,13 @@ expect {
     if {$authenticated == 0} {
       send "$pswd\r"
       incr authenticated
+      exp_continue -continue_timer
+    }
+  }
+  -nocase -gl "K_g:" {
+    if {$keyed == 0} {
+      send "$key\r"
+      incr keyed
       exp_continue -continue_timer
     }
   }
