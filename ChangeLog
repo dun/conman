@@ -1,5 +1,9 @@
 2007-03-27  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* lib/exec/cyclades-ssh.exp, lib/exec/cyclades-telnet.exp,
+	  lib/exec/freeipmi.exp, lib/exec/ibm-hs20.exp, lib/exec/ipmitool.exp,
+	  lib/exec/ssh.exp: Tweaked comments.
+
 	* lib/exec/freeipmi.exp: Replaced use of ipmiconsole cmdline opt "-k"
 	  with "-K" in order to avoid exposing key on command-line.
 

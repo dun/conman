@@ -24,7 +24,7 @@
 # KEY  is the optional key-generation key "Kg" for IPMIv2 authentication.
 #
 # Since this command-line will persist in the process listing for the duration
-# of the connection, passing USER/PSWD/KEY in this manner is not recommended.
+# of the connection, passing PSWD or KEY in this manner is not recommended.
 ###############################################################################
 
 ##

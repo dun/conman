@@ -22,7 +22,7 @@
 # PSWD is the corresponding password.
 #
 # Since this command-line will persist in the process listing for the duration
-# of the connection, passing USER/PSWD in this manner is not recommended.
+# of the connection, passing PSWD in this manner is not recommended.
 ###############################################################################
 
 ##
