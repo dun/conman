@@ -1,5 +1,7 @@
 2007-03-27  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* lib/exec/ipmitool.exp: Removed PATH used for testing.
+
 	* lib/exec/cyclades-ssh.exp, lib/exec/cyclades-telnet.exp,
 	  lib/exec/freeipmi.exp, lib/exec/ibm-hs20.exp, lib/exec/ipmitool.exp,
 	  lib/exec/ssh.exp: Tweaked comments.

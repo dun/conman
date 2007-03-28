@@ -55,7 +55,6 @@
 ##
 
 set env(PATH) "/bin:/usr/bin:/sbin:/usr/sbin"
-set env(PATH) "/bin:/usr/bin:/sbin:/usr/sbin:/home/dun/ipmitool/bin"
 set authenticated 0
 
 if { ! $argc } {
