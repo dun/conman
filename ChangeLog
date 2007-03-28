@@ -1,5 +1,8 @@
 2007-03-27  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* lib/exec/freeipmi.exp: Removed pattern for shell prompt since it is
+	  no longer needed with the SOL-established pattern.
+
 	* lib/exec/ipmitool.exp: Added.
 
 	* lib/exec/cyclades-ssh.exp, lib/exec/cyclades-telnet.exp,

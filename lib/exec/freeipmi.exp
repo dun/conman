@@ -90,7 +90,7 @@ if { [ info exists key ] } {
   lappend cmd -k $key
 }
 if [ catch "spawn $cmd" reason ] {
-  send_user "Error: failed to spawn ipmiconsole process: $reason.\r\n"
+  send_user "Error: Failed to spawn ipmiconsole process: $reason.\r\n"
   exit 1
 }
 expect {
@@ -115,11 +115,6 @@ expect {
     if {$authenticated == 0} {
       send "$pswd\r"
       incr authenticated
-      exp_continue -continue_timer
-    }
-  }
-  -re "\[^\n]*(:|#|%|\\\$) \$" {
-    if {$authenticated == 0} {
       exp_continue -continue_timer
     }
   }
