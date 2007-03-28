@@ -54,7 +54,7 @@
 
 ##
 
-set env(PATH) "/bin:/usr/bin:/sbin:/usr/sbin"
+set env(PATH) "/usr/bin:/usr/local/bin"
 set authenticated 0
 
 if { ! $argc } {
