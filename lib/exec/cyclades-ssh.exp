@@ -88,7 +88,7 @@ if { ! [ info exists host ] } {
   exit 1
 }
 if [ catch "spawn ssh -l $user:$port $host" spawn_result ] {
-  send_user "Error: Failed to spawn ssh process: $spawn_result.\r\n"
+  send_user "Error: $spawn_result.\r\n"
   exit 1
 }
 expect {

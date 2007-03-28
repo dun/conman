@@ -2,6 +2,10 @@
 
 	* lib/exec/cyclades-ssh.exp, lib/exec/cyclades-telnet.exp,
 	  lib/exec/freeipmi.exp, lib/exec/ibm-hs20.exp, lib/exec/ipmitool.exp,
+	  lib/exec/ssh.exp: Changed error message for failed spawn.
+
+	* lib/exec/cyclades-ssh.exp, lib/exec/cyclades-telnet.exp,
+	  lib/exec/freeipmi.exp, lib/exec/ibm-hs20.exp, lib/exec/ipmitool.exp,
 	  lib/exec/ssh.exp: Added spawned pid to connection established msg.
 
 	* lib/exec/freeipmi.exp, lib/exec/ipmitool.exp: Updated PATH.

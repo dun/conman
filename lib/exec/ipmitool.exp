@@ -89,7 +89,7 @@ if { [ info exists key ] } {
   lappend cmd -k $key
 }
 if [ catch "spawn $cmd sol deactivate" spawn_result ] {
-  send_user "Error: Failed to spawn ipmitool process: $spawn_result.\r\n"
+  send_user "Error: $spawn_result.\r\n"
   exit 1
 }
 expect {
@@ -105,7 +105,7 @@ expect {
 wait
 
 if [ catch "spawn $cmd sol activate" spawn_result ] {
-  send_user "Error: Failed to spawn ipmitool process: $spawn_result.\r\n"
+  send_user "Error: $spawn_result.\r\n"
   exit 1
 }
 expect {

@@ -92,7 +92,7 @@ if { [ info exists key ] } {
   set keyed 0
 }
 if [ catch "spawn $cmd" spawn_result ] {
-  send_user "Error: Failed to spawn ipmiconsole process: $spawn_result.\r\n"
+  send_user "Error: $spawn_result.\r\n"
   exit 1
 }
 expect {
