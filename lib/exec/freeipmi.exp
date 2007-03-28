@@ -91,8 +91,8 @@ if { [ info exists key ] } {
   lappend cmd -K
   set keyed 0
 }
-if [ catch "spawn $cmd" reason ] {
-  send_user "Error: Failed to spawn ipmiconsole process: $reason.\r\n"
+if [ catch "spawn $cmd" spawn_result ] {
+  send_user "Error: Failed to spawn ipmiconsole process: $spawn_result.\r\n"
   exit 1
 }
 expect {
@@ -131,5 +131,5 @@ expect {
     exp_continue -continue_timer
   }
 }
-send_user "Connection established via external ipmiconsole process.\r\n"
+send_user "Connection established via external ipmiconsole process (pid $spawn_result).\r\n"
 interact

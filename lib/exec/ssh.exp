@@ -86,8 +86,8 @@ if { ! [ info exists host ] } {
   send_user "Error: Unspecified password.\r\n"
   exit 1
 }
-if [ catch "spawn ssh -l $user -p $port $host" reason ] {
-  send_user "Error: failed to spawn ssh process: $reason.\r\n"
+if [ catch "spawn ssh -l $user -p $port $host" spawn_result ] {
+  send_user "Error: Failed to spawn ssh process: $spawn_result.\r\n"
   exit 1
 }
 expect {
@@ -134,5 +134,5 @@ expect {
     exp_continue -continue_timer
   }
 }
-send_user "Connection established via external ssh process.\r\n"
+send_user "Connection established via external ssh process (pid $spawn_result).\r\n"
 interact

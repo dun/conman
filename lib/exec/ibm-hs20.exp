@@ -86,8 +86,8 @@ if { ! [ info exists host ] } {
   send_user "Error: Unspecified password.\r\n"
   exit 1
 }
-if [ catch "spawn telnet $host" reason ] {
-  send_user "Error: failed to spawn telnet process: $reason.\r\n"
+if [ catch "spawn telnet $host" spawn_result ] {
+  send_user "Error: Failed to spawn telnet process: $spawn_result.\r\n"
   exit 1
 }
 expect {
@@ -150,7 +150,7 @@ expect {
     exp_continue -continue_timer
   }
 }
-send_user "Connection established via external telnet process.\r\n"
+send_user "Connection established via external telnet process (pid $spawn_result).\r\n"
 ##
 # The "&B" character sequence will be replaced with a serial-break.
 # The space-backspace sequence will be sent after an hour with no input
