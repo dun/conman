@@ -151,9 +151,10 @@ connection is defined by the pathname of the character device file.  A remote
 terminal-server connection is defined by the "\fIhost\fR:\fIport\fR" format
 (where "\fIhost\fR" is either a hostname or IPv4 address).  An external
 process-based connection is defined by the "\fIpath args\fR" format (where
-"\fIpath\fR" is a pathname to an executable file/script and any additional
-"\fIargs\fR" are space-delimited).  The '%N' character sequence will be
-replaced by the console name.  This keyword is required.
+"\fIpath\fR" is a pathname to an executable file/script, and any additional
+"\fIargs\fR" are space-delimited); the \fI@prefix@/lib/@PROJECT@/exec\fR
+directory contains scripts for various console types.  The '%N' character
+sequence will be replaced by the console name.  This keyword is required.
 .TP
 \fBlog\fR \fB=\fR "\fIfile\fR"
 Specifies the file where console output is logged.  This string undergoes

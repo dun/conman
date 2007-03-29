@@ -1,5 +1,8 @@
 2007-03-28  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* etc/conman.conf: Tweaked comment.
+	* man/conman.conf.5.in: Added reference to /usr/lib/conman/exec dir.
+
 	* lib/exec/ipmiconsole.exp, lib/exec/freeipmi.exp:
 	  Renamed freeipmi.exp to ipmiconsole.exp.
 
