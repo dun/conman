@@ -54,7 +54,7 @@
 
 ##
 
-set env(PATH) "/bin:/usr/bin"
+set env(PATH) "/usr/bin:/bin"
 set authenticated 0
 
 if { ! $argc } {

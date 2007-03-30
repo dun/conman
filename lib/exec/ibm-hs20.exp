@@ -53,7 +53,7 @@
 
 ##
 
-set env(PATH) "/bin:/usr/bin"
+set env(PATH) "/usr/bin:/bin"
 set connected 0
 
 if { ! $argc } {

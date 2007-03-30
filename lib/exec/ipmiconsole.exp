@@ -55,7 +55,7 @@
 
 ##
 
-set env(PATH) "/usr/sbin:/usr/local/sbin:/usr/bin:/usr/local/bin"
+set env(PATH) "/usr/sbin:/sbin"
 set authenticated 0
 set keyed 1
 
