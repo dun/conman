@@ -33,6 +33,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <netinet/in.h>
+#include <paths.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,6 +58,7 @@
 
 static int begin_daemonize(void);
 static void end_daemonize(int fd);
+static char ** get_sane_env (void);
 static void display_configuration(server_conf_t *conf);
 static void exit_handler(int signum);
 static void sig_hup_handler(int signum);
@@ -79,6 +81,8 @@ static int reconfig = 0;
  *    without having to pass the conf's tp var through the call stack.
  */
 tpoll_t tp_global = NULL;
+
+extern char ** environ;
 
 
 int main(int argc, char *argv[])
@@ -107,6 +111,9 @@ int main(int argc, char *argv[])
 
     process_config(conf);
 
+    if (!(environ = get_sane_env())) {
+        log_err(ENOMEM, "Unable to create sanitized environment");
+    }
     if (conf->enableVerbose) {
         display_configuration(conf);
     }
@@ -305,6 +312,77 @@ static void sig_chld_handler(int signum)
 
     while ((pid = waitpid(-1, NULL, WNOHANG)) > 0) {;}
     return;
+}
+
+
+char ** get_sane_env (void)
+{
+/*  Creates a sanitized environment.
+ *  Returns a NULL-terminated array of NUL-terminated "key=value" strings,
+ *    or NULL on error.
+ *  Based on the example in "Safe Initialization: Sanitizing the Environment",
+ *    Chapter 1.1 of Secure Programming Cookbook by John Viega & Matt Messier.
+ */
+    int    env_num;
+    int    env_len;
+    char **pp;
+    char  *p;
+    char **env;
+    char  *ptr;
+    int    num;
+    int    len;
+
+    char *env_restrict[] = {
+        "IFS= \t\n",
+        "PATH=" _PATH_STDPATH,
+        NULL
+    };
+    char *env_preserve[] = {
+        "DEBUG",
+        "TZ",
+        NULL
+    };
+
+    env_num = 1;                                /* for terminating NULL */
+    env_len = 0;
+    for (pp = env_restrict; *pp; pp++) {
+        env_len += strlen(*pp) + 1;             /* str + NUL */
+        env_num++;
+    }
+    for (pp = env_preserve; *pp; pp++) {
+        if (!(p = getenv(*pp)))
+            continue;
+        env_len += strlen(*pp) + strlen(p) + 2; /* key + '=' + val + NUL */
+        env_num++;
+    }
+    env_len += (env_num * sizeof(char *));
+    if (!(env = malloc(env_len))) {
+        return(NULL);
+    }
+    ptr = (char *) env + (env_num * sizeof(char *));
+    num = 0;
+    for (pp = env_restrict; *pp; pp++) {
+        env[num++] = ptr;
+        len = strlen(*pp) + 1;
+        memcpy(ptr, *pp, len);
+        ptr += len;
+    }
+    for (pp = env_preserve; *pp; pp++) {
+        if (!(p = getenv(*pp)))
+            continue;
+        env[num++] = ptr;
+        len = strlen(*pp);
+        memcpy(ptr, *pp, len);
+        ptr += len;
+        *ptr++ = '=';
+        len = strlen(p) + 1;
+        memcpy(ptr, p, len);
+        ptr += len;
+    }
+    env[num++] = NULL;
+    assert(num == env_num);
+    assert(ptr == (char *) env + env_len);
+    return(env);
 }
 
 

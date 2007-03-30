@@ -31,7 +31,6 @@
 
 #include <assert.h>
 #include <errno.h>
-#include <paths.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -123,14 +122,10 @@ int open_process_obj(obj_t *process)
     char    *delta;
     int      fdPair[2] = {-1,-1};
     pid_t    pid;
-    char   **env;
 
     assert(process != NULL);
     assert(is_process_obj(process));
 
-    if (!(env = get_sane_env())) {
-        log_err(ENOMEM, "Unable to create sanitized environment");
-    }
     if (process->aux.process.timer >= 0) {
         (void) tpoll_timeout_cancel(tp_global, process->aux.process.timer);
         process->aux.process.timer = -1;
@@ -204,7 +199,7 @@ int open_process_obj(obj_t *process)
         if (dup2(fdPair[1], STDERR_FILENO) < 0) {
             log_err(errno, "dup2() of child stderr failed");
         }
-        execve(process->aux.process.argv[0], process->aux.process.argv, env);
+        execv(process->aux.process.argv[0], process->aux.process.argv);
         write_notify_msg(process, LOG_WARNING,
             "Console [%s] disabled due to process exec failure: %s",
             process->name, strerror(errno));
@@ -233,77 +228,4 @@ err:
         (void) close(fdPair[1]);
     }
     return(-1);
-}
-
-
-char ** get_sane_env (void)
-{
-/*  Creates a sanitized environment.
- *  Returns a NULL-terminated array of NUL-terminated "key=value" strings,
- *    or NULL on error.
- *  Based on the example in "Safe Initialization: Sanitizing the Environment",
- *    Chapter 1.1 of Secure Programming Cookbook by John Viega & Matt Messier.
- */
-    int    env_num;
-    int    env_len;
-    char **pp;
-    char  *p;
-    char  *ptr;
-    int    num;
-    int    len;
-
-    char *env_restrict[] = {
-        "IFS= \t\n",
-        "PATH=" _PATH_STDPATH,
-        NULL
-    };
-    char *env_preserve[] = {
-        "TZ",
-        NULL
-    };
-    static char **env = NULL;
-
-    if (env) {
-        return(env);
-    }
-    env_num = 1;                                        /* NULL */
-    env_len = 0;
-    for (pp = env_restrict; *pp; pp++) {
-        env_len += strlen(*pp) + 1;                     /* NUL */
-        env_num++;
-    }
-    for (pp = env_preserve; *pp; pp++) {
-        if (!(p = getenv(*pp)))
-            continue;
-        env_len += strlen(*pp) + strlen(p) + 2;         /* '=' + NUL */
-        env_num++;
-    }
-    env_len += (env_num * sizeof(char *));
-    if (!(env = malloc(env_len))) {
-        return(NULL);
-    }
-    ptr = (char *) env + (env_num * sizeof(char *));
-    num = 0;
-    for (pp = env_restrict; *pp; pp++) {
-        env[num++] = ptr;
-        len = strlen(*pp) + 1;
-        memcpy(ptr, *pp, len);
-        ptr += len;
-    }
-    for (pp = env_preserve; *pp; pp++) {
-        if (!(p = getenv(*pp)))
-            continue;
-        env[num++] = ptr;
-        len = strlen(*pp);
-        memcpy(ptr, *pp, len);
-        ptr += len;
-        *ptr++ = '=';
-        len = strlen(p) + 1;
-        memcpy(ptr, p, len);
-        ptr += len;
-    }
-    env[num++] = NULL;
-    assert(num == env_num);
-    assert(ptr == (char *) env + env_len);
-    return(env);
 }

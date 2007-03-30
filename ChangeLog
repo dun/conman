@@ -1,3 +1,11 @@
+2007-03-30  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server.c(main): Sanitized environment variables.
+	* server.c(get_sane_env): Added from server-process.c.
+	  Added DEBUG to preserve list.
+	* server.h: Removed get_sane_env() prototype.
+	* server-process.c(get_sane_env): Removed.
+
 2007-03-29  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* lib/exec/cyclades-ssh.exp, lib/exec/cyclades-telnet.exp,

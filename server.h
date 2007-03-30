@@ -327,8 +327,6 @@ obj_t * create_process_obj(server_conf_t *conf, char *name, List args,
 
 int open_process_obj(obj_t *process);
 
-char ** get_sane_env (void);
-
 
 /*  server-serial.c
  */
