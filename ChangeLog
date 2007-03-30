@@ -1,5 +1,9 @@
 2007-03-29  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-process.c(open_process_obj): Sanitized environment for exec().
+	* server-process.c(get_sane_env): Added.
+	* server.h: Added get_sane_env() prototype.
+
 	* etc/conman.conf, man/conman.conf.5.in: Added console dev comment
 	  that "host:port" connections to remote terminal-servers use the
 	  telnet protocol.
