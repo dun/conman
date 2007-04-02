@@ -1,5 +1,13 @@
 2007-04-02  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server.c(create_listen_socket, open_daemon_logfile): Added debugging.
+	* server-conf.c(process_config): Added debugging.
+	* server-logfile.c(open_logfile_obj): Tweaked debugging.
+	* server-obj.c(create_client_obj): Added debugging.
+	* server-process.c(open_process_obj): Added debugging.
+	* server-serial.c(open_serial_obj): Added debugging.
+	* server-telnet.c(open_telnet_obj): Added debugging.
+
 	* README, conman.spec: Updated description.
 
 2007-03-30  Chris Dunlap  <cdunlap@llnl.gov>

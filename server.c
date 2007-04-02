@@ -542,6 +542,7 @@ static void create_listen_socket(server_conf_t *conf)
     if ((ld = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         log_err(errno, "Unable to create listening socket");
     }
+    DPRINTF((9, "Opened listen socket: fd=%d.\n", ld));
     set_fd_nonblocking(ld);
     set_fd_closed_on_exec(ld);
 
@@ -797,6 +798,7 @@ static void open_daemon_logfile(server_conf_t *conf)
         }
     }
     conf->logFilePtr = fp;
+    DPRINTF((9, "Opened logfile \"%s\": fd=%d.\n", conf->logFileName, fd));
     return;
 
 err:

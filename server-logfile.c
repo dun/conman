@@ -276,10 +276,8 @@ int open_logfile_obj(obj_t *logfile)
      */
     logfile->aux.logfile.lineState = CONMAN_LOG_LINE_INIT;
 
-    DPRINTF((10, "Opened %s%slogfile \"%s\" for console [%s].\n",
-        (logfile->aux.logfile.opts.enableSanitize ? "SANITIZED " : ""),
-        (logfile->aux.logfile.opts.enableTimestamp ? "TIMESTAMPED " : ""),
-        logfile->name, logfile->aux.logfile.console->name));
+    DPRINTF((9, "Opened [%s] logfile: fd=%d file=%s.\n",
+        logfile->aux.logfile.console->name, logfile->fd, logfile->name));
     return(0);
 }
 

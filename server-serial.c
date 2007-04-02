@@ -405,6 +405,9 @@ int open_serial_obj(obj_t *serial)
      */
     write_notify_msg(serial, LOG_INFO, "Console [%s] connected to \"%s\"",
         serial->name, serial->aux.serial.dev);
+    DPRINTF((9, "Opened [%s] serial: fd=%d dev=%s bps=%d.\n",
+        serial->name, serial->fd, serial->aux.serial.dev,
+        bps_to_int(serial->aux.serial.opts.bps)));
     return(0);
 
 err:

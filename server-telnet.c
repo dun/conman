@@ -135,6 +135,9 @@ int open_telnet_obj(obj_t *telnet)
     else {
         rc = connect_telnet_obj(telnet);
     }
+    DPRINTF((9, "Opened [%s] telnet: fd=%d host=%s port=%d state=%d.\n",
+        telnet->name, telnet->fd, telnet->aux.telnet.host,
+        telnet->aux.telnet.port, (int) telnet->aux.telnet.conState));
     return(rc);
 }
 

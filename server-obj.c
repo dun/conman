@@ -125,6 +125,8 @@ obj_t * create_client_obj(server_conf_t *conf, req_t *req)
      */
     list_append(conf->objs, client);
 
+    DPRINTF((9, "Opened client: fd=%d user=%s tty=%s host=%s port=%d.\n",
+        req->sd, req->user, req->tty, req->host, req->port));
     return(client);
 }
 
