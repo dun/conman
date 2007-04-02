@@ -170,6 +170,9 @@ tpoll_create (int n)
         if (fcntl (tp->fd_pipe[ i ], F_SETFL, fval | O_NONBLOCK) < 0) {
             goto err;
         }
+        if (fcntl (tp->fd_pipe[ i ], F_SETFD, FD_CLOEXEC) < 0) {
+            goto err;
+        }
     }
     if ((e = pthread_mutex_init (&tp->mutex, NULL)) != 0) {
         errno = e;

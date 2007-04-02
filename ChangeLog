@@ -1,5 +1,8 @@
 2007-04-02  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-conf.c(process_config): Closed config file on exec.
+	* tpoll.c(tpoll_create): Closed tpoll pipe fds on exec.
+
 	* server.c(create_listen_socket, open_daemon_logfile): Added debugging.
 	* server-conf.c(process_config): Added debugging.
 	* server-logfile.c(open_logfile_obj): Tweaked debugging.

@@ -403,6 +403,7 @@ void process_config(server_conf_t *conf)
      */
     DPRINTF((9, "Opened config \"%s\": fd=%d.\n",
         conf->confFileName, conf->fd));
+    set_fd_closed_on_exec(conf->fd);
     if (fstat(conf->fd, &fdStat) < 0) {
         log_err(errno, "Unable to stat \"%s\"", conf->confFileName);
     }
