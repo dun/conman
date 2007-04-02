@@ -1,5 +1,7 @@
 2007-04-02  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-process.c(open_process_obj): Closed socketpair fds on exec.
+
 	* server-conf.c(process_config): Closed config file on exec.
 	* tpoll.c(tpoll_create): Closed tpoll pipe fds on exec.
 

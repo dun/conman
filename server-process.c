@@ -179,6 +179,8 @@ int open_process_obj(obj_t *process)
     }
     set_fd_nonblocking(fdPair[0]);
     set_fd_nonblocking(fdPair[1]);
+    set_fd_closed_on_exec(fdPair[0]);
+    set_fd_closed_on_exec(fdPair[1]);
 
     if ((pid = fork()) < 0) {
         write_notify_msg(process, LOG_WARNING,
