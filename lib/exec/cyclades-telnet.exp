@@ -10,18 +10,21 @@
 # This file is part of ConMan: The Console Manager.
 # For details, see <http://home.gna.org/conman/>.
 ###############################################################################
-# This script performs the initial authentication step to access a console on
-# a Cyclades terminal server using the telnet protocol (protocol socket_server)
-# and local authentication (authtype local).
+# This script connects to a console on a Cyclades terminal server using the
+# telnet protocol (protocol socket_server or socket_server_ssh).  It supports
+# consoles using no authentication (authtype none) and local authentication
+# (authtype local).
 #
 # This script can be specified in "conman.conf" in the following manner:
 #
-#   CONSOLE name="zot" dev="/path/to/cyclades-telnet.exp HOST PORT USER PSWD"
+#   CONSOLE name="zot" dev="/path/to/cyclades-telnet.exp HOST PORT [USER PSWD]"
 #
 # HOST is the hostname of the terminal server.
 # PORT is the port number associated with the console.
 # USER is the username being authenticated.
 # PSWD is the corresponding password.
+#
+# Both USER and PSWD must be specified if the console requires authentication.
 #
 # Since this command-line will persist in the process listing for the duration
 # of the connection, passing PSWD in this manner is not recommended.
@@ -59,7 +62,7 @@ set authenticated 0
 
 if { ! $argc } {
   set prog [ lindex [ split $argv0 "/" ] end ]
-  send_user "Usage: $prog <host> <port> <user> <pswd>\r\n"
+  send_user "Usage: $prog <host> <port> [<user> <pswd>]\r\n"
   exit 1
 }
 if { $argc > 0 } {
@@ -80,12 +83,8 @@ if { ! [ info exists host ] } {
 } elseif { ! [ info exists port ] } {
   send_user "Error: Unspecified port number.\r\n"
   exit 1
-} elseif { ! [ info exists user ] } {
-  send_user "Error: Unspecified username.\r\n"
-  exit 1
-} elseif { ! [ info exists pswd ] } {
-  send_user "Error: Unspecified password.\r\n"
-  exit 1
+} elseif { !([ info exists user ] && [ info exists pswd ]) } {
+  set authenticated 1
 }
 if [ catch "spawn telnet $host $port" spawn_result ] {
   send_user "Error: $spawn_result.\r\n"
@@ -121,31 +120,28 @@ expect {
     exit 1
   }
   timeout {
-    if {$authenticated == 0} {
-      send_user "Error: Timed-out.\r\n"
+    if { $authenticated == 0 } {
+      send_user "Error: Timed-out waiting to authenticate.\r\n"
       exit 1
     }
   }
   -nocase -gl "login: \$" {
-    if {$authenticated == 0} {
+    if { $authenticated == 0 } {
       send "$user\r"
-      exp_continue -continue_timer
-    }
-  }
-  -nocase -gl "password: \$" {
-    if {$authenticated == 0} {
-      send "$pswd\r"
-      send "\r"
-      incr authenticated
       exp_continue -continue_timer
     } else {
       send_user "Error: Permission denied.\r\n"
       exit 1
     }
   }
-  -re "\[^\n]*(:|#|%|\\\$) \$" {
-    if {$authenticated == 0} {
+  -nocase -gl "password: \$" {
+    if { $authenticated == 0 } {
+      send "$pswd\r"
+      incr authenticated
       exp_continue -continue_timer
+    } else {
+      send_user "Error: Permission denied.\r\n"
+      exit 1
     }
   }
   -re "\[^\r]*\r\n" {

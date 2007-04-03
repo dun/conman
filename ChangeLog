@@ -1,3 +1,8 @@
+2007-04-03  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* lib/exec/cyclades-ssh.exp, lib/exec/cyclades-telnet.exp:
+	  Added support for authtype none.
+
 2007-04-02  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server-process.c(open_process_obj): Closed socketpair fds on exec.
