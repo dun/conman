@@ -159,7 +159,9 @@ send_user "Connection established via external telnet process (pid $spawn_result
 ##
 interact {
   "&B" {
+    set timeout 1
     send "\035send brk\r\n"
+    expect "telnet> send brk"
   }
   timeout 3600 {
     send " \177"
