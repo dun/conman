@@ -13,7 +13,9 @@
 # This script connects to a console on a Cyclades terminal server using the
 # telnet protocol (protocol socket_server or socket_server_ssh).  It supports
 # consoles using no authentication (authtype none) and local authentication
-# (authtype local).
+# (authtype local).  However, if console authentication is not needed, you will
+# achieve better scalability using the native telnet support within ConMan
+# (CONSOLE name="zot" dev="<host>:<port>").
 #
 # This script can be specified in "conman.conf" in the following manner:
 #
