@@ -151,4 +151,11 @@ expect {
   }
 }
 send_user "Connection established via external telnet process (pid $spawn_result).\r\n"
-interact
+##
+# The "&B" character sequence will be replaced with a serial-break.
+##
+interact {
+  "&B" {
+    send "\035send brk\r\n"
+  }
+}

@@ -1,5 +1,8 @@
 2007-04-03  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* lib/exec/cyclades-telnet.exp:
+	  Added support for "&B" to send a serial-break.
+
 	* server-obj.c (write_notify_msg):
 	  Fixed bug with potential buffer overrun.
 
