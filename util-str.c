@@ -90,7 +90,7 @@ int replace_string(char **dst, const char *src)
         return(-1);
     }
     if (*dst) {
-        free(dst);
+        free(*dst);
     }
     if (!(*dst = strdup(src))) {
         out_of_memory();

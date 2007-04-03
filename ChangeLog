@@ -1,5 +1,8 @@
 2007-04-03  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* util-str.c (replace_string):
+	  Fixed bug with potential dereference of freed pointer.
+
 	* lib/exec/cyclades-telnet.exp:
 	  Added comment on native telnet support within ConMan.
 
