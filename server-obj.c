@@ -476,7 +476,7 @@ int write_notify_msg(obj_t *console, int priority, char *fmt, ...)
     p = buf;
     len = sizeof(buf);
     n = snprintf(p, len, "%s", CONMAN_MSG_PREFIX);
-    if ((n < 0) || (n >= sizeof(buf))) {
+    if ((n < 0) || (n >= len)) {
         return(-1);
     }
     p += n;
@@ -485,7 +485,7 @@ int write_notify_msg(obj_t *console, int priority, char *fmt, ...)
     va_start(vargs, fmt);
     n = vsnprintf(p, len, fmt, vargs);
     va_end(vargs);
-    if ((n < 0) || (n >= sizeof(buf))) {
+    if ((n < 0) || (n >= len)) {
         return(-1);
     }
     log_msg(priority, "%s", p);
@@ -495,7 +495,7 @@ int write_notify_msg(obj_t *console, int priority, char *fmt, ...)
     now = create_short_time_string(0);
     n = snprintf(p, len, " at %s%s", now, CONMAN_MSG_SUFFIX);
     free(now);
-    if ((n < 0) || (n >= sizeof(buf))) {
+    if ((n < 0) || (n >= len)) {
         return(-1);
     }
     notify_console_objs(console, buf);
