@@ -116,25 +116,25 @@ expect {
     exit 1
   }
   timeout {
-    if {$connected == 0} {
+    if { $connected == 0 } {
       send_user "Error: Timed-out.\r\n"
       exit 1
     }
   }
   -nocase -gl "username: \$" {
-    if {$connected == 0} {
+    if { $connected == 0 } {
       send "$user\r"
       exp_continue -continue_timer
     }
   }
   -nocase -gl "password: \$" {
-    if {$connected == 0} {
+    if { $connected == 0 } {
       send "$pswd\r"
       exp_continue -continue_timer
     }
   }
   -nocase -gl "system> \$" {
-    if {$connected == 0} {
+    if { $connected == 0 } {
       send "console -T blade\[$blade]\r"
       incr connected
       exp_continue -continue_timer

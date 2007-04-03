@@ -104,19 +104,19 @@ expect {
     exit 1
   }
   timeout {
-    if {$authenticated == 0} {
+    if { $authenticated == 0 } {
       send_user "Error: Timed-out.\r\n"
       exit 1
     }
   }
   -re "Enter passphrase for key .*: \$" {
-    if {$authenticated == 0} {
+    if { $authenticated == 0 } {
       send "\r"
     }
     exp_continue -continue_timer
   }
   -re "^$user@.* password: \$" {
-    if {$authenticated == 0} {
+    if { $authenticated == 0 } {
       send "$pswd\r"
       incr authenticated
       exp_continue -continue_timer
@@ -126,7 +126,7 @@ expect {
     }
   }
   -re "\[^\n]*(:|#|%|\\\$) \$" {
-    if {$authenticated == 0} {
+    if { $authenticated == 0 } {
       exp_continue -continue_timer
     }
   }

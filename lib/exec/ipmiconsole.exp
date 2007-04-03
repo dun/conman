@@ -108,20 +108,20 @@ expect {
     exit 1
   }
   timeout {
-    if {($authenticated == 0) || ($keyed == 0)} {
+    if { ($authenticated == 0) || ($keyed == 0) } {
       send_user "Error: Timed-out.\r\n"
       exit 1
     }
   }
   -nocase -gl "Password:" {
-    if {$authenticated == 0} {
+    if { $authenticated == 0 } {
       send "$pswd\r"
       incr authenticated
       exp_continue -continue_timer
     }
   }
   -nocase -gl "K_g:" {
-    if {$keyed == 0} {
+    if { $keyed == 0 } {
       send "$key\r"
       incr keyed
       exp_continue -continue_timer
