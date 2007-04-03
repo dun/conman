@@ -86,7 +86,7 @@ if { ! [ info exists host ] } {
   send_user "Error: Unspecified password.\r\n"
   exit 1
 }
-if [ catch "spawn ssh -l $user -p $port $host" spawn_result ] {
+if [ catch "spawn ssh -e \& -l $user -p $port $host" spawn_result ] {
   send_user "Error: $spawn_result.\r\n"
   exit 1
 }

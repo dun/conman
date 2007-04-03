@@ -1,5 +1,9 @@
 2007-04-03  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* lib/exec/cyclades-ssh.exp, lib/exec/ssh.exp:
+	  Changed ssh escape char to '&'.  This also allows "&B" to fall-thru
+	  and trigger an ssh-generated serial-break.
+
 	* lib/exec/cyclades-telnet.exp, lib/exec/ibm-hs20.exp:
 	  Added expect pattern to eat "telnet> send brk" output from "&B".
 

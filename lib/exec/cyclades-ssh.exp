@@ -87,7 +87,7 @@ if { ! [ info exists host ] } {
   set authenticated 1
   set user {}
 }
-if [ catch "spawn ssh -l $user:$port $host" spawn_result ] {
+if [ catch "spawn ssh -e \& -l $user:$port $host" spawn_result ] {
   send_user "Error: $spawn_result.\r\n"
   exit 1
 }
