@@ -5,7 +5,7 @@ Version:	0
 Release:	0
 
 Summary:	ConMan: The Console Manager
-Group:		Applications/Communications
+Group:		Applications/System
 License:	GPL
 URL:		http://home.gna.org/conman/
 
