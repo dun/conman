@@ -30,28 +30,29 @@
 
 2007-04-02  Chris Dunlap  <cdunlap@llnl.gov>
 
-	* server-process.c(open_process_obj): Closed socketpair fds on exec.
+	* server-process.c (open_process_obj): Closed socketpair fds on exec.
 
-	* server-conf.c(process_config): Closed config file on exec.
-	* tpoll.c(tpoll_create): Closed tpoll pipe fds on exec.
+	* server-conf.c (process_config): Closed config file on exec.
+	* tpoll.c (tpoll_create): Closed tpoll pipe fds on exec.
 
-	* server.c(create_listen_socket, open_daemon_logfile): Added debugging.
-	* server-conf.c(process_config): Added debugging.
-	* server-logfile.c(open_logfile_obj): Tweaked debugging.
-	* server-obj.c(create_client_obj): Added debugging.
-	* server-process.c(open_process_obj): Added debugging.
-	* server-serial.c(open_serial_obj): Added debugging.
-	* server-telnet.c(open_telnet_obj): Added debugging.
+	* server.c (create_listen_socket, open_daemon_logfile):
+	  Added debugging.
+	* server-conf.c (process_config): Added debugging.
+	* server-logfile.c (open_logfile_obj): Tweaked debugging.
+	* server-obj.c (create_client_obj): Added debugging.
+	* server-process.c (open_process_obj): Added debugging.
+	* server-serial.c (open_serial_obj): Added debugging.
+	* server-telnet.c (open_telnet_obj): Added debugging.
 
 	* README, conman.spec: Updated description.
 
 2007-03-30  Chris Dunlap  <cdunlap@llnl.gov>
 
-	* server.c(main): Sanitized environment variables.
-	* server.c(get_sane_env): Added from server-process.c.
+	* server.c (main): Sanitized environment variables.
+	* server.c (get_sane_env): Added from server-process.c.
 	  Added DEBUG to preserve list.
 	* server.h: Removed get_sane_env() prototype.
-	* server-process.c(get_sane_env): Removed.
+	* server-process.c (get_sane_env): Removed.
 
 2007-03-29  Chris Dunlap  <cdunlap@llnl.gov>
 
@@ -59,8 +60,9 @@
 	  lib/exec/freeipmi.exp, lib/exec/ibm-hs20.exp, lib/exec/ipmitool.exp,
 	  lib/exec/ssh.exp: Updated PATH.
 
-	* server-process.c(open_process_obj): Sanitized environment for exec().
-	* server-process.c(get_sane_env): Added.
+	* server-process.c (open_process_obj):
+	  Sanitized environment for exec().
+	* server-process.c (get_sane_env): Added.
 	* server.h: Added get_sane_env() prototype.
 
 	* etc/conman.conf, man/conman.conf.5.in: Added console dev comment
