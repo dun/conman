@@ -4,7 +4,7 @@
 
 	* conman.spec: Changed RPM Group.
 
-	* Makefile.in: Changed install perms of munge.sysconfig to 0644.
+	* Makefile.in: Changed conman.sysconfig install perms to 0644.
 	  Removed default symbol stripping of conman/conmand executables.
 
 2007-04-03  Chris Dunlap  <cdunlap@llnl.gov>
