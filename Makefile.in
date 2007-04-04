@@ -93,13 +93,15 @@ install: $(PROGS)
 	    $(DESTDIR)$(sysconfdir)/$$d/$$f
 	@ for f in `cd lib >/dev/null \
 	      && find * -name ".*" -prune -o -type f -print`; do \
+	    expr "$$f" : ".*\.exp" && mode=755 || mode=644; \
 	    echo $(INSTALL) -m 755 -d \
 	      `dirname $(DESTDIR)$(prefix)/lib/$(PROJECT)/$$f`; \
 	    $(INSTALL) -m 755 -d \
 	      `dirname $(DESTDIR)$(prefix)/lib/$(PROJECT)/$$f`; \
-	    echo $(INSTALL) -m 755 \
+	    echo $(INSTALL) -m $${mode} \
 	      lib/$$f $(DESTDIR)$(prefix)/lib/$(PROJECT)/$$f; \
-	    $(INSTALL) -m 755 lib/$$f $(DESTDIR)$(prefix)/lib/$(PROJECT)/$$f; \
+	    $(INSTALL) -m $${mode} lib/$$f \
+	      $(DESTDIR)$(prefix)/lib/$(PROJECT)/$$f; \
 	  done
 	chmod 644 $(DESTDIR)$(prefix)/lib/$(PROJECT)/*.exp
 	@ for d in man1 man5 man8; do \

@@ -1,5 +1,8 @@
 2007-04-03  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* lib/examples/README, lib/exec/README: Added.
+	* Makefile.in: Changed 'install' target to install READMEs 0644.
+
 	* lib/exec/cyclades-ssh.exp, lib/exec/ssh.exp:
 	  Changed ssh escape char to '&'.  This also allows "&B" to fall-thru
 	  and trigger an ssh-generated serial-break.
