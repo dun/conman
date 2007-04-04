@@ -59,10 +59,10 @@ conmand: $(SERVER_OBJS)
 
 install: $(PROGS)
 	$(INSTALL) -m 755 -d $(DESTDIR)$(bindir)
-	$(INSTALL) -m 755 -s conman $(DESTDIR)$(bindir)/
+	$(INSTALL) -m 755 conman $(DESTDIR)$(bindir)/
 	$(INSTALL) -m 755 conmen $(DESTDIR)$(bindir)/
 	$(INSTALL) -m 755 -d $(DESTDIR)$(sbindir)
-	$(INSTALL) -m 755 -s conmand $(DESTDIR)$(sbindir)/
+	$(INSTALL) -m 755 conmand $(DESTDIR)$(sbindir)/
 	$(INSTALL) -m 755 -d $(DESTDIR)$(sysconfdir)
 	@ test -f $(DESTDIR)$(sysconfdir)/conman.conf \
 	    && f=conman.conf.new || f=conman.conf; \
@@ -87,9 +87,9 @@ install: $(PROGS)
 	  $(INSTALL) -m 755 -d $(DESTDIR)$(sysconfdir)/$$d; \
 	  test -f $(DESTDIR)$(sysconfdir)/$$d/conman \
 	    && f=conman.new || f=conman; \
-	  echo $(INSTALL) -m 755 etc/conman.sysconfig \
+	  echo $(INSTALL) -m 644 etc/conman.sysconfig \
 	    $(DESTDIR)$(sysconfdir)/$$d/$$f; \
-	  $(INSTALL) -m 755 etc/conman.sysconfig \
+	  $(INSTALL) -m 644 etc/conman.sysconfig \
 	    $(DESTDIR)$(sysconfdir)/$$d/$$f
 	@ for f in `cd lib >/dev/null \
 	      && find * -name ".*" -prune -o -type f -print`; do \
