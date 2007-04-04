@@ -9,6 +9,7 @@ Group:		Applications/System
 License:	GPL
 URL:		http://home.gna.org/conman/
 
+Requires:	expect
 BuildRoot:	%{_tmppath}/%{name}-%{version}
 
 Source0:	%{name}-%{version}.tar

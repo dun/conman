@@ -1,5 +1,7 @@
 2007-04-04  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* conman.spec: Added Requires for expect.
+
 	* Makefile.in: Changed install target to use ".new" suffix for
 	  preserving local mods to config files only when the new files differ.
 
