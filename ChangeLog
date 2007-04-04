@@ -1,5 +1,7 @@
 2007-04-04  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* conman.spec: Tweaked %post, %preun, %postun.
+
 	* conman.spec: Changed RPM Group.
 
 	* Makefile.in: Changed install perms of munge.sysconfig to 0644.

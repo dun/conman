@@ -41,17 +41,17 @@ DESTDIR="$RPM_BUILD_ROOT" make install
 rm -rf "$RPM_BUILD_ROOT"
 
 %post
-/sbin/chkconfig --add conman
+if [ -x /sbin/chkconfig ]; then /sbin/chkconfig --add conman; fi
 
 %preun
 if [ "$1" = 0 ]; then
-  /sbin/service conman stop >/dev/null 2>&1 || :
-  /sbin/chkconfig --del conman
+  %{_sysconfdir}/init.d/conman stop >/dev/null 2>&1 || :
+  if [ -x /sbin/chkconfig ]; then /sbin/chkconfig --del conman; fi
 fi
 
 %postun
 if [ "$1" -ge 1 ]; then
-  /sbin/service conman condrestart >/dev/null 2>&1 || :
+  %{_sysconfdir}/init.d/conman condrestart >/dev/null 2>&1 || :
 fi
 
 %files
