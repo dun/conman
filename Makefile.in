@@ -64,33 +64,40 @@ install: $(PROGS)
 	$(INSTALL) -m 755 -d $(DESTDIR)$(sbindir)
 	$(INSTALL) -m 755 conmand $(DESTDIR)$(sbindir)/
 	$(INSTALL) -m 755 -d $(DESTDIR)$(sysconfdir)
-	@ test -f $(DESTDIR)$(sysconfdir)/conman.conf \
-	    && f=conman.conf.new || f=conman.conf; \
-	  echo $(INSTALL) -m 600 etc/conman.conf $(DESTDIR)$(sysconfdir)/$$f; \
-	  $(INSTALL) -m 600 etc/conman.conf $(DESTDIR)$(sysconfdir)/$$f
+	@ test ! -f $(DESTDIR)$(sysconfdir)/conman.conf \
+	    || cmp etc/conman.conf $(DESTDIR)$(sysconfdir)/conman.conf \
+	    1>/dev/null 2>&1 || new=".new"; \
+	  echo $(INSTALL) -m 600 etc/conman.conf \
+	    $(DESTDIR)$(sysconfdir)/conman.conf$${new}; \
+	  $(INSTALL) -m 600 etc/conman.conf \
+	    $(DESTDIR)$(sysconfdir)/conman.conf$${new}
 	$(INSTALL) -m 755 -d $(DESTDIR)$(sysconfdir)/init.d
-	@ test -f $(DESTDIR)$(sysconfdir)/init.d/conman \
-	    && f=conman.new || f=conman; \
+	@ test ! -f $(DESTDIR)$(sysconfdir)/init.d/conman \
+	    || cmp etc/conman.init $(DESTDIR)$(sysconfdir)/init.d/conman \
+	    1>/dev/null 2>&1 || new=".new"; \
 	  echo $(INSTALL) -m 755 etc/conman.init \
-	    $(DESTDIR)$(sysconfdir)/init.d/$$f; \
+	    $(DESTDIR)$(sysconfdir)/init.d/conman$${new}; \
 	  $(INSTALL) -m 755 etc/conman.init \
-	    $(DESTDIR)$(sysconfdir)/init.d/$$f
+	    $(DESTDIR)$(sysconfdir)/init.d/conman$${new}
 	$(INSTALL) -m 755 -d $(DESTDIR)$(sysconfdir)/logrotate.d
-	@ test -f $(DESTDIR)$(sysconfdir)/logrotate.d/conman \
-	    && f=conman.new || f=conman; \
+	@ test ! -f $(DESTDIR)$(sysconfdir)/logrotate.d/conman \
+	    || cmp etc/conman.logrotate \
+	    $(DESTDIR)$(sysconfdir)/logrotate.d/conman \
+	    1>/dev/null 2>&1 || new=".new"; \
 	  echo $(INSTALL) -m 644 etc/conman.logrotate \
-	    $(DESTDIR)$(sysconfdir)/logrotate.d/$$f; \
+	    $(DESTDIR)$(sysconfdir)/logrotate.d/conman$${new}; \
 	  $(INSTALL) -m 644 etc/conman.logrotate \
-	    $(DESTDIR)$(sysconfdir)/logrotate.d/$$f
+	    $(DESTDIR)$(sysconfdir)/logrotate.d/conman$${new}
 	@ test -d /etc/sysconfig && d=sysconfig || d=default; \
 	  echo $(INSTALL) -m 755 -d $(DESTDIR)$(sysconfdir)/$$d; \
 	  $(INSTALL) -m 755 -d $(DESTDIR)$(sysconfdir)/$$d; \
-	  test -f $(DESTDIR)$(sysconfdir)/$$d/conman \
-	    && f=conman.new || f=conman; \
+	  test ! -f $(DESTDIR)$(sysconfdir)/$$d/conman \
+	    || cmp etc/conman.sysconfig $(DESTDIR)$(sysconfdir)/$$d/conman \
+	    1>/dev/null 2>&1 || new=".new"; \
 	  echo $(INSTALL) -m 644 etc/conman.sysconfig \
-	    $(DESTDIR)$(sysconfdir)/$$d/$$f; \
+	    $(DESTDIR)$(sysconfdir)/$$d/conman$${new}; \
 	  $(INSTALL) -m 644 etc/conman.sysconfig \
-	    $(DESTDIR)$(sysconfdir)/$$d/$$f
+	    $(DESTDIR)$(sysconfdir)/$$d/conman$${new}
 	@ for f in `cd lib >/dev/null \
 	      && find * -name ".*" -prune -o -type f -print`; do \
 	    expr "$$f" : ".*\.exp" && mode=755 || mode=644; \
@@ -103,7 +110,6 @@ install: $(PROGS)
 	    $(INSTALL) -m $${mode} lib/$$f \
 	      $(DESTDIR)$(prefix)/lib/$(PROJECT)/$$f; \
 	  done
-	chmod 644 $(DESTDIR)$(prefix)/lib/$(PROJECT)/*.exp
 	@ for d in man1 man5 man8; do \
 	    echo $(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/$$d; \
 	    $(INSTALL) -m 755 -d $(DESTDIR)$(mandir)/$$d; \
