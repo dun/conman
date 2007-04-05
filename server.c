@@ -56,7 +56,7 @@
 #include "wrapper.h"
 
 
-static int begin_daemonize(void);
+static void begin_daemonize(int *fd_ptr, pid_t *pgid_ptr);
 static void end_daemonize(int fd);
 static char ** get_sane_env (void);
 static void display_configuration(server_conf_t *conf);
@@ -88,6 +88,7 @@ extern char ** environ;
 int main(int argc, char *argv[])
 {
     int fd = -1;
+    pid_t pgid = -1;
     server_conf_t *conf;
     int log_priority = LOG_NOTICE;
 
@@ -101,7 +102,7 @@ int main(int argc, char *argv[])
 
     process_cmdline(conf, argc, argv);
     if (!conf->enableForeground) {
-        fd = begin_daemonize();
+        begin_daemonize(&fd, &pgid);
     }
     posix_signal(SIGCHLD, sig_chld_handler);
     posix_signal(SIGHUP, sig_hup_handler);
@@ -146,18 +147,27 @@ int main(int argc, char *argv[])
     mux_io(conf);
     destroy_server_conf(conf);
 
+    if (pgid > 0) {
+        if (kill(-pgid, SIGTERM) < 0) {
+            log_msg(LOG_WARNING, "Unable to terminate process group ID %d: %s",
+                pgid, strerror(errno));
+        }
+    }
     log_msg(LOG_NOTICE, "Stopping ConMan daemon %s (pid %d)",
         VERSION, (int) getpid());
     exit(0);
 }
 
 
-static int begin_daemonize(void)
+static void begin_daemonize(int *fd_ptr, pid_t *pgid_ptr)
 {
 /*  Begins the daemonization of the process.
  *  Despite the fact that this routine backgrounds the process, control
  *    will not be returned to the shell until end_daemonize() is called.
- *  Returns an 'fd' to pass to end_daemonize() to complete the daemonization.
+ *  If 'fd_ptr' is non-null, it will be set to the fd to pass to
+ *    end_daemonize() in order to complete the daemonization.
+ *  If 'pgid_ptr' is non-null, it will be set to the daemonized
+ *    process group ID.
  */
     struct rlimit limit;
     int fds[2];
@@ -165,6 +175,7 @@ static int begin_daemonize(void)
     int n;
     signed char priority;
     char ebuf[1024];
+    pid_t pgid;
 
     /*  Clear file mode creation mask.
      */
@@ -228,7 +239,7 @@ static int begin_daemonize(void)
     /*  Become a session leader and process group leader
      *    with no controlling tty.
      */
-    if (setsid() < 0) {
+    if ((pgid = setsid()) < 0) {
         log_err(errno, "Unable to disassociate controlling tty");
     }
     /*  Ignore SIGHUP to keep child from terminating when
@@ -245,7 +256,15 @@ static int begin_daemonize(void)
     else if (pid > 0) {
         exit(0);
     }
-    return(fds[1]);
+    /*  Return.
+     */
+    if (fd_ptr) {
+        *fd_ptr = fds[1];
+    }
+    if (pgid_ptr) {
+        *pgid_ptr = pgid;
+    }
+    return;
 }
 
 
