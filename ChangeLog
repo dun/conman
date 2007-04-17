@@ -1,3 +1,10 @@
+2007-04-17  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server-process.c (open_process_obj): Changed info notification
+	  message to use full pathname to process instead of basename.
+	  Removed warning notification message after exec() failure since it
+	  happens in the child process.
+
 2007-04-05  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server.c (main): Added sending SIGTERM to process group ID at exit.

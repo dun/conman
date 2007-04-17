@@ -96,7 +96,6 @@ obj_t * create_process_obj(server_conf_t *conf, char *name, List args,
         process->aux.process.argv[n] = arg;
     }
     process->aux.process.argv[n] = (char *) NULL;
-
     if ((arg = strrchr(process->aux.process.argv[0], '/'))) {
         process->aux.process.prog = arg + 1;
     }
@@ -202,9 +201,6 @@ int open_process_obj(obj_t *process)
             log_err(errno, "dup2() of child stderr failed");
         }
         execv(process->aux.process.argv[0], process->aux.process.argv);
-        write_notify_msg(process, LOG_WARNING,
-            "Console [%s] disabled due to process exec failure: %s",
-            process->name, strerror(errno));
         _exit(127);
     }
     if (close(fdPair[1]) < 0) {
@@ -219,9 +215,9 @@ int open_process_obj(obj_t *process)
 
     write_notify_msg(process, LOG_INFO,
         "Console [%s] connected to \"%s\" (pid %d)",
-        process->name, process->aux.process.prog, process->aux.process.pid);
+        process->name, process->aux.process.argv[0], process->aux.process.pid);
     DPRINTF((9, "Opened [%s] process: fd=%d/%d prog=%s pid=%d.\n",
-        process->name, fdPair[0], fdPair[1], process->aux.process.prog,
+        process->name, fdPair[0], fdPair[1], process->aux.process.argv[0],
         process->aux.process.pid));
     return(0);
 
