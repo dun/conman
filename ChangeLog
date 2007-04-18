@@ -1,3 +1,8 @@
+2007-04-18  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server.c (reset_console): Disabled notify_console_objs() taking
+	  place after the actual reset command is executed.
+
 2007-04-17  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server.h, server-conf.c: Replaced "execdir" with "execpath".

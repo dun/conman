@@ -957,10 +957,12 @@ static void reset_console(obj_t *console, const char *cmd)
      *  and replace it with the following:
      */
     log_msg(LOG_INFO, "Reset console [%s] (pid %d)", console->name, pid);
+#if 0
     snprintf(buf, sizeof(buf), "%sConsole [%s] reset (pid %d)%s",
         CONMAN_MSG_PREFIX, console->name, (int) pid, CONMAN_MSG_SUFFIX);
     strcpy(&buf[sizeof(buf) - 3], "\r\n");
     notify_console_objs(console, buf);
+#endif
 
     /*  Set a timer to ensure the reset cmd does not exceed its time limit.
      *  The callback function's arg must be allocated on the heap since
