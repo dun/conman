@@ -58,7 +58,7 @@ enum server_conf_toks {
  */
     SERVER_CONF_CONSOLE = LEX_TOK_OFFSET,
     SERVER_CONF_DEV,
-    SERVER_CONF_EXECDIR,
+    SERVER_CONF_EXECPATH,
     SERVER_CONF_GLOBAL,
     SERVER_CONF_KEEPALIVE,
     SERVER_CONF_LOG,
@@ -86,7 +86,7 @@ static char *server_conf_strs[] = {
  */
     "CONSOLE",
     "DEV",
-    "EXECDIR",
+    "EXECPATH",
     "GLOBAL",
     "KEEPALIVE",
     "LOG",
@@ -172,6 +172,12 @@ static void signal_daemon(server_conf_t *conf);
 static void parse_console_directive(server_conf_t *conf, Lex l);
 static int process_console(server_conf_t *conf, console_strs_t *con_p,
     char *errbuf, int errbuflen);
+static int is_telnet_dev(const char *dev, char **host_ref, int *port_ref);
+static int is_serial_dev(const char *dev, const char *cwd, char **path_ref);
+static int is_process_dev(const char *dev, const char *cwd,
+    const char *exec_path, char **path_ref);
+static int search_exec_path(const char *path, const char *src,
+    char *dst, int dstlen);
 static void parse_global_directive(server_conf_t *conf, Lex l);
 static void parse_server_directive(server_conf_t *conf, Lex l);
 static int read_pidfile(const char *pidfile);
@@ -190,7 +196,7 @@ server_conf_t * create_server_conf(void)
     }
     conf->cwd = NULL;
     conf->confFileName = create_string(CONMAN_CONF);
-    conf->execDirName = NULL;
+    conf->execPath = NULL;
     conf->logDirName = NULL;
     conf->logFileName = NULL;
     conf->logFmtName = NULL;
@@ -253,7 +259,6 @@ server_conf_t * create_server_conf(void)
         log_err(errno, "Unable to determine working directory");
     }
     conf->cwd = create_string(buf);
-    conf->execDirName = create_string(buf);
     conf->logDirName = create_string(buf);
     return(conf);
 }
@@ -292,7 +297,7 @@ void destroy_server_conf(server_conf_t *conf)
     }
     destroy_string(conf->confFileName);
     destroy_string(conf->cwd);
-    destroy_string(conf->execDirName);
+    destroy_string(conf->execPath);
     destroy_string(conf->globalLogName);
     destroy_string(conf->logDirName);
     destroy_string(conf->logFileName);
@@ -717,8 +722,9 @@ static int process_console(server_conf_t *conf, console_strs_t *con_p,
     int          rc;
     char         buf[MAX_LINE];
     char        *arg0;
-    int          n;
-    struct stat  st;
+    char        *host = NULL;
+    int          port;
+    char        *path = NULL;
     obj_t       *console;
     seropt_t     seropts;
     logopt_t     logopts;
@@ -758,67 +764,57 @@ static int process_console(server_conf_t *conf, console_strs_t *con_p,
             "console [%s] dev string is empty", con_p->name);
         goto err;
     }
-    if ((p = strchr(arg0, ':'))
-            && ((n = strspn(p+1, "0123456789")) > 0)
-            && (p[ n + 1 ] == '\0')) {
-        *p++ = '\0';
+    if (is_telnet_dev(arg0, &host, &port)) {
         if (list_count(args) != 1) {
             snprintf(errbuf, errbuflen,
                 "console [%s] dev string has too many args", con_p->name);
             goto err;
         }
         if (!(console = create_telnet_obj(
-                conf, con_p->name, arg0, atoi(p), errbuf, errbuflen))) {
+                conf, con_p->name, host, port, errbuf, errbuflen))) {
+            goto err;
+        }
+        free(host);
+        host = NULL;
+    }
+    else if (is_serial_dev(arg0, conf->cwd, &path)) {
+        if (list_count(args) != 1) {
+            snprintf(errbuf, errbuflen,
+                "console [%s] dev string has too many args", con_p->name);
+            goto err;
+        }
+        if (access(path, R_OK | W_OK) < 0) {
+            snprintf(errbuf, errbuflen,
+                "console [%s] device \"%s\" is not readable/writable",
+                con_p->name, path);
+            goto err;
+        }
+        seropts = conf->globalSerOpts;
+        if (con_p->sopts && parse_serial_opts(
+                &seropts, con_p->sopts, errbuf, errbuflen) < 0) {
+            goto err;
+        }
+        if (!(console = create_serial_obj(
+                conf, con_p->name, path, &seropts, errbuf, errbuflen))) {
+            goto err;
+        }
+        free(path);
+        path = NULL;
+    }
+    else if (is_process_dev(arg0, conf->cwd, conf->execPath, &path)) {
+        free(list_pop(args));
+        arg0 = list_push(args, path);
+        path = NULL;
+        if (!(console = create_process_obj(
+                conf, con_p->name, args, errbuf, errbuflen))) {
             goto err;
         }
     }
     else {
-        if (arg0[ 0 ] != '/') {
-            p = list_pop(args);
-            arg0 = list_push(args,
-                create_format_string("%s/%s", conf->execDirName, arg0));
-            free(p);
-        }
-        if (stat(arg0, &st) < 0) {
-            snprintf(errbuf, errbuflen,
-                "console [%s] device \"%s\" stat error: %s",
-                con_p->name, arg0, strerror(errno));
-            goto err;
-        }
-        else if (S_ISCHR(st.st_mode)) {
-            if (list_count(args) != 1) {
-                snprintf(errbuf, errbuflen,
-                    "console [%s] dev string has too many args", con_p->name);
-                goto err;
-            }
-            seropts = conf->globalSerOpts;
-            if (con_p->sopts && parse_serial_opts(
-                        &seropts, con_p->sopts, errbuf, errbuflen) < 0) {
-                goto err;
-            }
-            if (!(console = create_serial_obj(
-                    conf, con_p->name, arg0, &seropts, errbuf, errbuflen))) {
-                goto err;
-            }
-        }
-        else if (S_ISREG(st.st_mode)) {
-            if (!(st.st_mode & S_IXUSR)) {
-                snprintf(errbuf, errbuflen,
-                    "console [%s] device \"%s\" is not executable",
-                    con_p->name, arg0);
-                goto err;
-            }
-            if (!(console = create_process_obj(
-                    conf, con_p->name, args, errbuf, errbuflen))) {
-                goto err;
-            }
-        }
-        else {
-            snprintf(errbuf, errbuflen,
-                "console [%s] device \"%s\" type unrecognized",
-                con_p->name, arg0);
-            goto err;
-        }
+        snprintf(errbuf, errbuflen,
+            "console [%s] device \"%s\" type unrecognized",
+            con_p->name, arg0);
+        goto err;
     }
     if ((con_p->log && con_p->log[ 0 ] != '\0')
             || (!con_p->log && conf->globalLogName)) {
@@ -835,7 +831,7 @@ static int process_console(server_conf_t *conf, console_strs_t *con_p,
         }
         logopts = conf->globalLogOpts;
         if (con_p->lopts && parse_logfile_opts(
-                    &logopts, con_p->lopts, errbuf, errbuflen) < 0) {
+                &logopts, con_p->lopts, errbuf, errbuflen) < 0) {
             goto err;
         }
         if (!(logfile = create_logfile_obj(
@@ -848,8 +844,158 @@ static int process_console(server_conf_t *conf, console_strs_t *con_p,
     return(0);
 
 err:
-    list_destroy(args);
     errbuf[ errbuflen - 1 ] = '\0';
+    list_destroy(args);
+    destroy_string(host);
+    destroy_string(path);
+    return(-1);
+}
+
+
+static int is_telnet_dev(const char *dev, char **host_ref, int *port_ref)
+{
+    char  buf[MAX_LINE];
+    char *p;
+    int   n;
+
+    assert(dev != NULL);
+
+    if (strlcpy(buf, dev, sizeof(buf)) >= sizeof(buf)) {
+        return(0);
+    }
+    if (!(p = strchr(dev, ':'))) {
+        return(0);
+    }
+    if ((n = strspn(p+1, "0123456789")) == 0) {
+        return(0);
+    }
+    if (p[ n + 1 ] != '\0') {
+        return(0);
+    }
+    *p++ = '\0';
+    if (host_ref) {
+        *host_ref = strdup(buf);
+    }
+    if (port_ref) {
+        *port_ref = atoi(p);
+    }
+    return(1);
+}
+
+
+static int is_serial_dev(const char *dev, const char *cwd, char **path_ref)
+{
+    char         buf[PATH_MAX];
+    int          n;
+    struct stat  st;
+
+    assert(dev != NULL);
+
+    if ((dev[0] != '/') && (cwd != NULL)) {
+        n = snprintf(buf, sizeof(buf), "%s/%s", cwd, dev);
+        if ((n < 0) || (n >= sizeof(buf))) {
+            return(0);
+        }
+        dev = buf;
+    }
+    if (stat(dev, &st) < 0) {
+        return(0);
+    }
+    if (!S_ISCHR(st.st_mode)) {
+        return(0);
+    }
+    if (path_ref) {
+        *path_ref = strdup(dev);
+    }
+    return(1);
+}
+
+
+static int is_process_dev(const char *dev, const char *cwd,
+    const char *exec_path, char **path_ref)
+{
+    char         buf[PATH_MAX];
+    int          n;
+    struct stat  st;
+
+    assert(dev != NULL);
+
+    if (!strchr(dev, '/')
+            && (search_exec_path(exec_path, dev, buf, sizeof(buf)) == 0)) {
+        dev = buf;
+    }
+    else if ((dev[0] != '/') && (cwd != NULL)) {
+        n = snprintf(buf, sizeof(buf), "%s/%s", cwd, dev);
+        if ((n < 0) || (n >= sizeof(buf))) {
+            return(0);
+        }
+        dev = buf;
+    }
+    if (stat(dev, &st) < 0) {
+        return(0);
+    }
+    if (!S_ISREG(st.st_mode)) {
+        return(0);
+    }
+    if (access(dev, X_OK) < 0) {
+        return(0);
+    }
+    if (path_ref) {
+        *path_ref = strdup(dev);
+    }
+    return(1);
+}
+
+
+static int search_exec_path(const char *path, const char *src,
+    char *dst, int dstlen)
+{
+    char         path_buf[PATH_MAX];
+    char         file_buf[PATH_MAX];
+    char        *p;
+    char        *q;
+    struct stat  st;
+    int          n;
+
+    assert((path == NULL) || (strlen(path) < PATH_MAX));
+    assert(src != NULL);
+    assert(strchr(src, '/') == NULL);
+    assert(dst != NULL);
+    assert(dstlen >= 0);
+
+    if (!path) {
+        return(-1);
+    }
+    if (strlcpy(path_buf, path, sizeof(path_buf)) >= sizeof(path_buf)) {
+        return(-1);
+    }
+    for (p = path_buf; p && *p; p = q) {
+        if ((q = strchr(p, ':'))) {
+            *q++ = '\0';
+        }
+        else {
+            q = strchr(p, '\0');
+        }
+        if (stat(p, &st) < 0) {
+            continue;
+        }
+        if (!S_ISDIR(st.st_mode)) {
+            continue;
+        }
+        n = snprintf(file_buf, sizeof(file_buf), "%s/%s", p, src);
+        if ((n < 0) || (n >= sizeof(file_buf))) {
+            continue;
+        }
+        if (access(file_buf, X_OK) < 0) {
+            continue;
+        }
+        if ((dst != NULL) && (dstlen > 0)) {
+            if (strlcpy(dst, file_buf, dstlen) >= dstlen) {
+                return(1);
+            }
+        }
+        return(0);
+    }
     return(-1);
 }
 
@@ -977,7 +1123,7 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
         tok = lex_next(l);
         switch(tok) {
 
-        case SERVER_CONF_EXECDIR:
+        case SERVER_CONF_EXECPATH:
             if (lex_next(l) != '=') {
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
                     server_conf_strs[LEX_UNTOK(tok)]);
@@ -986,28 +1132,17 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             }
+            else if (strlen(lex_text(l)) >= PATH_MAX) {
+                snprintf(err, sizeof(err), "exceeded max length for %s value",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            }
             else if (is_empty_string(lex_text(l))) {
-                destroy_string(conf->execDirName);
-                conf->execDirName = create_string(conf->cwd);
+                destroy_string(conf->execPath);
+                conf->execPath = NULL;
             }
             else {
-                p = (lex_text(l)[0] != '/')
-                    ? create_format_string("%s/%s", conf->cwd, lex_text(l))
-                    : create_string(lex_text(l));
-                if (lstat(p, &st) < 0) {
-                    snprintf(err, sizeof(err), "cannot stat %s \"%s\": %s",
-                        server_conf_strs[LEX_UNTOK(tok)], p, strerror(errno));
-                    free(p);
-                }
-                else if (!S_ISDIR(st.st_mode)) {
-                    snprintf(err, sizeof(err), "%s \"%s\" not a directory",
-                        server_conf_strs[LEX_UNTOK(tok)], p);
-                    free(p);
-                }
-                else {
-                    destroy_string(conf->execDirName);
-                    conf->execDirName = p;
-                }
+                destroy_string(conf->execPath);
+                conf->execPath = create_string(lex_text(l));
             }
             break;
 

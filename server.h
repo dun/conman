@@ -174,7 +174,7 @@ typedef struct base_obj {               /* BASE OBJ:                         */
 typedef struct server_conf {
     char            *confFileName;      /* configuration file name           */
     char            *cwd;               /* cwd when daemon was started       */
-    char            *execDirName;       /* dir prefix for relpath proc exec  */
+    char            *execPath;          /* process exec path                 */
     char            *logDirName;        /* dir prefix for relative logfiles  */
     char            *logFileName;       /* file to which logmsgs are written */
     char            *logFmtName;        /* name with conversion specifiers   */
