@@ -11,11 +11,11 @@
 # For details, see <http://home.gna.org/conman/>.
 ###############################################################################
 # This script performs the initial authentication step to access a console on
-# an IBM BladeCenter HS20 Type 8843 blade server using the telnet protocol.
+# a given blade in an IBM BladeCenter using the telnet protocol.
 #
 # This script can be specified in "conman.conf" in the following manner:
 #
-#   CONSOLE name="zot" dev="/path/to/ibm-hs20.exp HOST BLADE USER PSWD"
+#   CONSOLE name="zot" dev="/path/to/ibm-bc.exp HOST BLADE USER PSWD"
 #
 # HOST  is the hostname of the blade server.
 # BLADE is the blade number associated with the console.

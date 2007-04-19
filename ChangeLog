@@ -1,3 +1,8 @@
+2007-04-19  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* lib/exec/ibm-bc.exp, lib/exec/ibm-hs20.exp:
+	  Renamed ibm-hs20.exp to ibm-bc.exp.
+
 2007-04-18  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server.c (reset_console): Disabled notify_console_objs() taking
