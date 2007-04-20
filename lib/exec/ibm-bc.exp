@@ -52,6 +52,13 @@
   set override 0
 
 ##
+# If "idle_timeout" is set and greater than 0, a space-backspace sequence will
+#   be sent every ${idle_timeout} seconds when no input activity is detected
+#   in order to keep the connection active.
+##
+  set idle_timeout 0
+
+##
 # Command-line argument defaults should be specified here.  In this manner,
 #   you can avoid exposing sensitive information on the command line.
 ##
@@ -92,6 +99,9 @@ if { ! [ info exists host ] } {
 } elseif { ! [ info exists pswd ] } {
   send_user "Error: Unspecified password.\r\n"
   exit 1
+}
+if { ! [ info exists idle_timeout ] || $idle_timeout <= 0 } {
+  set idle_timeout -1
 }
 set cmd [ list console -T "blade\[$blade]" ]
 if { [ info exists override ] && $override > 0 } {
@@ -164,9 +174,6 @@ expect {
 send_user "Connection established via external telnet process (pid $spawn_result).\r\n"
 ##
 # The "&B" character sequence will be replaced with a serial-break.
-# The space-backspace sequence will be sent after an hour with no input
-#   activity in order to keep the connection alive.  Without it, the blade
-#   server terminates connections that have been idle for ~63min.
 ##
 interact {
   "&B" {
@@ -174,7 +181,7 @@ interact {
     send "\035send brk\r\n"
     expect "telnet> send brk"
   }
-  timeout 3600 {
+  timeout $idle_timeout {
     send " \177"
   }
 }
