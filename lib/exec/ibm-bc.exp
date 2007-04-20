@@ -45,11 +45,11 @@
   set timeout 10
 
 ##
-# If "override" is set, an existing connection to the given blade will be
-#   terminated and a new connection will be established; otherwise, the
-#   connection will fail with "console session already in use".
+# If "session_override" is set, an existing connection to the given blade
+#   will be terminated and a new connection will be established; otherwise,
+#   the connection will fail with "console session already in use".
 ##
-  set override 0
+  set session_override 0
 
 ##
 # If "idle_timeout" is set and greater than 0, a "space-backspace" sequence
@@ -104,7 +104,7 @@ if { ! [ info exists idle_timeout ] || $idle_timeout <= 0 } {
   set idle_timeout -1
 }
 set cmd [ list console -T "blade\[$blade]" ]
-if { [ info exists override ] && $override > 0 } {
+if { [ info exists session_override ] && $session_override > 0 } {
   lappend cmd -o
 }
 if [ catch "spawn telnet $host" spawn_result ] {
