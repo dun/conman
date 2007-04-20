@@ -1,3 +1,7 @@
+2007-04-20  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* lib/exec/ibm-bc.exp: Tweaked comments.
+
 2007-04-19  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* lib/exec/ibm-bc.exp: Renamed "override" to "session_override".

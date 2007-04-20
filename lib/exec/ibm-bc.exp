@@ -52,7 +52,7 @@
   set session_override 0
 
 ##
-# If "idle_timeout" is set and greater than 0, a "space-backspace" sequence
+# If "idle_timeout" is set greater than 0, a "space-backspace" sequence
 #   will be sent every ${idle_timeout} seconds when no input activity is
 #   detected in order to keep the connection active.
 ##
