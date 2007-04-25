@@ -27,9 +27,9 @@
 # Both USER and PSWD must be specified if the console requires authentication.
 #
 # Since this command-line will persist in the process listing for the duration
-# of the connection, passing sensitive information in this manner is not
-# recommended.  Instead, consider using either a command-line argument default
-# or the password database (see below).
+# of the connection, passing sensitive information like PSWD in this manner is
+# not recommended.  Instead, consider using either a command-line argument
+# default or the password database (see below).
 ###############################################################################
 
 ##

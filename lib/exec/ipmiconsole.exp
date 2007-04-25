@@ -24,9 +24,9 @@
 # KEYG is the optional key-generation key "Kg" for IPMIv2 authentication.
 #
 # Since this command-line will persist in the process listing for the duration
-# of the connection, passing sensitive information in this manner is not
-# recommended.  Instead, consider using either a command-line argument default
-# or the password database (see below).
+# of the connection, passing sensitive information like PSWD or KEYG in this
+# manner is not recommended.  Instead, consider using either a command-line
+# argument default or the password database (see below).
 ###############################################################################
 
 ##

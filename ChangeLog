@@ -1,3 +1,9 @@
+2007-04-25  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* lib/exec/cyclades-ssh.exp, lib/exec/cyclades-telnet.exp,
+	  lib/exec/ibm-bc.exp, lib/exec/ipmiconsole.exp, lib/exec/ipmitool.exp,
+	  lib/exec/ssh.exp: Tweaked documentation.
+
 2007-04-24  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* etc/conman.conf: Changed keywords in examples to lowercase.
