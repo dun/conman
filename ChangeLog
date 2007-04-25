@@ -1,3 +1,9 @@
+2007-04-24  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* lib/exec/cyclades-ssh.exp, lib/exec/cyclades-telnet.exp,
+	  lib/exec/ibm-bc.exp, lib/exec/ipmiconsole.exp, lib/exec/ipmitool.exp,
+	  lib/exec/ssh.exp: Added support for password database.  Restructured.
+
 2007-04-20  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* lib/exec/ibm-bc.exp: Tweaked comments.

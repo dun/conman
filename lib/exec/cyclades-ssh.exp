@@ -25,9 +25,11 @@
 # PSWD is the corresponding password.
 #
 # Both USER and PSWD must be specified if the console requires authentication.
-# 
+#
 # Since this command-line will persist in the process listing for the duration
-# of the connection, passing PSWD in this manner is not recommended.
+# of the connection, passing sensitive information in this manner is not
+# recommended.  Instead, consider using either a command-line argument default
+# or the password database (see below).
 ###############################################################################
 
 ##
@@ -49,45 +51,94 @@
   set timeout 10
 
 ##
-# Command-line argument defaults should be specified here.  In this manner,
-#   you can avoid exposing sensitive information on the command line.
+# The "password_db" specifies the location of the password database.
+#   This avoids exposing sensitive information on the command-line without
+#   needing to modify this script.
+# Whitespace and lines beginning with '#' are ignored.  The file format is:
+#   <host-regex> : <user> : <pswd>
+##
+  set password_db "/etc/conman.pswd"
+
+##
+# Command-line argument defaults can be specified here.  This avoids exposing
+#   sensitive information on the command-line.
 ##
 # set user "foo"
 # set pswd "bar"
 
-##
+###############################################################################
 
 set env(PATH) "/usr/bin:/bin"
-set authenticated 0
 
-if { ! $argc } {
-  set prog [ lindex [ split $argv0 "/" ] end ]
+proc get_password {host user index} {
+  global password_db
+  set db_pswd {}
+  if {! [info exists password_db]} {
+    return
+  }
+  if {[catch {open $password_db} input]} {
+    return
+  }
+  while {[gets $input line] != -1} {
+    if {[regexp {^[ \t]*#} $line]} {
+      continue
+    }
+    set record [split $line ":"]
+    set db_host [string trim [lindex $record 0]]
+    if {[catch {regexp "^$db_host$" $host} got_host_match]} {
+      continue
+    }
+    if {! $got_host_match && [string length $db_host]} {
+      continue
+    }
+    set db_user [string trim [lindex $record 1]]
+    if {[string compare $db_user $user]} {
+      continue
+    }
+    set db_pswd [string trim [lindex $record $index]]
+    break
+  }
+  close $input
+  return $db_pswd
+}
+
+if {! $argc} {
+  set prog [lindex [split $argv0 "/"] end]
   send_user "Usage: $prog <host> <port> [<user> <pswd>]\r\n"
   exit 1
 }
-if { $argc > 0 } {
-  set host [ lindex $argv 0 ]
+if {$argc > 0} {
+  set host [lindex $argv 0]
 }
-if { $argc > 1 } {
-  set port [ lindex $argv 1 ]
+if {$argc > 1} {
+  set port [lindex $argv 1]
 }
-if { $argc > 2 } {
-  set user [ lindex $argv 2 ]
+if {$argc > 2} {
+  set user [lindex $argv 2]
 }
-if { $argc > 3 } {
-  set pswd [ lindex $argv 3 ]
+if {$argc > 3} {
+  set pswd [lindex $argv 3]
 }
-if { ! [ info exists host ] } {
+set authenticated 0
+if {! [info exists host]} {
   send_user "Error: Unspecified hostname.\r\n"
   exit 1
-} elseif { ! [ info exists port ] } {
+}
+if {! [info exists port]} {
   send_user "Error: Unspecified port number.\r\n"
   exit 1
-} elseif { !([ info exists user ] && [ info exists pswd ]) } {
+}
+if {! [info exists user]} {
   set authenticated 1
   set user {}
+} elseif {! [info exists pswd]} {
+  set pswd [get_password $host $user 2]
+  if {! [string length $pswd]} {
+    send_user "Error: Unspecified password.\r\n"
+    exit 1
+  }
 }
-if [ catch "spawn ssh -e \& -l $user:$port $host" spawn_result ] {
+if {[catch "spawn ssh -e \& -l $user:$port $host" spawn_result]} {
   send_user "Error: $spawn_result.\r\n"
   exit 1
 }
@@ -117,13 +168,13 @@ expect {
     exit 1
   }
   timeout {
-    if { $authenticated == 0 } {
+    if {$authenticated == 0} {
       send_user "Error: Timed-out waiting to authenticate.\r\n"
       exit 1
     }
   }
   -nocase -gl "password: \$" {
-    if { $authenticated == 0 } {
+    if {$authenticated == 0} {
       send "$pswd\r"
       incr authenticated
       exp_continue -continue_timer
