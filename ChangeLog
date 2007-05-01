@@ -1,5 +1,8 @@
 2007-04-30  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* etc/conman.sysconfig: Reverted re-ordering of CONFIG & DAEMON_ARGS
+	  since DAEMON_ARGS might contain $CONFIG.
+
 	* etc/conman.init.in (log_fini): Changed output for default case.
 
 	* etc/conman.init.in: Added support for Debian Etch & Ubuntu Edgy.
