@@ -1,3 +1,12 @@
+2007-04-30  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* etc/conman.init.in: Added support for Debian Etch & Ubuntu Edgy.
+	  Updated Required-Start, Required-Stop, Should-Start, Should-Stop.
+	  Renamed OPTIONS to DAEMON_ARGS.  Renamed SERVICE_NAME to SCRIPT_NAME.
+	  Redirected ERRMSG to stderr.  Forced removal of PIDFILE on stop.
+	  Replaced query_exec() with type.  Added log_init() and log_fini().
+	* etc/conman.sysconfig: Renamed OPTIONS to DAEMON_ARGS.
+
 2007-04-25  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* lib/conman.exp: Removed executable svn property.

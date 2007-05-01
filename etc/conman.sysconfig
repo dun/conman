@@ -3,14 +3,14 @@
 ###############################################################################
 
 ##
+# Pass additional command-line options to the daemon.
+##
+# DAEMON_ARGS="-c $CONFIG"
+
+##
 # Specify an alternative configuration file.
 ##
 # CONFIG="/etc/conman.conf"
-
-##
-# Pass additional command-line options to the daemon.
-##
-# OPTIONS="-c $CONFIG"
 
 ##
 # Specify where the daemon's PID is written.
