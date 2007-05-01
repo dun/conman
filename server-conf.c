@@ -691,11 +691,14 @@ static void parse_console_directive(server_conf_t *conf, Lex l)
             break;
         }
     }
-    if ((!*con.name || !*con.dev) && !*err) {
-        snprintf(err, sizeof(err), "incomplete %s directive", directive);
+    if (!*err) {
+        if (!con.name || !con.dev) {
+            snprintf(err, sizeof(err), "incomplete %s directive", directive);
+        }
+        else {
+            process_console(conf, &con, err, sizeof(err));
+        }
     }
-    process_console(conf, &con, err, sizeof(err));
-
     if (*err) {
         log_msg(LOG_ERR, "CONFIG[%s:%d]: %s",
             conf->confFileName, lex_line(l), err);

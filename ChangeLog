@@ -1,5 +1,8 @@
 2007-04-30  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-conf.c (parse_console_directive): Fixed segfault with
+	  incomplete console directive.
+
 	* etc/conman.sysconfig: Reverted re-ordering of CONFIG & DAEMON_ARGS
 	  since DAEMON_ARGS might contain $CONFIG.
 
