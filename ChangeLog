@@ -1,5 +1,7 @@
 2007-05-01  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* etc/conman.init.in: Changed format of usage output.
+
 	* etc/conman.init.in (service_status): Changed format of status output.
 	  Added check for "dead" status if process not found & pidfile exists.
 

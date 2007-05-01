@@ -546,8 +546,8 @@ case "$1" in
     service_status
     ;;
   *)
-    COMMANDS="start|stop|restart|try-restart|reload|force-reload|status"
-    echo "Usage: `basename \"$0\"` ($COMMANDS)" >&2
+    echo "Usage: `basename \"$0\"`" \
+      "(start|stop|restart|try-restart|reload|force-reload|status)" >&2
     exit 2                              # LSB: invalid or excess argument(s)
     ;;
 esac
