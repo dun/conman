@@ -361,31 +361,38 @@ service_status ()
       STATUS=$?
       ;;
     SUSE)
-      printf "Checking for $DESC: "
+      printf "Checking for service $DESC: "
       checkproc ${PIDFILE:+"-p"} ${PIDFILE:+"$PIDFILE"} "$DAEMON"
       rc_status -v
       ;;
     LSB)
+      printf "Checking status of $DESC: "
       pids=`pidofproc ${PIDFILE:+"-p"} ${PIDFILE:+"$PIDFILE"} \
         "$DAEMON" 2>/dev/null`
       STATUS=$?
       if [ $STATUS -eq 0 -a -n "$pids" ]; then
-        echo "$DAEMON_NAME (pid $pids) is running"
+        echo "running"
+      elif [ $STATUS -ne 0 -a -s "$PIDFILE" ]; then
+        echo "dead"
       else
-        echo "$DAEMON_NAME is stopped"
+        echo "stopped"
       fi
       ;;
     DEBIAN|*)
+      printf "Checking status of $DESC: "
       pids=`query_pids "$DAEMON" "$PIDFILE"`
       rc=$?
       if [ $rc -eq 0 -a -n "$pids" ]; then
-        echo "$DAEMON_NAME (pid $pids) is running"
+        echo "running"
         STATUS=0
+      elif [ $rc -ne 0 -a -s "$PIDFILE" ]; then
+        echo "dead"
+        STATUS=1                        # LSB: program is dead & pidfile exists
       elif [ $rc -ne 0 ]; then
-        echo "$DAEMON_NAME is stopped"
+        echo "stopped"
         STATUS=3                        # LSB: program is not running
       else
-        echo "$DAEMON_NAME status is unknown"
+        echo "unknown"
         STATUS=4                        # LSB: program status unknown
       fi
       ;;

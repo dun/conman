@@ -1,3 +1,8 @@
+2007-05-01  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* etc/conman.init.in (service_status): Changed format of status output.
+	  Added check for "dead" status if process not found & pidfile exists.
+
 2007-04-30  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server-conf.c (parse_console_directive): Fixed segfault with
