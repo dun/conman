@@ -506,7 +506,7 @@ log_fini ()
       [ $STATUS -eq 0 -o -z "$ERRMSG" ] || echo "$ERRMSG" >&2
       ;;
     *)
-      [ $STATUS -eq 0 ] && echo "success" || echo "failed"
+      [ $STATUS -eq 0 ] && echo "." || echo " (failed)."
       [ $STATUS -eq 0 -o -z "$ERRMSG" ] || echo "$ERRMSG" >&2
       ;;
   esac
