@@ -1,5 +1,7 @@
 2007-05-02  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* Makefile.in: Added support for datarootdir.
+
 	* configure: Updated to autoconf-2.61 (Debian Etch).
 
 	* configure.ac, config.h.in: Added <paths.h> header check (Solaris).

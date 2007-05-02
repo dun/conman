@@ -27,6 +27,7 @@ sbindir=	@sbindir@
 libdir=		@libdir@
 mandir=		@mandir@
 sysconfdir=	@sysconfdir@
+datarootdir=	@datarootdir@
 
 AC_OUTPUT=	Makefile config.h etc/conman.init \
 		man/conman.1 man/conman.conf.5 man/conmand.8
