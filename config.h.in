@@ -111,7 +111,7 @@
 /* Define if using the debug malloc library. */
 #undef WITH_DMALLOC
 
-/* Define to 1 if using Pthreads. */
+/* Define if using Pthreads. */
 #undef WITH_PTHREADS
 
 /* Define if using TCP Wrappers. */

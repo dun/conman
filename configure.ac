@@ -276,7 +276,7 @@ AC_CACHE_CHECK([for a sense of humor], ac_cv_humor, ac_cv_humor=yes)
 
 dnl Add defs to config.h.
 dnl
-AC_DEFINE(WITH_PTHREADS, 1, [Define to 1 if using Pthreads.])
+AC_DEFINE(WITH_PTHREADS, 1, [Define if using Pthreads.])
 
 AH_BOTTOM(
 [
