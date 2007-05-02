@@ -1,5 +1,8 @@
 2007-05-02  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-process.c (open_process_obj): Reverted connected info
+	  notification message to use basename.
+
 	* etc/conman.init.in (service_init): Re-ordered config cleanup tweaks.
 
 2007-05-01  Chris Dunlap  <cdunlap@llnl.gov>
@@ -86,10 +89,10 @@
 	* etc/conman.conf, man/conman.conf.5.in:
 	  Replaced SERVER EXECDIR keyword with SERVER EXECPATH.
 
-	* server-process.c (open_process_obj): Changed info notification
-	  message to use full pathname to process instead of basename.
-	  Removed warning notification message after exec() failure since it
-	  happens in the child process.
+	* server-process.c (open_process_obj): Changed connected info
+	  notification message to use full pathname to process instead of
+	  basename.  Removed warning notification message after exec() failure
+	  since it happens in the child process.
 
 2007-04-05  Chris Dunlap  <cdunlap@llnl.gov>
 

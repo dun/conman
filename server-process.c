@@ -215,7 +215,7 @@ int open_process_obj(obj_t *process)
 
     write_notify_msg(process, LOG_INFO,
         "Console [%s] connected to \"%s\" (pid %d)",
-        process->name, process->aux.process.argv[0], process->aux.process.pid);
+        process->name, process->aux.process.prog, process->aux.process.pid);
     DPRINTF((9, "Opened [%s] process: fd=%d/%d prog=%s pid=%d.\n",
         process->name, fdPair[0], fdPair[1], process->aux.process.argv[0],
         process->aux.process.pid));
