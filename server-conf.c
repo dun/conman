@@ -866,7 +866,7 @@ static int is_telnet_dev(const char *dev, char **host_ref, int *port_ref)
     if (strlcpy(buf, dev, sizeof(buf)) >= sizeof(buf)) {
         return(0);
     }
-    if (!(p = strchr(dev, ':'))) {
+    if (!(p = strchr(buf, ':'))) {
         return(0);
     }
     if ((n = strspn(p+1, "0123456789")) == 0) {

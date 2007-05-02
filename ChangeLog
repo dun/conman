@@ -1,5 +1,8 @@
 2007-05-02  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-conf.c (is_telnet_obj): Fixed bug where port number remained
+	  appended to hostname.
+
 	* server-process.c (open_process_obj): Reverted connected info
 	  notification message to use basename.
 
