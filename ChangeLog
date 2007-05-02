@@ -1,5 +1,7 @@
 2007-05-01  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-esc.c: Added <arpa/telnet.h> include for use of telnet BREAK.
+
 	* server.h: Removed <arpa/telnet.h> include and NTELOPTS redefinition.
 
 	* common.h: Added define for _PATH_STDPATH if missing (AIX).
