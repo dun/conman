@@ -276,7 +276,9 @@ AC_CACHE_CHECK([for a sense of humor], ac_cv_humor, ac_cv_humor=yes)
 
 dnl Add defs to config.h.
 dnl
-AC_DEFINE(WITH_PTHREADS, 1, [Define if using Pthreads.])
+AC_DEFINE(WITH_PTHREADS, 1, [Define to 1 if using Pthreads.])
+AC_DEFINE(_STDC_C99, 1,
+  [Define to 1 to allow use of <stdbool.h> (needed on Solaris).])
 
 AH_BOTTOM(
 [

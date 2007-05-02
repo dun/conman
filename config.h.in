@@ -111,7 +111,7 @@
 /* Define if using the debug malloc library. */
 #undef WITH_DMALLOC
 
-/* Define if using Pthreads. */
+/* Define to 1 if using Pthreads. */
 #undef WITH_PTHREADS
 
 /* Define if using TCP Wrappers. */
@@ -120,6 +120,9 @@
 /* Define to 1 if your processor stores words with the most significant byte
    first (like Motorola and SPARC, unlike Intel and VAX). */
 #undef WORDS_BIGENDIAN
+
+/* Define to 1 to allow use of <stdbool.h> (needed on Solaris). */
+#undef _STDC_C99
 
 #ifdef WITH_DMALLOC
 #  include <stdlib.h>
