@@ -29,7 +29,6 @@
 #define _SERVER_H
 
 
-#include <arpa/telnet.h>
 #include <netinet/in.h>                 /* for struct sockaddr_in            */
 #include <pthread.h>
 #include <sys/types.h>
@@ -57,16 +56,6 @@
 
 #define TELNET_MAX_TIMEOUT              1800
 #define TELNET_MIN_TIMEOUT              15
-
-
-/*  Under Solaris and Tru64, NTELOPTS is only defined when TELOPTS is defined.
- *    But the TELOPTS definition also defines storage for telopts[] -- and that
- *    can only be done once in the executable.  So we create our own definition
- *    for NTELOPTS for those brain-damaged platforms.  Sigh...
- */
-#ifndef NTELOPTS
-#  define NTELOPTS (1+TELOPT_LAST)
-#endif /* NTELOPTS */
 
 
 enum obj_type {                         /* type of auxiliary obj (3 bits)    */
