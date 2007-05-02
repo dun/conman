@@ -1,16 +1,16 @@
 2007-05-02  Chris Dunlap  <cdunlap@llnl.gov>
 
-	* configure.ac, config.h.in: Added check for <paths.h> header.
+	* configure.ac, config.h.in: Added <paths.h> header check (Solaris).
 	* common.h: Wrapped <paths.h> include with test for HAVE_PATHS_H def.
 	* server.c: Removed <paths.h> include in favor of "common.h" include
 	  which checks for HAVE_PATHS_H.
 
-	* server.c (get_sane_env): Set env var TERM=dumb.
+	* server.c (get_sane_env): Set env var TERM=dumb (AIX).
 
 	* server-process.c (open_process_obj): Tweaked format of DPRINTF.
 
 	* server.c (accept_client): Fixed portability bug by forcing
-	  newly-accept()d client fds to initially use blocking I/O.
+	  newly-accept()d client fds to initially use blocking I/O (AIX/BSD).
 	* util-file.c, util-file.h: Added set_fd_blocking().
 
 	* server-conf.c (is_telnet_obj): Fixed bug where port number remained
