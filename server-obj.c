@@ -324,7 +324,7 @@ int format_obj_string(char *buf, int buflen, obj_t *obj, const char *fmt)
                 }
                 break;
             case 'P':                   /* daemon's pid */
-                m = snprintf (pdst, n, "%d", getpid());
+                m = snprintf (pdst, n, "%d", (int) getpid());
                 if ((m < 0) || (m >= n))
                     n = 0;
                 else {
