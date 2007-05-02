@@ -1,5 +1,10 @@
 2007-05-02  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* configure.ac, config.h.in: Added check for <paths.h> header.
+	* common.h: Wrapped <paths.h> include with test for HAVE_PATHS_H def.
+	* server.c: Removed <paths.h> include in favor of "common.h" include
+	  which checks for HAVE_PATHS_H.
+
 	* server.c (get_sane_env): Set env var TERM=dumb.
 
 	* server-process.c (open_process_obj): Tweaked format of DPRINTF.

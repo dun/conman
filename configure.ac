@@ -89,6 +89,7 @@ fi
 
 dnl Check for header files.
 dnl
+AC_CHECK_HEADERS(paths.h)
 
 
 dnl Check for typedefs.
