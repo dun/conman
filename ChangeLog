@@ -1,5 +1,7 @@
 2007-05-02  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server.c (get_sane_env): Set env var TERM=dumb.
+
 	* server-process.c (open_process_obj): Tweaked format of DPRINTF.
 
 	* server.c (accept_client): Fixed portability bug by forcing

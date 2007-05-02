@@ -354,6 +354,7 @@ char ** get_sane_env (void)
     char *env_restrict[] = {
         "IFS= \t\n",
         "PATH=" _PATH_STDPATH,
+        "TERM=dumb",
         NULL
     };
     char *env_preserve[] = {
