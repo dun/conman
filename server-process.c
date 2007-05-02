@@ -170,7 +170,7 @@ int open_process_obj(obj_t *process)
             process->aux.process.count = 0;
         }
     }
-    if (socketpair(AF_LOCAL, SOCK_STREAM, 0, fdPair) < 0) {
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, fdPair) < 0) {
         write_notify_msg(process, LOG_WARNING,
             "Console [%s] disabled due to process socketpair failure: %s",
             process->name, strerror(errno));

@@ -1,5 +1,7 @@
 2007-05-01  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-process.c (open_process_obj): Replaced AF_LOCAL with AF_UNIX.
+
 	* server-esc.c: Added <arpa/telnet.h> include for use of telnet BREAK.
 
 	* server.h: Removed <arpa/telnet.h> include and NTELOPTS redefinition.
