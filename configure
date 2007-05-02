@@ -4952,11 +4952,6 @@ cat >>confdefs.h <<\_ACEOF
 _ACEOF
 
 
-cat >>confdefs.h <<\_ACEOF
-#define _STDC_C99 1
-_ACEOF
-
-
 
 
 

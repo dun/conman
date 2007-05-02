@@ -1,5 +1,7 @@
 2007-05-02  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* configure.ac: Reverted previous commit.
+
 	* configure.ac: Added _STDC_C99 define to use <stdbool.h> on Solaris.
 
 	* server-obj.c (format_obj_string): Cast getpid to int.

@@ -121,9 +121,6 @@
    first (like Motorola and SPARC, unlike Intel and VAX). */
 #undef WORDS_BIGENDIAN
 
-/* Define to 1 to allow use of <stdbool.h> (needed on Solaris). */
-#undef _STDC_C99
-
 #ifdef WITH_DMALLOC
 #  include <stdlib.h>
 #  include <dmalloc.h>
