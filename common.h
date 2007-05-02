@@ -28,6 +28,7 @@
 #ifndef _COMMON_H
 #define _COMMON_H
 
+#include <paths.h>
 #include <termios.h>
 #include "lex.h"
 #include "list.h"
@@ -104,6 +105,10 @@
 #ifndef HAVE_SOCKLEN_T
 typedef int socklen_t;                  /* socklen_t is uint32_t in Posix.1g */
 #endif /* !HAVE_SOCKLEN_T */
+
+#ifndef _PATH_STDPATH
+#define _PATH_STDPATH "/usr/bin:/bin:/usr/sbin:/sbin"
+#endif /* !_PATH_STDPATH */
 
 
 typedef enum cmd_type {                 /* ConMan command (2 bits)           */
