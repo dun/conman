@@ -371,11 +371,11 @@ service_status ()
         "$DAEMON" 2>/dev/null`
       STATUS=$?
       if [ $STATUS -eq 0 -a -n "$pids" ]; then
-        echo "running"
+        echo "running."
       elif [ $STATUS -ne 0 -a -s "$PIDFILE" ]; then
-        echo "dead"
+        echo "dead."
       else
-        echo "stopped"
+        echo "stopped."
       fi
       ;;
     DEBIAN|*)
@@ -383,16 +383,16 @@ service_status ()
       pids=`query_pids "$DAEMON" "$PIDFILE"`
       rc=$?
       if [ $rc -eq 0 -a -n "$pids" ]; then
-        echo "running"
+        echo "running."
         STATUS=0                        # LSB: program is running
       elif [ $rc -ne 0 -a -s "$PIDFILE" ]; then
-        echo "dead"
+        echo "dead."
         STATUS=1                        # LSB: program is dead & pidfile exists
       elif [ $rc -ne 0 ]; then
-        echo "stopped"
+        echo "stopped."
         STATUS=3                        # LSB: program is not running
       else
-        echo "unknown"
+        echo "unknown."
         STATUS=4                        # LSB: program status unknown
       fi
       ;;

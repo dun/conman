@@ -1,5 +1,7 @@
 2007-05-01  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* etc/conman.init.in (service_status): Terminated output with period.
+
 	* etc/conman.init.in (service_status): Added comment.
 
 	* etc/conman.init.in: Changed format of usage output.
