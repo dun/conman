@@ -1,3 +1,7 @@
+2007-05-02  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* etc/conman.init.in (service_init): Re-ordered config cleanup tweaks.
+
 2007-05-01  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server-process.c (open_process_obj): Replaced AF_LOCAL with AF_UNIX.
