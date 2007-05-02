@@ -891,6 +891,15 @@ static void accept_client(server_conf_t *conf)
     }
     DPRINTF((5, "Accepted new client on fd=%d.\n", sd));
 
+    /*  While the listen fd is non-blocking, new fds that are accept()d from
+     *    it can be either blocking or non-blocking depending on the platform.
+     *  The current model spawns a thread to handle a new client with
+     *    blocking I/O.  Once the client request has been processed,
+     *    this fd is set non-blocking and moved to the main fd set.
+     *  Consequently, we force the new fd to be blocking here for portability.
+     */
+    set_fd_blocking(sd);
+
     if (conf->enableKeepAlive) {
         if (setsockopt(sd, SOL_SOCKET, SO_KEEPALIVE,
           (const void *) &on, sizeof(on)) < 0) {

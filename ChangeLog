@@ -1,5 +1,9 @@
 2007-05-02  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server.c (accept_client): Fixed portability bug by forcing
+	  newly-accept()d client fds to initially use blocking I/O.
+	* util-file.c, util-file.h: Added set_fd_blocking().
+
 	* server-conf.c (is_telnet_obj): Fixed bug where port number remained
 	  appended to hostname.
 

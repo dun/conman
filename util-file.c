@@ -53,6 +53,20 @@ void set_fd_closed_on_exec(int fd)
 }
 
 
+void set_fd_blocking(int fd)
+{
+    int fval;
+
+    assert(fd >= 0);
+
+    if ((fval = fcntl(fd, F_GETFL, 0)) < 0)
+        log_err(errno, "fcntl(F_GETFL) failed");
+    if (fcntl(fd, F_SETFL, fval & (~O_NONBLOCK)) < 0)
+        log_err(errno, "fcntl(F_SETFL) failed");
+    return;
+}
+
+
 void set_fd_nonblocking(int fd)
 {
     int fval;

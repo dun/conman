@@ -42,6 +42,11 @@ void set_fd_closed_on_exec(int fd);
  *  Sets the file descriptor (fd) to be closed on exec().
  */
 
+void set_fd_blocking(int fd);
+/*
+ *  Sets the file descriptor (fd) for blocking I/O.
+ */
+
 void set_fd_nonblocking(int fd);
 /*
  *  Sets the file descriptor (fd) for non-blocking I/O.
