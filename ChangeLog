@@ -1,5 +1,7 @@
 2007-05-02  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* configure: Updated to autoconf-2.61 (Debian Etch).
+
 	* configure.ac, config.h.in: Added <paths.h> header check (Solaris).
 	* common.h: Wrapped <paths.h> include with test for HAVE_PATHS_H def.
 	* server.c: Removed <paths.h> include in favor of "common.h" include
