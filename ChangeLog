@@ -1,5 +1,8 @@
 2007-05-02  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* etc/conman.init.in: Added back Description header (which had been
+	  renamed to Short-Description) in order to comply with chkconfig.
+
 	* : Released 0.2.0.
 
 	* META, NEWS: Updated for 0.2.0 release.

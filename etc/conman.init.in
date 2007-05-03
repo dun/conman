@@ -8,6 +8,7 @@
 # UCRL-CODE-2002-009.
 ###############################################################################
 # chkconfig:          345 95 5
+# Description:        Start/Stop the ConMan (serial console manager) daemon.
 ###############################################################################
 ### BEGIN INIT INFO
 # Provides:           conman
