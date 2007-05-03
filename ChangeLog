@@ -1,5 +1,7 @@
 2007-05-02  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* META, NEWS: Updated for 0.2.0 release.
+
 	* configure.ac: Added test for broken <stdbool.h>.
 	* tpoll.c: Removed <stdbool.h> include in favor of AC's "config.h".
 

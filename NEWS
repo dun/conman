@@ -1,7 +1,12 @@
-conman-?.?.?.? (????-??-??):
+conman-0.2.0 (2007-05-02):
 - Changed project homepage to <http://home.gna.org/conman/>.
+- Added support for consoles to be driven by an external process.
+- Added console scripts for Cyclades, IBM BladeCenter, IPMI, SSH.
+- Added SERVER EXECPATH config directive.
+- Added '-F' cmdline opt to daemon for running in the foreground.
 - Changed daemon behavior to return fatal errors to shell if possible.
-- Added '-F' cmdline opt to daemon to run in foreground.
+- Sanitized environment variables and closed unneeded fds in child processes.
+- Fixed potential deadlock bug in signal handlers.
 
 conman-0.1.9.2 (2006-06-26):
 - Fixed bug where a failed telnet connection would segfault the daemon.
