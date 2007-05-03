@@ -1,5 +1,7 @@
 2007-05-02  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* : Released 0.2.0.
+
 	* META, NEWS: Updated for 0.2.0 release.
 
 	* configure.ac: Added test for broken <stdbool.h>.
