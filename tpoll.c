@@ -34,7 +34,7 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <pthread.h>
-#include <stdbool.h>
+/* #include <stdbool.h> */
 #include <stdlib.h>
 #include <string.h>
 #include <sys/resource.h>
