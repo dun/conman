@@ -1,7 +1,7 @@
 conman-0.2.0 (2007-05-02):
 - Changed project homepage to <http://home.gna.org/conman/>.
 - Added support for consoles to be driven by an external process.
-- Added console scripts for Cyclades, IBM BladeCenter, IPMI, SSH.
+- Added console scripts for Cyclades, IBM BladeCenter, IPMI SOL, SSH.
 - Added SERVER EXECPATH config directive.
 - Added '-F' cmdline opt to daemon for running in the foreground.
 - Changed daemon behavior to return fatal errors to shell if possible.
