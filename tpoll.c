@@ -34,12 +34,12 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <pthread.h>
-/* #include <stdbool.h> */
 #include <stdlib.h>
 #include <string.h>
 #include <sys/resource.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include "bool.h"
 #include "log.h"
 #include "tpoll.h"
 

@@ -136,19 +136,10 @@ AC_COMPILE_IFELSE(AC_LANG_PROGRAM([#include <stdbool.h>]),
   [ broken_stdbool=no ],
   [ broken_stdbool=yes
     AC_DEFINE(BROKEN_STDBOOL, 1,
-      [Define if your <stdbool.h> header file generates an error pragma.])
+      [Define if your <stdbool.h> header file generates an error directive.])
   ]
 )
 AC_MSG_RESULT(${broken_stdbool=no})
-AH_BOTTOM(
-[#if BROKEN_STDBOOL
-#  define bool int
-#  define false 0
-#  define true 1
-#else
-#  include <stdbool.h>
-#endif /* BROKEN_STDBOOL */]
-)
 
 
 dnl Check for debug vs. production compilation.

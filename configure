@@ -4506,8 +4506,6 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 echo "${ECHO_T}${broken_stdbool=no}" >&6; }
 
 
-
-
 { echo "$as_me:$LINENO: checking whether debugging is enabled" >&5
 echo $ECHO_N "checking whether debugging is enabled... $ECHO_C" >&6; }
 # Check whether --enable-debug was given.

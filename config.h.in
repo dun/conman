@@ -1,6 +1,6 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* Define if your <stdbool.h> header file generates an error pragma. */
+/* Define if your <stdbool.h> header file generates an error directive. */
 #undef BROKEN_STDBOOL
 
 /* Define the default configuration file of the ConMan daemon */
@@ -123,15 +123,6 @@
 /* Define to 1 if your processor stores words with the most significant byte
    first (like Motorola and SPARC, unlike Intel and VAX). */
 #undef WORDS_BIGENDIAN
-
-#if BROKEN_STDBOOL
-#  define bool int
-#  define false 0
-#  define true 1
-#else
-#  include <stdbool.h>
-#endif /* BROKEN_STDBOOL */
-
 
 #ifdef WITH_DMALLOC
 #  include <stdlib.h>
