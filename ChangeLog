@@ -1,5 +1,7 @@
 2007-05-15  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* README, conman.spec: Tweaked description.
+
 	* configure.ac, config.h.in: Moved BROKEN_STDBOOL #ifdef to "bool.h".
 	* tpoll.c: Added "bool.h" include to replace <stdbool.h>.
 	* bool.h: Added.
