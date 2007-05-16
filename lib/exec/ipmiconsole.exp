@@ -16,7 +16,7 @@
 #
 # This script can be specified in "conman.conf" in the following manner:
 #
-#   CONSOLE name="zot" dev="/path/to/ipmiconsole.exp HOST USER PSWD [KEYG]"
+#   console name="zot" dev="/path/to/ipmiconsole.exp HOST USER PSWD [KEYG]"
 #
 # HOST is the hostname of the remote server.
 # USER is the username being authenticated.
@@ -36,13 +36,13 @@
   exp_internal 0
 
 ##
-# Set "log_user" to 1 to show the underlying dialogue that takes place during
-#   the initial authentication step.
+# Set "log_user" to 1 to show the underlying dialogue establishing a connection
+#   to the console.
 ##
   log_user 0
 
 ##
-# The "timeout" specifies the number of seconds before the authentication step
+# The "timeout" specifies the number of seconds before the connection attempt
 #   times-out and terminates the connection.
 ##
   set timeout 5
@@ -133,11 +133,11 @@ if {! [info exists pswd]} {
     send_user "Error: Unspecified password.\r\n"
     exit 1
   }
-}
-if {! [info exists keyg]} {
-  set keyg [get_password $host $user 3]
-  if {! [string length $keyg]} {
-    unset keyg
+  if {! [info exists keyg]} {
+    set keyg [get_password $host $user 3]
+    if {! [string length $keyg]} {
+      unset keyg
+    }
   }
 }
 set cmd "ipmiconsole -h $host -u $user -P"
@@ -153,7 +153,7 @@ expect {
   -nocase -re "\\\[SOL established]" {
     ;
   }
-  -nocase -re "^\\\[error received]: (\[^\r\n]*)" {
+  -nocase -re "^\\\[error received]: (\[^\r]*)\r+\n" {
     send_user "Error: $expect_out(1,string)\r\n"
     exit 1
   }
@@ -181,9 +181,10 @@ expect {
       exp_continue -continue_timer
     }
   }
-  -re "\[^\r]*\r\n" {
+  -re "\[^\r]*\r+\n" {
     exp_continue -continue_timer
   }
 }
-send_user "Connection established via external ipmiconsole process (pid $spawn_result).\r\n"
+send_user "Connection established via ipmiconsole process (pid $spawn_result).\r\n"
+
 interact
