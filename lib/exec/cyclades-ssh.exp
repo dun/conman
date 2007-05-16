@@ -10,14 +10,14 @@
 # This file is part of ConMan: The Console Manager.
 # For details, see <http://home.gna.org/conman/>.
 ###############################################################################
-# This script connects to a console on a Cyclades terminal server using the
-# SSH protocol (protocol socket_ssh or socket_server_ssh).  It supports
-# consoles using no authentication (authtype none) and local authentication
-# (authtype local).
+# This script connects to a port on a Cyclades terminal server using the SSH
+# protocol (protocol socket_ssh or socket_server_ssh).  It supports consoles
+# using no authentication (authtype none) and local authentication (authtype
+# local).
 #
 # This script can be specified in "conman.conf" in the following manner:
 #
-#   CONSOLE name="zot" dev="/path/to/cyclades-ssh.exp HOST PORT [USER PSWD]"
+#   console name="zot" dev="/path/to/cyclades-ssh.exp HOST PORT [USER PSWD]"
 #
 # HOST is the hostname of the terminal server.
 # PORT is the port number associated with the console.
@@ -39,13 +39,13 @@
   exp_internal 0
 
 ##
-# Set "log_user" to 1 to show the underlying dialogue that takes place during
-#   the initial authentication step.
+# Set "log_user" to 1 to show the underlying dialogue establishing a connection
+#   to the console.
 ##
   log_user 0
 
 ##
-# The "timeout" specifies the number of seconds before the authentication step
+# The "timeout" specifies the number of seconds before the connection attempt
 #   times-out and terminates the connection.
 ##
   set timeout 10
@@ -159,7 +159,7 @@ expect {
     send_user "Error: Connection closed by remote host.\r\n"
     exit 1
   }
-  -re "^ssh: (\[^\r\n]*)\[\r\n]*\$" {
+  -re "^ssh: (\[^\r]*)\r+\n" {
     send_user "Error: $expect_out(1,string).\r\n"
     exit 1
   }
@@ -173,6 +173,10 @@ expect {
       exit 1
     }
   }
+  -nocase -gl "Are you sure you want to continue connecting (yes/no)? \$" {
+    send "yes\r"
+    exp_continue -continue_timer
+  }
   -nocase -gl "password: \$" {
     if {$authenticated == 0} {
       send "$pswd\r"
@@ -183,9 +187,10 @@ expect {
       exit 1
     }
   }
-  -re "\[^\r]*\r\n" {
+  -re "\[^\r]*\r+\n" {
     exp_continue -continue_timer
   }
 }
-send_user "Connection established via external ssh process (pid $spawn_result).\r\n"
+send_user "Connection established via ssh process (pid $spawn_result).\r\n"
+
 interact

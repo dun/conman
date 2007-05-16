@@ -1,5 +1,10 @@
 2007-05-16  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* lib/exec/cyclades-ssh.exp: Updated comments.  Changed error regex
+	  to match through newline.  Added pattern to accept new host key.
+	* lib/exec/cyclades-telnet.exp: Updated comments.  Changed error regex
+	  to match through newline.
+
 	* lib/exec/ipmiconsole.exp, lib/exec/ipmitool.exp: Updated comments.
 	  Changed keyg lookup to only happen when pswd is also missing.
 	  Changed error regex to match through newline.
