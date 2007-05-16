@@ -1,3 +1,8 @@
+2007-05-16  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* lib/exec/sun-ilom.exp: Updated comments.  Added interact pattern to
+	  disable "ESC (" sequence for stopping console and returning to ILOM.
+
 2007-05-15  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* README, conman.spec: Tweaked description.

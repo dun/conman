@@ -10,12 +10,12 @@
 # This file is part of ConMan: The Console Manager.
 # For details, see <http://home.gna.org/conman/>.
 ###############################################################################
-# This script connects to a console over an ssh session to the Integrated
-# Lights Out Manager (ILOM) on a Sun server.
+# This script connects to a console managed by the Integrated Lights Out
+# Manager (ILOM) on a Sun server using the ssh protocol.
 #
 # This script can be specified in "conman.conf" in the following manner:
 #
-#   CONSOLE name="zot" dev="/path/to/sun-ilom.exp HOST USER PSWD"
+#   console name="zot" dev="/path/to/sun-ilom.exp HOST USER PSWD"
 #
 # HOST is the hostname of the Sun ILOM server.
 # USER is the username being authenticated.
@@ -118,6 +118,8 @@ if {$argc > 1} {
 if {$argc > 2} {
   set pswd [lindex $argv 2]
 }
+set authenticated 0
+set connected 0
 if {! [info exists host]} {
   send_user "Error: Unspecified hostname.\r\n"
   exit 1
@@ -136,10 +138,7 @@ if {! [info exists pswd]} {
 if {! [info exists session_override]} {
   set session_override 0
 }
-set authenticated 0
-set connected 0
 set override $session_override
-
 if {[catch "spawn ssh -e \& -l $user $host" spawn_result]} {
   send_user "Error: $spawn_result.\r\n"
   exit 1
@@ -210,12 +209,23 @@ expect {
     exp_continue -continue_timer
   }
 }
-send_user "Connection established via external ssh process (pid $spawn_result).\r\n"
-##
-# The "&B" character sequence will be replaced with a serial-break.
-##
+send_user "Connection established via ssh process (pid $spawn_result).\r\n"
+
 interact {
+  # Replace "&B" with serial-break.
   "&B" {
     send "\033B"
+  }
+  # Match subsequent patterns against spawned process, not user's keystrokes.
+  -o
+  # Disable "ESC (" sequence for stopping console and returning to ILOM prompt.
+  -re "\r\nSerial console stopped.\r\n\r\n-> " {
+    set timeout 2
+    if {$session_override != 0} {
+      send "stop -script /SP/console\r"
+      expect -re "\r\n-> \$"
+    }
+    send "start -script /SP/console\r"
+    expect -re "\r\nSerial console started.\[^\r]*\r+\n"
   }
 }
