@@ -10,11 +10,11 @@
 # This file is part of ConMan: The Console Manager.
 # For details, see <http://home.gna.org/conman/>.
 ###############################################################################
-# This script connects to a console using the SSH protocol.
+# This script connects to a host using the SSH protocol.
 #
 # This script can be specified in "conman.conf" in the following manner:
 #
-#   CONSOLE name="zot" dev="/path/to/ssh.exp HOST PORT USER PSWD"
+#   console name="zot" dev="/path/to/ssh.exp HOST PORT USER PSWD"
 #
 # HOST is the hostname of the remote server.
 # PORT is the port number (typically 22).
@@ -34,13 +34,13 @@
   exp_internal 0
 
 ##
-# Set "log_user" to 1 to show the underlying dialogue that takes place during
-#   the initial authentication step.
+# Set "log_user" to 1 to show the underlying dialogue establishing a connection
+#   to the console.
 ##
   log_user 0
 
 ##
-# The "timeout" specifies the number of seconds before the authentication step
+# The "timeout" specifies the number of seconds before the connection attempt
 #   times-out and terminates the connection.
 ##
   set timeout 10
@@ -144,7 +144,7 @@ expect {
     send_user "Error: Permission denied.\r\n"
     exit 1
   }
-  -re "^ssh: (\[^\r\n]*)\[\r\n]*\$" {
+  -re "^ssh: (\[^\r]*)\r+\n" {
     send_user "Error: $expect_out(1,string).\r\n"
     exit 1
   }
@@ -157,6 +157,10 @@ expect {
       send_user "Error: Timed-out.\r\n"
       exit 1
     }
+  }
+  -nocase -gl "Are you sure you want to continue connecting (yes/no)? \$" {
+    send "yes\r"
+    exp_continue -continue_timer
   }
   -re "Enter passphrase for key .*: \$" {
     if {$authenticated == 0} {
@@ -174,14 +178,13 @@ expect {
       exit 1
     }
   }
-  -re "\[^\n]*(:|#|%|\\\$) \$" {
-    if {$authenticated == 0} {
-      exp_continue -continue_timer
-    }
+  -re "(:|#|%|\\\$) \$" {
+    ;
   }
-  -re "\[^\r]*\r\n" {
+  -re "\[^\r]*\r+\n" {
     exp_continue -continue_timer
   }
 }
-send_user "Connection established via external ssh process (pid $spawn_result).\r\n"
+send_user "Connection established via ssh process (pid $spawn_result).\r\n"
+
 interact

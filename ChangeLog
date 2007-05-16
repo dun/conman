@@ -1,5 +1,9 @@
 2007-05-16  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* lib/exec/ssh.exp: Updated comments.  Changed error regex to match
+	  through newline.  Changed prompt regex for accept state.
+	  Added pattern to accept new host key.
+
 	* lib/exec/sun-ilom.exp: Updated comments.  Added interact pattern to
 	  disable "ESC (" sequence for stopping console and returning to ILOM.
 
