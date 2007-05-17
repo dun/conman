@@ -215,7 +215,7 @@ interact {
   # Match subsequent patterns against spawned process, not user's keystrokes.
   -o
   # Disable "ESC (" sequence for stopping console and returning to ILOM prompt.
-  -re "\r\nSerial console stopped.\r\n\r\n-> " {
+  -re "\r\nSerial console stopped.\r\n\r\n-> \$" {
     set timeout 2
     if {$session_override != 0} {
       send "stop -script /SP/console\r"
