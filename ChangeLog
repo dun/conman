@@ -1,5 +1,8 @@
 2007-05-17  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* lib/exec/sun-ilom.exp: Removed ssh error message exception for
+	  "no version information available".
+
 	* lib/exec/sun-ilom.exp: Tweaked regex for disabling "ESC (" action.
 
 2007-05-16  Chris Dunlap  <cdunlap@llnl.gov>

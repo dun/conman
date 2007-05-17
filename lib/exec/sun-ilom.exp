@@ -160,9 +160,6 @@ expect {
     exit 1
   }
   -re "^ssh: (\[^\r]*)\r+\n" {
-    if {[string match "*no version information*" $expect_out(1,string)]} {
-      exp_continue -continue_timer
-    }
     send_user "Error: $expect_out(1,string).\r\n"
     exit 1
   }
