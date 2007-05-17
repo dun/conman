@@ -145,9 +145,7 @@ if {[catch "spawn ssh -e \& -l $user $host" spawn_result]} {
 }
 expect {
   -re "Serial console started.\[^\r]*\r+\n" {
-    if {$connected == 0} {
-      exp_continue -continue_timer
-    }
+    ;
   }
   -gl "Permission denied" {
     send_user "Error: Permission denied.\r\n"
@@ -173,10 +171,8 @@ expect {
     exit 1
   }
   timeout {
-    if {$connected == 0} {
-      send_user "Error: Timed-out.\r\n"
-      exit 1
-    }
+    send_user "Error: Timed-out.\r\n"
+    exit 1
   }
   -nocase -gl "Are you sure you want to continue connecting (yes/no)? \$" {
     send "yes\r"
