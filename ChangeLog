@@ -1,5 +1,8 @@
 2007-05-16  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* lib/exec/ipmiconsole.exp, lib/exec/ipmitool.exp:
+	  Added checks for duplicate prompts to generate an error.
+
 	* lib/exec/sun-ilom.exp: Removed $connected from the accept state and
 	  timeout clause since the accept state has a known pattern.
 

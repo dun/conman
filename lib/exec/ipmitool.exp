@@ -152,8 +152,17 @@ if {[catch "spawn $cmd sol deactivate" spawn_result]} {
 }
 expect {
   -nocase -gl "Password:" {
-    send "$pswd\r"
-    exp_continue -continue_timer
+    if {$authenticated == 0} {
+      send "$pswd\r"
+      incr authenticated
+      exp_continue -continue_timer
+    } else {
+      send_user "Error: Unexpected response during deactivate.\r\n"
+      exit 1
+    }
+  }
+  eof {
+    ;
   }
   timeout {
     send_user "Error: Timed-out.\r\n"
@@ -166,6 +175,7 @@ if {[catch "spawn $cmd sol activate" spawn_result]} {
   send_user "Error: $spawn_result.\r\n"
   exit 1
 }
+set authenticated 0
 expect {
   -nocase -re "\\\[SOL Session operational" {
     ;
@@ -191,6 +201,9 @@ expect {
       send "$pswd\r"
       incr authenticated
       exp_continue -continue_timer
+    } else {
+      send_user "Error: Unexpected response during activate.\r\n"
+      exit 1
     }
   }
   -re "\[^\r]*\r+\n" {

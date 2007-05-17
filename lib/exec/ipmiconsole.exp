@@ -170,6 +170,9 @@ expect {
       send "$pswd\r"
       incr authenticated
       exp_continue -continue_timer
+    } else {
+      send_user "Error: Unexpected response.\r\n"
+      exit 1
     }
   }
   -nocase -gl "K_g:" {
@@ -177,6 +180,9 @@ expect {
       send "$keyg\r"
       incr keyed
       exp_continue -continue_timer
+    } else {
+      send_user "Error: Unexpected response.\r\n"
+      exit 1
     }
   }
   -re "\[^\r]*\r+\n" {
