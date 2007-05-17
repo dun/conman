@@ -139,7 +139,7 @@ if {! [info exists session_override]} {
   set session_override 0
 }
 set override $session_override
-if {[catch "spawn ssh -e \& -l $user $host" spawn_result]} {
+if {[catch "spawn ssh -a -e \& -l $user -p 22 -x $host" spawn_result]} {
   send_user "Error: $spawn_result.\r\n"
   exit 1
 }

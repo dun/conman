@@ -135,7 +135,7 @@ if {! [info exists pswd]} {
     exit 1
   }
 }
-if {[catch "spawn ssh -e \& -l $user -p $port $host" spawn_result]} {
+if {[catch "spawn ssh -a -e \& -l $user -p $port -x $host" spawn_result]} {
   send_user "Error: $spawn_result.\r\n"
   exit 1
 }

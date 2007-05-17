@@ -1,5 +1,9 @@
 2007-05-17  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* lib/exec/cyclades-ssh.exp, lib/exec/ssh.exp, lib/exec/sun-ilom.exp:
+	  Specified cmdline args to spawned ssh process to use standard port
+	  and disable authentication agent & X11 forwarding.
+
 	* lib/exec/sun-ilom.exp: Removed ssh error message exception for
 	  "no version information available".
 

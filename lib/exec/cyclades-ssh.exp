@@ -138,7 +138,7 @@ if {! [info exists user]} {
     exit 1
   }
 }
-if {[catch "spawn ssh -e \& -l $user:$port $host" spawn_result]} {
+if {[catch "spawn ssh -a -e \& -l $user:$port -p 22 -x $host" spawn_result]} {
   send_user "Error: $spawn_result.\r\n"
   exit 1
 }
