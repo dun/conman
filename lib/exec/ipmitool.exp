@@ -183,10 +183,8 @@ expect {
     exit 1
   }
   timeout {
-    if {$authenticated == 0} {
-      send_user "Error: Timed-out.\r\n"
-      exit 1
-    }
+    send_user "Error: Timed-out.\r\n"
+    exit 1
   }
   -nocase -gl "Password:" {
     if {$authenticated == 0} {
