@@ -1,5 +1,8 @@
 2007-05-17  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* lib/exec/ibm-bc.exp, lib/exec/sun-ilom.exp:
+	  Enabled ${session_override} by default.
+
 	* lib/exec/ibm-bc.exp: Updated comments.  Added ${bcmm_timeout} to set
 	  the telnet inactivity timeout.  Added state var to accept pattern.
 	  Changed checks for unexpected prompts to continue instead of accept.

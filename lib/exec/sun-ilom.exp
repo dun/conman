@@ -50,7 +50,7 @@
 #   will be terminated and a new connection will be established; otherwise,
 #   the connection will fail with "console session already in use".
 ##
-  set session_override 0
+  set session_override 1
 
 ##
 # The "password_db" specifies the location of the password database.

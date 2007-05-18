@@ -72,7 +72,7 @@
 #   this connection to terminate with "console session stolen".
 # Beware of dueling banjos if a console is overridden by more than one process.
 ##
-  set session_override 0
+  set session_override 1
 
 ##
 # The "password_db" specifies the location of the password database.
