@@ -155,11 +155,8 @@ expect {
     if {$authenticated == 0} {
       send "$pswd\r"
       incr authenticated
-      exp_continue -continue_timer
-    } else {
-      send_user "Error: Unexpected response during deactivate.\r\n"
-      exit 1
     }
+    exp_continue -continue_timer
   }
   eof {
     ;
@@ -200,11 +197,8 @@ expect {
     if {$authenticated == 0} {
       send "$pswd\r"
       incr authenticated
-      exp_continue -continue_timer
-    } else {
-      send_user "Error: Unexpected response during activate.\r\n"
-      exit 1
     }
+    exp_continue -continue_timer
   }
   -re "\[^\r]*\r+\n" {
     exp_continue -continue_timer

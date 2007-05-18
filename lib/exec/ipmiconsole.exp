@@ -169,21 +169,15 @@ expect {
     if {$authenticated == 0} {
       send "$pswd\r"
       incr authenticated
-      exp_continue -continue_timer
-    } else {
-      send_user "Error: Unexpected response.\r\n"
-      exit 1
     }
+    exp_continue -continue_timer
   }
   -nocase -gl "K_g:" {
     if {$keyed == 0} {
       send "$keyg\r"
       incr keyed
-      exp_continue -continue_timer
-    } else {
-      send_user "Error: Unexpected response.\r\n"
-      exit 1
     }
+    exp_continue -continue_timer
   }
   -re "\[^\r]*\r+\n" {
     exp_continue -continue_timer
