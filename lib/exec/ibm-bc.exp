@@ -56,21 +56,23 @@
 
 ##
 # If "idle_timeout" is set greater than 0, a "space-backspace" sequence will
-#   be sent every ${idle_timeout} seconds when no output activity is detected
-#   in order to keep the connection alive.
+#   be sent every ${idle_timeout} seconds after no output activity has been
+#   detected in order to keep the connection alive.
 # This setting should ideally be the same value as "bcmm_timeout".
 ##
   set idle_timeout 0
 
 ##
 # If "session_override" is set, an existing connection to this console session
-#   will be terminated and the new connection will be established.
-#   Furthermore, attempts to steal this console session will be thwarted.
+#   will be terminated and the new connection will be established.  Subsequent
+#   attempts to steal this console session will be thwarted.
 # Otherwise, an existing connection to this console session will cause the new
-#   connection to fail with "console session already in use".  But if the
-#   connection is established, another process may steal this console causing
-#   this connection to terminate with "console session stolen".
-# Beware of dueling banjos if a console is overridden by more than one process.
+#   connection to fail with "console session already in use".  If the console
+#   session is not in use and the connection succeeds, the console session may
+#   subsequently be stolen thereby causing this connection to terminate with
+#   "console session stolen".
+# Beware of dueling banjos if a given console session is overridden by more
+#   than one process.
 ##
   set session_override 1
 

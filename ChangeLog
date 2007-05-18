@@ -1,5 +1,7 @@
 2007-05-18  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* lib/exec/ibm-bc.exp: Tweaked "session_override" comment.
+
 	* lib/exec/ibm-bc.exp: Tweaked "idle_timeout" comment.
 
 2007-05-17  Chris Dunlap  <cdunlap@llnl.gov>
