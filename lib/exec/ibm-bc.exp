@@ -56,7 +56,7 @@
 
 ##
 # If "idle_timeout" is set greater than 0, a "space-backspace" sequence will
-#   be sent every ${idle_timeout} seconds when no input activity is detected
+#   be sent every ${idle_timeout} seconds when no output activity is detected
 #   in order to keep the connection alive.
 # This setting should ideally be the same value as "bcmm_timeout".
 ##

@@ -1,3 +1,7 @@
+2007-05-18  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* lib/exec/ibm-bc.exp: Tweaked "idle_timeout" comment.
+
 2007-05-17  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* lib/exec/cyclades-ssh.exp, lib/exec/cyclades-telnet.exp,
@@ -6,12 +10,12 @@
 	  Tweaked "connection established" message.
 
 	* lib/exec/ibm-bc.exp, lib/exec/sun-ilom.exp:
-	  Enabled ${session_override} by default.
+	  Enabled "session_override" by default.
 
-	* lib/exec/ibm-bc.exp: Updated comments.  Added ${bcmm_timeout} to set
+	* lib/exec/ibm-bc.exp: Updated comments.  Added "bcmm_timeout" to set
 	  the telnet inactivity timeout.  Added state var to accept pattern.
 	  Changed checks for unexpected prompts to continue instead of accept.
-	  Changed ${idle_timeout} to monitor spawned process instead of user's
+	  Changed "idle_timeout" to monitor spawned process instead of user's
 	  keystrokes.  Added interact pattern to disable "ESC (" sequence from
 	  stopping console and returning to BCMM.
 
