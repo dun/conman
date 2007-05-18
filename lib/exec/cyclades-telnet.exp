@@ -202,7 +202,7 @@ expect {
     exp_continue -continue_timer
   }
 }
-send_user "Connection established via telnet process (pid $spawn_result).\r\n"
+send_user "Connection established via telnet (pid $spawn_result).\r\n"
 
 interact {
   # Replace "&B" with serial-break.

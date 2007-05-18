@@ -191,6 +191,6 @@ expect {
     exp_continue -continue_timer
   }
 }
-send_user "Connection established via ssh process (pid $spawn_result).\r\n"
+send_user "Connection established via ssh (pid $spawn_result).\r\n"
 
 interact
