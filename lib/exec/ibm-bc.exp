@@ -10,12 +10,12 @@
 # This file is part of ConMan: The Console Manager.
 # For details, see <http://home.gna.org/conman/>.
 ###############################################################################
-# This script performs the initial authentication step to access a console on
-# a given blade in an IBM BladeCenter using the telnet protocol.
+# This script connects to a console on a given blade in an IBM BladeCenter
+# via Serial Over LAN (SOL) using the telnet protocol.
 #
 # This script can be specified in "conman.conf" in the following manner:
 #
-#   CONSOLE name="zot" dev="/path/to/ibm-bc.exp HOST BLADE USER PSWD"
+#   console name="zot" dev="/path/to/ibm-bc.exp HOST BLADE USER PSWD"
 #
 # HOST  is the hostname of the blade server.
 # BLADE is the blade number associated with the console.
@@ -35,30 +35,44 @@
   exp_internal 0
 
 ##
-# Set "log_user" to 1 to show the underlying dialogue that takes place during
-#   the initial authentication step.
+# Set "log_user" to 1 to show the underlying dialogue establishing a connection
+#   to the console.
 ##
   log_user 0
 
 ##
-# The "timeout" specifies the number of seconds before the authentication step
+# The "timeout" specifies the number of seconds before the connection attempt
 #   times-out and terminates the connection.
 ##
   set timeout 10
 
 ##
-# If "session_override" is set, an existing connection to the given blade
-#   will be terminated and a new connection will be established; otherwise,
-#   the connection will fail with "console session already in use".
+# If "bcmm_timeout" is set greater than or equal to 0, the telnet inactivity
+#   timeout of the BladeCenter management module will be set to this value.
+# This setting specifies the number of seconds of inactivity before the
+#   interface session times-out; setting it to 0 disables the timeout.
 ##
-  set session_override 0
+  set bcmm_timeout 0
 
 ##
-# If "idle_timeout" is set greater than 0, a "space-backspace" sequence
-#   will be sent every ${idle_timeout} seconds when no input activity is
-#   detected in order to keep the connection active.
+# If "idle_timeout" is set greater than 0, a "space-backspace" sequence will
+#   be sent every ${idle_timeout} seconds when no input activity is detected
+#   in order to keep the connection alive.
+# This setting should ideally be the same value as "bcmm_timeout".
 ##
   set idle_timeout 0
+
+##
+# If "session_override" is set, an existing connection to this console session
+#   will be terminated and the new connection will be established.
+#   Furthermore, attempts to steal this console session will be thwarted.
+# Otherwise, an existing connection to this console session will cause the new
+#   connection to fail with "console session already in use".  But if the
+#   connection is established, another process may steal this console causing
+#   this connection to terminate with "console session stolen".
+# Beware of dueling banjos if a console is overridden by more than one process.
+##
+  set session_override 0
 
 ##
 # The "password_db" specifies the location of the password database.
@@ -73,8 +87,8 @@
 # Command-line argument defaults can be specified here.  This avoids exposing
 #   sensitive information on the command-line.
 ##
-# set user "foo"
-# set pswd "bar"
+# set user "USERID"
+# set pswd "PASSW0RD"
 
 ###############################################################################
 
@@ -129,7 +143,9 @@ if {$argc > 2} {
 if {$argc > 3} {
   set pswd [lindex $argv 3]
 }
-set authenticated 0
+set bcmm_bay 1
+set cmd_sent 0
+set connected 0
 if {! [info exists host]} {
   send_user "Error: Unspecified hostname.\r\n"
   exit 1
@@ -149,10 +165,13 @@ if {! [info exists pswd]} {
     exit 1
   }
 }
+if {! [info exists bcmm_timeout] || ($bcmm_timeout < 0)} {
+  set bcmm_timeout -1
+}
 if {! [info exists idle_timeout] || ($idle_timeout <= 0)} {
   set idle_timeout -1
 }
-set cmd "console -T blade\[$blade]"
+set cmd "console -T system:blade\[$blade]"
 if {[info exists session_override] && ($session_override > 0)} {
   append cmd " -o"
 }
@@ -161,6 +180,11 @@ if {[catch "spawn telnet $host" spawn_result]} {
   exit 1
 }
 expect {
+  -gl "\u001b\\\[2J" {
+    if {$connected == 0} {
+      exp_continue -continue_timer
+    }
+  }
   -gl "Invalid login" {
     send_user "Error: Permission denied.\r\n"
     exit 1
@@ -186,53 +210,82 @@ expect {
     exit 1
   }
   timeout {
-    if {$authenticated == 0} {
+    if {$connected == 0} {
       send_user "Error: Timed-out.\r\n"
       exit 1
     }
   }
   -nocase -gl "username: \$" {
-    if {$authenticated == 0} {
+    if {$connected == 0} {
       send "$user\r"
-      exp_continue -continue_timer
     }
+    exp_continue -continue_timer
   }
   -nocase -gl "password: \$" {
-    if {$authenticated == 0} {
+    if {$connected == 0} {
       send "$pswd\r"
-      exp_continue -continue_timer
     }
+    exp_continue -continue_timer
+  }
+  -nocase -gl "OK\r\n" {
+    if {$cmd_sent != 0} {
+      incr bcmm_bay
+      set cmd_sent 0
+    }
+    exp_continue -continue_timer
+  }
+  -nocase -gl "Command cannot be issued to this target.\r\n" {
+    if {$cmd_sent != 0} {
+      set bcmm_timeout -1
+      set cmd_sent 0
+    }
+    exp_continue -continue_timer
   }
   -nocase -gl "system> \$" {
-    if {$authenticated == 0} {
+    if {($bcmm_timeout >= 0) && ($cmd_sent == 0)} {
+      send "telnetcfg -T system:mm\[$bcmm_bay] -t $bcmm_timeout\r"
+      incr cmd_sent
+    } elseif {($connected == 0) && ($cmd_sent == 0)} {
       send "$cmd\r"
-      incr authenticated
-      exp_continue -continue_timer
+      incr connected
     } else {
-      send_user "Error: Unexpected response.\r\n"
+      send_user "Error: Unrecognized response.\r\n"
       exit 1
     }
+    exp_continue -continue_timer
   }
-  -gl "\u001b\\\[2J" {
-    ;
-  }
-  -re "\[^\r]*\r\n" {
+  -re "\[^\r]*\r+\n" {
     exp_continue -continue_timer
   }
 }
-send_user "Connection established via external telnet process (pid $spawn_result).\r\n"
-##
-# The "&B" character sequence will be replaced with a serial-break.
-# The "space-backspace" sequence will be sent after ${idle_timeout} seconds
-#   of inactivity in order to keep the connection active.
-##
+send_user "Connection established via telnet process (pid $spawn_result).\r\n"
+
 interact {
+  # Replace "&B" with serial-break.
   "&B" {
-    set timeout 1
+    set timeout 2
     send "\035send brk\r\n"
     expect "telnet> send brk"
   }
+  # Match subsequent patterns against spawned process, not user's keystrokes.
+  -o
+  # Send "space-backspace" sequence after ${idle_timeout} seconds of inactivity
+  #   in order to keep the connection alive.
   timeout $idle_timeout {
     send " \177"
+  }
+  # Disable "ESC (" sequence for stopping the console session and returning to
+  #   the BladeCenter management module prompt.  If "session_override" is set,
+  #   this will also prevent the console session from being stolen.
+  -re "\r\nsystem> \$" {
+    set timeout 2
+    send "$cmd\r"
+    expect {
+      -gl "\r\nSOL session is already active\r\nsystem> \$" {
+        send_user "\r\nConsole session stolen.\r\n"
+        exit 1
+      }
+      -gl "\u001b\\\[2J"
+    }
   }
 }

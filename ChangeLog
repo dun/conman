@@ -1,5 +1,12 @@
 2007-05-17  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* lib/exec/ibm-bc.exp: Updated comments.  Added ${bcmm_timeout} to set
+	  the telnet inactivity timeout.  Added state var to accept pattern.
+	  Changed checks for unexpected prompts to continue instead of accept.
+	  Changed ${idle_timeout} to monitor spawned process instead of user's
+	  keystrokes.  Added interact pattern to disable "ESC (" sequence from
+	  stopping console and returning to BCMM.
+
 	* lib/exec/ipmiconsole.exp, lib/exec/ipmitool.exp:
 	  Changed checks for duplicate prompts to ignore instead of exit.
 
