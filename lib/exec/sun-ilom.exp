@@ -11,7 +11,7 @@
 # For details, see <http://home.gna.org/conman/>.
 ###############################################################################
 # This script connects to a console managed by the Integrated Lights Out
-# Manager (ILOM) on a Sun server using the ssh protocol.
+# Manager (ILOM) on a Sun server using the SSH protocol.
 #
 # This script can be specified in "conman.conf" in the following manner:
 #
@@ -46,9 +46,14 @@
   set timeout 10
 
 ##
-# If "session_override" is set, an existing connection to the host console
-#   will be terminated and a new connection will be established; otherwise,
-#   the connection will fail with "console session already in use".
+# If "session_override" is set, an existing connection to this console session
+#   will be terminated and the new connection will be established.  Subsequent
+#   attempts to steal this console session will be thwarted.
+# Otherwise, an existing connection to this console session will cause the new
+#   connection to fail with "console session already in use".  If the console
+#   session is not in use and the connection succeeds, the console session may
+#   subsequently be stolen thereby causing this connection to terminate with
+#   "console session stolen".
 ##
   set session_override 1
 
@@ -204,6 +209,7 @@ expect {
 }
 send_user "Connection established via ssh (pid $spawn_result).\r\n"
 
+set timeout 2
 interact {
   # Replace "&B" with serial-break.
   "&B" {
@@ -213,12 +219,22 @@ interact {
   -o
   # Disable "ESC (" sequence for stopping console and returning to ILOM prompt.
   -re "\r\nSerial console stopped.\r\n\r\n-> \$" {
-    set timeout 2
-    if {$session_override != 0} {
-      send "stop -script /SP/console\r"
-      expect -re "\r\n-> \$"
-    }
     send "start -script /SP/console\r"
     expect -re "\r\nSerial console started.\[^\r]*\r+\n"
+  }
+  # Prevent theft of console if "session_override" is enabled; o/w, exit.
+  -re "\r\n-> \$" {
+    if {$session_override == 0} {
+      send_user "\r\nConsole session stolen.\r\n"
+      exit 1
+    }
+    send "start -script /SP/console\r"
+    expect {
+      -re "\r\nSerial console is in use.\r\n" {
+        send_user "\r\nConsole session stolen.\r\n"
+        exit 1
+      }
+      -re "\r\nSerial console started.\[^\r]*\r+\n"
+    }
   }
 }
