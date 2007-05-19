@@ -1,5 +1,7 @@
 2007-05-19  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* lib/exec/ibm-bc.exp: Consolidated new timeouts in interact clause.
+
 	* lib/exec/sun-ilom.exp: Tweaked "session_override" comment.  Changed
 	  behavior to prevent theft of console session if "session_override"
 	  is enabled, or exit with an appropriate message otherwise.

@@ -262,10 +262,10 @@ expect {
 }
 send_user "Connection established via telnet (pid $spawn_result).\r\n"
 
+set timeout 2
 interact {
   # Replace "&B" with serial-break.
   "&B" {
-    set timeout 2
     send "\035send brk\r\n"
     expect "telnet> send brk"
   }
@@ -280,7 +280,6 @@ interact {
   #   the BladeCenter management module prompt.  If "session_override" is set,
   #   this will also prevent the console session from being stolen.
   -re "\r\nsystem> \$" {
-    set timeout 2
     send "$cmd\r"
     expect {
       -gl "\r\nSOL session is already active\r\nsystem> \$" {
