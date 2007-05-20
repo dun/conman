@@ -194,3 +194,5 @@ expect {
 send_user "Connection established via ssh (pid $spawn_result).\r\n"
 
 interact
+# Since the default ssh escape character was changed from "~" to "&",
+#   "&B" will generate a serial-break.

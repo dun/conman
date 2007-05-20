@@ -1,5 +1,8 @@
 2007-05-19  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* lib/exec/cyclades-ssh.exp, lib/exec/ssh.exp:
+	  Added serial-break comment to interact clause.
+
 	* lib/exec/cyclades-ssh.exp, lib/exec/cyclades-telnet.exp:
 	  Updated user/pswd comment with default password.
 
