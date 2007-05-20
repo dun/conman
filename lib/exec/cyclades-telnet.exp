@@ -65,8 +65,8 @@
 # Command-line argument defaults can be specified here.  This avoids exposing
 #   sensitive information on the command-line.
 ##
-# set user "foo"
-# set pswd "bar"
+# set user "root"
+# set pswd "tslinux"
 
 ###############################################################################
 

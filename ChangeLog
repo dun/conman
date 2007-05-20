@@ -1,5 +1,8 @@
 2007-05-19  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* lib/exec/cyclades-ssh.exp, lib/exec/cyclades-telnet.exp:
+	  Updated user/pswd comment with default password.
+
 	* lib/exec/ibm-bc.exp: Consolidated new timeouts in interact clause.
 
 	* lib/exec/sun-ilom.exp: Tweaked "session_override" comment.  Changed
