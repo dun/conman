@@ -243,6 +243,13 @@ expect {
     }
     exp_continue -continue_timer
   }
+  -nocase -gl "User does not have the authority to issue this command.\r\n" {
+    if {$cmd_sent != 0} {
+      set bcmm_timeout -1
+      set cmd_sent 0
+    }
+    exp_continue -continue_timer
+  }
   -nocase -gl "system> \$" {
     if {($bcmm_timeout >= 0) && ($cmd_sent == 0)} {
       send "telnetcfg -T system:mm\[$bcmm_bay] -t $bcmm_timeout\r"
