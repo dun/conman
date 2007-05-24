@@ -1,3 +1,7 @@
+2007-05-24  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* META, NEWS: Updated for 0.2.1 release.
+
 2007-05-22  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* lib/exec/ibm-bc.exp: Added pattern to handle case where user does not

@@ -1,3 +1,7 @@
+conman-0.2.1 (2007-05-24):
+- Added console script for Sun ILOM.
+- Fixed minor issues with existing console scripts.
+
 conman-0.2.0 (2007-05-02):
 - Changed project homepage to <http://home.gna.org/conman/>.
 - Added support for consoles to be driven by an external process.
