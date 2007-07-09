@@ -1,3 +1,7 @@
+2007-07-09  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* Makefile.in: Fixed bug in SERVER_OBJS3 to reference server-telnet.o.
+
 2007-05-24  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* : Released 0.2.1.
