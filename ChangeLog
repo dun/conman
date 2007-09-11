@@ -1,3 +1,11 @@
+2007-09-10  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* etc/conman.init.in: Fixed bug with SCRIPT_NAME not removing the
+	  leading /[SK][0-9]+/, thereby causing the sysconfig file to be
+	  ignored at boot (when referenced via "/etc/rc5.d/S95conman").
+	* etc/conman.init.in: Fixed bug with RH_SUBSYS referencing the init
+	  script name instead of the executable daemon name.
+
 2007-07-09  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* Makefile.in: Fixed bug in SERVER_OBJS3 to reference server-telnet.o.
