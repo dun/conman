@@ -1,3 +1,7 @@
+2007-09-27  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* conman.spec: Added tcp_wrappers BuildRequires for mock builds.
+
 2007-09-10  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* etc/conman.init.in: Fixed bug with SCRIPT_NAME not removing the
