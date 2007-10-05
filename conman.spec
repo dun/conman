@@ -61,7 +61,7 @@ fi
 %doc AUTHORS
 %doc ChangeLog
 %doc COPYING
-%doc DISCLAIMER
+%doc DISCLAIMER*
 %doc FAQ
 %doc NEWS
 %doc README

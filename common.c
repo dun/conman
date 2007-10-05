@@ -1,9 +1,9 @@
 /*****************************************************************************
  *  $Id$
  *****************************************************************************
- *  Copyright (C) 2001-2007 The Regents of the University of California.
- *  Produced at Lawrence Livermore National Laboratory.
  *  Written by Chris Dunlap <cdunlap@llnl.gov>.
+ *  Copyright (C) 2007 Lawrence Livermore National Security, LLC.
+ *  Copyright (C) 2001-2007 The Regents of the University of California.
  *  UCRL-CODE-2002-009.
  *
  *  This file is part of ConMan: The Console Manager.
@@ -19,9 +19,8 @@
  *  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
  *  for more details.
  *
- *  You should have received a copy of the GNU General Public License along
- *  with this program; if not, write to the Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA.
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
 
@@ -40,15 +39,18 @@
 
 
 const char *conman_license = \
-    "ConMan: The Console Manager\n\n"                                         \
-    "Copyright (C) 2001-2007 The Regents of the University of California.\n"  \
-    "Produced at Lawrence Livermore National Laboratory.\n"                   \
-    "Written by Chris Dunlap <cdunlap@llnl.gov>.\n"                           \
+    "ConMan: The Console Manager\n"                                           \
     "http://home.gna.org/conman/\n"                                           \
-    "UCRL-CODE-2002-009\n\n"                                                  \
+    "\n"                                                                      \
+    "Written by Chris Dunlap <cdunlap@llnl.gov>.\n"                           \
+    "Copyright (C) 2007 Lawrence Livermore National Security, LLC.\n"         \
+    "Copyright (C) 2001-2007 The Regents of the University of California.\n"  \
+    "\n"                                                                      \
     "ConMan is free software; you can redistribute it and/or modify it\n"     \
     "under the terms of the GNU General Public License as published by\n"     \
-    "the Free Software Foundation.\n\n";
+    "the Free Software Foundation; either version 2 of the License, or\n"     \
+    "(at your option) any later version.\n"                                   \
+    "\n";
 
 
 char *proto_strs[] = {
