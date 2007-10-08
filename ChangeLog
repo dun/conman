@@ -1,3 +1,7 @@
+2007-10-08  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* etc/conman.init.in: Changed default start/stop runlevels.
+
 2007-10-05  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* : Updated copyright info for LLNS.
