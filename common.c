@@ -155,6 +155,11 @@ void get_tty_mode(struct termios *tty, int fd)
 void set_tty_mode(struct termios *tty, int fd)
 {
 /*  Sets the tty values associated with 'fd' to those stored in 'tty'.
+ *
+ *  FIXME: tcsetattr() returns 0 (success) if it is able to perform ANY of the
+ *    requested actions.  Therefore, after calling tcsetattr(), one must call
+ *    tcgetattr() and compare the actual terminal's attributes to the desired
+ *    attributes to detect any differences.  (APUE2 18.4)
  */
     assert(fd >= 0);
     assert(tty != NULL);
@@ -178,8 +183,14 @@ void get_tty_raw(struct termios *tty, int fd)
 
     get_tty_mode(tty, fd);
 
-    tty->c_iflag = 0;
-    tty->c_oflag = 0;
+    /*  Disable SIGINT on BREAK, CR-to-NL, input parity check,
+     *    stripping 8th bit on input, and output flow control.
+     */
+    tty->c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+
+    /*  Disable output processing.
+     */
+    tty->c_oflag &= ~(OPOST);
 
     /*  Set 8 bits/char.
      */
