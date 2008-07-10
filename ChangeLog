@@ -1,5 +1,7 @@
 2008-07-10  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* THANKS: Added.
+
 	* server-telnet.c (connect_telnet_obj): Added errno to socket()
 	  failure error message.
 	* server-telnet.c (disconnect_telnet_obj): Moved line for state change
