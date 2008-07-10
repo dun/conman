@@ -171,7 +171,7 @@ static int connect_telnet_obj(obj_t *telnet)
             return(-1);
         }
         if ((telnet->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-            log_err(0, "Unable to create socket for [%s]", telnet->name);
+            log_err(errno, "Unable to create socket for [%s]", telnet->name);
         }
         if (setsockopt(telnet->fd, SOL_SOCKET, SO_OOBINLINE,
                 (const void *) &on, sizeof(on)) < 0) {
@@ -286,9 +286,10 @@ static void disconnect_telnet_obj(obj_t *telnet)
             "Console [%s] disconnected from <%s:%d>",
             telnet->name, telnet->aux.telnet.host, telnet->aux.telnet.port);
     }
-    /*  Set timer for establishing new connection using exponential backoff.
-     */
     telnet->aux.telnet.conState = CONMAN_TELCON_DOWN;
+    /*
+     *  Set timer for establishing new connection using exponential backoff.
+     */
     telnet->aux.telnet.timer = tpoll_timeout_relative(tp_global,
         (callback_f) connect_telnet_obj, telnet,
         telnet->aux.telnet.delay * 1000);

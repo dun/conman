@@ -1,5 +1,10 @@
 2008-07-10  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-telnet.c (connect_telnet_obj): Added errno to socket()
+	  failure error message.
+	* server-telnet.c (disconnect_telnet_obj): Moved line for state change
+	  to separate it from the new timer being set.
+
 	* : Added support for console devices using unix domain sockets.
 	* server.h: Added unixsock_obj_t and related defs.
 	* server.c (mux_io): Added unixsock objs to tpoll set.
