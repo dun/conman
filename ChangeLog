@@ -1,3 +1,21 @@
+2008-07-10  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* : Added support for console devices using unix domain sockets.
+	* server.h: Added unixsock_obj_t and related defs.
+	* server.c (mux_io): Added unixsock objs to tpoll set.
+	* server-conf.c (process_console): Updated to create unixsock obj.
+	* server-conf.c (is_unixsock_dev): Added to parse unixsock console.
+	* server-logfile.c (create_logfile_obj): Updated for unixsock obj.
+	* server-logfile.c (get_console_logfile_obj): Updated for unixsock obj.
+	* server-obj.c (create_obj): Updated assert of valid obj types.
+	* server-obj.c (destroy_obj): Added unixsock obj destructor.
+	* server-obj.c (reopen_obj): Added case to reopen unixsock obj.
+	* server-sock.c (check_console_state): Added check for unixsock obj
+	  to warn client if disconnected and attempt immediate reconnect.
+	* server-unixsock.c: Added.
+	* Makefile.in: Added server-unixsock.o.
+	* man/conman.conf.5.in, etc/conman.conf: Documented "unix:" dev prefix.
+
 2008-01-10  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* common.c (get_tty_raw): Changed settings for c_iflag & c_oflag.

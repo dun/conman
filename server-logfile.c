@@ -177,6 +177,9 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name,
     else if (is_telnet_obj(console)) {
         console->aux.telnet.logfile = logfile;
     }
+    else if (is_unixsock_obj(console)) {
+        console->aux.unixsock.logfile = logfile;
+    }
     else {
         log_err(0, "INTERNAL: Unrecognized console [%s] type=%d",
             console->name, console->type);
@@ -299,6 +302,9 @@ obj_t * get_console_logfile_obj(obj_t *console)
     }
     else if (is_telnet_obj(console)) {
         logfile = console->aux.telnet.logfile;
+    }
+    else if (is_unixsock_obj(console)) {
+        logfile = console->aux.unixsock.logfile;
     }
     else {
         log_err(0, "INTERNAL: Unrecognized console [%s] type=%d",

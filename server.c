@@ -650,6 +650,10 @@ static void mux_io(server_conf_t *conf)
             reconfig = 0;
         }
 
+        /*  FIXME: Switch from recomputing the tpoll set on each loop iteration
+         *    to modifying it based on events.  This will eliminate the 1sec
+         *    tpoll() sleep timeout and greatly reduce cpu utilization.
+         */
         (void) tpoll_zero(conf->tp, TPOLL_ZERO_FDS);
         tpoll_set(conf->tp, conf->ld, POLLIN);
 
@@ -662,19 +666,25 @@ static void mux_io(server_conf_t *conf)
             if (obj->fd < 0) {
                 continue;
             }
-            if ((is_telnet_obj(obj)
-                && obj->aux.telnet.conState == CONMAN_TELCON_UP)
-              || is_serial_obj(obj)
-              || is_process_obj(obj)
-              || is_client_obj(obj)) {
+            if ( is_client_obj(obj)  ||
+                 is_process_obj(obj) ||
+                 is_serial_obj(obj)  ||
+                 ( is_telnet_obj(obj)  &&
+                   obj->aux.telnet.conState == CONMAN_TELCON_UP) ||
+                 ( is_unixsock_obj(obj) &&
+                   obj->aux.unixsock.state == CONMAN_UNIXSOCK_UP))
+            {
                 tpoll_set(conf->tp, obj->fd, POLLIN);
             }
-            if (((obj->bufInPtr != obj->bufOutPtr) || (obj->gotEOF))
-              && (!(is_client_obj(obj) && obj->aux.client.gotSuspend))) {
+            if ( ( (obj->bufInPtr != obj->bufOutPtr) ||
+                   (obj->gotEOF) ) &&
+                 ( ! (is_client_obj(obj) && obj->aux.client.gotSuspend) ) )
+            {
                 tpoll_set(conf->tp, obj->fd, POLLOUT);
             }
-            if (is_telnet_obj(obj)
-              && obj->aux.telnet.conState == CONMAN_TELCON_PENDING) {
+            if (is_telnet_obj(obj) &&
+                obj->aux.telnet.conState == CONMAN_TELCON_PENDING)
+            {
                 tpoll_set(conf->tp, obj->fd, POLLIN | POLLOUT);
             }
         }

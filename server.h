@@ -56,13 +56,16 @@
 #define TELNET_MAX_TIMEOUT              1800
 #define TELNET_MIN_TIMEOUT              15
 
+#define UNIXSOCK_RETRY_TIMEOUT          60
+
 
 enum obj_type {                         /* type of auxiliary obj (3 bits)    */
     CONMAN_OBJ_CLIENT,
     CONMAN_OBJ_LOGFILE,
     CONMAN_OBJ_PROCESS,
     CONMAN_OBJ_SERIAL,
-    CONMAN_OBJ_TELNET
+    CONMAN_OBJ_TELNET,
+    CONMAN_OBJ_UNIXSOCK
 };
 
 typedef struct client_obj {             /* CLIENT AUX OBJ DATA:              */
@@ -135,12 +138,25 @@ typedef struct telnet_obj {             /* TELNET AUX OBJ DATA:              */
     unsigned         enableKeepAlive:1; /*  true if using TCP keep-alive     */
 } telnet_obj_t;
 
+typedef enum unixsock_connect_state {   /* socket connection state (1 bit)   */
+    CONMAN_UNIXSOCK_DOWN,
+    CONMAN_UNIXSOCK_UP
+} unixsock_state_t;
+
+typedef struct unixsock_obj {           /* UNIXSOCK AUX OBJ DATA:            */
+    char            *dev;               /*  unix domain socket device name   */
+    struct base_obj *logfile;           /*  log obj ref for console replay   */
+    int              timer;             /*  timer id for reconnects          */
+    unsigned         state:1;           /*  unixsock_state_t conn state      */
+} unixsock_obj_t;
+
 typedef union aux_obj {
     client_obj_t     client;
     logfile_obj_t    logfile;
     process_obj_t    process;
     serial_obj_t     serial;
     telnet_obj_t     telnet;
+    unixsock_obj_t   unixsock;
 } aux_obj_t;
 
 typedef struct base_obj {               /* BASE OBJ:                         */
@@ -237,8 +253,12 @@ typedef struct client_args {
 #define is_process_obj(OBJ)  (OBJ->type == CONMAN_OBJ_PROCESS)
 #define is_serial_obj(OBJ)   (OBJ->type == CONMAN_OBJ_SERIAL)
 #define is_telnet_obj(OBJ)   (OBJ->type == CONMAN_OBJ_TELNET)
+#define is_unixsock_obj(OBJ) (OBJ->type == CONMAN_OBJ_UNIXSOCK)
 #define is_console_obj(OBJ)  \
-    (is_process_obj(OBJ) || is_serial_obj(OBJ) || is_telnet_obj(OBJ))
+    (is_process_obj(OBJ) ||  \
+     is_serial_obj(OBJ)  ||  \
+     is_telnet_obj(OBJ)  ||  \
+     is_unixsock_obj(OBJ))
 
 
 /*  server-conf.c
@@ -344,6 +364,14 @@ int open_telnet_obj(obj_t *telnet);
 int process_telnet_escapes(obj_t *telnet, void *src, int len);
 
 int send_telnet_cmd(obj_t *telnet, int cmd, int opt);
+
+
+/*  server-unixsock.c
+ */
+obj_t * create_unixsock_obj(server_conf_t *conf, char *name, char *dev,
+    char *errbuf, int errlen);
+
+int open_unixsock_obj(obj_t *unixsock);
 
 
 #endif /* !_SERVER_H */

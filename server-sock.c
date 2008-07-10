@@ -920,5 +920,15 @@ static void check_console_state(obj_t *console, obj_t *client)
             open_telnet_obj(console);
         }
     }
+    else if (is_unixsock_obj(console)
+            && (console->aux.unixsock.state != CONMAN_UNIXSOCK_UP)) {
+        snprintf(buf, sizeof(buf),
+            "%sConsole [%s] is currently disconnected from \"%s\"%s",
+            CONMAN_MSG_PREFIX, console->name, console->aux.unixsock.dev,
+            CONMAN_MSG_SUFFIX);
+        strcpy(&buf[sizeof(buf) - 3], "\r\n");
+        write_obj_data(client, buf, strlen(buf), 1);
+        open_unixsock_obj(console);
+    }
     return;
 }

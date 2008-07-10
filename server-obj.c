@@ -67,7 +67,8 @@ obj_t * create_obj(
         || type==CONMAN_OBJ_LOGFILE
         || type==CONMAN_OBJ_PROCESS
         || type==CONMAN_OBJ_SERIAL
-        || type==CONMAN_OBJ_TELNET);
+        || type==CONMAN_OBJ_TELNET
+        || type==CONMAN_OBJ_UNIXSOCK);
 
     if (!(obj = malloc(sizeof(obj_t))))
         out_of_memory();
@@ -196,6 +197,13 @@ void destroy_obj(obj_t *obj)
         /*  Do not destroy obj->aux.telnet.logfile since it is only a ref.
          */
         break;
+    case CONMAN_OBJ_UNIXSOCK:
+        if (obj->aux.unixsock.dev) {
+            free(obj->aux.unixsock.dev);
+        }
+        /*  Do not destroy obj->aux.unixsock.logfile since it is only a ref.
+         */
+        break;
     default:
         log_err(0, "INTERNAL: Unrecognized object [%s] type=%d",
             obj->name, obj->type);
@@ -237,6 +245,9 @@ void reopen_obj(obj_t *obj)
     }
     else if (is_telnet_obj(obj)) {
         open_telnet_obj(obj);
+    }
+    else if (is_unixsock_obj(obj)) {
+        open_unixsock_obj(obj);
     }
     else if (is_client_obj(obj)) {
         ; /* no-op */

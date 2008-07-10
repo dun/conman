@@ -147,16 +147,31 @@ Specifies the name used by clients to refer to the console.  This keyword
 is required.
 .TP
 \fBdev\fR \fB=\fR "\fIstring\fR"
-Specifies the type and location of the device.  A local serial-port connection
-is defined by the pathname of the character device file.  A remote
-terminal-server connection using the telnet protocol is defined by the
-"\fIhost\fR:\fIport\fR" format (where "\fIhost\fR" is either a hostname or IPv4
-address).  An external process-based connection is defined by the "\fIpath
-args\fR" format (where "\fIpath\fR" is a pathname to an executable file/script,
-and any additional "\fIargs\fR" are space-delimited); the
+Specifies the type and location of the device.  This keyword is required.
+.br
+.sp
+A local serial port connection is defined by the pathname of the character
+device file.
+.br
+.sp
+A remote terminal server connection using the telnet protocol is defined by
+the "\fIhost\fR:\fIport\fR" format (where \fIhost\fR is the remote hostname
+or IPv4 address, and \fIport\fR is the remote port number).
+.br
+.sp
+An external process-based connection is defined by the "\fIpath\fR
+\fIargs\fR" format (where \fIpath\fR is the pathname to an executable
+file/script, and any additional \fIargs\fR are space-delimited); the
 \fI@prefix@/lib/@PROJECT@/exec\fR directory contains scripts for various
-console types.  The '%N' character sequence will be replaced by the console
-name.  This keyword is required.
+console types.
+.br
+.sp
+A local unix domain socket connection is defined by the "unix:\fIpath\fR"
+format (where "unix:" is the literal character string prefix and \fIpath\fR
+is the pathname of the local socket).
+.br
+.sp
+The '%N' character sequence will be replaced by the console name.
 .TP
 \fBlog\fR \fB=\fR "\fIfile\fR"
 Specifies the file where console output is logged.  This string undergoes

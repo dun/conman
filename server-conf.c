@@ -177,6 +177,7 @@ static int is_process_dev(const char *dev, const char *cwd,
     const char *exec_path, char **path_ref);
 static int search_exec_path(const char *path, const char *src,
     char *dst, int dstlen);
+static int is_unixsock_dev(const char *dev, const char *cwd, char **path_ref);
 static void parse_global_directive(server_conf_t *conf, Lex l);
 static void parse_server_directive(server_conf_t *conf, Lex l);
 static int read_pidfile(const char *pidfile);
@@ -812,6 +813,19 @@ static int process_console(server_conf_t *conf, console_strs_t *con_p,
             goto err;
         }
     }
+    else if (is_unixsock_dev(arg0, conf->cwd, &path)) {
+        if (list_count(args) != 1) {
+            snprintf(errbuf, errbuflen,
+                "console [%s] dev string has too many args", con_p->name);
+            goto err;
+        }
+        if (!(console = create_unixsock_obj(
+                conf, con_p->name, path, errbuf, errbuflen))) {
+            goto err;
+        }
+        free(host);
+        host = NULL;
+    }
     else {
         snprintf(errbuf, errbuflen,
             "console [%s] device \"%s\" type unrecognized",
@@ -999,6 +1013,35 @@ static int search_exec_path(const char *path, const char *src,
         return(0);
     }
     return(-1);
+}
+
+
+static int is_unixsock_dev(const char *dev, const char *cwd, char **path_ref)
+{
+    const char *prefix = "unix:";
+    int         n;
+    char        buf[PATH_MAX];
+
+    assert(dev != NULL);
+
+    if (strncasecmp(dev, prefix, strlen(prefix)) != 0) {
+        return(0);
+    }
+    dev += strlen(prefix);
+    if (dev[0] == '\0') {
+        return(0);
+    }
+    if ((dev[0] != '/') && (cwd != NULL)) {
+        n = snprintf(buf, sizeof(buf), "%s/%s", cwd, dev);
+        if ((n < 0) || (n >= sizeof(buf))) {
+            return(0);
+        }
+        dev = buf;
+    }
+    if (path_ref) {
+        *path_ref = create_string(dev);
+    }
+    return(1);
 }
 
 
