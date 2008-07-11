@@ -65,6 +65,7 @@ fi
 %doc FAQ
 %doc NEWS
 %doc README
+%doc THANKS
 %config(noreplace) %{_sysconfdir}/conman.conf
 %config(noreplace) %{_sysconfdir}/*/*
 %{_bindir}/*

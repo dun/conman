@@ -1,5 +1,7 @@
 2008-07-10  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* conman.spec: Added THANKS to %doc.
+
 	* README, conman.spec: Tweaked description.
 
 	* THANKS: Added.
