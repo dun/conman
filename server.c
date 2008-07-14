@@ -754,7 +754,7 @@ static void open_daemon_logfile(server_conf_t *conf)
     static int once = 1;
     const char *mode = "a";
     mode_t mask;
-    FILE *fp;
+    FILE *fp = NULL;
     int fd;
 
     assert(conf->logFileName != NULL);
@@ -830,6 +830,9 @@ static void open_daemon_logfile(server_conf_t *conf)
     return;
 
 err:
+    if (fp) {
+        (void) fclose(fp);
+    }
     /*  Abandon old log file and go logless.
      */
     log_set_file(NULL, 0, 0);

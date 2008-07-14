@@ -1,5 +1,8 @@
 2008-07-14  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server.c (open_daemon_logfile): Fixed potential resource leak when
+	  error occurs while (re)opening daemon logfile.
+
 	* lib/exec/ibm-bc.exp: Added case for when "target bay is empty".
 
 	* server-conf.c (process_console): Moved test for is_unixsock_dev() to
