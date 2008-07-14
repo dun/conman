@@ -1,5 +1,7 @@
 2008-07-14  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* lib/exec/ibm-bc.exp: Added case for when "target bay is empty".
+
 	* server-conf.c (process_console): Moved test for is_unixsock_dev() to
 	  the top of the if/else clause to ensure the "unix:" prefix cannot be
 	  misinterpreted.
