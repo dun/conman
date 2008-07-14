@@ -767,7 +767,20 @@ static int process_console(server_conf_t *conf, console_strs_t *con_p,
             "console [%s] dev string is empty", con_p->name);
         goto err;
     }
-    if (is_telnet_dev(arg0, &host, &port)) {
+    if (is_unixsock_dev(arg0, conf->cwd, &path)) {
+        if (list_count(args) != 1) {
+            snprintf(errbuf, errbuflen,
+                "console [%s] dev string has too many args", con_p->name);
+            goto err;
+        }
+        if (!(console = create_unixsock_obj(
+                conf, con_p->name, path, errbuf, errbuflen))) {
+            goto err;
+        }
+        free(host);
+        host = NULL;
+    }
+    else if (is_telnet_dev(arg0, &host, &port)) {
         if (list_count(args) != 1) {
             snprintf(errbuf, errbuflen,
                 "console [%s] dev string has too many args", con_p->name);
@@ -812,19 +825,6 @@ static int process_console(server_conf_t *conf, console_strs_t *con_p,
                 conf, con_p->name, args, errbuf, errbuflen))) {
             goto err;
         }
-    }
-    else if (is_unixsock_dev(arg0, conf->cwd, &path)) {
-        if (list_count(args) != 1) {
-            snprintf(errbuf, errbuflen,
-                "console [%s] dev string has too many args", con_p->name);
-            goto err;
-        }
-        if (!(console = create_unixsock_obj(
-                conf, con_p->name, path, errbuf, errbuflen))) {
-            goto err;
-        }
-        free(host);
-        host = NULL;
     }
     else {
         snprintf(errbuf, errbuflen,
