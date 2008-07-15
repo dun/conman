@@ -1,5 +1,9 @@
 2008-07-14  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-sock.c (query_consoles_via_regex): Initialized rex to silence
+	  "uninitialized use" warnings when calling regcomp(), even though that
+	  parm is output-only.
+
 	* server.c (open_daemon_logfile): Fixed potential resource leak when
 	  error occurs while (re)opening daemon logfile.
 

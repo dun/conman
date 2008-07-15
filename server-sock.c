@@ -525,6 +525,10 @@ static int query_consoles_via_regex(
     }
     list_iterator_destroy(i);
 
+    /*  Initialize 'rex' to silence "uninitialized use" warnings.
+     */
+    memset(&rex, 0, sizeof(rex));
+
     /*  Compile regex for searching server's console objs.
      */
     rc = regcomp(&rex, buf, REG_EXTENDED | REG_ICASE);
