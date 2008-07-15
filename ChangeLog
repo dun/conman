@@ -1,5 +1,7 @@
 2008-07-14  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* lex.c (lex_create): Added check for null toks.
+
 	* server.c (open_daemon_logfile): Fixed double-free() of fp on error.
 
 	* log.c (log_err): Fixed bug comparing array against NULL.

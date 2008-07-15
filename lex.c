@@ -103,17 +103,23 @@ static int lookup_token(char *str, char *toks[], int numtoks);
 Lex lex_create(void *buf, char *toks[])
 {
     Lex l;
-    int n;
 
     assert(buf != NULL);
     assert(validate_sorted_tokens(toks) >= 0);
 
-    if (!(l = (Lex) malloc(sizeof(struct lexer_state))))
+    if (!(l = (Lex) malloc(sizeof(struct lexer_state)))) {
         return(out_of_memory());
+    }
     l->pos = buf;
     l->toks = toks;
-    for (n=0; toks[n] != NULL; n++) {;}
-    l->numtoks = n;
+    if (!toks) {
+        l->numtoks = 0;
+    }
+    else {
+        int n;
+        for (n=0; toks[n] != NULL; n++) {;}
+        l->numtoks = n;
+    }
     l->text[0] = '\0';
     l->prev = 0;
     l->line = 0;
