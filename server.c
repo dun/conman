@@ -808,10 +808,6 @@ static void open_daemon_logfile(server_conf_t *conf)
     if (get_write_lock(fd) < 0) {
         log_msg(LOG_WARNING, "Unable to lock daemon logfile \"%s\"",
             conf->logFileName);
-        if (fclose(fp) == EOF) {
-            log_msg(LOG_WARNING, "Unable to close daemon logfile \"%s\"",
-                conf->logFileName);
-        }
         goto err;
     }
     set_fd_closed_on_exec(fd);
