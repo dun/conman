@@ -355,7 +355,7 @@ void lex_parse_test(char *buf, char *toks[])
     int tok;
     int newline = 1;
 
-    if (!buf || !toks || !(l = lex_create(buf, toks)))
+    if (!buf || !(l = lex_create(buf, toks)))
         return;
 
     while ((tok = lex_next(l)) != LEX_EOF) {
