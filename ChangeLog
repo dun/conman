@@ -1,5 +1,8 @@
 2008-07-14  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* lex.c (validate_sorted_tokens): Added guard for null toks.
+	* lex.c (lex_parse_test): Added guard for null toks.
+
 	* server-sock.c (query_consoles_via_regex): Initialized rex to silence
 	  "uninitialized use" warnings when calling regcomp(), even though that
 	  parm is output-only.

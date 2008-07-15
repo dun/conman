@@ -279,6 +279,9 @@ static int validate_sorted_tokens(char *toks[])
     char **pp;
     char *p, *q;
 
+    if (!toks) {
+        return(-1);
+    }
     if ((pp = toks) && *pp) {
         for (p=*pp++, q=*pp++; q; p=q, q=*pp++) {
             if (xstrcasecmp(p, q) > 0)
@@ -352,7 +355,7 @@ void lex_parse_test(char *buf, char *toks[])
     int tok;
     int newline = 1;
 
-    if (!buf || !(l = lex_create(buf, toks)))
+    if (!buf || !toks || !(l = lex_create(buf, toks)))
         return;
 
     while ((tok = lex_next(l)) != LEX_EOF) {
