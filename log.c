@@ -144,7 +144,7 @@ void log_err(int errnum, const char *format, ...)
     if (log_fd_daemonize >= 0) {
         c = (signed char) priority;
         n = write(log_fd_daemonize, &c, sizeof(c));
-        if ((n > 0) && (msg != NULL) && (log_file_fp != stderr)) {
+        if ((n > 0) && (msg[0] != '\0') && (log_file_fp != stderr)) {
             if ((p = strchr(msg, '\n'))) {
                 *p = '\0';
             }
