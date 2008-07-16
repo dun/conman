@@ -1,3 +1,8 @@
+2008-07-16  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server-obj.c (format_obj_string): Fixed bug omitting "%D" conversion
+	  specifier for unixsock device name.
+
 2008-07-14  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* lex.c (lex_create): Added check for null toks.

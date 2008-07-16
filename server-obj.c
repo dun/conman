@@ -311,7 +311,7 @@ int format_obj_string(char *buf, int buflen, obj_t *obj, const char *fmt)
             case 'D':                   /* console device */
                 if (!obj)
                     goto ignore_specifier;
-                if (is_serial_obj(obj)) {
+                if (is_serial_obj(obj) || is_unixsock_obj(obj)) {
                     q = obj->aux.serial.dev;
                     p = (p = strrchr(q, '/')) ? p + 1 : q;
                     m = strlen(p);
