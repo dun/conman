@@ -666,13 +666,15 @@ static void mux_io(server_conf_t *conf)
             if (obj->fd < 0) {
                 continue;
             }
-            if ( is_client_obj(obj)  ||
-                 is_process_obj(obj) ||
-                 is_serial_obj(obj)  ||
-                 ( is_telnet_obj(obj)  &&
-                   obj->aux.telnet.conState == CONMAN_TELCON_UP) ||
-                 ( is_unixsock_obj(obj) &&
-                   obj->aux.unixsock.state == CONMAN_UNIXSOCK_UP))
+            if ( ( is_client_obj(obj)  ||
+                   is_process_obj(obj) ||
+                   is_serial_obj(obj)  ||
+                   ( is_telnet_obj(obj) &&
+                     obj->aux.telnet.conState == CONMAN_TELCON_UP ) ||
+                   ( is_unixsock_obj(obj) &&
+                     obj->aux.unixsock.state == CONMAN_UNIXSOCK_UP ) )
+                 &&
+                 ( ! obj->gotEOF ) )
             {
                 tpoll_set(conf->tp, obj->fd, POLLIN);
             }

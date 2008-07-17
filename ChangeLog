@@ -1,5 +1,20 @@
 2008-07-17  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server.c (mux_io): Added test for !gotEOF before setting POLLIN.
+	* server-obj.c (read_from_obj): Set gotEOF flag upon reading EOF
+	  instead of immediately calling shutdown_obj() in order to attempt
+	  flushing the output buffer via write_to_obj().
+	* server-obj.c (write_obj_data): Added test for unixsock state.
+	* server-obj.c (write_to_obj): Added test for unixsock state.
+	  When marking obj as being "dead", perform shutdown_obj() instead of
+	  returning -1 and causing obj to be destroyed upon return to mux_io().
+	* server-logfile.c (open_logfile_obj),
+	  server-process.c (open_process_obj),
+	  server-serial.c (open_serial_obj),
+	  server-telnet.c (connect_telnet_obj),
+	  server-unixsock.c (connect_unixsock_obj):
+	  Reset gotEOF flag when (re)opening console device.
+
 	* servers-sock.c (check_console_state): Changed test for unixsock obj
 	  being marked as down.
 

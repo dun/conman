@@ -234,12 +234,13 @@ static int connect_telnet_obj(obj_t *telnet)
         log_err(0, "Console [%s] is in unexpected telnet state=%d",
             telnet->aux.telnet.conState);
     }
+    telnet->gotEOF = 0;
+    telnet->aux.telnet.conState = CONMAN_TELCON_UP;
+
     /*  Notify linked objs when transitioning into an UP state.
      */
     write_notify_msg(telnet, LOG_INFO, "Console [%s] connected to <%s:%d>",
         telnet->name, telnet->aux.telnet.host, telnet->aux.telnet.port);
-
-    telnet->aux.telnet.conState = CONMAN_TELCON_UP;
     /*
      *  Require the connection to be up for a minimum length of time
      *    before resetting the reconnect delay back to zero.  This protects

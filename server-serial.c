@@ -399,6 +399,7 @@ int open_serial_obj(obj_t *serial)
     set_serial_opts(&tty, serial, &serial->aux.serial.opts);
     set_tty_mode(&tty, fd);
     serial->fd = fd;
+    serial->gotEOF = 0;
     /*
      *  Success!
      */

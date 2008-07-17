@@ -63,12 +63,12 @@ obj_t * create_obj(
 
     assert(conf != NULL);
     assert(name != NULL);
-    assert(type==CONMAN_OBJ_CLIENT
-        || type==CONMAN_OBJ_LOGFILE
-        || type==CONMAN_OBJ_PROCESS
-        || type==CONMAN_OBJ_SERIAL
-        || type==CONMAN_OBJ_TELNET
-        || type==CONMAN_OBJ_UNIXSOCK);
+    assert(type==CONMAN_OBJ_CLIENT  ||
+           type==CONMAN_OBJ_LOGFILE ||
+           type==CONMAN_OBJ_PROCESS ||
+           type==CONMAN_OBJ_SERIAL  ||
+           type==CONMAN_OBJ_TELNET  ||
+           type==CONMAN_OBJ_UNIXSOCK);
 
     if (!(obj = malloc(sizeof(obj_t))))
         out_of_memory();
@@ -749,10 +749,19 @@ int shutdown_obj(obj_t *obj)
     if (obj->fd < 0) {
         return(0);
     }
+    /*  Close the existing connection.
+     */
     if (close(obj->fd) < 0) {
         log_err(errno, "Unable to close object [%s]", obj->name);
     }
     obj->fd = -1;
+    /*
+     *  FIXME:  The connection state should ideally be marked as DOWN here if
+     *    applicable (eg, telnet & unixsock), perhaps via a close_foo_obj().
+     *    However, reopen_obj() below calls open_foo_obj() which checks the
+     *    state and calls disconnect_foo_obj() if the state was UP.  This
+     *    should be refactored since it's confusing.
+     */
 
     /*  Flush the obj's buffer.
      */
@@ -809,7 +818,22 @@ int read_from_obj(obj_t *obj, tpoll_t tp)
 
     assert(obj->fd >= 0);
 
+    if (obj->gotEOF) {
+        /*
+         *  This code path can happen on POLLHUP or POLLERR.
+         */
+        DPRINTF((1, "Attempted to read from [%s] after EOF.\n", obj->name));
+        return(0);
+    }
     /*  Do not read from an active telnet obj that is not yet in the UP state.
+     *
+     *  The state of telnet objs must be checked here since it can be either
+     *    UP or DOWN.  Before calling tpoll() in server.c:mux_io(), a telnet
+     *    obj must be either UP or PENDING in order to check for POLLIN events.
+     *    But a PENDING telnet obj will be forced into either the UP or DOWN
+     *    state via open_telnet_obj() before read_from_obj() is called.
+     *  The state of unixsock objs does not need to be checked here since it
+     *    must be UP.
      */
     if (is_telnet_obj(obj) && obj->aux.telnet.conState != CONMAN_TELCON_UP) {
         return(0);
@@ -827,15 +851,13 @@ again:
         return(shutdown_obj(obj));
     }
     else if (n == 0) {
-        int rc = shutdown_obj(obj);
-        if (obj->fd >= 0) {
-            tpoll_set(tp, obj->fd, POLLOUT);    /* ensure buffer is flushed */
-        }
-        return(rc);
+        DPRINTF((15, "Read EOF from [%s].\n", obj->name));
+        obj->gotEOF = 1;
+        tpoll_set(tp, obj->fd, POLLOUT);        /* attempt to flush buffer */
+        return(0);
     }
     else {
         DPRINTF((15, "Read %d bytes from [%s].\n", n, obj->name));
-
         if (is_client_obj(obj)) {
             x_pthread_mutex_lock(&obj->bufLock);
             time(&obj->aux.client.timeLastRead);
@@ -903,8 +925,12 @@ int write_obj_data(obj_t *obj, const void *src, int len, int isInfo)
     /*  If the obj is a disconnected console connection,
      *    data will be discarded so perform a no-op here.
      */
-    if ((is_telnet_obj(obj) && obj->aux.telnet.conState != CONMAN_TELCON_UP)
-            || (is_console_obj(obj) && (obj->fd < 0))) {
+    if ( ( is_telnet_obj(obj) &&
+           obj->aux.telnet.conState != CONMAN_TELCON_UP ) || 
+         ( is_unixsock_obj(obj) &&
+           obj->aux.unixsock.state != CONMAN_UNIXSOCK_UP ) ||
+         ( is_console_obj(obj) && (obj->fd < 0) ) )
+    {
         DPRINTF((1, "Attempted to write to disconnected [%s].\n", obj->name));
         return(0);
     }
@@ -1026,14 +1052,17 @@ int write_to_obj(obj_t *obj)
      *    circular-buffer.  This remaining data will be written on the
      *    next invocation of this routine.  It's just simpler that way.
      *  If a client is suspended, no data is written out to its fd.
-     *  If a telnet connection goes down, the buffer is cleared.
+     *  If a connection goes down, the buffer is cleared.
      *  Note that if (bufInPtr == bufOutPtr), the obj's buffer is empty.
      */
     if (is_client_obj(obj) && obj->aux.client.gotSuspend) {
         avail = 0;
     }
-    else if (is_telnet_obj(obj)
-      && obj->aux.telnet.conState != CONMAN_TELCON_UP) {
+    else if ( ( is_telnet_obj(obj) &&
+                obj->aux.telnet.conState != CONMAN_TELCON_UP ) || 
+              ( is_unixsock_obj(obj) &&
+                obj->aux.unixsock.state != CONMAN_UNIXSOCK_UP ) )
+    {
         avail = 0;
         obj->bufInPtr = obj->bufOutPtr = obj->buf;
     }
@@ -1050,6 +1079,9 @@ again:
                 goto again;
             }
             if ((errno != EAGAIN) && (errno != EWOULDBLOCK)) {
+                /*
+                 *  Mark obj for shutdown.
+                 */
                 log_msg(LOG_INFO, "Unable to write to [%s]: %s",
                     obj->name, strerror(errno));
                 obj->gotEOF = 1;
@@ -1086,5 +1118,5 @@ again:
 
     x_pthread_mutex_unlock(&obj->bufLock);
 
-    return(isDead ? -1 : 0);
+    return(isDead ? shutdown_obj(obj) : 0);
 }

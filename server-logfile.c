@@ -261,6 +261,7 @@ int open_logfile_obj(obj_t *logfile)
         logfile->fd = -1;
         return(-1);
     }
+    logfile->gotEOF = 0;
     set_fd_nonblocking(logfile->fd);    /* redundant, just playing it safe */
     set_fd_closed_on_exec(logfile->fd);
 

@@ -211,6 +211,7 @@ int open_process_obj(obj_t *process)
     process->aux.process.count++;
     process->aux.process.pid = pid;
     process->fd = fdPair[0];
+    process->gotEOF = 0;
 
     write_notify_msg(process, LOG_INFO,
         "Console [%s] connected to \"%s\" (pid %d)",

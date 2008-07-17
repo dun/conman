@@ -213,6 +213,7 @@ static int connect_unixsock_obj(obj_t *unixsock)
      *    only an issue if two daemons are trying to simultaneously use the
      *    same local socket.
      */
+    unixsock->gotEOF = 0;
     auxp->state = CONMAN_UNIXSOCK_UP;
 
     /*  Notify linked objs when transitioning into an UP state.
