@@ -1,5 +1,8 @@
 2008-07-17  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* servers-sock.c (check_console_state): Changed test for unixsock obj
+	  being marked as down.
+
 	* server-esc.c (perform_serial_break): Added FIXME for handling
 	  serial-breaks for unixsock objs.
 
