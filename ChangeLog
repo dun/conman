@@ -1,3 +1,8 @@
+2008-07-17  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server-esc.c (perform_serial_break): Added FIXME for handling
+	  serial-breaks for unixsock objs.
+
 2008-07-16  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server-obj.c (format_obj_string): Fixed bug omitting "%D" conversion

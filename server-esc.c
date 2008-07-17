@@ -168,6 +168,8 @@ static void perform_serial_break(obj_t *client)
         else if (is_telnet_obj(console)) {
             send_telnet_cmd(console, BREAK, -1);
         }
+        /*  FIXME: How should serial-breaks be handled for unixsock objs?
+         */
     }
     list_iterator_destroy(i);
     return;
