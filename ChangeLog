@@ -1,5 +1,9 @@
 2008-07-17  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-telnet.c (open_telnet_obj): Fixed bug where calling
+	  open_telnet_obj() in the PENDING state would be misinterpreted
+	  as the completion of the non-blocking connect.
+
 	* server.c (mux_io): Added test for !gotEOF before setting POLLIN.
 	* server-obj.c (read_from_obj): Set gotEOF flag upon reading EOF
 	  instead of immediately calling shutdown_obj() in order to attempt
