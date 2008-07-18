@@ -52,6 +52,7 @@ static int send_esc_seq(client_conf_t *conf, char c);
 static int perform_break_esc(client_conf_t *conf, char c);
 static int perform_close_esc(client_conf_t *conf, char c);
 static int perform_del_esc(client_conf_t *conf, char c);
+static int perform_echo_esc(client_conf_t *conf, char c);
 static int perform_force_esc(client_conf_t *conf, char c);
 static int perform_help_esc(client_conf_t *conf, char c);
 static int perform_info_esc(client_conf_t *conf, char c);
@@ -188,6 +189,8 @@ static int read_from_stdin(client_conf_t *conf)
             return(perform_close_esc(conf, c));
         case ESC_CHAR_DEL:              /* XXX: gnats:100 del char kludge */
             return(perform_del_esc(conf, c));
+        case ESC_CHAR_ECHO:
+            return(perform_echo_esc(conf, c));
         case ESC_CHAR_FORCE:
             return(perform_force_esc(conf, c));
         case ESC_CHAR_HELP:
@@ -347,6 +350,23 @@ static int perform_del_esc(client_conf_t *conf, char c)
 }
 
 
+static int perform_echo_esc(client_conf_t *conf, char c)
+{
+/*  Toggles whether the client echoes its standard input.
+ *  Returns 1 on success, or 0 if the socket connection is to be closed.
+ */
+    struct termios tty;
+
+    if (conf->req->command != CONMAN_CMD_CONNECT)
+        return(1);
+    get_tty_mode(&tty, STDIN_FILENO);
+    tty.c_lflag ^= ECHO;
+    set_tty_mode(&tty, STDIN_FILENO);
+    conf->req->enableEcho ^= 1;
+    return(1);
+}
+
+
 static int perform_force_esc(client_conf_t *conf, char c)
 {
 /*  Changes a R/O session into a R/W session by forcibly stealing the console
@@ -401,6 +421,13 @@ static int perform_help_esc(client_conf_t *conf, char c)
         write_esc_char(ESC_CHAR_DEL, tmp);
         n = append_format_string(buf, sizeof(buf),
             "  %2s%-2s -  Transmit a DEL character.\r\n", esc, tmp);
+    }
+
+    if (conf->req->command == CONMAN_CMD_CONNECT) {
+        write_esc_char(ESC_CHAR_ECHO, tmp);
+        n = append_format_string(buf, sizeof(buf),
+            "  %2s%-2s -  %s echoing of client input.\r\n", esc, tmp,
+            conf->req->enableEcho ? "Disable" : "Enable");
     }
 
     if (conf->req->command == CONMAN_CMD_MONITOR) {

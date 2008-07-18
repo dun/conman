@@ -98,6 +98,7 @@ req_t * create_req(void)
     req->consoles = list_create((ListDelF) destroy_string);
     req->command = CONMAN_CMD_NONE;
     req->enableBroadcast = 0;
+    req->enableEcho = 0;
     req->enableForce = 0;
     req->enableJoin = 0;
     req->enableQuiet = 0;
@@ -207,7 +208,7 @@ void get_tty_raw(struct termios *tty, int fd)
 
     /*  Disable echo, canonical mode, extended input processing, signal chars.
      */
-    tty->c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
+    tty->c_lflag &= ~(ECHO | ECHOCTL | ICANON | IEXTEN | ISIG);
 
     /*  read() does not return until data is present (may block indefinitely).
      */

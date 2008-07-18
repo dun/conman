@@ -1,5 +1,13 @@
 2008-07-17  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* : Merged r811:816 (2008-01-10 to 2008-01-14) from conman-0.2.1-echo
+	  branch for feature request to enable local echo for serial
+	  connections.  However, this merge only enables echo at the client
+	  and not the server (so it is not tied to serial devices, logs are
+	  unaffected, etc.) -- not the ideal solution.  Note that the changes
+	  from r810 have been omitted since they didn't seem to work and I was
+	  unable to continue without further feedback from the user.
+
 	* server-telnet.c (open_telnet_obj): Fixed bug where calling
 	  open_telnet_obj() in the PENDING state would be misinterpreted
 	  as the completion of the non-blocking connect.
@@ -82,7 +90,23 @@
 	* Makefile.in: Added server-unixsock.o.
 	* man/conman.conf.5.in, etc/conman.conf: Documented "unix:" dev prefix.
 
+2008-01-14  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* man/conman.1.in: Documented &E client esc char.
+
+	* client-tty.c (perform_help_esc): Tweaked verbage for &E help.
+
+	* common.c (get_tty_raw): Cleared ECHOCTL.
+
+2008-01-11  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* client-tty.c (perform_echo_esc): Moved enableEcho toggle outside of
+	  the (get|set)_tty_mode block.
+
 2008-01-10  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* common.h, common.c, client-tty.c:
+	  Added support for "&E" echoing of client input.
 
 	* common.c (get_tty_raw): Changed settings for c_iflag & c_oflag.
 	* common.c (set_tty_mode): Added FIXME comment.

@@ -99,6 +99,9 @@ Send a single escape character.
 .B &B
 Send a "serial-break" to the remote console.
 .TP
+.B &E
+Toggle echoing of client input.
+.TP
 .B &F
 Switch from read-only to read-write via a "force".
 .TP

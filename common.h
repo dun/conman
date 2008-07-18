@@ -75,6 +75,7 @@
 #define ESC_CHAR_BREAK          'B'
 #define ESC_CHAR_CLOSE          '.'
 #define ESC_CHAR_DEL            'D'     /* XXX: gnats:100 del char kludge */
+#define ESC_CHAR_ECHO           'E'
 #define ESC_CHAR_FORCE          'F'
 #define ESC_CHAR_HELP           '?'
 #define ESC_CHAR_INFO           'I'
@@ -131,6 +132,7 @@ typedef struct request {
     List      consoles;                 /* list of consoles affected by cmd  */
     unsigned  command:2;                /* ConMan command to perform (cmd_t) */
     unsigned  enableBroadcast:1;        /* true if b-casting to >1 consoles  */
+    unsigned  enableEcho:1;             /* true if echoing standard input    */
     unsigned  enableForce:1;            /* true if forcing console conn      */
     unsigned  enableJoin:1;             /* true if joining console conn      */
     unsigned  enableQuiet:1;            /* true if suppressing info messages */
