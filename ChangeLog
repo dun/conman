@@ -1,3 +1,7 @@
+2008-08-06  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server.c: Added volatile qualifier to signal handler flags.
+
 2008-07-17  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* : Merged r811:816 (2008-01-10 to 2008-01-14) from conman-0.2.1-echo

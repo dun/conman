@@ -72,8 +72,10 @@ static void accept_client(server_conf_t *conf);
 static void reset_console(obj_t *console, const char *cmd);
 static void kill_console_reset(pid_t *arg);
 
-static int done = 0;
-static int reconfig = 0;
+/*  Signal handler flags.
+ */
+static int volatile done = 0;
+static int volatile reconfig = 0;
 
 /*  The 'tp_global' var is to allow timers to be set or canceled
  *    without having to pass the conf's tp var through the call stack.
