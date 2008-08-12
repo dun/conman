@@ -51,7 +51,6 @@
 #include "util-file.h"
 #include "util-str.h"
 #include "util.h"
-#include "wrapper.h"
 
 
 static void begin_daemonize(int *fd_ptr, pid_t *pgid_ptr);
