@@ -1,7 +1,7 @@
 2008-08-12  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server.c (reopen_logfiles): Fixed bug where open_daemon_logfile()
-could be
+	  could be invoked when conf->logFileName was NULL.
 
 	* server.c: Removed unnecessary header wrapper.h.
 
