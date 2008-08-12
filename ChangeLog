@@ -1,5 +1,8 @@
 2008-08-12  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server.c (reopen_logfiles): Fixed bug where open_daemon_logfile()
+could be
+
 	* server.c: Removed unnecessary header wrapper.h.
 
 2008-08-06  Chris Dunlap  <cdunlap@llnl.gov>

@@ -862,7 +862,7 @@ static void reopen_logfiles(server_conf_t *conf)
     }
     list_iterator_destroy(i);
 
-    if (!conf->enableForeground) {
+    if (conf->logFileName && !conf->enableForeground) {
         open_daemon_logfile(conf);
     }
     return;
