@@ -765,7 +765,9 @@ int shutdown_obj(obj_t *obj)
 
     /*  Flush the obj's buffer.
      */
+    x_pthread_mutex_lock(&obj->bufLock);
     obj->bufInPtr = obj->bufOutPtr = obj->buf;
+    x_pthread_mutex_unlock(&obj->bufLock);
 
     /*  Prepare this obj for destruction by unlinking it from all others.
      *    It will be removed from the master objs list by mux_io(),
