@@ -73,8 +73,8 @@ static void kill_console_reset(pid_t *arg);
 
 /*  Signal handler flags.
  */
-static volatile int done = 0;
-static volatile int reconfig = 0;
+static volatile sig_atomic_t done = 0;
+static volatile sig_atomic_t reconfig = 0;
 
 /*  The 'tp_global' var is to allow timers to be set or canceled
  *    without having to pass the conf's tp var through the call stack.

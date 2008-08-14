@@ -1,3 +1,7 @@
+2008-08-14  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server.c: Changed type of signal handler flags to sig_atomic_t.
+
 2008-08-12  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server-obj.c (shutdown_obj): Fixed bug where bufInPtr & bufOutPtr
