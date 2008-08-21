@@ -194,7 +194,6 @@ inevent_remove (const char *pathname)
  */
     ListIterator  li = NULL;
     inevent_t    *inevent_ptr;
-    inevent_t    *inevent_loop_ptr;
     int           wd_cnt;
 
     if (pathname == NULL) {
@@ -216,8 +215,7 @@ inevent_remove (const char *pathname)
 
     list_iterator_reset (li);
     wd_cnt = 0;
-    while (( inevent_loop_ptr = list_find (li,
-            (ListFindF) _list_find_by_wd, &(inevent_ptr->wd)) )) {
+    while (list_find (li, (ListFindF) _list_find_by_wd, &(inevent_ptr->wd))) {
         wd_cnt++;
     }
     list_iterator_destroy (li);

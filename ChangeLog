@@ -1,5 +1,8 @@
 2008-08-20  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* inevent.c (inevent_remove): Removed use of inevent_loop_ptr var since
+	  it was never subsequently used after being set.
+
 	* configure.ac: Added header check for <sys/inotify.h>.
 	* inevent.c, inevent.h: Added.
 	* server.c (mux_io): Added checks for inevents.
