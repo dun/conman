@@ -129,14 +129,20 @@ typedef struct inevent inevent_t;
  *****************************************************************************/
 
 static int _inevent_init (void);
+
 static void _inevent_fini (void);
+
 static inevent_t * _inevent_create (const char *pathname,
     inevent_cb_f cb_fnc, void *cb_arg);
+
 static void _inevent_destroy (inevent_t *inevent_ptr, int is_unique_wd);
+
 static int _list_find_by_path (const inevent_t *inevent_ptr,
     const char *pathname);
+
 static int _list_find_by_wd (const inevent_t *inevent_ptr,
     const int *wd_ptr);
+
 static int _list_find_by_event (const inevent_t *inevent_ptr,
     const struct inotify_event *event_ptr);
 
@@ -152,7 +158,6 @@ static List inevent_list = NULL;        /* list of inevent structs           */
 /*****************************************************************************
  *  Public Functions
  *****************************************************************************/
-
 
 int
 inevent_add (const char *pathname, inevent_cb_f cb_fnc, void *cb_arg)
