@@ -477,6 +477,9 @@ _list_find_by_path (const inevent_t *inevent_ptr, const char *pathname)
  *    the pathname [pathname] as the key.
  *  Returns non-zero if the key is found; o/w, returns zero.
  */
+    assert (inevent_ptr != NULL);
+    assert (pathname != NULL);
+
     return (strcmp (inevent_ptr->pathname, pathname) == 0);
 }
 
@@ -488,6 +491,9 @@ _list_find_by_wd (const inevent_t *inevent_ptr, const int *wd_ptr)
  *    a pointer to an inotify watch descriptor [wd_ptr] as the key.
  *  Returns non-zero if the key is found; o/w, returns zero.
  */
+    assert (inevent_ptr != NULL);
+    assert (wd_ptr != NULL);
+
     return (inevent_ptr->wd == *wd_ptr);
 }
 
@@ -500,7 +506,11 @@ _list_find_by_event (const inevent_t *inevent_ptr,
  *    a pointer to an inotify_event struct [event_ptr] as the key.
  *  Returns non-zero if the key is found; o/w, returns zero.
  */
+    assert (inevent_ptr != NULL);
+    assert (inevent_ptr->filename != NULL);
+    assert (event_ptr != NULL);
     assert (event_ptr->len > 0);
+    assert (event_ptr->name != NULL);
 
     return ((inevent_ptr->wd == event_ptr->wd) &&
             (strcmp (inevent_ptr->filename, event_ptr->name) == 0));

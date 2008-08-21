@@ -1,5 +1,8 @@
 2008-08-21  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* inevent.c (_list_find_by_path, _list_find_by_wd,
+	  _list_find_by_event): Added assert()s.
+
 	* inevent.c: Tweaked spacing.
 
 2008-08-20  Chris Dunlap  <cdunlap@llnl.gov>
