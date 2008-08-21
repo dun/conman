@@ -35,6 +35,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/un.h>
+#include "inevent.h"
 #include "list.h"
 #include "server.h"
 #include "tpoll.h"
@@ -58,6 +59,7 @@ obj_t * create_unixsock_obj(server_conf_t *conf, char *name, char *dev,
     int           n;
     ListIterator  i;
     obj_t        *unixsock;
+    int           rv;
 
     assert(conf != NULL);
     assert((name != NULL) && (name[0] != '\0'));
@@ -103,6 +105,13 @@ obj_t * create_unixsock_obj(server_conf_t *conf, char *name, char *dev,
      */
     list_append(conf->objs, unixsock);
 
+    rv = inevent_add(unixsock->aux.unixsock.dev,
+        (inevent_cb_f) open_unixsock_obj, unixsock);
+    if (rv < 0) {
+        log_msg(LOG_INFO,
+            "Console [%s] unable to register device \"%s\" for inotify events",
+            unixsock->name, unixsock->aux.unixsock.dev);
+    }
     return(unixsock);
 }
 

@@ -38,6 +38,7 @@
 #include <time.h>
 #include <unistd.h>
 #include "common.h"
+#include "inevent.h"
 #include "list.h"
 #include "log.h"
 #include "server.h"
@@ -199,6 +200,7 @@ void destroy_obj(obj_t *obj)
         break;
     case CONMAN_OBJ_UNIXSOCK:
         if (obj->aux.unixsock.dev) {
+            (void) inevent_remove(obj->aux.unixsock.dev);
             free(obj->aux.unixsock.dev);
         }
         /*  Do not destroy obj->aux.unixsock.logfile since it is only a ref.

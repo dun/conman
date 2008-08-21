@@ -89,6 +89,7 @@ fi
 dnl Check for header files.
 dnl
 AC_CHECK_HEADERS(paths.h)
+AC_CHECK_HEADERS(sys/inotify.h)
 
 
 dnl Check for typedefs.

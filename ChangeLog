@@ -1,3 +1,13 @@
+2008-08-20  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* configure.ac: Added header check for <sys/inotify.h>.
+	* inevent.c, inevent.h: Added.
+	* server.c (mux_io): Added checks for inevents.
+	* server-unixsock.c (create_unixsock_obj): Added call to register
+	  inevents for unixsock objs.
+	* server-obj.c (destroy_obj): Added call to unregister inevents for
+	  unixsock objs.
+
 2008-08-14  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server.c: Changed type of signal handler flags to sig_atomic_t.

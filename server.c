@@ -44,6 +44,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include "common.h"
+#include "inevent.h"
 #include "list.h"
 #include "log.h"
 #include "server.h"
@@ -633,6 +634,7 @@ static void mux_io(server_conf_t *conf)
     ListIterator i;
     int n;
     obj_t *obj;
+    int inevent_fd;
 
     assert(conf->tp != NULL);
     assert(!list_is_empty(conf->objs));
@@ -658,6 +660,10 @@ static void mux_io(server_conf_t *conf)
         (void) tpoll_zero(conf->tp, TPOLL_ZERO_FDS);
         tpoll_set(conf->tp, conf->ld, POLLIN);
 
+        inevent_fd = inevent_get_fd();
+        if (inevent_fd >= 0) {
+            tpoll_set(conf->tp, inevent_get_fd(), POLLIN);
+        }
         list_iterator_reset(i);
         while ((obj = list_next(i))) {
 
@@ -704,6 +710,9 @@ static void mux_io(server_conf_t *conf)
         }
         if (tpoll_is_set(conf->tp, conf->ld, POLLIN)) {
             accept_client(conf);
+        }
+        if ((inevent_fd >= 0) && tpoll_is_set(conf->tp, inevent_fd, POLLIN)) {
+            inevent_process();
         }
         /*  If read_from_obj() or write_to_obj() returns -1,
          *    the obj's buffer has been flushed.  If it is a telnet obj,
