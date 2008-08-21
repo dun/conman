@@ -24,7 +24,19 @@
  *****************************************************************************/
 
 
-/*  FIXME: What happens if the inotify watch directory is deleted?  */
+/*  FIXME:
+ *  This code does not yet handle the following cases:
+ *  - when the watched directory does not yet exist
+ *  - when the watched directory is later deleted
+ *  In the event of the watched directory not yet existing, this code should
+ *    watch its parent directory for its subsequent creation; if the parent
+ *    does not yet exist, it should its parent's parent, etc., up to the root.
+ *    Once the directory to be watched exists, it should add the watch and its
+ *    associated callback.
+ *  In the event of the watched directory being deleted (event IN_IGNORED),
+ *    this code should remove the existing watch and then degenerate into the
+ *    case above where the watched directory does not yet exist.
+ */
 
 
 #ifdef HAVE_CONFIG_H

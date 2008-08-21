@@ -1,5 +1,7 @@
 2008-08-21  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* inevent.c: Added FIXME for cases not handled by the current code.
+
 	* NEWS: Updated.
 
 	* inevent.c (inevent_process): Added DPRINTF to dump contents of
