@@ -31,6 +31,15 @@
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
+
+/*****************************************************************************
+ *  Stubbed Routines for building without <sys/inotify.h>.
+ *
+ *  These routines preserve type-checking while allowing any decent compiler
+ *    to optimize the case of simply returning a constant integer such that
+ *    no function call overhead is incurred.
+ *****************************************************************************/
+
 #ifndef HAVE_SYS_INOTIFY_H
 
 #include "inevent.h"
@@ -62,6 +71,10 @@ int inevent_process (void)
     return (-1);
 }
 
+
+/*****************************************************************************
+ *  Routines for building with <sys/inotify.h> (Linux 2.6.13+).
+ *****************************************************************************/
 
 #else  /* HAVE_SYS_INOTIFY_H */
 

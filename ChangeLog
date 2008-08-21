@@ -1,5 +1,7 @@
 2008-08-20  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* inevent.c: Added comment for stubbed routines.
+
 	* inevent.c (inevent_remove): Added comment.
 
 	* inevent.c (inevent_remove): Removed use of inevent_loop_ptr var since
