@@ -1,5 +1,8 @@
 2008-08-21  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* inevent.c (inevent_process): Added DPRINTF to dump contents of
+	  inotify_event struct.
+
 	* inevent.c (_inevent_destroy): Renamed 'is_unique_wd' parmameter to
 	  'is_wd_unique'.
 

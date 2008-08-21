@@ -300,13 +300,22 @@ retry_read:
         uint32_t event_mask = IN_CREATE | IN_MOVED_TO;
 
         while (i < len) {
+
             struct inotify_event *event_ptr;
             inevent_t            *inevent_ptr;
 
             event_ptr = (struct inotify_event *) &buf[i];
+
+            DPRINTF((15,
+                "Received inotify event wd=%d mask=0x%x len=%u name=\"%s\".\n",
+                event_ptr->wd, event_ptr->mask, event_ptr->len,
+                (event_ptr->len > 0 ? event_ptr->name : "")));
+
             if ((event_ptr->mask & event_mask) && (event_ptr->len > 0)) {
+
                 inevent_ptr = list_find_first (inevent_list,
                     (ListFindF) _list_find_by_event, event_ptr);
+
                 if ((inevent_ptr != NULL) && (inevent_ptr->cb_fnc != NULL)) {
                     inevent_ptr->cb_fnc (inevent_ptr->cb_arg);
                 }
