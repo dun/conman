@@ -1,5 +1,7 @@
 2008-08-21  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* NEWS: Updated.
+
 	* inevent.c (inevent_process): Added DPRINTF to dump contents of
 	  inotify_event struct.
 
