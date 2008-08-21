@@ -220,6 +220,9 @@ inevent_remove (const char *pathname)
     }
     list_iterator_destroy (li);
 
+    /*  If no other inevents were found with a matching wd, then this inevent
+     *    is the only one associated with this wd (ie, it's unique).
+     */
     _inevent_destroy (inevent_ptr, (wd_cnt == 0));
     DPRINTF((5, "Removed inotify events for \"%s\".\n", pathname));
 
