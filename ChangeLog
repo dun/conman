@@ -1,5 +1,8 @@
 2008-08-21  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* inevent.c (_inevent_destroy): Renamed 'is_unique_wd' parmameter to
+	  'is_wd_unique'.
+
 	* inevent.c (_list_find_by_path, _list_find_by_wd,
 	  _list_find_by_event): Added assert()s.
 

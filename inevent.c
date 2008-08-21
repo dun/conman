@@ -135,7 +135,7 @@ static void _inevent_fini (void);
 static inevent_t * _inevent_create (const char *pathname,
     inevent_cb_f cb_fnc, void *cb_arg);
 
-static void _inevent_destroy (inevent_t *inevent_ptr, int is_unique_wd);
+static void _inevent_destroy (inevent_t *inevent_ptr, int is_wd_unique);
 
 static int _list_find_by_path (const inevent_t *inevent_ptr,
     const char *pathname);
@@ -437,10 +437,10 @@ err:
 
 
 static void
-_inevent_destroy (inevent_t *inevent_ptr, int is_unique_wd)
+_inevent_destroy (inevent_t *inevent_ptr, int is_wd_unique)
 {
 /*  Destroys the inotify event object referenced by [inevent_ptr].
- *  If [is_unique_wd] is true, the watch associated with this object's watch
+ *  If [is_wd_unique] is true, the watch associated with this object's watch
  *    descriptor will be removed.  Note that multiple files may share the
  *    same watch descriptor since it is the file's directory that is watched.
  *    As such, this flag should be set when the object's wd is unique since
@@ -451,7 +451,7 @@ _inevent_destroy (inevent_t *inevent_ptr, int is_unique_wd)
     if (inevent_ptr == NULL) {
         return;
     }
-    if ((inevent_ptr->wd >= 0) && is_unique_wd) {
+    if ((inevent_ptr->wd >= 0) && is_wd_unique) {
         (void) inotify_rm_watch (inevent_fd, inevent_ptr->wd);
         DPRINTF((10, "Removed inotify event wd=%d for directory \"%s\".\n",
                 inevent_ptr->wd, inevent_ptr->dirname));
