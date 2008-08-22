@@ -1,5 +1,8 @@
 2008-08-21  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-telnet.c (open_telnet_obj): Reverted change from 2008-07-17
+	  which broke telnet connections.  It seems the bug was in the comment.
+
 	* inevent.c: Added FIXME for cases not handled by the current code.
 
 	* NEWS: Updated.

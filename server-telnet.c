@@ -124,11 +124,7 @@ int open_telnet_obj(obj_t *telnet)
     assert(telnet != NULL);
     assert(is_telnet_obj(telnet));
 
-    /*  Do not call connect_telnet_obj() from here while in the PENDING state
-     *    since it will be misinterpreted as the completion of the non-blocking
-     *    connect().
-     */
-    if (telnet->aux.telnet.conState != CONMAN_TELCON_DOWN) {
+    if (telnet->aux.telnet.conState == CONMAN_TELCON_UP) {
         disconnect_telnet_obj(telnet);
     }
     else {
