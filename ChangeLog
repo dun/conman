@@ -1,3 +1,11 @@
+2008-08-24  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* lib/exec/ibm-bc.exp: Tweaked pattern for "Command cannot be issued to
+	  this target".  The new src text is "Command cannot be issued to this
+	  target.  Type env -h for help on changing\r\ntargets.\r\n".
+	  Truncated pattern before the first CR/LF to maintain backwards
+	  compatibility.  Patch from Py Watson.
+
 2008-08-21  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server-telnet.c (open_telnet_obj): Reverted change from 2008-07-17

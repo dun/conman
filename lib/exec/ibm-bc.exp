@@ -243,7 +243,7 @@ expect {
     }
     exp_continue -continue_timer
   }
-  -nocase -gl "Command cannot be issued to this target.\r\n" {
+  -nocase -gl "Command cannot be issued to this target." {
     if {$cmd_sent != 0} {
       set bcmm_timeout -1
       set cmd_sent 0
