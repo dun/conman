@@ -237,7 +237,11 @@ expect {
     exp_continue -continue_timer
   }
   -nocase -gl "The target bay is empty.\r\n" {
-    if {$cmd_sent != 0} {
+    if {$bcmm_bay == 0} {
+      send_user "Error: No blade in specified slot.\r\n"
+      exit 1
+    } elseif {$cmd_sent != 0} {
+      set bcmm_bay 0
       set bcmm_timeout -1
       set cmd_sent 0
     }

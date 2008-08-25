@@ -1,3 +1,11 @@
+2008-08-25  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* lib/exec/ibm-bc.exp: Tweaked case for "target bay is empty" pattern.
+	  Added test to return "no blade in specified slot" error in response
+	  to the console cmd, while allowing a "target bay is empty" response
+	  to be safely ignored if encountered while incrementing bcmm_bay
+	  during the telnetcfg cmds.
+
 2008-08-24  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* lib/exec/ibm-bc.exp: Tweaked pattern for "Command cannot be issued to
