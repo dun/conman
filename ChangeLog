@@ -1,5 +1,7 @@
 2008-08-28  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* NEWS, THANKS: Updated.
+
 	* lib/exec/hp-ilo.exp: Added console script for HP iLO.
 
 	* inevent.c (_inevent_destroy): Fixed bug where the function prototype

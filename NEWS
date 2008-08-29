@@ -2,6 +2,8 @@ conman-0.2.2 (2008-??-??):
 - Added support for connecting to consoles via unix domain sockets.
 - Added support for detecting unix domain socket devices via inotify.
 - Added client escape character to toggle echoing of client input via '&E'.
+- Added console script for HP iLO.
+- Updated console script for IBM BladeCenter.
 
 conman-0.2.1 (2007-05-24):
 - Added console script for Sun ILOM.
