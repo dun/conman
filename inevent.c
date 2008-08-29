@@ -25,17 +25,22 @@
 
 
 /*  FIXME:
- *  This code does not yet handle the following cases:
+ *  This code does not fully handle the following cases:
  *  - when the watched directory does not yet exist
  *  - when the watched directory is later deleted
  *  In the event of the watched directory not yet existing, this code should
- *    watch its parent directory for its subsequent creation; if the parent
- *    does not yet exist, it should its parent's parent, etc., up to the root.
- *    Once the directory to be watched exists, it should add the watch and its
- *    associated callback.
+ *    watch the parent directory for its subsequent creation; if the parent
+ *    does not yet exist, it should watch the parent's parent, etc., up to the
+ *    root.  This might be best accomplished by initially registering all of
+ *    parent directories up to the root for the directory being watched.
  *  In the event of the watched directory being deleted (event IN_IGNORED),
- *    this code should remove the existing watch and then degenerate into the
+ *    once the existing watch has been removed, this should degenerate into the
  *    case above where the watched directory does not yet exist.
+ *
+ *  Currently, inotify works as expected as long as the parent directory being
+ *    watched persists for the lifetime of the daemon.  But once that
+ *    directory's inode is removed, the daemon falls back to using timers to
+ *    periodically resurrect downed objects.
  */
 
 
@@ -147,7 +152,7 @@ static void _inevent_fini (void);
 static inevent_t * _inevent_create (const char *pathname,
     inevent_cb_f cb_fnc, void *cb_arg);
 
-static void _inevent_destroy (inevent_t *inevent_ptr, int is_wd_unique);
+static void _inevent_destroy (inevent_t *inevent_ptr);
 
 static int _list_find_by_path (const inevent_t *inevent_ptr,
     const char *pathname);
@@ -211,7 +216,6 @@ inevent_add (const char *pathname, inevent_cb_f cb_fnc, void *cb_arg)
         return (-1);
     }
     list_append (inevent_list, inevent_ptr);
-    DPRINTF((5, "Added inotify events for \"%s\".\n", pathname));
     return (0);
 }
 
@@ -219,7 +223,7 @@ inevent_add (const char *pathname, inevent_cb_f cb_fnc, void *cb_arg)
 int
 inevent_remove (const char *pathname)
 {
-/*  Removes the inotify event for [pathname].
+/*  Removes the inotify event (if present) for [pathname].
  *  Returns 0 on success, or -1 on error.
  */
     ListIterator  li = NULL;
@@ -230,8 +234,7 @@ inevent_remove (const char *pathname)
         return (0);
     }
     if (inevent_list == NULL) {
-        log_msg (LOG_ERR, "inotify event subsystem not initialized");
-        goto err;
+        return (0);
     }
     li = list_iterator_create (inevent_list);
     inevent_ptr = list_find (li, (ListFindF) _list_find_by_path,
@@ -239,7 +242,8 @@ inevent_remove (const char *pathname)
     if (inevent_ptr == NULL) {
         log_msg (LOG_ERR, "inotify event path \"%s\" not registered",
                 pathname);
-        goto err;
+        list_iterator_destroy (li);
+        return (0);
     }
     (void) list_remove (li);
 
@@ -251,21 +255,23 @@ inevent_remove (const char *pathname)
     list_iterator_destroy (li);
 
     /*  If no other inevents were found with a matching wd, then this inevent
-     *    is the only one associated with this wd (ie, it's unique).
+     *    is the only one associated with this watch descriptor.  As such, the
+     *    watch associated with this watch descriptor can be removed since no
+     *    other objects are relying on it.
+     *  Note that multiple files may share the same watch descriptor since it
+     *    is the file's directory that is watched.
      */
-    _inevent_destroy (inevent_ptr, (wd_cnt == 0));
-    DPRINTF((5, "Removed inotify events for \"%s\".\n", pathname));
+    if ((inevent_ptr->wd >= 0) && (wd_cnt == 0)) {
+        (void) inotify_rm_watch (inevent_fd, inevent_ptr->wd);
+        DPRINTF((10, "Removed inotify watch wd=%d for directory \"%s\".\n",
+                inevent_ptr->wd, inevent_ptr->dirname));
+    }
+    _inevent_destroy (inevent_ptr);
 
     if (list_is_empty (inevent_list)) {
         _inevent_fini ();
     }
     return (0);
-
-err:
-    if (li != NULL) {
-        list_iterator_destroy (li);
-    }
-    return (-1);
 }
 
 
@@ -323,7 +329,12 @@ retry_read:
                 event_ptr->wd, event_ptr->mask, event_ptr->len,
                 (event_ptr->len > 0 ? event_ptr->name : "")));
 
-            if ((event_ptr->mask & event_mask) && (event_ptr->len > 0)) {
+            if (event_ptr->mask & IN_IGNORED) {
+
+                (void) list_delete_all (inevent_list,
+                    (ListFindF) _list_find_by_wd, &(event_ptr->wd));
+            }
+            else if ((event_ptr->mask & event_mask) && (event_ptr->len > 0)) {
 
                 inevent_ptr = list_find_first (inevent_list,
                     (ListFindF) _list_find_by_event, event_ptr);
@@ -400,8 +411,8 @@ _inevent_fini (void)
 static inevent_t *
 _inevent_create (const char *pathname, inevent_cb_f cb_fnc, void *cb_arg)
 {
-/*  Creates an inotify event object causing [cb_fnc] to be invoked with
- *    [cb_arg] whenever the file specified by [pathname] is created.
+/*  Creates an inotify event object for [cb_fnc] to be invoked with [cb_arg]
+ *    whenever the file specified by [pathname] is created.
  *  Returns a pointer to the new object on success, or NULL on error
  *    (with errno set).
  */
@@ -447,36 +458,30 @@ _inevent_create (const char *pathname, inevent_cb_f cb_fnc, void *cb_arg)
     if (inevent_ptr->wd == -1) {
         goto err;
     }
-    DPRINTF((10, "Added inotify event wd=%d for directory \"%s\".\n",
-            inevent_ptr->wd, inevent_ptr->dirname));
+
+    DPRINTF((10, "Added inotify watch wd=%d for \"%s\".\n",
+            inevent_ptr->wd, inevent_ptr->pathname));
     return (inevent_ptr);
 
 err:
-    _inevent_destroy (inevent_ptr, 0);
+    _inevent_destroy (inevent_ptr);
     return (NULL);
 }
 
 
 static void
-_inevent_destroy (inevent_t *inevent_ptr, int is_wd_unique)
+_inevent_destroy (inevent_t *inevent_ptr)
 {
 /*  Destroys the inotify event object referenced by [inevent_ptr].
- *  If [is_wd_unique] is true, the watch associated with this object's watch
- *    descriptor will be removed.  Note that multiple files may share the
- *    same watch descriptor since it is the file's directory that is watched.
- *    As such, this flag should be set when the object's wd is unique since
- *    that signifies no other objects are relying on it.
  */
     assert (inevent_ptr != NULL);
 
     if (inevent_ptr == NULL) {
         return;
     }
-    if ((inevent_ptr->wd >= 0) && is_wd_unique) {
-        (void) inotify_rm_watch (inevent_fd, inevent_ptr->wd);
-        DPRINTF((10, "Removed inotify event wd=%d for directory \"%s\".\n",
-                inevent_ptr->wd, inevent_ptr->dirname));
-    }
+    DPRINTF((10, "Removed inotify watch wd=%d for \"%s\".\n",
+            inevent_ptr->wd, inevent_ptr->pathname));
+
     if (inevent_ptr->pathname != NULL) {
         free (inevent_ptr->pathname);
     }
