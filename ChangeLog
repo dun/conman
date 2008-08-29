@@ -1,7 +1,7 @@
 2008-08-28  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* inevent.c (inevent_process): Changed type of inotify event buffer
-	  variable 'i' from signed to unsigned.
+	  variable 'i' from signed to unsigned since: 0 <= i < len.
 
 	* NEWS, THANKS: Updated.
 
