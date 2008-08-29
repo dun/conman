@@ -314,8 +314,8 @@ retry_read:
         return (-1);
     }
     else {
-        int      i = 0;
-        uint32_t event_mask = IN_CREATE | IN_MOVED_TO;
+        unsigned int i = 0;
+        uint32_t     event_mask = IN_CREATE | IN_MOVED_TO;
 
         while (i < len) {
 
