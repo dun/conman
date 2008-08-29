@@ -13,7 +13,7 @@
 	* inevent.c (inevent_process): Removed all inevents associated with a
 	  given watch descriptor upon receipt of IN_IGNORED.
 	* inevent.c (inevent_remove): Changed behavior so it is not an error
-	  if [pathname] is not registered or if the inevent subsystem is down.
+	  if 'pathname' is not registered or if the inevent subsystem is down.
 
 2008-08-25  Chris Dunlap  <cdunlap@llnl.gov>
 
