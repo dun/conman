@@ -222,7 +222,7 @@ expect {
 }
 send_user "Connection established via telnet (pid $spawn_result).\r\n"
 
-set timeout 2
+set timeout 5
 interact {
   # Replace "&B" with serial-break.
   "&B" {
@@ -231,8 +231,8 @@ interact {
   # Match subsequent patterns against spawned process, not user's keystrokes.
   -o
   # Disable "ESC (" sequence for stopping console and returning to CLI prompt.
-  -re "\u001b\\(</>hpiLO-> \$" {
+  -re "</>hpiLO-> \$" {
     send "vsp\r"
-    expect -re "Virtual Serial Port active\[^\r]*\r+\n\r+\n"
+    expect -re "Virtual Serial Port active\[^\r]*\r+\n(\r+\n)?"
   }
 }

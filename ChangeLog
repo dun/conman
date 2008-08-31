@@ -1,3 +1,8 @@
+2008-08-30  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* lib/exec/hp-ilo.exp: Increased timeout to 5s for interact block.
+	  Tweaked patterns to disable "ESC (" sequence.
+
 2008-08-28  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* inevent.c (inevent_process): Changed type of inotify event buffer
