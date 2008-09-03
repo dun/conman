@@ -1,4 +1,4 @@
-conman-0.2.2 (2008-??-??):
+conman-0.2.2 (2008-09-03):
 - Added support for connecting to consoles via unix domain sockets.
 - Added support for detecting unix domain socket devices via inotify.
 - Added client escape character to toggle echoing of client input via '&E'.
