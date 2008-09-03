@@ -1,5 +1,7 @@
 2008-09-03  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* : Released 0.2.2.
+
 	* README, conman.spec: Tweaked description.
 
 	* META, NEWS: Updated for 0.2.2 release.
