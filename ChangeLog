@@ -1,3 +1,7 @@
+2008-09-03  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* common.h: Increased MAX_BUF_SIZE from 8192 to 10240.
+
 2008-08-30  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* lib/exec/hp-ilo.exp: Increased timeout to 5s for interact block.

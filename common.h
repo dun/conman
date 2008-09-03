@@ -65,7 +65,7 @@
  *    - MAX_SOCK_LINE >= MAX_LINE
  */
 #define CONMAN_REPLAY_LEN       4096
-#define MAX_BUF_SIZE            8192
+#define MAX_BUF_SIZE            10240
 #define MAX_SOCK_LINE           32768   /* XXX: MCR kludge (was 8192) */
 #define MAX_LINE                1024
 
