@@ -18,7 +18,7 @@ Source0:	%{name}-%{version}.tar
 %description
 ConMan is a serial console management program designed to support a large
 number of console devices and simultaneous users.  It supports local serial
-devices, remote terminal servers (via the telnet protocol), unix domain
+devices, remote terminal servers (via the telnet protocol), Unix domain
 sockets, and external processes (e.g., using Expect to control connections
 over telnet, ssh, or ipmi-sol).  Its features include:
 
