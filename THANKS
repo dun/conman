@@ -11,3 +11,5 @@ the following people have contributed in its development:
   implementation
 
 * Mike T. Spangler <mike.t.spangler@boeing.com> - testing of hp-ilo.exp
+
+* Christopher D. Maestas <cdmaestas@comcast.net> - driver for hp-lo100.exp
