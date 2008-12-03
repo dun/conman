@@ -1,5 +1,7 @@
 2008-12-02  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* util-file.c (get_dir_name): Added len check for integer overflow.
+
 	* util-file.c (get_dir_name): Changed len type to int.
 
 	* server.c (open_daemon_logfile), server-conf.c (write_pidfile),

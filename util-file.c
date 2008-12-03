@@ -281,7 +281,10 @@ get_dir_name (const char *srcpath, char *dstdir, size_t dstdirlen)
      */
     else {
         len = p - srcpath + 1;
-        if (dstdirlen < len + 1) {
+
+        /*  Protect against integer overflows and buffer overruns.
+         */
+        if ((len <= 0) || (len >= dstdirlen)) {
             errno = ENAMETOOLONG;
             return (NULL);
         }
