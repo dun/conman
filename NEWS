@@ -1,3 +1,7 @@
+conman-0.2.3 (2008-12-03):
+- Added support for creation of intermediate directories.
+- Added console script for HP LO100.
+
 conman-0.2.2 (2008-09-03):
 - Added support for connecting to consoles via unix domain sockets.
 - Added support for detecting unix domain socket devices via inotify.
