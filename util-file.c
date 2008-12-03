@@ -244,7 +244,7 @@ char *
 get_dir_name (const char *srcpath, char *dstdir, size_t dstdirlen)
 {
     const char *p;
-    size_t      len;
+    int         len;
 
     if ((srcpath == NULL) || (dstdir == NULL)) {
         errno = EINVAL;
