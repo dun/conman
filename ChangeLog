@@ -1,5 +1,7 @@
 2008-12-03  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* : Released 0.2.3.
+
 	* META, NEWS: Updated for 0.2.3 release.
 
 	* common.h: Reverted MAX_BUF_SIZE to 8192.
