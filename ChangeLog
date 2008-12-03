@@ -1,3 +1,14 @@
+2008-12-02  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server.c (open_daemon_logfile), server-conf.c (write_pidfile),
+	  server-logfile.c (open_logfile_obj): Added creation of intermediate
+	  directories.
+	* server-conf.c (parse_server_directive): Removed code that ignored
+	  LOGDIR if the directory did not already exist since intermediate
+	  directories are now created.
+	* etc/conman.conf, man/conman.conf.5.in: Updated documentation.
+	* util-file.c, util-file.h: Added get_dir_name() and create_dirs().
+
 2008-10-13  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* lib/exec/hp-lo100.exp: Added patch for HP lo100 "Lights Out 100"

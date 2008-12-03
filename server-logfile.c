@@ -31,6 +31,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -210,8 +211,10 @@ int open_logfile_obj(obj_t *logfile)
  *    it must be specified with an absolute pathname.
  *  Returns 0 if the logfile is successfully opened; o/w, returns -1.
  */
-    int flags;
-    char *now, *msg;
+    char  dirname[PATH_MAX];
+    int   flags;
+    char *now;
+    char *msg;
 
     assert(logfile != NULL);
     assert(is_logfile_obj(logfile));
@@ -226,6 +229,8 @@ int open_logfile_obj(obj_t *logfile)
                 logfile->name, strerror(errno));
         logfile->fd = -1;
     }
+    /*  Perform conversion specifier expansion.
+     */
     if (logfile->aux.logfile.fmtName) {
 
         char buf[MAX_LINE];
@@ -242,10 +247,14 @@ int open_logfile_obj(obj_t *logfile)
         free(logfile->name);
         logfile->name = create_string(buf);
     }
-    flags = O_WRONLY | O_CREAT | O_APPEND | O_NONBLOCK;
-    /*
-     *  Only truncate on the initial open if ZeroLogs was enabled.
+    /*  Create intermediate directories.
      */
+    if (get_dir_name(logfile->name, dirname, sizeof(dirname))) {
+        (void) create_dirs(dirname);
+    }
+    /*  Only truncate on the initial open if ZeroLogs was enabled.
+     */
+    flags = O_WRONLY | O_CREAT | O_APPEND | O_NONBLOCK;
     if (logfile->aux.logfile.gotTruncate) {
         logfile->aux.logfile.gotTruncate = 0;
         flags |= O_TRUNC;

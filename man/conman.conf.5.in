@@ -31,19 +31,20 @@ connections.  The default is \fBon\fR.
 .TP
 \fBlogdir\fR \fB=\fR "\fIdirectory\fR"
 Specifies a directory prefix for log files that are not defined via an
-absolute pathname.
+absolute pathname.  This affects the \fBserver logfile\fR, \fBglobal log\fR,
+and \fBconsole log\fR directives.
 .TP
 \fBlogfile\fR \fB=\fR "\fIfile\fR[,\fIpriority\fR]"
-Specifies the file to which log messages are appended if the daemon is not
-running in the foreground.  This string undergoes conversion specifier
-expansion (cf., \fBCONVERSION SPECIFICATIONS\fR).  If an absolute pathname is
-not specified, the file's location is relative to \fBlogdir\fR (assuming it has
-been previously defined).  This file will be created if it does not already
-exist.  The filename may optionally be followed by a comma and a minimum
-priority at which messages will be logged.  Refer to \fBsyslog.conf(5)\fR for a
-list of priorities.  The default priority is \fBinfo\fR.  If this keyword is
-used in conjunction with the \fBsyslog\fR keyword, messages will be sent to
-both locations.
+Specifies the file to which log messages are appended if the daemon is
+not running in the foreground.  This string undergoes conversion specifier
+expansion (cf., \fBCONVERSION SPECIFICATIONS\fR) each time the file is opened.
+If an absolute pathname is not given, the file's location is relative
+to either \fBlogdir\fR (if defined) or the current working directory.
+Intermediate directories will be created as needed.  The filename may
+optionally be followed by a comma and a minimum priority at which messages
+will be logged.  Refer to \fBsyslog.conf(5)\fR for a list of priorities.
+The default priority is \fBinfo\fR.  If this keyword is used in conjunction
+with the \fBsyslog\fR keyword, messages will be sent to both locations.
 .TP
 \fBloopback\fR \fB=\fR (\fBon\fR|\fBoff\fR)
 Specifies whether the daemon will bind its socket to the loopback address,
@@ -51,9 +52,9 @@ thereby only accepting local client connections directed to that address
 (127.0.0.1).  The default is \fBoff\fR.
 .TP
 \fBpidfile\fR \fB=\fR "\fIfile\fR"
-Specifies the file to which the daemon's PID is written.
-The use of a pidfile is recommended if you want to use the
-daemon's '\fB-k\fR', '\fB-q\fR', or '\fB-r\fR' options.
+Specifies the file to which the daemon's PID is written.  Intermediate
+directories will be created as needed.  The use of a pidfile is recommended
+if you want to use the daemon's '\fB-k\fR', '\fB-q\fR', or '\fB-r\fR' options.
 .TP
 \fBport\fR \fB=\fR \fIinteger\fR
 Specifies the port on which the daemon will listen for client connections.
@@ -88,18 +89,20 @@ These directives begin with the \fBGLOBAL\fR keyword followed by one of the
 following key/value pairs:
 .TP
 \fBlog\fR \fB=\fR "\fIfile\fR"
-Specifies the default log file to use for each \fBconsole\fR directive.
-This string undergoes conversion specifier expansion (cf., \fBCONVERSION
-SPECIFICATIONS\fR) and must contain either '\fB%N\fR' or '\fB%D\fR'.
-If an absolute pathname is not given, the file's location is relative to
-\fBlogdir\fR (assuming it has been previously defined).
+Specifies the default log file to use for each \fBconsole\fR
+directive.  This string undergoes conversion specifier expansion (cf.,
+\fBCONVERSION SPECIFICATIONS\fR) each time the file is opened; it must
+contain either '\fB%N\fR' or '\fB%D\fR'.  If an absolute pathname is
+not given, the file's location is relative to either \fBlogdir\fR (if
+defined) or the current working directory.  Intermediate directories
+will be created as needed.
 .TP
 \fBlogopts\fR \fB=\fR "(\fBsanitize\fR|\fBnosanitize\fR),(\fBtimestamp\fR|\fBnotimestamp\fR)"
 Specifies global options for the console log files.  These options can be
-overridden on a per-console basis by specifying the \fBCONSOLE\fR
-\fBlogopts\fR keyword.  Note that options affecting the output of the console's
-logfile also affect the output of the console's log-replay escape.  The valid
-\fBlogopts\fR include the following:
+overridden on a per-console basis by specifying the \fBCONSOLE\fR \fBlogopts\fR
+keyword.  Note that options affecting the output of the console's logfile also
+affect the output of the console's log-replay escape.  The valid \fBlogopts\fR
+include the following:
 .br
 .sp
 \fBsanitize\fR or \fBnosanitize\fR - sanitized log files convert non-printable
@@ -175,10 +178,12 @@ The '%N' character sequence will be replaced by the console name.
 .TP
 \fBlog\fR \fB=\fR "\fIfile\fR"
 Specifies the file where console output is logged.  This string undergoes
-conversion specifier expansion (cf., \fBCONVERSION SPECIFICATIONS\fR).
-If an absolute pathname is not given, the file's location is relative to
-\fBlogdir\fR (assuming it has been previously defined).  An empty log string
-(i.e., \fBlog\fR="") disables logging, overriding the global log name.
+conversion specifier expansion (cf., \fBCONVERSION SPECIFICATIONS\fR) each
+time the file is opened.  If an absolute pathname is not given, the file's
+location is relative to either \fBlogdir\fR (if defined) or the current
+working directory.  Intermediate directories will be created as needed.
+An empty log string (i.e., \fBlog\fR="") disables logging, overriding the
+\fBglobal log\fR name.
 .TP
 \fBlogopts\fR \fB=\fR "\fIstring\fR"
 This keyword is optional (cf., \fBGLOBAL DIRECTIVES\fR).

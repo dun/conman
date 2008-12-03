@@ -33,9 +33,13 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
+#include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include "log.h"
 #include "util-file.h"
+#include "util-str.h"
 
 
 static int get_file_lock(int fd, int cmd, int type);
@@ -233,4 +237,139 @@ ssize_t read_line(int fd, void *buf, size_t maxlen)
 
     *p = '\0';                          /* NUL-terminate, like fgets() */
     return(n);
+}
+
+
+char *
+get_dir_name (const char *srcpath, char *dstdir, size_t dstdirlen)
+{
+    const char *p;
+    size_t      len;
+
+    if ((srcpath == NULL) || (dstdir == NULL)) {
+        errno = EINVAL;
+        return (NULL);
+    }
+    p = srcpath + strlen (srcpath) - 1;
+
+    /*  Ignore trailing slashes except for the root slash.
+     */
+    while ((p > srcpath) && (*p == '/')) {
+        p--;
+    }
+    /*  Skip over last path component.
+     */
+    while ((p >= srcpath) && (*p != '/')) {
+        p--;
+    }
+    /*  Skip over adjacent slashes except for the root slash.
+     */
+    while ((p > srcpath) && (*p == '/')) {
+        p--;
+    }
+    /*  A path not containing a slash shall return the dot directory.
+     */
+    if (p < srcpath) {
+        if (dstdirlen < 2) {
+            errno = ENAMETOOLONG;
+            return (NULL);
+        }
+        dstdir [0] = '.';
+        dstdir [1] = '\0';
+    }
+    /*  Otherwise, copy the directory string into dstdir.
+     */
+    else {
+        len = p - srcpath + 1;
+        if (dstdirlen < len + 1) {
+            errno = ENAMETOOLONG;
+            return (NULL);
+        }
+        assert ((len > 0) && (len < dstdirlen));
+        (void) strncpy (dstdir, srcpath, len);
+        dstdir [len] = '\0';
+    }
+    return (dstdir);
+}
+
+
+int
+create_dirs (const char *dir_name)
+{
+    struct stat  st_buf;
+    char         dir_buf [PATH_MAX];
+    char        *p;
+    char        *slash_ptr;
+    mode_t       dir_mode = S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
+
+    if ((dir_name == NULL) || (*dir_name == '\0')) {
+        errno = EINVAL;
+        log_msg (LOG_WARNING, "No directory specified for creation");
+        return (-1);
+    }
+    /*  Check if the directory already exists.
+     */
+    if (stat (dir_name, &st_buf) == 0) {
+        if (S_ISDIR (st_buf.st_mode)) {
+            return (0);
+        }
+        errno = EEXIST;
+        log_msg (LOG_WARNING, "Cannot create directory \"%s\": %s",
+                dir_name, strerror (errno));
+        return (-1);
+    }
+    /*  Create copy of [dir_name] for modification.
+     */
+    if (strlcpy (dir_buf, dir_name, sizeof (dir_buf)) >= sizeof (dir_buf)) {
+        errno = ENAMETOOLONG;
+        log_msg (LOG_WARNING, "Exceeded maximum directory length of %d bytes",
+                sizeof (dir_buf) - 1);
+        return (-1);
+    }
+    /*  Remove trailing slashes from the directory name
+     *    (while ensuring the root slash is not removed in the process).
+     */
+    p = dir_buf + strlen (dir_buf) - 1;
+    while ((p > dir_buf) && (*p == '/')) {
+        *p-- = '\0';
+    }
+    /*  The slash_ptr points to the leftmost unprocessed directory component.
+     */
+    slash_ptr = dir_buf;
+
+    /*  Process directory components.
+     */
+    while (1) {
+
+        /* Skip over adjacent slashes (omitting unnecessary calls to mkdir).
+         */
+        while (*slash_ptr == '/') {
+            slash_ptr++;
+        }
+        /*  Advance slash_ptr to the next directory component.
+         */
+        slash_ptr = strchr (slash_ptr, '/');
+        if (slash_ptr != NULL) {
+            *slash_ptr = '\0';
+        }
+        /*  Create directory.
+         */
+        if (mkdir (dir_buf, dir_mode) < 0) {
+
+            int mkdir_errno = errno;
+
+            if ((mkdir_errno != EEXIST)
+                    || (stat (dir_buf, &st_buf) < 0)
+                    || (! S_ISDIR (st_buf.st_mode))) {
+                log_msg (LOG_WARNING, "Cannot create directory \"%s\": %s",
+                        dir_buf, strerror (mkdir_errno));
+                return (-1);
+            }
+        }
+        if (slash_ptr == NULL) {
+            break;
+        }
+        *slash_ptr++ = '/';
+    }
+    return (0);
 }

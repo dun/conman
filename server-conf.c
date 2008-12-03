@@ -1158,7 +1158,6 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
     int tok;
     int done = 0;
     char err[MAX_LINE] = "";
-    struct stat st;
     char *p;
     int n;
 
@@ -1225,20 +1224,8 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
                 p = (lex_text(l)[0] != '/')
                     ? create_format_string("%s/%s", conf->cwd, lex_text(l))
                     : create_string(lex_text(l));
-                if (lstat(p, &st) < 0) {
-                    snprintf(err, sizeof(err), "cannot stat %s \"%s\": %s",
-                        server_conf_strs[LEX_UNTOK(tok)], p, strerror(errno));
-                    free(p);
-                }
-                else if (!S_ISDIR(st.st_mode)) {
-                    snprintf(err, sizeof(err), "%s \"%s\" not a directory",
-                        server_conf_strs[LEX_UNTOK(tok)], p);
-                    free(p);
-                }
-                else {
-                    destroy_string(conf->logDirName);
-                    conf->logDirName = p;
-                }
+                destroy_string(conf->logDirName);
+                conf->logDirName = p;
             }
             break;
 
@@ -1514,8 +1501,9 @@ static int write_pidfile(const char *pidfile)
  *  The pidfile must be specified with an absolute pathname; o/w, the
  *    unlink() call at exit will fail because the daemon has chdir()'d.
  */
-    mode_t mask;
-    FILE *fp;
+    mode_t  mask;
+    char    dirname[PATH_MAX];
+    FILE   *fp;
 
     if (pidfile == NULL) {
         return(0);
@@ -1531,6 +1519,14 @@ static int write_pidfile(const char *pidfile)
      */
     mask = umask(0);
     umask(mask | 022);
+    /*
+     *  Create intermediate directories.
+     */
+    if (get_dir_name(pidfile, dirname, sizeof(dirname))) {
+        (void) create_dirs(dirname);
+    }
+    /*  Open the pidfile.
+     */
     fp = fopen(pidfile, "w");
     umask(mask);
 

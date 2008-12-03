@@ -31,6 +31,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <netinet/in.h>
 #include <signal.h>
 #include <stdio.h>
@@ -763,11 +764,12 @@ static void open_daemon_logfile(server_conf_t *conf)
  *  Since this logfile can be re-opened after the daemon has chdir()'d,
  *    it must be specified with an absolute pathname.
  */
-    static int once = 1;
+    static int  once = 1;
     const char *mode = "a";
-    mode_t mask;
-    FILE *fp = NULL;
-    int fd;
+    mode_t      mask;
+    char        dirname[PATH_MAX];
+    FILE       *fp = NULL;
+    int         fd;
 
     assert(conf->logFileName != NULL);
     assert(conf->logFileName[0] == '/');
@@ -781,7 +783,7 @@ static void open_daemon_logfile(server_conf_t *conf)
         }
         once = 0;
     }
-    /*  Perform conversion specifier expansion if needed.
+    /*  Perform conversion specifier expansion.
      */
     if (conf->logFmtName) {
 
@@ -801,7 +803,12 @@ static void open_daemon_logfile(server_conf_t *conf)
     mask = umask(0);
     umask(mask | 022);
     /*
-     *  Open the logfile.
+     *  Create intermediate directories.
+     */
+    if (get_dir_name(conf->logFileName, dirname, sizeof(dirname))) {
+        (void) create_dirs(dirname);
+    }
+    /*  Open the logfile.
      */
     fp = fopen(conf->logFileName, mode);
     umask(mask);

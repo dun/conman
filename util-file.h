@@ -117,5 +117,23 @@ ssize_t read_line(int fd, void *buf, size_t maxlen);
  *  Returns the number of bytes read, 0 on EOF, or -1 on error.
  */
 
+char * get_dir_name (const char *srcpath, char *dstdir, size_t dstdirlen);
+/*
+ *  Copies the parent directory name of (srcpath) into the buffer (dstdir)
+ *    of length (dstdirlen).
+ *  If (srcpath) does not contain a slash, then (dstdir) shall contain the
+ *    dot directory (ie, the string ".").
+ *  Returns a pointer to (dstdir) on success (guaranteed to be nul terminated),
+ *    or NULL on error (with errno set).
+ */
+
+int create_dirs (const char *dir_name);
+/*
+ *  Creates the directory (dir_name) and any parent directories that do not
+ *    already exist.  Directories are created with permissions 0755 modified
+ *    by the umask.
+ *  Returns 0 on success, or -1 on error (logging a warning message).
+ */
+
 
 #endif /* !_UTIL_FILE_H */
