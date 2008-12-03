@@ -288,7 +288,6 @@ get_dir_name (const char *srcpath, char *dstdir, size_t dstdirlen)
             errno = ENAMETOOLONG;
             return (NULL);
         }
-        assert ((len > 0) && (len < dstdirlen));
         (void) strncpy (dstdir, srcpath, len);
         dstdir [len] = '\0';
     }
