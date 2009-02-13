@@ -28,6 +28,9 @@
 #define _SERVER_H
 
 
+#ifdef WITH_FREEIPMI
+#include <ipmiconsole.h>
+#endif /* WITH_FREEIPMI */
 #include <netinet/in.h>                 /* for struct sockaddr_in            */
 #include <pthread.h>
 #include <sys/types.h>
@@ -45,6 +48,16 @@
 #define DEFAULT_SEROPT_DATABITS         8
 #define DEFAULT_SEROPT_PARITY           0
 #define DEFAULT_SEROPT_STOPBITS         1
+
+#ifdef WITH_FREEIPMI
+#define IPMI_ENGINE_CONSOLES_PER_THREAD 128
+#define IPMI_MAX_USER_LEN               IPMI_MAX_USER_NAME_LENGTH
+#define IPMI_MAX_PSWD_LEN               IPMI_2_0_MAX_PASSWORD_LENGTH
+#define IPMI_MAX_KG_LEN                 IPMI_MAX_K_G_LENGTH
+#define IPMI_CONNECT_TIMEOUT            300
+#define IPMI_MAX_TIMEOUT                1800
+#define IPMI_MIN_TIMEOUT                60
+#endif /* WITH_FREEIPMI */
 
 #define PROCESS_MAX_COUNT               3
 #define PROCESS_MIN_TIMEOUT             60
@@ -65,7 +78,11 @@ enum obj_type {                         /* type of auxiliary obj (3 bits)    */
     CONMAN_OBJ_PROCESS,
     CONMAN_OBJ_SERIAL,
     CONMAN_OBJ_TELNET,
-    CONMAN_OBJ_UNIXSOCK
+    CONMAN_OBJ_UNIXSOCK,
+#ifdef WITH_FREEIPMI
+    CONMAN_OBJ_IPMI,
+#endif /* WITH_FREEIPMI */
+    CONMAN_OBJ_LAST_ENTRY
 };
 
 typedef struct client_obj {             /* CLIENT AUX OBJ DATA:              */
@@ -150,6 +167,33 @@ typedef struct unixsock_obj {           /* UNIXSOCK AUX OBJ DATA:            */
     unsigned         state:1;           /*  unixsock_state_t conn state      */
 } unixsock_obj_t;
 
+#ifdef WITH_FREEIPMI
+typedef struct ipmi_opt {                               /* IPMI OBJ OPTIONS: */
+    char             username[ IPMI_MAX_USER_LEN + 1 ]; /*  BMC username     */
+    char             password[ IPMI_MAX_PSWD_LEN + 1 ]; /*  BMC password     */
+    unsigned char    kg[ IPMI_MAX_KG_LEN + 1 ];         /*  BMC K_g key      */
+    unsigned int     kgLen;                             /*  BMC K_g key len  */
+} ipmiopt_t;
+
+typedef struct ipmiconsole_ctx ipmictx_t;
+
+typedef enum ipmi_connect_state {
+    CONMAN_IPMI_DOWN,
+    CONMAN_IPMI_PENDING,
+    CONMAN_IPMI_UP
+} ipmi_state_t;
+
+typedef struct ipmi_obj {               /* IPMI AUX OBJ DATA:                */
+    char            *host;              /*  remote bmc host name (or ip)     */
+    ipmiopt_t        iconf;             /*  conf to connect to bmc           */
+    ipmictx_t       *ctx;               /*  ipmi session ctx ptr             */
+    struct base_obj *logfile;           /*  log obj ref for console replay   */
+    ipmi_state_t     state;             /*  connection state                 */
+    int              timer;             /*  timer id                         */
+    int              delay;             /*  secs 'til next reconnect attempt */
+} ipmi_obj_t;
+#endif /* WITH_FREEIPMI */
+
 typedef union aux_obj {
     client_obj_t     client;
     logfile_obj_t    logfile;
@@ -157,6 +201,9 @@ typedef union aux_obj {
     serial_obj_t     serial;
     telnet_obj_t     telnet;
     unixsock_obj_t   unixsock;
+#ifdef WITH_FREEIPMI
+    ipmi_obj_t       ipmi;
+#endif /* WITH_FREEIPMI */
 } aux_obj_t;
 
 typedef struct base_obj {               /* BASE OBJ:                         */
@@ -198,6 +245,10 @@ typedef struct server_conf {
     char            *globalLogName;     /* global log name (must contain &)  */
     logopt_t         globalLogOpts;     /* global opts for logfile objects   */
     seropt_t         globalSerOpts;     /* global opts for serial objects    */
+#ifdef WITH_FREEIPMI
+    ipmiopt_t        globalIpmiOpts;    /* global opts for ipmi objects      */
+    int              numIpmiObjs;       /* number of ipmi consoles in config */
+#endif /* WITH_FREEIPMI */
     unsigned         enableKeepAlive:1; /* true if using TCP keep-alive      */
     unsigned         enableLoopBack:1;  /* true if only listening on loopback*/
     unsigned         enableTCPWrap:1;   /* true if TCP-Wrappers is enabled   */
@@ -254,11 +305,21 @@ typedef struct client_args {
 #define is_serial_obj(OBJ)   (OBJ->type == CONMAN_OBJ_SERIAL)
 #define is_telnet_obj(OBJ)   (OBJ->type == CONMAN_OBJ_TELNET)
 #define is_unixsock_obj(OBJ) (OBJ->type == CONMAN_OBJ_UNIXSOCK)
-#define is_console_obj(OBJ)  \
-    (is_process_obj(OBJ) ||  \
-     is_serial_obj(OBJ)  ||  \
-     is_telnet_obj(OBJ)  ||  \
-     is_unixsock_obj(OBJ))
+
+#ifdef WITH_FREEIPMI
+#define is_ipmi_obj(OBJ)     (OBJ->type == CONMAN_OBJ_IPMI)
+#else /* !WITH_FREEIPMI */
+#define is_ipmi_obj(OBJ)     (0)
+#endif /* WITH_FREEIPMI */
+
+#define is_console_obj(OBJ) \
+( \
+  is_telnet_obj(OBJ)   || \
+  is_ipmi_obj(OBJ)     || \
+  is_unixsock_obj(OBJ) || \
+  is_serial_obj(OBJ)   || \
+  is_process_obj(OBJ)     \
+)
 
 
 /*  server-conf.c
@@ -275,6 +336,27 @@ void process_config(server_conf_t *conf);
 /*  server-esc.c
  */
 int process_client_escapes(obj_t *client, void *src, int len);
+
+
+/* server-ipmi.c
+ */
+#ifdef WITH_FREEIPMI
+
+void ipmi_init(int num_consoles);
+
+void ipmi_fini(void);
+
+int parse_ipmi_opts(
+    ipmiopt_t *iopts, const char *str, char *errbuf, int errlen);
+
+obj_t * create_ipmi_obj(server_conf_t *conf, char *name,
+    ipmiopt_t *iconf, char *host, char *errbuf, int errlen);
+
+int open_ipmi_obj(obj_t *ipmi);
+
+int send_ipmi_break(obj_t *ipmi);
+
+#endif /* WITH_FREEIPMI */
 
 
 /*  server-logfile.c

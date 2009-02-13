@@ -139,6 +139,31 @@ for none, '\fBo\fR' for odd, and '\fBe\fR' for even.
 .br
 .sp
 The default is "9600,8n1" for 9600 bps, 8 data bits, no parity, and 1 stop bit.
+.TP
+\fBipmiopts\fR \fB=\fR "[\fIusername\fR[,\fIpassword\fR[,\fIK_g\fR]]]"
+Specifies global options for IPMI Serial-Over-LAN devices.  These options can
+be overridden on a per-console basis by specifying the \fBCONSOLE\fR
+\fBipmiopts\fR keyword.  This directive is only available if compiled with the
+"--with-freeipmi" option.  The valid \fBipmiopts\fR include the following:
+.br
+.sp
+\fIusername\fR is a string of at most 16 bytes that specifies the username with
+which to authenticate to the BMCs serving the remote consoles.
+.br
+.sp
+\fIpassword\fR is a string of at most 20 bytes that specifies the password with
+which to authenticate to the BMCs serving the remote consoles.
+.br
+.sp
+\fIK_g\fR is a string of at most 20 bytes that specifies the K_g key with which
+to authenticate to the BMCs serving the remote consoles.
+.br
+.sp
+Both the \fIpassword\fR and \fIK_g\fR keys can be specified in either ASCII or
+hexadecimal; in the latter case, the string should begin with "0x" and contain
+at most 40 hexadecimal digits.  A \fIK_g\fR key entered in hexadecimal may
+contain embedded NUL characters, but any characters following the first NUL in
+the \fIpassword\fR key will be ignored.
 
 .SH CONSOLE DIRECTIVES
 This directive defines an individual console being managed by the daemon.
@@ -146,8 +171,8 @@ The \fBCONSOLE\fR keyword is followed by one or more of the following
 key/value pairs:
 .TP
 \fBname\fR \fB=\fR "\fIstring\fR"
-Specifies the name used by clients to refer to the console.  This keyword
-is required.
+Specifies the name used by clients to refer to the console.  This keyword is
+required.
 .TP
 \fBdev\fR \fB=\fR "\fIstring\fR"
 Specifies the type and location of the device.  This keyword is required.
@@ -174,6 +199,11 @@ format (where "unix:" is the literal character string prefix and \fIpath\fR
 is the pathname of the local socket).
 .br
 .sp
+An IPMI Serial-Over-LAN connection is defined by the "ipmi:\fIhost\fR" format
+(where "ipmi" is the literal string and "\fIhost\fR" is a hostname or IPv4
+address).
+.br
+.sp
 The '%N' character sequence will be replaced by the console name.
 .TP
 \fBlog\fR \fB=\fR "\fIfile\fR"
@@ -189,6 +219,9 @@ An empty log string (i.e., \fBlog\fR="") disables logging, overriding the
 This keyword is optional (cf., \fBGLOBAL DIRECTIVES\fR).
 .TP
 \fBseropts\fR \fB=\fR "\fIstring\fR"
+This keyword is optional (cf., \fBGLOBAL DIRECTIVES\fR).
+.TP
+\fBipmiopts\fR \fB=\fR "\fIstring\fR"
 This keyword is optional (cf., \fBGLOBAL DIRECTIVES\fR).
 
 .SH CONVERSION SPECIFICATIONS

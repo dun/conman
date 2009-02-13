@@ -31,6 +31,9 @@
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
+#ifdef WITH_FREEIPMI
+#include <ipmiconsole.h>
+#endif /* WITH_FREEIPMI */
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -65,11 +68,15 @@ obj_t * create_obj(
     assert(conf != NULL);
     assert(name != NULL);
     assert(type==CONMAN_OBJ_CLIENT  ||
+#ifdef WITH_FREEIPMI
+           type==CONMAN_OBJ_IPMI    ||
+#endif /* WITH_FREEIPMI */
            type==CONMAN_OBJ_LOGFILE ||
            type==CONMAN_OBJ_PROCESS ||
            type==CONMAN_OBJ_SERIAL  ||
            type==CONMAN_OBJ_TELNET  ||
-           type==CONMAN_OBJ_UNIXSOCK);
+           type==CONMAN_OBJ_UNIXSOCK
+    );
 
     if (!(obj = malloc(sizeof(obj_t))))
         out_of_memory();
@@ -206,6 +213,16 @@ void destroy_obj(obj_t *obj)
         /*  Do not destroy obj->aux.unixsock.logfile since it is only a ref.
          */
         break;
+#ifdef WITH_FREEIPMI
+    case CONMAN_OBJ_IPMI:
+        if (obj->aux.ipmi.host) {
+            free(obj->aux.ipmi.host);
+        }
+        if (obj->aux.ipmi.ctx) {
+            ipmiconsole_ctx_destroy(obj->aux.ipmi.ctx);
+        }
+        break;
+#endif /* WITH_FREEIPMI */
     default:
         log_err(0, "INTERNAL: Unrecognized object [%s] type=%d",
             obj->name, obj->type);
@@ -251,6 +268,11 @@ void reopen_obj(obj_t *obj)
     else if (is_unixsock_obj(obj)) {
         open_unixsock_obj(obj);
     }
+#ifdef WITH_FREEIPMI
+    else if (is_ipmi_obj(obj)) {
+        open_ipmi_obj(obj);
+    }
+#endif /* WITH_FREEIPMI */
     else if (is_client_obj(obj)) {
         ; /* no-op */
     }

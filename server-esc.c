@@ -162,12 +162,27 @@ static void perform_serial_break(obj_t *client)
         }
         else if (is_serial_obj(console)) {
             if (tcsendbreak(console->fd, 0) < 0)
-                log_err(errno, "Unable to send serial-break to console [%s]",
-                    console->name);
+                log_msg(LOG_WARNING,
+                    "Unable to send serial-break to console [%s]: %s",
+                    console->name, strerror(errno));
         }
         else if (is_telnet_obj(console)) {
-            send_telnet_cmd(console, BREAK, -1);
+            if (send_telnet_cmd(console, BREAK, -1) < 0) {
+                log_msg(LOG_WARNING,
+                    "Unable to send serial-break to console [%s]",
+                    console->name);
+            }
         }
+#ifdef WITH_FREEIPMI
+        else if (is_ipmi_obj(console)) {
+            if (send_ipmi_break(console) < 0) {
+                log_msg(LOG_WARNING,
+                    "Unable to send serial-break to console [%s]",
+                    console->name);
+            }
+        }
+#endif /* WITH_FREEIPMI */
+
         /*  FIXME: How should serial-breaks be handled for unixsock objs?
          */
     }

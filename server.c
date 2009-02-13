@@ -144,8 +144,17 @@ int main(int argc, char *argv[])
     log_msg(LOG_NOTICE, "Starting ConMan daemon %s (pid %d)",
         VERSION, (int) getpid());
 
+#ifdef WITH_FREEIPMI
+    ipmi_init(conf->numIpmiObjs);
+#endif /* WITH_FREEIPMI */
+
     open_objs(conf);
     mux_io(conf);
+
+#ifdef WITH_FREEIPMI
+    ipmi_fini();
+#endif /* WITH_FREEIPMI */
+
     destroy_server_conf(conf);
 
     if (pgid > 0) {
@@ -674,13 +683,19 @@ static void mux_io(server_conf_t *conf)
             if (obj->fd < 0) {
                 continue;
             }
-            if ( ( is_client_obj(obj)  ||
-                   is_process_obj(obj) ||
-                   is_serial_obj(obj)  ||
+            if ( (
                    ( is_telnet_obj(obj) &&
                      obj->aux.telnet.conState == CONMAN_TELCON_UP ) ||
+#ifdef WITH_FREEIPMI
+                   ( is_ipmi_obj(obj) &&
+                     obj->aux.ipmi.state == CONMAN_IPMI_UP ) ||
+#endif /* WITH_FREEIPMI */
                    ( is_unixsock_obj(obj) &&
-                     obj->aux.unixsock.state == CONMAN_UNIXSOCK_UP ) )
+                     obj->aux.unixsock.state == CONMAN_UNIXSOCK_UP ) ||
+                   is_serial_obj(obj)  ||
+                   is_process_obj(obj) ||
+                   is_client_obj(obj)
+                 )
                  &&
                  ( ! obj->gotEOF ) )
             {

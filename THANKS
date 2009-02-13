@@ -5,7 +5,7 @@ the following people have contributed in its development:
   using external processes
 
 * Levi Pearson <lpearson@lnxi.com> - subsequent IPMI SOL implementation using
-  FreeIPMI's libipmiconsole (which I still need to merge into the trunk)
+  FreeIPMI's libipmiconsole
 
 * Brian J. Murrell <brian.murrell@sun.com> - initial Unix domain socket
   implementation

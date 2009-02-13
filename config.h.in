@@ -66,6 +66,9 @@
 /* Define to 1 if you have the `strlcpy' function. */
 #undef HAVE_STRLCPY
 
+/* Define to 1 if you have the `strncasecmp' function. */
+#undef HAVE_STRNCASECMP
+
 /* Define to 1 if you have the <sys/inotify.h> header file. */
 #undef HAVE_SYS_INOTIFY_H
 
@@ -74,6 +77,9 @@
 
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
+
+/* Define to 1 if you have the `toint' function. */
+#undef HAVE_TOINT
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
@@ -116,6 +122,9 @@
 
 /* Define if using the debug malloc library. */
 #undef WITH_DMALLOC
+
+/* Define if using FreeIPMI's libipmiconsole. */
+#undef WITH_FREEIPMI
 
 /* Define if using Pthreads. */
 #undef WITH_PTHREADS

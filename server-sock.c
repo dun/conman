@@ -934,5 +934,19 @@ static void check_console_state(obj_t *console, obj_t *client)
         write_obj_data(client, buf, strlen(buf), 1);
         open_unixsock_obj(console);
     }
+#ifdef WITH_FREEIPMI
+    else if (is_ipmi_obj(console)
+            && (console->aux.ipmi.state != CONMAN_IPMI_UP)) {
+        snprintf(buf, sizeof(buf),
+            "%sConsole [%s] is currently disconnected from <%s>%s",
+            CONMAN_MSG_PREFIX, console->name, console->aux.ipmi.host,
+            CONMAN_MSG_SUFFIX);
+        strcpy(&buf[sizeof(buf) - 3], "\r\n");
+        write_obj_data(client, buf, strlen(buf), 1);
+        if (console->aux.ipmi.state == CONMAN_IPMI_DOWN) {
+            open_ipmi_obj(console);
+        }
+    }
+#endif /* WITH_FREEIPMI */
     return;
 }

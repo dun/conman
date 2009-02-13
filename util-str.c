@@ -412,3 +412,42 @@ int strcasecmp(const char *s1, const char *s2)
     return(toupper((int) *p) - toupper((int) *q));
 }
 #endif /* !HAVE_STRCASECMP */
+
+
+#ifndef HAVE_STRNCASECMP
+int strncasecmp(const char *s1, const char *s2, size_t n)
+{
+    const char *p, *q;
+
+    if (!n) {
+        return(0);
+    }
+    p = s1;
+    q = s2;
+    while (--n && *p && toupper((int) *p) == toupper((int) *q)) {
+        p++, q++;
+    }
+    return(toupper((int) *p) - toupper((int) *q));
+}
+#endif /* !HAVE_STRNCASECMP */
+
+
+#ifndef HAVE_TOINT
+int toint(int c)
+{
+/*  Returns the "weight" (0-15) of a hexadecimal digit 'c'.
+ *
+ *  Implementation from "C: A Reference Manual, 5e" by Harbison & Steele.
+ */
+    if (c >= '0' && c <= '9') {
+        return(c - '0');
+    }
+    if (c >= 'A' && c <= 'F') {
+        return(c - 'A' + 10);
+    }
+    if (c >= 'a' && c <= 'f') {
+        return(c - 'a' + 10);
+    }
+    return(0);
+}
+#endif /* !HAVE_TOINT */

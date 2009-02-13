@@ -155,6 +155,16 @@ int strcasecmp(const char *s1, const char *s2);
  */
 #endif /* !HAVE_STRCASECMP */
 
+#ifndef HAVE_STRNCASECMP
+int strncasecmp(const char *s1, const char *s2, size_t n);
+/*
+ *  Compares up to the first 'n' bytes of the two strings 's1' and 's2',
+ *    ignoring the case of the chars.
+ *  Returns less-than-zero if (s1 < s2), zero if (s1 == s2), and
+ *    greater-than-zero if (s1 > s2).
+ */
+#endif /* !HAVE_STRNCASECMP */
+
 #ifndef HAVE_STRLCAT
 size_t strlcat(char *dst, const char *src, size_t siz);
 /*
@@ -173,6 +183,13 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
  *  Returns strlen(src); if retval >= siz, truncation occurred.
  */
 #endif /* !HAVE_STRLCPY */
+
+#ifndef HAVE_TOINT
+int toint(int c);
+/*
+ *  Returns the "weight" (0-15) of a hexadecimal digit 'c'.
+ */
+#endif /* !HAVE_TOINT */
 
 
 #endif /* !_UTIL_STR_H */

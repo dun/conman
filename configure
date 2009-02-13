@@ -678,6 +678,8 @@ CPP
 GREP
 EGREP
 LIBOBJS
+IPMI_OBJS
+IPMI_LIBS
 CONMAN_CONF
 CONMAN_HOST
 CONMAN_PORT
@@ -1271,6 +1273,7 @@ Optional Packages:
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
   --with-dmalloc          use Gray Watson's dmalloc library
   --with-tcp-wrappers     use Wietse Venema's TCP Wrappers
+  --with-freeipmi         use FreeIPMI's Serial-Over-LAN console
   --with-conman-host=HOST default host name of daemon [127.0.0.1]
   --with-conman-port=PORT default port number of daemon [7890]
 
@@ -3790,7 +3793,9 @@ done
 
 
 
-for ac_header in paths.h
+for ac_header in \
+  paths.h \
+
 do
 as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
 if { as_var=$as_ac_Header; eval "test \"\${$as_var+set}\" = set"; }; then
@@ -4381,12 +4386,16 @@ esac
 
 
 
+
+
 for ac_func in \
   inet_aton \
   inet_ntop \
   inet_pton \
   localtime_r \
   strcasecmp \
+  strncasecmp \
+  toint \
 
 do
 as_ac_var=`echo "ac_cv_func_$ac_func" | $as_tr_sh`
@@ -5072,6 +5081,239 @@ fi
 echo $ECHO_N "checking whether to use TCP Wrappers... $ECHO_C" >&6; }
 { echo "$as_me:$LINENO: result: ${tcp_wrappers=no}" >&5
 echo "${ECHO_T}${tcp_wrappers=no}" >&6; }
+
+
+
+# Check whether --with-freeipmi was given.
+if test "${with_freeipmi+set}" = set; then
+  withval=$with_freeipmi;  case "$withval" in
+      yes) freeipmi=yes ;;
+      no)  freeipmi=no ;;
+      *)   { echo "$as_me:$LINENO: result: doh!" >&5
+echo "${ECHO_T}doh!" >&6; }
+           { { echo "$as_me:$LINENO: error: bad value \"$withval\" for --with-freeipmi" >&5
+echo "$as_me: error: bad value \"$withval\" for --with-freeipmi" >&2;}
+   { (exit 1); exit 1; }; } ;;
+    esac
+
+
+fi
+
+if test "$freeipmi" != no; then
+  if test "${ac_cv_header_ipmiconsole_h+set}" = set; then
+  { echo "$as_me:$LINENO: checking for ipmiconsole.h" >&5
+echo $ECHO_N "checking for ipmiconsole.h... $ECHO_C" >&6; }
+if test "${ac_cv_header_ipmiconsole_h+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+fi
+{ echo "$as_me:$LINENO: result: $ac_cv_header_ipmiconsole_h" >&5
+echo "${ECHO_T}$ac_cv_header_ipmiconsole_h" >&6; }
+else
+  # Is the header compilable?
+{ echo "$as_me:$LINENO: checking ipmiconsole.h usability" >&5
+echo $ECHO_N "checking ipmiconsole.h usability... $ECHO_C" >&6; }
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+$ac_includes_default
+#include <ipmiconsole.h>
+_ACEOF
+rm -f conftest.$ac_objext
+if { (ac_try="$ac_compile"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
+  (eval "$ac_compile") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest.$ac_objext; then
+  ac_header_compiler=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	ac_header_compiler=no
+fi
+
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+{ echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
+echo "${ECHO_T}$ac_header_compiler" >&6; }
+
+# Is the header present?
+{ echo "$as_me:$LINENO: checking ipmiconsole.h presence" >&5
+echo $ECHO_N "checking ipmiconsole.h presence... $ECHO_C" >&6; }
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+#include <ipmiconsole.h>
+_ACEOF
+if { (ac_try="$ac_cpp conftest.$ac_ext"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
+  (eval "$ac_cpp conftest.$ac_ext") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } >/dev/null && {
+	 test -z "$ac_c_preproc_warn_flag$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       }; then
+  ac_header_preproc=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+  ac_header_preproc=no
+fi
+
+rm -f conftest.err conftest.$ac_ext
+{ echo "$as_me:$LINENO: result: $ac_header_preproc" >&5
+echo "${ECHO_T}$ac_header_preproc" >&6; }
+
+# So?  What about this header?
+case $ac_header_compiler:$ac_header_preproc:$ac_c_preproc_warn_flag in
+  yes:no: )
+    { echo "$as_me:$LINENO: WARNING: ipmiconsole.h: accepted by the compiler, rejected by the preprocessor!" >&5
+echo "$as_me: WARNING: ipmiconsole.h: accepted by the compiler, rejected by the preprocessor!" >&2;}
+    { echo "$as_me:$LINENO: WARNING: ipmiconsole.h: proceeding with the compiler's result" >&5
+echo "$as_me: WARNING: ipmiconsole.h: proceeding with the compiler's result" >&2;}
+    ac_header_preproc=yes
+    ;;
+  no:yes:* )
+    { echo "$as_me:$LINENO: WARNING: ipmiconsole.h: present but cannot be compiled" >&5
+echo "$as_me: WARNING: ipmiconsole.h: present but cannot be compiled" >&2;}
+    { echo "$as_me:$LINENO: WARNING: ipmiconsole.h:     check for missing prerequisite headers?" >&5
+echo "$as_me: WARNING: ipmiconsole.h:     check for missing prerequisite headers?" >&2;}
+    { echo "$as_me:$LINENO: WARNING: ipmiconsole.h: see the Autoconf documentation" >&5
+echo "$as_me: WARNING: ipmiconsole.h: see the Autoconf documentation" >&2;}
+    { echo "$as_me:$LINENO: WARNING: ipmiconsole.h:     section \"Present But Cannot Be Compiled\"" >&5
+echo "$as_me: WARNING: ipmiconsole.h:     section \"Present But Cannot Be Compiled\"" >&2;}
+    { echo "$as_me:$LINENO: WARNING: ipmiconsole.h: proceeding with the preprocessor's result" >&5
+echo "$as_me: WARNING: ipmiconsole.h: proceeding with the preprocessor's result" >&2;}
+    { echo "$as_me:$LINENO: WARNING: ipmiconsole.h: in the future, the compiler will take precedence" >&5
+echo "$as_me: WARNING: ipmiconsole.h: in the future, the compiler will take precedence" >&2;}
+
+    ;;
+esac
+{ echo "$as_me:$LINENO: checking for ipmiconsole.h" >&5
+echo $ECHO_N "checking for ipmiconsole.h... $ECHO_C" >&6; }
+if test "${ac_cv_header_ipmiconsole_h+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_cv_header_ipmiconsole_h=$ac_header_preproc
+fi
+{ echo "$as_me:$LINENO: result: $ac_cv_header_ipmiconsole_h" >&5
+echo "${ECHO_T}$ac_cv_header_ipmiconsole_h" >&6; }
+
+fi
+if test $ac_cv_header_ipmiconsole_h = yes; then
+  ac_have_ipmiconsole_h=yes
+fi
+
+
+  { echo "$as_me:$LINENO: checking for ipmiconsole_engine_init in -lipmiconsole" >&5
+echo $ECHO_N "checking for ipmiconsole_engine_init in -lipmiconsole... $ECHO_C" >&6; }
+if test "${ac_cv_lib_ipmiconsole_ipmiconsole_engine_init+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lipmiconsole  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char ipmiconsole_engine_init ();
+int
+main ()
+{
+return ipmiconsole_engine_init ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval "echo \"\$as_me:$LINENO: $ac_try_echo\"") >&5
+  (eval "$ac_link") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest$ac_exeext &&
+       $as_test_x conftest$ac_exeext; then
+  ac_cv_lib_ipmiconsole_ipmiconsole_engine_init=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	ac_cv_lib_ipmiconsole_ipmiconsole_engine_init=no
+fi
+
+rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
+      conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ echo "$as_me:$LINENO: result: $ac_cv_lib_ipmiconsole_ipmiconsole_engine_init" >&5
+echo "${ECHO_T}$ac_cv_lib_ipmiconsole_ipmiconsole_engine_init" >&6; }
+if test $ac_cv_lib_ipmiconsole_ipmiconsole_engine_init = yes; then
+  ac_have_ipmiconsole=yes
+fi
+
+  if test "$ac_have_ipmiconsole_h" = yes -a "$ac_have_ipmiconsole" = yes; then
+
+cat >>confdefs.h <<_ACEOF
+#define WITH_FREEIPMI 1
+_ACEOF
+
+    freeipmi=yes
+    IPMI_OBJS="server-ipmi.o"
+    IPMI_LIBS="-lipmiconsole"
+  else
+    freeipmi=no
+  fi
+fi
+{ echo "$as_me:$LINENO: checking whether to use FreeIPMI's libipmiconsole" >&5
+echo $ECHO_N "checking whether to use FreeIPMI's libipmiconsole... $ECHO_C" >&6; }
+{ echo "$as_me:$LINENO: result: ${freeipmi=no}" >&5
+echo "${ECHO_T}${freeipmi=no}" >&6; }
+
+
 
 
 CONMAN_CONF_TMP1="`eval echo ${sysconfdir}/conman.conf`"
@@ -5850,13 +6092,15 @@ CPP!$CPP$ac_delim
 GREP!$GREP$ac_delim
 EGREP!$EGREP$ac_delim
 LIBOBJS!$LIBOBJS$ac_delim
+IPMI_OBJS!$IPMI_OBJS$ac_delim
+IPMI_LIBS!$IPMI_LIBS$ac_delim
 CONMAN_CONF!$CONMAN_CONF$ac_delim
 CONMAN_HOST!$CONMAN_HOST$ac_delim
 CONMAN_PORT!$CONMAN_PORT$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 69; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 71; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
