@@ -1,3 +1,6 @@
+conman-0.2.4 (????-??-??):
+- Added support for FreeIPMI.
+
 conman-0.2.3 (2008-12-03):
 - Added support for creation of intermediate directories.
 - Added console script for HP LO100.
