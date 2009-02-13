@@ -10,6 +10,7 @@ License:	GPL
 URL:		http://home.gna.org/conman/
 
 Requires:	expect
+BuildRequires:	freeipmi-devel
 BuildRequires:	tcp_wrappers
 BuildRoot:	%{_tmppath}/%{name}-%{version}
 

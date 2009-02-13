@@ -1,5 +1,7 @@
 2009-02-12  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* conman.spec: Added BuildRequires for freeipmi-devel.
+
 	* : Updated copyright date range.
 
 	* : Merged r758:900 (2007-08-03 to 2009-02-12) from
