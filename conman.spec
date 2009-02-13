@@ -23,7 +23,7 @@ number of console devices and simultaneous users.  It supports:
   - remote terminal servers (via the telnet protocol)
   - IPMI Serial-Over-LAN (via FreeIPMI)
   - Unix domain sockets
-  - external processes (eg, using Expect for telnet/ssh/ipmi-sol connections).
+  - external processes (eg, using Expect for telnet/ssh/ipmi-sol connections)
 
 Its features include:
   - logging (and optionally timestamping) console device output to file
