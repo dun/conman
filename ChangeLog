@@ -1,5 +1,7 @@
 2009-03-02  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* conmen: Removed 0.2s delay between the spawning of each xterm.
+
 	* conmen: Changed xterm geometry option from "-g" to "-G".
 	  Added support for genders nodeattr query via "-g".
 

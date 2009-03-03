@@ -164,7 +164,6 @@ sub spawn_consoles
         } else {
             push(@pids, $pid);
         }
-        select(undef, undef, undef, 0.2);
     }
     select(undef, undef, undef, 1.0);
 
