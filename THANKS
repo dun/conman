@@ -12,4 +12,6 @@ the following people have contributed in its development:
 
 * Mike T. Spangler <mike.t.spangler@boeing.com> - testing of hp-ilo.exp
 
-* Christopher D. Maestas <cdmaestas@comcast.net> - driver for hp-lo100.exp
+* Christopher D. Maestas <cdmaestas@comcast.net> - hp-lo100.exp
+
+* Dave Love <d.love@liverpool.ac.uk> - sun-elom.exp

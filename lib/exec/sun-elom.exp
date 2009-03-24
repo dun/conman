@@ -1,0 +1,245 @@
+#!/usr/bin/expect -f
+###############################################################################
+# $Id$
+###############################################################################
+# Written by Chris Dunlap <cdunlap@llnl.gov>.
+# Copyright (C) 2007-2009 Lawrence Livermore National Security, LLC.
+# Copyright (C) 2001-2007 The Regents of the University of California.
+# UCRL-CODE-2002-009.
+# Adapted for ELOM from sun-ilom.exp by Dave Love <d.love@liverpool.ac.uk>
+#  (mods not significant for copyright purposes)
+# Works with ELOM 3.15, at least.
+#
+# This file is part of ConMan: The Console Manager.
+# For details, see <http://home.gna.org/conman/>.
+###############################################################################
+# This script connects to a console managed by the Integrated Lights Out
+# Manager (ELOM) on a Sun server using the SSH protocol.
+# ELOM is annoyingly different from ILOM, for which the original script
+# was written.
+#
+# This script can be specified in "conman.conf" in the following manner:
+#
+#   console name="zot" dev="/path/to/sun-elom.exp HOST USER PSWD"
+#
+# HOST is the hostname of the Sun ELOM server.
+# USER is the username being authenticated.
+# PSWD is the corresponding password.
+#
+# Since this command-line will persist in the process listing for the duration
+# of the connection, passing sensitive information like PSWD in this manner is
+# not recommended.  Instead, consider using either a command-line argument
+# default or the password database (see below).
+###############################################################################
+
+##
+# Set "exp_internal" to 1 to print diagnostics describing internal operations.
+#   This is helpful in diagnosing pattern-match failures.
+##
+  exp_internal 0
+
+##
+# Set "log_user" to 1 to show the underlying dialogue establishing a connection
+#   to the console.
+##
+  log_user 0
+
+##
+# The "timeout" specifies the number of seconds before the connection attempt
+#   times-out and terminates the connection.
+##
+  set timeout 10
+
+##
+# If "session_override" is set, an existing connection to this console session
+#   will be terminated and the new connection will be established.  Subsequent
+#   attempts to steal this console session will be thwarted.
+# Otherwise, an existing connection to this console session will cause the new
+#   connection to fail with "console session already in use".  If the console
+#   session is not in use and the connection succeeds, the console session may
+#   subsequently be stolen thereby causing this connection to terminate with
+#   "console session stolen".
+##
+  set session_override 1
+
+##
+# The "password_db" specifies the location of the password database.
+#   This avoids exposing sensitive information on the command-line without
+#   needing to modify this script.
+# Whitespace and lines beginning with '#' are ignored.  The file format is:
+#   <host-regex> : <user> : <pswd>
+##
+  set password_db "/etc/conman.pswd"
+
+##
+# Command-line argument defaults can be specified here.  This avoids exposing
+#   sensitive information on the command-line.
+##
+# set user "root"
+# set pswd "changeme"
+
+###############################################################################
+
+set env(PATH) "/usr/bin:/bin"
+
+proc get_password {host user index} {
+  global password_db
+  set db_pswd {}
+  if {! [info exists password_db]} {
+    return
+  }
+  if {[catch {open $password_db} input]} {
+    return
+  }
+  while {[gets $input line] != -1} {
+    if {[regexp {^[ \t]*#} $line]} {
+      continue
+    }
+    set record [split $line ":"]
+    set db_host [string trim [lindex $record 0]]
+    if {[catch {regexp "^$db_host$" $host} got_host_match]} {
+      continue
+    }
+    if {! $got_host_match && [string length $db_host]} {
+      continue
+    }
+    set db_user [string trim [lindex $record 1]]
+    if {[string compare $db_user $user]} {
+      continue
+    }
+    set db_pswd [string trim [lindex $record $index]]
+    break
+  }
+  close $input
+  return $db_pswd
+}
+
+if {! $argc} {
+  set prog [lindex [split $argv0 "/"] end]
+  send_user "Usage: $prog <host> <user> <pswd>\r\n"
+  exit 1
+}
+if {$argc > 0} {
+  set host [lindex $argv 0]
+}
+if {$argc > 1} {
+  set user [lindex $argv 1]
+}
+if {$argc > 2} {
+  set pswd [lindex $argv 2]
+}
+set authenticated 0
+set connected 0
+if {! [info exists host]} {
+  send_user "Error: Unspecified hostname.\r\n"
+  exit 1
+}
+if {! [info exists user]} {
+  send_user "Error: Unspecified username.\r\n"
+  exit 1
+}
+if {! [info exists pswd]} {
+  set pswd [get_password $host $user 2]
+  if {! [string length $pswd]} {
+    send_user "Error: Unspecified password.\r\n"
+    exit 1
+  }
+}
+if {! [info exists session_override]} {
+  set session_override 0
+}
+set override $session_override
+if {[catch "spawn ssh -a -e \& -l $user -p 22 -x $host" spawn_result]} {
+  send_user "Error: $spawn_result.\r\n"
+  exit 1
+}
+expect {
+  -re "console activate successful.\[^\r]*\r+\n" {
+    ;
+  }
+  -gl "Permission denied" {
+    send_user "Error: Permission denied.\r\n"
+    exit 1
+  }
+  -gl "Serial console is in use" {
+    send_user "Error: Console session already in use.\r\n"
+    exit 1
+  }
+  -re "Invalid command ('\[^']*')" {
+    send_user "Error: Invalid ELOM command $expect_out(1,string).\r\n"
+    exit 1
+  }
+  -re "^ssh: (\[^\r]*)\r+\n" {
+    send_user "Error: $expect_out(1,string).\r\n"
+    exit 1
+  }
+  eof {
+    send_user "Error: Connection closed by remote host.\r\n"
+    exit 1
+  }
+  timeout {
+    send_user "Error: Timed-out.\r\n"
+    exit 1
+  }
+  -nocase -gl "Are you sure you want to continue connecting (yes/no)? \$" {
+    send "yes\r"
+    exp_continue -continue_timer
+  }
+  -nocase -gl "Password: \$" {
+    if {$authenticated == 0} {
+      send "$pswd\r"
+      incr authenticated
+      exp_continue -continue_timer
+    } else {
+      send_user "Error: Permission denied.\r\n"
+      exit 1
+    }
+  }
+  -nocase -gl "-> \$" {
+    if {$connected != 0} {
+      send_user "Error: Unexpected ELOM response.\r\n"
+      exit 1
+    } elseif {$override != 0} {
+      send "stop /SP/AgentInfo/console\r"
+      set override 0
+    } else {
+      send "start /SP/AgentInfo/console\r"
+      incr connected
+    }
+    exp_continue -continue_timer
+  }
+  -re "\[^\r]*\r+\n" {
+    exp_continue -continue_timer
+  }
+}
+send_user "Connection established via ssh (pid $spawn_result).\r\n"
+
+set timeout 2
+interact {
+  # Replace "&B" with serial-break.
+  "&B" {
+    send "\033B"
+  }
+  # Match subsequent patterns against spawned process, not user's keystrokes.
+  -o
+  # Disable "ESC (" sequence for stopping console and returning to ELOM prompt.
+  -re "\r\nSerial console stopped.\r\n\r\n-> \$" {
+    send "start /SP/AgentInfo/console\r"
+    expect -re "\r\nconsole activate successful\[^\r]*\r+\n"
+  }
+  # Prevent theft of console if "session_override" is enabled; o/w, exit.
+  -re "\r\n-> \$" {
+    if {$session_override == 0} {
+      send_user "\r\nConsole session stolen.\r\n"
+      exit 1
+    }
+    send "start /SP/AgentInfo/console\r"
+    expect {
+      -re "\r\nSerial console is in use.\r\n" {
+        send_user "\r\nConsole session stolen.\r\n"
+        exit 1
+      }
+      -re "\r\nconsole activate successful\[^\r]*\r+\n"
+    }
+  }
+}
