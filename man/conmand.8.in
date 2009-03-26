@@ -81,6 +81,11 @@ If the configuration file is modified while the daemon is running and a
 \fBpidfile\fR was not originally specified, the '\fB-k\fR' and '\fB-r\fR'
 options may be unable to identify the daemon process; consequently, the
 appropriate signal may need to be sent to the daemon manually.
+.PP
+The number of consoles that can be simultaneously managed is limited by the
+maximum number of file descriptors a process can have open.  The daemon sets
+its "nofile" soft limit to the maximum/hard limit.  If you are encountering
+"too many open files" errors, you may need to increase the "nofile" hard limit.
 
 .SH AUTHOR
 Chris Dunlap <cdunlap@llnl.gov>
