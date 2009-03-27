@@ -148,7 +148,12 @@ void log_err(int errnum, const char *format, ...)
             if ((p = strchr(msg, '\n'))) {
                 *p = '\0';
             }
-            (void) write(log_fd_daemonize, msg, strlen(msg) + 1);
+            /*  Ignore return value from write() instead of logging an error
+             *    about failing to log an error.  Replaced void cast with
+             *    useless assignment since compilation under rhel5 complained
+             *    about ignoring return value of 'write'.
+             */
+            n = write(log_fd_daemonize, msg, strlen(msg) + 1);
         }
     }
 #ifndef NDEBUG

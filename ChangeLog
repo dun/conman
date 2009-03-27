@@ -1,5 +1,9 @@
 2009-03-26  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* log.c (log_err): Replaced void cast of write() in order to silence
+	  rhel5 warning of [ignoring return value of 'write', declared with
+	  attribute warn_unused_result].
+
 	* conman.spec: Added rpm conditionals to BuildRequires for
 	  freeipmi-devel and (tcp_wrappers|tcp_wrappers-devel|tcpd-devel).
 
