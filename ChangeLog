@@ -1,5 +1,8 @@
 2009-03-26  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* conman.spec: Added rpm conditionals to BuildRequires for
+	  freeipmi-devel and (tcp_wrappers|tcp_wrappers-devel|tcpd-devel).
+
 	* man/conmand.8.in: Added note regarding "too many open files" errors.
 
 2009-03-24  Chris Dunlap  <cdunlap@llnl.gov>

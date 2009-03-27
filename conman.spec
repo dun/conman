@@ -10,9 +10,23 @@ License:	GPL
 URL:		http://home.gna.org/conman/
 
 Requires:	expect
-BuildRequires:	freeipmi-devel
-BuildRequires:	tcp_wrappers
 BuildRoot:	%{_tmppath}/%{name}-%{version}
+
+%if 0%{?chaos} >= 4 || 0%{?rhel} >= 6 || 0%{?fedora} >= 9
+BuildRequires:  freeipmi-devel
+%endif
+
+%if 0%{?rhel} >= 6 || 0%{?fedora} >= 7
+BuildRequires:  tcp_wrappers-devel
+%else
+%if 0%{?rhel} < 6 || 0%{?fedora} < 7 || 0%{?rhl}
+BuildRequires:  tcp_wrappers
+%else
+%if "%{_vendor}" == "suse"
+BuildRequires:  tcpd-devel
+%endif
+%endif
+%endif
 
 Source0:	%{name}-%{version}.tar
 
