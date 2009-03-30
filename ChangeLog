@@ -1,5 +1,7 @@
 2009-03-30  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* man/conmand.8.in: Updated security section.
+
 	* lib/exec/sun-elom.exp:
 	  Added patch from Dave Love <d.love@liverpool.ac.uk> for
 	  permission-denied and in-use error patterns in Sun ELOM driver.
