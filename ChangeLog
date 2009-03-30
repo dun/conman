@@ -1,3 +1,9 @@
+2009-03-30  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* lib/exec/sun-elom.exp:
+	  Added patch from Dave Love <d.love@liverpool.ac.uk> for
+	  permission-denied and in-use error patterns in Sun ELOM driver.
+
 2009-03-26  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* log.c (log_err): Replaced void cast of write() in order to silence
@@ -11,8 +17,8 @@
 
 2009-03-24  Chris Dunlap  <cdunlap@llnl.gov>
 
-	* lib/exec/sun-elom.exp: Added patch for Sun ELOM driver from
-	  Dave Love <d.love@liverpool.ac.uk>.
+	* lib/exec/sun-elom.exp: Added patch from
+	  Dave Love <d.love@liverpool.ac.uk> for Sun ELOM driver.
 	* THANKS: Updated.
 
 2009-03-02  Chris Dunlap  <cdunlap@llnl.gov>

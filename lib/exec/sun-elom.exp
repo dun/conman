@@ -157,11 +157,11 @@ expect {
   -re "console activate successful.\[^\r]*\r+\n" {
     ;
   }
-  -gl "Permission denied" {
+  -gl "start: Permission Denied" {
     send_user "Error: Permission denied.\r\n"
     exit 1
   }
-  -gl "Serial console is in use" {
+  -gl "console already active on another session" {
     send_user "Error: Console session already in use.\r\n"
     exit 1
   }
