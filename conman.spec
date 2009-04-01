@@ -6,7 +6,7 @@ Release:	0
 
 Summary:	ConMan: The Console Manager
 Group:		Applications/System
-License:	GPL
+License:	GPLv2+
 URL:		http://home.gna.org/conman/
 
 Requires:	expect
