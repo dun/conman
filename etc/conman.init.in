@@ -22,7 +22,7 @@
 ### END INIT INFO
 ###############################################################################
 
-unset DESC DAEMON DAEMON_ARGS CONFIG PIDFILE NICE USER SIGHUP_RELOAD
+unset DESC DAEMON CONFIG DAEMON_ARGS PIDFILE NICE USER SIGHUP_RELOAD
 
 prefix="@prefix@"
 exec_prefix="@exec_prefix@"
@@ -32,8 +32,8 @@ localstatedir="@localstatedir@"
 
 DESC="ConMan"
 DAEMON="$sbindir/conmand"
-#DAEMON_ARGS=
 #CONFIG=
+#DAEMON_ARGS=
 #PIDFILE=
 #NICE=
 #USER=
@@ -55,7 +55,7 @@ service_init ()
   STATUS=0
 
   # Read configuration defaults to override variables:
-  #   $DAEMON_ARGS, $CONFIG, $PIDFILE, $USER, $NICE, $SIGHUP_RELOAD
+  #   $CONFIG, $DAEMON_ARGS, $PIDFILE, $USER, $NICE, $SIGHUP_RELOAD
   ##
   for dir in "$sysconfdir/default" "$sysconfdir/sysconfig"; do
     [ -r "$dir/$SCRIPT_NAME" ] && . "$dir/$SCRIPT_NAME"

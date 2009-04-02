@@ -1,3 +1,7 @@
+2009-04-02  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* etc/conman.init.in: Swapped order of CONFIG & DAEMON_ARGS vars.
+
 2009-04-01  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* conman.spec: Changed License field from "GPL" to "GPLv2+".
