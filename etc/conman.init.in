@@ -7,7 +7,7 @@
 # Copyright (C) 2001-2007 The Regents of the University of California.
 # UCRL-CODE-2002-009.
 ###############################################################################
-# chkconfig:          2345 95 5
+# chkconfig:          - 95 5
 # Description:        Start/Stop the ConMan (serial console manager) daemon.
 ###############################################################################
 ### BEGIN INIT INFO
@@ -16,8 +16,6 @@
 # Required-Stop:      $local_fs $named $network
 # Should-Start:       $remote_fs $syslog $time
 # Should-Stop:        $remote_fs $syslog $time
-# Default-Start:      2 3 4 5
-# Default-Stop:       0 1 6
 # Short-Description:  Start/Stop the ConMan (serial console manager) daemon.
 ### END INIT INFO
 ###############################################################################
