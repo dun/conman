@@ -17,6 +17,7 @@
 # Should-Start:       $remote_fs $syslog $time
 # Should-Stop:        $remote_fs $syslog $time
 # Short-Description:  Start/Stop the ConMan (serial console manager) daemon.
+# Description:        Start/Stop the ConMan (serial console manager) daemon.
 ### END INIT INFO
 ###############################################################################
 
