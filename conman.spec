@@ -50,7 +50,7 @@ Its features include:
 
 %build
 %configure
-make
+make %{?_smp_mflags}
 
 %install
 rm -rf "$RPM_BUILD_ROOT"
