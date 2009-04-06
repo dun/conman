@@ -1,5 +1,7 @@
 2009-04-06  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* conman.spec: Tweaked %preun & %postun init script invocation.
+
 	* conman.spec: Tweaked %install "make install" line.
 
 	* conman.spec: Replaced $RPM_BUILD_ROOT with %{buildroot}.

@@ -72,13 +72,15 @@ if [ -x /sbin/chkconfig ]; then /sbin/chkconfig --add conman; fi
 
 %preun
 if [ "$1" = 0 ]; then
-  %{_sysconfdir}/init.d/conman stop >/dev/null 2>&1 || :
+  INITRDDIR=%{?_initrddir:%{_initrddir}}%{!?_initrddir:%{_sysconfdir}/init.d}
+  $INITRDDIR/conman stop >/dev/null 2>&1 || :
   if [ -x /sbin/chkconfig ]; then /sbin/chkconfig --del conman; fi
 fi
 
 %postun
 if [ "$1" -ge 1 ]; then
-  %{_sysconfdir}/init.d/conman condrestart >/dev/null 2>&1 || :
+  INITRDDIR=%{?_initrddir:%{_initrddir}}%{!?_initrddir:%{_sysconfdir}/init.d}
+  $INITRDDIR/conman condrestart >/dev/null 2>&1 || :
 fi
 
 %files
