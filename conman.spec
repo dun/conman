@@ -53,19 +53,19 @@ Its features include:
 make %{?_smp_mflags}
 
 %install
-rm -rf "$RPM_BUILD_ROOT"
-mkdir -p "$RPM_BUILD_ROOT"
-DESTDIR="$RPM_BUILD_ROOT" make install
+rm -rf "%{buildroot}"
+mkdir -p "%{buildroot}"
+DESTDIR="%{buildroot}" make install
 #
 %if 0%{?_initrddir:1}
 if [ "%{_sysconfdir}/init.d" != "%{_initrddir}" ]; then
-  mkdir -p "$RPM_BUILD_ROOT%{_initrddir}"
-  mv "$RPM_BUILD_ROOT%{_sysconfdir}/init.d"/* "$RPM_BUILD_ROOT%{_initrddir}/"
+  mkdir -p "%{buildroot}%{_initrddir}"
+  mv "%{buildroot}%{_sysconfdir}/init.d"/* "%{buildroot}%{_initrddir}/"
 fi
 %endif
 
 %clean
-rm -rf "$RPM_BUILD_ROOT"
+rm -rf "%{buildroot}"
 
 %post
 if [ -x /sbin/chkconfig ]; then /sbin/chkconfig --add conman; fi
