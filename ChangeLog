@@ -1,3 +1,7 @@
+2009-04-06  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* conman.spec: Added test for %{_initrddir}.  Updated %files.
+
 2009-04-02  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* etc/conman.init.in: Added Description LSB header.

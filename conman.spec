@@ -56,6 +56,13 @@ make
 rm -rf "$RPM_BUILD_ROOT"
 mkdir -p "$RPM_BUILD_ROOT"
 DESTDIR="$RPM_BUILD_ROOT" make install
+#
+%if 0%{?_initrddir:1}
+if [ "%{_sysconfdir}/init.d" != "%{_initrddir}" ]; then
+  mkdir -p "$RPM_BUILD_ROOT%{_initrddir}"
+  mv "$RPM_BUILD_ROOT%{_sysconfdir}/init.d"/* "$RPM_BUILD_ROOT%{_initrddir}/"
+fi
+%endif
 
 %clean
 rm -rf "$RPM_BUILD_ROOT"
@@ -85,7 +92,9 @@ fi
 %doc README
 %doc THANKS
 %config(noreplace) %{_sysconfdir}/conman.conf
-%config(noreplace) %{_sysconfdir}/*/*
+%config(noreplace) %{_sysconfdir}/logrotate.d/conman
+%config(noreplace) %{_sysconfdir}/sysconfig/conman
+%{?_initrddir:%{_initrddir}}%{!?_initrddir:%{_sysconfdir}/init.d}/conman
 %{_bindir}/*
 %{_sbindir}/*
 %{_prefix}/lib/*
