@@ -1,5 +1,7 @@
 2009-04-06  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* conman.spec: Updated BuildRoot to use mktemp.
+
 	* conman.spec: Added test for %{_initrddir}.  Updated %files.
 
 2009-04-02  Chris Dunlap  <cdunlap@llnl.gov>
