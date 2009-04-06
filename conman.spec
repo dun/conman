@@ -55,7 +55,7 @@ make %{?_smp_mflags}
 %install
 rm -rf "%{buildroot}"
 mkdir -p "%{buildroot}"
-DESTDIR="%{buildroot}" make install
+make install DESTDIR="%{buildroot}"
 #
 %if 0%{?_initrddir:1}
 if [ "%{_sysconfdir}/init.d" != "%{_initrddir}" ]; then

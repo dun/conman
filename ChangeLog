@@ -1,8 +1,10 @@
 2009-04-06  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* conman.spec: Tweaked %install "make install" line.
+
 	* conman.spec: Replaced $RPM_BUILD_ROOT with %{buildroot}.
 
-	* conman.spec: Updated %build make to use %{?_smp_mflags}.
+	* conman.spec: Updated %build "make" to use %{?_smp_mflags}.
 
 	* conman.spec: Updated BuildRoot to use mktemp.
 
