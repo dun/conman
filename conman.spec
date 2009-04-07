@@ -84,7 +84,7 @@ if [ "$1" -ge 1 ]; then
 fi
 
 %files
-%defattr(-,root,root,0755)
+%defattr(-,root,root,-)
 %doc AUTHORS
 %doc ChangeLog
 %doc COPYING
