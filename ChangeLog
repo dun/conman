@@ -1,5 +1,7 @@
 2009-04-09  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* NEWS: Updated for 0.2.4 release.
+
 	* lib/exec/sun-v20z-v40z.exp: Added.
 
 	* lib/exec/ibm-bc.exp: Tweaked header comments.
