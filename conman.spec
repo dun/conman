@@ -94,8 +94,7 @@ fi
 %doc README
 %doc THANKS
 %config(noreplace) %{_sysconfdir}/conman.conf
-%config(noreplace) %{_sysconfdir}/logrotate.d/conman
-%config(noreplace) %{_sysconfdir}/sysconfig/conman
+%config(noreplace) %{_sysconfdir}/[dls]*/conman
 %{?_initrddir:%{_initrddir}}%{!?_initrddir:%{_sysconfdir}/init.d}/conman
 %{_bindir}/*
 %{_sbindir}/*

@@ -1,5 +1,7 @@
 2009-04-09  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* conman.spec: Fixed %files entry for /etc/{default,sysconfig}/conman.
+
 	* META, NEWS: Updated for 0.2.4-0.pre2.
 
 	* lib/exec/sun-v20z-v40z.exp: Tweaked header comments.
