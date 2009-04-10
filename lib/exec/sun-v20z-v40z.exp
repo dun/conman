@@ -17,7 +17,7 @@
 #
 #   console name="zot" dev="/path/to/sun-v20z-v40z.exp HOST USER PSWD"
 #
-# HOST is the hostname of the Sun ILOM server.
+# HOST is the hostname of the Sun Fire server.
 # USER is the username being authenticated.
 # PSWD is the corresponding password.
 #

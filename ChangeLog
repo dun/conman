@@ -1,5 +1,7 @@
 2009-04-09  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* lib/exec/sun-v20z-v40z.exp: Tweaked header comments.
+
 	* NEWS: Updated for 0.2.4 release.
 
 	* lib/exec/sun-v20z-v40z.exp: Added.
