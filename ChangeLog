@@ -1,3 +1,7 @@
+2009-04-14  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* conman.spec: Changed BuildRoot to work under AIX-5.2.
+
 2009-04-09  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* conman.spec: Fixed %files entry for /etc/{default,sysconfig}/conman.

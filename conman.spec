@@ -10,7 +10,7 @@ License:	GPLv2+
 URL:		http://home.gna.org/conman/
 
 Requires:	expect
-BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
+BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 %if 0%{?chaos} >= 4 || 0%{?rhel} >= 6 || 0%{?fedora} >= 9
 BuildRequires:  freeipmi-devel
