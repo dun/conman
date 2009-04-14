@@ -1,8 +1,7 @@
-conman-0.2.4 (????-??-??):
+conman-0.2.4 (2009-04-14):
 - Added support for FreeIPMI.
 - Added console scripts for Sun ELOM and Sun Fire V20z/V40z.
-- Changed conmen '-g' cmdline opt for xterm geometry to '-G'.
-- Added conmen '-g' cmdline opt for genders nodeattr query.
+- Changed conmen cmdline opts: '-G' xterm geometry, '-g' genders nodeattr.
 
 conman-0.2.3 (2008-12-03):
 - Added support for creation of intermediate directories.

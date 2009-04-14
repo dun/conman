@@ -1,5 +1,7 @@
 2009-04-14  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* META, NEWS: Updated for 0.2.4 release.
+
 	* conman.spec: Changed BuildRoot to work under AIX-5.2.
 
 2009-04-09  Chris Dunlap  <cdunlap@llnl.gov>
