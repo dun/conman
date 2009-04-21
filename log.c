@@ -61,7 +61,7 @@ static void log_aux(int errnum, int priority, char *msgbug, int msgbuflen,
 static const char * log_prefix(int priority);
 
 
-void dprintf(int level, const char *format, ...)
+void debug_printf(int level, const char *format, ...)
 {
     static int debug_level = -1;
     va_list vargs;

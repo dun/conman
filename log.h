@@ -44,16 +44,16 @@ extern int log_daemonize_fd;
 
 
 /*  DPRINTF((level, format, ...))
- *    A wrapper for dprintf() allowing it to be removed from production code.
+ *    A wrapper for debug_printf() so it can be removed from production code.
  */
 #ifndef NDEBUG
-#  define DPRINTF(args) dprintf args
+#  define DPRINTF(args) debug_printf args
 #else /* NDEBUG */
 #  define DPRINTF(args)
 #endif /* !NDEBUG */
 
 
-void dprintf(int level, const char *format, ...);
+void debug_printf(int level, const char *format, ...);
 /*
  *  Similar to printf, except output is always to stderr and only done
  *    when 'level' is less than or equal to the "DEBUG" env var.
