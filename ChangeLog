@@ -1,5 +1,7 @@
 2009-04-21  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* META, NEWS: Updated for 0.2.4.1 release.
+
 	* log.c, log.h: Renamed dprintf() to debug_printf().  The old function
 	  name conflicted with the GNU dprintf() routine for printing to a file
 	  descriptor.  Supposedly, this GNU extension will be specified in the
