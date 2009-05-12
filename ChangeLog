@@ -1,3 +1,8 @@
+2009-05-11  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server-telnet.c: Allowed telnet opts not recognized by TELOPT_OK
+	  since my telnet.h doesn't list the newer telnet options.
+
 2009-04-21  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* : Released 0.2.4.1.

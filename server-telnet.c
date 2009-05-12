@@ -49,11 +49,14 @@
 #include "util-str.h"
 #include "util.h"
 
+#define OPTBUFLEN 8                     /* "OPT:nnn" + \0 */
+
 
 static int connect_telnet_obj(obj_t *telnet);
 static void disconnect_telnet_obj(obj_t *telnet);
 static void reset_telnet_delay(obj_t *telnet);
 static int process_telnet_cmd(obj_t *telnet, int cmd, int opt);
+static char * opt2str(int opt, char *buf, int buflen);
 
 extern tpoll_t tp_global;               /* defined in server.c */
 
@@ -414,6 +417,7 @@ int send_telnet_cmd(obj_t *telnet, int cmd, int opt)
  */
     unsigned char buf[3];
     unsigned char *p = buf;
+    char opt_buf[OPTBUFLEN];
 
     assert(is_telnet_obj(telnet));
     assert(cmd > 0);
@@ -431,21 +435,29 @@ int send_telnet_cmd(obj_t *telnet, int cmd, int opt)
     }
     *p++ = cmd;
     if ((cmd == DONT) || (cmd == DO) || (cmd == WONT) || (cmd == WILL)) {
+#if 0
+        /*  Disabled since my TELOPT_OK doesn't recognize newer telnet opts.
+         */
         if (!TELOPT_OK(opt)) {
             log_msg(LOG_WARNING,
                 "Invalid telnet cmd %s opt=%#.2x for console [%s]",
                 telcmds[cmd - TELCMD_FIRST], opt, telnet->name);
             return(-1);
         }
+#endif
         *p++ = opt;
     }
 
     assert((p > buf) && ((p - buf) <= sizeof(buf)));
     if (write_obj_data(telnet, buf, p - buf, 0) <= 0)
         return(-1);
-    DPRINTF((10, "Sent telnet cmd %s%s%s to console [%s].\n",
-        telcmds[cmd - TELCMD_FIRST], ((p - buf > 2) ? " " : ""),
-        ((p - buf > 2) ? telopts[opt - TELOPT_FIRST] : ""), telnet->name));
+
+    DPRINTF((10, "Sent telnet cmd %s %s to console [%s].\n",
+        telcmds[cmd - TELCMD_FIRST],
+        (TELOPT_OK(opt)
+            ? telopts[opt - TELOPT_FIRST]
+            : opt2str(opt, opt_buf, sizeof(opt_buf))),
+        telnet->name));
     return(0);
 }
 
@@ -456,6 +468,8 @@ static int process_telnet_cmd(obj_t *telnet, int cmd, int opt)
  *  Telnet option negotiation is performed using the Q-Method (rfc1143).
  *  Returns 0 if the command is valid, or -1 on error.
  */
+    char opt_buf[OPTBUFLEN];
+
     assert(is_telnet_obj(telnet));
     assert(telnet->fd >= 0);
     assert(telnet->aux.telnet.conState == CONMAN_TELCON_UP);
@@ -466,18 +480,27 @@ static int process_telnet_cmd(obj_t *telnet, int cmd, int opt)
             cmd, telnet->name);
         return(-1);
     }
-    DPRINTF((10, "Received telnet cmd %s%s%s from console [%s].\n",
-        telcmds[cmd - TELCMD_FIRST], (TELOPT_OK(opt) ? " " : ""),
-        (TELOPT_OK(opt) ? telopts[opt - TELOPT_FIRST] : ""), telnet->name));
+    DPRINTF((10, "Received telnet cmd %s %s from console [%s].\n",
+        telcmds[cmd - TELCMD_FIRST],
+        (TELOPT_OK(opt)
+            ? telopts[opt - TELOPT_FIRST]
+            : opt2str(opt, opt_buf, sizeof(opt_buf))),
+        telnet->name));
 
+#if 0
+    /*  Disabled since my TELOPT_OK doesn't recognize newer telnet opts.
+     */
     if (!TELOPT_OK(opt)) {
         log_msg(LOG_DEBUG,
             "Received invalid telnet opt %#.2x from console [%s]",
             opt, telnet->name);
         return(-1);
     }
+#endif
+
     /*  FIXME: Perform telnet option negotiation via rfc1143 Q-Method.
      */
+
     switch(cmd) {
     case DONT:
         /* fall-thru */
@@ -492,10 +515,20 @@ static int process_telnet_cmd(obj_t *telnet, int cmd, int opt)
             send_telnet_cmd(telnet, DONT, opt);
         break;
     default:
-        log_msg(LOG_INFO, "Ignoring telnet cmd %s%s%s from console [%s]",
-            telcmds[cmd - TELCMD_FIRST], (TELOPT_OK(opt) ? " " : ""),
-            (TELOPT_OK(opt) ? telopts[opt - TELOPT_FIRST] : ""), telnet->name);
+        log_msg(LOG_INFO, "Ignoring telnet cmd %s %s from console [%s]",
+            telcmds[cmd - TELCMD_FIRST],
+            (TELOPT_OK(opt)
+                ? telopts[opt - TELOPT_FIRST]
+                : opt2str(opt, opt_buf, sizeof(opt_buf))),
+            telnet->name);
         break;
     }
     return(0);
+}
+
+
+static char * opt2str(int opt, char *buf, int buflen)
+{
+    snprintf(buf, buflen, "OPT:%d", opt);
+    return(buf);
 }
