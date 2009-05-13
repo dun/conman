@@ -849,7 +849,7 @@ int read_from_obj(obj_t *obj, tpoll_t tp)
          *  This code path can happen on POLLHUP or POLLERR.
          */
         DPRINTF((1, "Attempted to read from [%s] after EOF.\n", obj->name));
-        return(0);
+        return(shutdown_obj(obj));
     }
     /*  Do not read from an active telnet obj that is not yet in the UP state.
      *
@@ -946,7 +946,7 @@ int write_obj_data(obj_t *obj, const void *src, int len, int isInfo)
      */
     if (obj->gotEOF) {
         DPRINTF((1, "Attempted to write to [%s] after EOF.\n", obj->name));
-        return(0);
+        return(shutdown_obj(obj));
     }
     /*  If the obj is a disconnected console connection,
      *    data will be discarded so perform a no-op here.

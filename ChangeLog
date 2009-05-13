@@ -1,5 +1,8 @@
 2009-05-11  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-obj.c (read_from_obj, write_obj_data): Fixed bug with objects
+	  being trapped in a gotEOF state.
+
 	* server.c (mux_io): Fixed bug with POLLOUT being set in
 	  disconnected objects having buffered data to send.
 
