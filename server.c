@@ -219,10 +219,10 @@ static void begin_daemonize(int *fd_ptr, pid_t *pgid_ptr)
     else if (pid > 0) {
         log_set_err_pipe(-1);
         /*
-         *  FIXME:
-         *    The following log_err()s don't necessarily indicate the daemon
-         *    has failed since the grandchild process may still be running.
-         *    This could confuse the user.  Should they be warnings instead?
+         *  FIXME: The following log_err()s don't necessarily indicate the
+         *    daemon has failed since the grandchild process may still be
+         *    running.  This could confuse the user.  Should they be warnings
+         *    instead?
          */
         if (close(fds[1]) < 0) {
             log_err(errno, "Unable to close write-pipe in parent process");
@@ -656,7 +656,7 @@ static void mux_io(server_conf_t *conf)
         if (reconfig) {
             /*
              *  FIXME: A reconfig should pro'ly resurrect "downed" serial objs
-             *         and reset reconnect timers of "downed" telnet objs.
+             *    and reset reconnect timers of "downed" telnet objs.
              */
             log_msg(LOG_NOTICE, "Performing reconfig on signal=%d", reconfig);
             reopen_logfiles(conf);
@@ -666,7 +666,7 @@ static void mux_io(server_conf_t *conf)
         /*  FIXME: Switch from recomputing the tpoll set on each loop iteration
          *    to modifying it based on events.  This will eliminate the 1sec
          *    tpoll() sleep timeout and greatly reduce cpu utilization.
-         *    It will also eliminate the maze of twisty conditions.
+         *    It will also eliminate the maze of twisty conditions below.
          */
         (void) tpoll_zero(conf->tp, TPOLL_ZERO_FDS);
         tpoll_set(conf->tp, conf->ld, POLLIN);
@@ -1012,8 +1012,8 @@ static void reset_console(obj_t *console, const char *cmd)
     setpgid(pid, 0);
 
     /*  FIXME: Have perform_reset() store the client info instead of a bool
-     *  for gotReset.  Then remove the notify_objs msg from perform_reset()
-     *  and replace it with the following:
+     *    for gotReset.  Then remove the notify_objs msg from perform_reset()
+     *    and replace it with the following:
      */
     log_msg(LOG_INFO, "Reset console [%s] (pid %d)", console->name, pid);
 #if 0
