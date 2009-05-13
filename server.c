@@ -666,6 +666,7 @@ static void mux_io(server_conf_t *conf)
         /*  FIXME: Switch from recomputing the tpoll set on each loop iteration
          *    to modifying it based on events.  This will eliminate the 1sec
          *    tpoll() sleep timeout and greatly reduce cpu utilization.
+         *    It will also eliminate the maze of twisty conditions.
          */
         (void) tpoll_zero(conf->tp, TPOLL_ZERO_FDS);
         tpoll_set(conf->tp, conf->ld, POLLIN);
@@ -703,7 +704,14 @@ static void mux_io(server_conf_t *conf)
             }
             if ( ( (obj->bufInPtr != obj->bufOutPtr) ||
                    (obj->gotEOF) ) &&
-                 ( ! (is_client_obj(obj) && obj->aux.client.gotSuspend) ) )
+                 ( ! (is_telnet_obj(obj) &&
+                      obj->aux.telnet.conState != CONMAN_TELCON_UP) ) &&
+                 ( ! (is_ipmi_obj(obj) &&
+                      obj->aux.ipmi.state != CONMAN_IPMI_UP) ) &&
+                 ( ! (is_unixsock_obj(obj) &&
+                      obj->aux.unixsock.state != CONMAN_UNIXSOCK_UP) ) &&
+                 ( ! (is_client_obj(obj) &&
+                      obj->aux.client.gotSuspend) ) )
             {
                 tpoll_set(conf->tp, obj->fd, POLLOUT);
             }
