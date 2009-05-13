@@ -1,6 +1,6 @@
 2009-05-11  Chris Dunlap  <cdunlap@llnl.gov>
 
-	* server-obj.c (mux_io): Fixed bug with POLLOUT being set in
+	* server.c (mux_io): Fixed bug with POLLOUT being set in
 	  disconnected objects having buffered data to send.
 
 	* server-telnet.c: Allowed telnet opts not recognized by TELOPT_OK
