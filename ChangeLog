@@ -3,8 +3,8 @@
 	* server-obj.c (read_from_obj, write_obj_data): Fixed bug with objects
 	  being trapped in a gotEOF state.
 
-	* server.c (mux_io): Fixed bug with POLLOUT being set in
-	  disconnected objects having buffered data to send.
+	* server.c (mux_io): Fixed bug with POLLOUT being set in disconnected
+	  objects having buffered data to send.
 
 	* server-telnet.c: Allowed telnet opts not recognized by TELOPT_OK
 	  since my telnet.h doesn't list the newer telnet options.
