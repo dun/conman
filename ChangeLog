@@ -1,5 +1,7 @@
 2009-05-12  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server.c (mux_io): Added #ifdef guard around ipmi obj test.
+
 	* server-obj.c (read_from_obj, write_obj_data): Fixed bug with objects
 	  being trapped in a gotEOF state.
 

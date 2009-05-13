@@ -706,8 +706,10 @@ static void mux_io(server_conf_t *conf)
                    (obj->gotEOF) ) &&
                  ( ! (is_telnet_obj(obj) &&
                       obj->aux.telnet.conState != CONMAN_TELCON_UP) ) &&
+#ifdef WITH_FREEIPMI
                  ( ! (is_ipmi_obj(obj) &&
                       obj->aux.ipmi.state != CONMAN_IPMI_UP) ) &&
+#endif /* WITH_FREEIPMI */
                  ( ! (is_unixsock_obj(obj) &&
                       obj->aux.unixsock.state != CONMAN_UNIXSOCK_UP) ) &&
                  ( ! (is_client_obj(obj) &&
