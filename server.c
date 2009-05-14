@@ -57,7 +57,7 @@
 
 static void begin_daemonize(int *fd_ptr, pid_t *pgid_ptr);
 static void end_daemonize(int fd);
-static char ** get_sane_env (void);
+static char ** get_sane_env(void);
 static void display_configuration(server_conf_t *conf);
 static void exit_handler(int signum);
 static void sig_hup_handler(int signum);
@@ -344,7 +344,7 @@ static void sig_chld_handler(int signum)
 }
 
 
-char ** get_sane_env (void)
+static char ** get_sane_env(void)
 {
 /*  Creates a sanitized environment.
  *  Returns a NULL-terminated array of NUL-terminated "key=value" strings,
