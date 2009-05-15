@@ -1,3 +1,7 @@
+conman-XX (2009-XX-XX):
+- Fixed bug with consoles trapped in downed state causing poll loop to spin.
+- Added 'server coredump' & 'server coredumpdir' config directives.
+
 conman-0.2.4.1 (2009-04-21):
 - Fixed builds with gcc-4.4 on Fedora 11.
 
@@ -25,7 +29,7 @@ conman-0.2.0 (2007-05-02):
 - Changed project homepage to <http://home.gna.org/conman/>.
 - Added support for consoles to be driven by an external process.
 - Added console scripts for Cyclades, IBM BladeCenter, IPMI SOL, SSH.
-- Added SERVER EXECPATH config directive.
+- Added 'server execpath' config directive.
 - Added '-F' cmdline opt to daemon for running in the foreground.
 - Changed daemon behavior to return fatal errors to shell if possible.
 - Sanitized environment variables and closed unneeded fds in child processes.
@@ -78,8 +82,8 @@ conman-0.1.8.1 (2002-07-15):
 - Added telnet connection fix for ECHO and SUPPRESS GO AHEAD requests.
 
 conman-0.1.8 (2002-05-20):
-- Added GLOBAL LOG config directive.
-- Added SERVER LOGFILE & SERVER SYSLOG config directives.
+- Added 'global log' config directive.
+- Added 'server logfile' & 'server syslog' config directives.
 - Added '-L' cmdline opt for software license.
 - Fixed bug where relative-path'd pidfile was not removed at exit.
 - Fixed bug where relative-path'd logs were not re-opened on sighup.
