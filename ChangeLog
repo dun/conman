@@ -1,5 +1,7 @@
 2009-05-14  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server.c (coredump_handler): Added void cast to kill().
+
 	* server.c (main, begin_daemonize, setup_coredump, setup_signals,
 	  coredump_handler, display_configuration), server-conf
 	  (create_server_conf, destroy_server_conf, parse_server_directive),

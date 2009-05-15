@@ -389,7 +389,7 @@ static void coredump_handler(int signum)
      */
     posix_signal(signum, SIG_DFL);
     log_msg(LOG_ERR, "Terminating on signal=%d", signum);
-    kill(getpid(), signum);
+    (void) kill(getpid(), signum);
     return;
 }
 
