@@ -20,6 +20,16 @@ Keywords are case-insensitive.
 These directives begin with the \fBSERVER\fR keyword followed by one of the
 following key/value pairs:
 .TP
+\fBcoredump\fR \fB=\fR (\fBon\fR|\fBoff\fR)
+Specifies whether the daemon should generate a core dump file.  This file
+will be created in the current working directory (or '/' when running in the
+background) unless you also set \fBCOREDUMPDIR\fR.  The default is \fboff\fR.
+.TP
+\fBcoredumpdir\fR \fB=\fR "\fIdirectory\fR"
+Specifies the directory where the daemon tries to write core dump files.
+The default is empty, meaning the current working directory (or '/' when
+running in the background) will be used.
+.TP
 \fBexecpath\fR \fB=\fR "\fIdir1:dir2:dir3...\fR"
 Specifies a colon-separated list of directories in which to search for external
 process-based console executables that are not defined by an absolute or

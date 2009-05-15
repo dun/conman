@@ -56,6 +56,8 @@ enum server_conf_toks {
  *  Keep enums in sync w/ server_conf_strs[].
  */
     SERVER_CONF_CONSOLE = LEX_TOK_OFFSET,
+    SERVER_CONF_COREDUMP,
+    SERVER_CONF_COREDUMPDIR,
     SERVER_CONF_DEV,
     SERVER_CONF_EXECPATH,
     SERVER_CONF_GLOBAL,
@@ -87,6 +89,8 @@ static char *server_conf_strs[] = {
  *  These must be sorted in a case-insensitive manner.
  */
     "CONSOLE",
+    "COREDUMP",
+    "COREDUMPDIR",
     "DEV",
     "EXECPATH",
     "GLOBAL",
@@ -208,6 +212,7 @@ server_conf_t * create_server_conf(void)
     }
     conf->cwd = NULL;
     conf->confFileName = create_string(CONMAN_CONF);
+    conf->coreDumpDir = NULL;
     conf->execPath = NULL;
     conf->logDirName = NULL;
     conf->logFileName = NULL;
@@ -260,6 +265,7 @@ server_conf_t * create_server_conf(void)
     memset(&conf->globalIpmiOpts, 0, sizeof(conf->globalIpmiOpts));
     conf->numIpmiObjs = 0;
 #endif /* WITH_FREEIPMI */
+    conf->enableCoreDump = 0;
     conf->enableKeepAlive = 1;
     conf->enableLoopBack = 0;
     conf->enableTCPWrap = 0;
@@ -312,6 +318,7 @@ void destroy_server_conf(server_conf_t *conf)
         tpoll_destroy(conf->tp);
     }
     destroy_string(conf->confFileName);
+    destroy_string(conf->coreDumpDir);
     destroy_string(conf->cwd);
     destroy_string(conf->execPath);
     destroy_string(conf->globalLogName);
@@ -1264,12 +1271,67 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
     char err[MAX_LINE] = "";
     char *p;
     int n;
+    struct stat st;
 
     directive = server_conf_strs[LEX_UNTOK(lex_prev(l))];
 
     while (!done && !*err) {
         tok = lex_next(l);
         switch(tok) {
+
+        case SERVER_CONF_COREDUMP:
+            if (lex_next(l) != '=') {
+                snprintf(err, sizeof(err), "expected '=' after %s keyword",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            }
+            else if (lex_next(l) == SERVER_CONF_ON) {
+                conf->enableCoreDump = 1;
+            }
+            else if (lex_prev(l) == SERVER_CONF_OFF) {
+                conf->enableCoreDump = 0;
+            }
+            else {
+                snprintf(err, sizeof(err), "expected ON or OFF for %s value",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            }
+            break;
+
+        case SERVER_CONF_COREDUMPDIR:
+            if (lex_next(l) != '=') {
+                snprintf(err, sizeof(err), "expected '=' after %s keyword",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            }
+            else if ((lex_next(l) != LEX_STR)) {
+                snprintf(err, sizeof(err), "expected STRING for %s value",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            }
+            else if (is_empty_string(lex_text(l))) {
+                destroy_string(conf->coreDumpDir);
+                conf->coreDumpDir = NULL;
+            }
+            else if (stat(lex_text(l), &st) < 0) {
+                snprintf(err, sizeof(err), "cannot stat %s \"%s\"",
+                    server_conf_strs[LEX_UNTOK(tok)], lex_text(l));
+            }
+            else if (!S_ISDIR(st.st_mode)) {
+                snprintf(err, sizeof(err), "invalid %s \"%s\" not a directory",
+                    server_conf_strs[LEX_UNTOK(tok)], lex_text(l));
+            }
+            else {
+                p = (lex_text(l)[0] != '/')
+                    ? create_format_string("%s/%s", conf->cwd, lex_text(l))
+                    : create_string(lex_text(l));
+                destroy_string(conf->coreDumpDir);
+                conf->coreDumpDir = p;
+                /*
+                 *  Remove trailing slashes from dir name.
+                 */
+                p += strlen(p) - 1;
+                while ((p > conf->coreDumpDir) && (*p == '/')) {
+                    *p-- = '\0';
+                }
+            }
+            break;
 
         case SERVER_CONF_EXECPATH:
             if (lex_next(l) != '=') {

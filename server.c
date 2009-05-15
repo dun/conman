@@ -57,11 +57,14 @@
 
 static void begin_daemonize(int *fd_ptr, pid_t *pgid_ptr);
 static void end_daemonize(int fd);
+static void setup_coredump(server_conf_t *conf);
+static void setup_signals(server_conf_t *conf);
+static void sig_chld_handler(int signum);
+static void sig_hup_handler(int signum);
+static void exit_handler(int signum);
+static void coredump_handler(int signum);
 static char ** get_sane_env(void);
 static void display_configuration(server_conf_t *conf);
-static void exit_handler(int signum);
-static void sig_hup_handler(int signum);
-static void sig_chld_handler(int signum);
 static void schedule_timestamp(server_conf_t *conf);
 static void timestamp_logfiles(server_conf_t *conf);
 static void create_listen_socket(server_conf_t *conf);
@@ -73,10 +76,11 @@ static void accept_client(server_conf_t *conf);
 static void reset_console(obj_t *console, const char *cmd);
 static void kill_console_reset(pid_t *arg);
 
-/*  Signal handler flags.
+/*  Signal handler flags and whatnot.
  */
 static volatile sig_atomic_t done = 0;
 static volatile sig_atomic_t reconfig = 0;
+static char coredumpdir[PATH_MAX];
 
 /*  The 'tp_global' var is to allow timers to be set or canceled
  *    without having to pass the conf's tp var through the call stack.
@@ -105,13 +109,9 @@ int main(int argc, char *argv[])
     if (!conf->enableForeground) {
         begin_daemonize(&fd, &pgid);
     }
-    posix_signal(SIGCHLD, sig_chld_handler);
-    posix_signal(SIGHUP, sig_hup_handler);
-    posix_signal(SIGINT, exit_handler);
-    posix_signal(SIGPIPE, SIG_IGN);
-    posix_signal(SIGTERM, exit_handler);
-
     process_config(conf);
+    setup_coredump(conf);
+    setup_signals(conf);
 
     if (!(environ = get_sane_env())) {
         log_err(ENOMEM, "Unable to create sanitized environment");
@@ -179,7 +179,6 @@ static void begin_daemonize(int *fd_ptr, pid_t *pgid_ptr)
  *  If 'pgid_ptr' is non-null, it will be set to the daemonized
  *    process group ID.
  */
-    struct rlimit limit;
     int fds[2];
     pid_t pid;
     int n;
@@ -191,13 +190,6 @@ static void begin_daemonize(int *fd_ptr, pid_t *pgid_ptr)
      */
     umask(0);
 
-    /*  Disable creation of core files.
-     */
-    limit.rlim_cur = 0;
-    limit.rlim_max = 0;
-    if (setrlimit(RLIMIT_CORE, &limit) < 0) {
-        log_err(errno, "Unable to prevent creation of core file");
-    }
     /*  Create pipe for IPC so parent process will wait to terminate until
      *    signaled by grandchild process.  This allows messages written to
      *    stdout/stderr by the grandchild to be properly displayed before
@@ -321,9 +313,53 @@ static void end_daemonize(int fd)
 }
 
 
-static void exit_handler(int signum)
+static void setup_coredump(server_conf_t *conf)
 {
-    done = signum;
+    struct rlimit limit;
+
+    if (conf->enableCoreDump) {
+        limit.rlim_cur = RLIM_INFINITY;
+        limit.rlim_max = RLIM_INFINITY;
+        strlcpy(coredumpdir, conf->coreDumpDir, sizeof(coredumpdir));
+    }
+    else {
+        limit.rlim_cur = 0;
+        limit.rlim_max = 0;
+        coredumpdir[0] = '\0';
+    }
+
+    if (setrlimit(RLIMIT_CORE, &limit) < 0) {
+        log_err(errno, "Unable to set core dump file limit");
+    }
+    return;
+}
+
+
+static void setup_signals(server_conf_t *conf)
+{
+    posix_signal(SIGCHLD, sig_chld_handler);
+    posix_signal(SIGHUP, sig_hup_handler);
+    posix_signal(SIGINT, exit_handler);
+    posix_signal(SIGPIPE, SIG_IGN);
+    posix_signal(SIGTERM, exit_handler);
+
+    /*  These signals have a default action of terminate+core according to SUS.
+     */
+    posix_signal(SIGABRT, coredump_handler);
+    posix_signal(SIGBUS, coredump_handler);
+    posix_signal(SIGFPE, coredump_handler);
+    posix_signal(SIGILL, coredump_handler);
+    posix_signal(SIGQUIT, coredump_handler);
+    posix_signal(SIGSEGV, coredump_handler);
+    return;
+}
+
+
+static void sig_chld_handler(int signum)
+{
+    pid_t pid;
+
+    while ((pid = waitpid(-1, NULL, WNOHANG)) > 0) {;}
     return;
 }
 
@@ -335,11 +371,25 @@ static void sig_hup_handler(int signum)
 }
 
 
-static void sig_chld_handler(int signum)
+static void exit_handler(int signum)
 {
-    pid_t pid;
+    done = signum;
+    return;
+}
 
-    while ((pid = waitpid(-1, NULL, WNOHANG)) > 0) {;}
+
+static void coredump_handler(int signum)
+{
+    if (*coredumpdir) {
+        (void) chdir(coredumpdir);
+    }
+    /*  The log_msg() here is probably a bad idea.  Since things are already
+     *    fubar at this point, the daemon could die within the depths of
+     *    log_msg() without having a chance to dump core.
+     */
+    posix_signal(signum, SIG_DFL);
+    log_msg(LOG_ERR, "Terminating on signal=%d", signum);
+    kill(getpid(), signum);
     return;
 }
 
@@ -438,6 +488,10 @@ static void display_configuration(server_conf_t *conf)
     fprintf(stderr, "Configuration: %s\n", conf->confFileName);
     fprintf(stderr, "Options:");
 
+    if (conf->enableCoreDump) {
+        fprintf(stderr, " CoreDump");
+        gotOptions++;
+    }
     if (conf->enableKeepAlive) {
         fprintf(stderr, " KeepAlive");
         gotOptions++;

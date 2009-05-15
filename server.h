@@ -224,6 +224,7 @@ typedef struct base_obj {               /* BASE OBJ:                         */
 
 typedef struct server_conf {
     char            *confFileName;      /* configuration file name           */
+    char            *coreDumpDir;       /* dir where core dumps are written  */
     char            *cwd;               /* cwd when daemon was started       */
     char            *execPath;          /* process exec path                 */
     char            *logDirName;        /* dir prefix for relative logfiles  */
@@ -249,6 +250,7 @@ typedef struct server_conf {
     ipmiopt_t        globalIpmiOpts;    /* global opts for ipmi objects      */
     int              numIpmiObjs;       /* number of ipmi consoles in config */
 #endif /* WITH_FREEIPMI */
+    unsigned         enableCoreDump:1;  /* true if core dumps are enabled    */
     unsigned         enableKeepAlive:1; /* true if using TCP keep-alive      */
     unsigned         enableLoopBack:1;  /* true if only listening on loopback*/
     unsigned         enableTCPWrap:1;   /* true if TCP-Wrappers is enabled   */

@@ -1,5 +1,12 @@
 2009-05-14  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server.c (main, begin_daemonize, setup_coredump, setup_signals,
+	  coredump_handler, display_configuration), server-conf
+	  (create_server_conf, destroy_server_conf, parse_server_directive),
+	  server.h: Added support for 'server coredump' & 'server coredumpdir'
+	  config directives.
+	* etc/conman.conf, man/conman.conf.5.in: Documented new directives.
+
 	* server.c (get_sane_env): Added static keyword to function definition.
 
 2009-05-12  Chris Dunlap  <cdunlap@llnl.gov>
