@@ -1,3 +1,8 @@
+2009-05-16  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server.c (setup_coredump, coredump_handler): Added coredumpdir
+	  location to final log msg.
+
 2009-05-14  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* META, NEWS: Updated.

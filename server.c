@@ -80,6 +80,7 @@ static void kill_console_reset(pid_t *arg);
  */
 static volatile sig_atomic_t done = 0;
 static volatile sig_atomic_t reconfig = 0;
+static int coredump = 0;
 static char coredumpdir[PATH_MAX];
 
 /*  The 'tp_global' var is to allow timers to be set or canceled
@@ -320,11 +321,18 @@ static void setup_coredump(server_conf_t *conf)
     if (conf->enableCoreDump) {
         limit.rlim_cur = RLIM_INFINITY;
         limit.rlim_max = RLIM_INFINITY;
-        strlcpy(coredumpdir, conf->coreDumpDir, sizeof(coredumpdir));
+        coredump = 1;
+        if (conf->coreDumpDir) {
+            strlcpy(coredumpdir, conf->coreDumpDir, sizeof(coredumpdir));
+        }
+        else {
+            getcwd(coredumpdir, sizeof(coredumpdir));
+        }
     }
     else {
         limit.rlim_cur = 0;
         limit.rlim_max = 0;
+        coredump = 0;
         coredumpdir[0] = '\0';
     }
 
@@ -380,16 +388,19 @@ static void exit_handler(int signum)
 
 static void coredump_handler(int signum)
 {
-    if (*coredumpdir) {
+    if (coredump && *coredumpdir) {
         (void) chdir(coredumpdir);
     }
-    /*  The log_msg() here is probably a bad idea.  Since things are already
-     *    fubar at this point, the daemon could die within the depths of
-     *    log_msg() without having a chance to dump core.
-     */
     posix_signal(signum, SIG_DFL);
-    log_msg(LOG_ERR, "Terminating on signal=%d", signum);
     (void) kill(getpid(), signum);
+
+    if (coredump && *coredumpdir) {
+        log_msg(LOG_ERR, "Terminating on signal=%d (check \"%s\" for core)",
+            signum, coredumpdir);
+    }
+    else {
+        log_msg(LOG_ERR, "Terminating on signal=%d", signum);
+    }
     return;
 }
 
