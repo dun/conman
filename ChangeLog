@@ -1,3 +1,7 @@
+2009-05-18  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server.c (coredump_handler): Set restricted umask().
+
 2009-05-16  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server.c (setup_coredump, coredump_handler): Added coredumpdir

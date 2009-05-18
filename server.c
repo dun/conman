@@ -388,6 +388,7 @@ static void exit_handler(int signum)
 
 static void coredump_handler(int signum)
 {
+    umask(077);
     if (coredump && *coredumpdir) {
         (void) chdir(coredumpdir);
     }
