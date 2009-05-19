@@ -452,6 +452,10 @@ int send_telnet_cmd(obj_t *telnet, int cmd, int opt)
     if (write_obj_data(telnet, buf, p - buf, 0) <= 0)
         return(-1);
 
+    /*  Suppress unused variable warning.
+     */
+    opt_buf[0] = '\0';
+
     DPRINTF((10, "Sent telnet cmd %s %s to console [%s].\n",
         telcmds[cmd - TELCMD_FIRST],
         (TELOPT_OK(opt)

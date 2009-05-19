@@ -1,5 +1,7 @@
 2009-05-19  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-telnet.c (send_telnet_cmd): Suppressed unused var warning.
+
 	* FAQ: Updated info on increasing nofile hard limit.
 
 2009-05-18  Chris Dunlap  <cdunlap@llnl.gov>
