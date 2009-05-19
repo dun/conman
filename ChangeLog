@@ -1,3 +1,7 @@
+2009-05-19  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* FAQ: Updated info on increasing nofile hard limit.
+
 2009-05-18  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* man/conman.conf.5.in: Tweaked formatting.
