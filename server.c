@@ -388,13 +388,6 @@ static void exit_handler(int signum)
 
 static void coredump_handler(int signum)
 {
-    umask(077);
-    if (coredump && *coredumpdir) {
-        (void) chdir(coredumpdir);
-    }
-    posix_signal(signum, SIG_DFL);
-    (void) kill(getpid(), signum);
-
     if (coredump && *coredumpdir) {
         log_msg(LOG_ERR, "Terminating on signal=%d (check \"%s\" for core)",
             signum, coredumpdir);
@@ -402,6 +395,14 @@ static void coredump_handler(int signum)
     else {
         log_msg(LOG_ERR, "Terminating on signal=%d", signum);
     }
+
+    umask(077);
+    if (coredump && *coredumpdir) {
+        (void) chdir(coredumpdir);
+    }
+    posix_signal(signum, SIG_DFL);
+    (void) kill(getpid(), signum);
+
     return;
 }
 
