@@ -1,4 +1,4 @@
-conman-XX (2009-XX-XX):
+conman-0.2.5 (2009-05-19):
 - Fixed bug with consoles trapped in downed state causing poll loop to spin.
 - Added 'server coredump' & 'server coredumpdir' config directives.
 
