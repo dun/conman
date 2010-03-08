@@ -1,5 +1,7 @@
 2009-05-19  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* : Released 0.2.5.
+
 	* META, NEWS: Updated for 0.2.5 release.
 
 	* server.c (coredump_handler): Moved log_msg() to top of handler.
