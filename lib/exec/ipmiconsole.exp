@@ -1,0 +1,188 @@
+#!/usr/bin/expect -f
+###############################################################################
+# $Id$
+###############################################################################
+# Written by Chris Dunlap <cdunlap@llnl.gov>.
+# Copyright (C) 2007-2009 Lawrence Livermore National Security, LLC.
+# Copyright (C) 2001-2007 The Regents of the University of California.
+# UCRL-CODE-2002-009.
+#
+# This file is part of ConMan: The Console Manager.
+# For details, see <http://home.gna.org/conman/>.
+###############################################################################
+# This script connects to a console using the IPMI Serial-Over-LAN protocol.
+# The "ipmiconsole" command is part of GNU FreeIPMI available from
+# <http://savannah.gnu.org/projects/freeipmi/>.
+#
+# This script can be specified in "conman.conf" in the following manner:
+#
+#   console name="zot" dev="/path/to/ipmiconsole.exp HOST USER PSWD [KEYG]"
+#
+# HOST is the hostname of the remote server.
+# USER is the username being authenticated.
+# PSWD is the corresponding password.
+# KEYG is the optional key-generation key "Kg" for IPMIv2 authentication.
+#
+# Since this command-line will persist in the process listing for the duration
+# of the connection, passing sensitive information like PSWD or KEYG in this
+# manner is not recommended.  Instead, consider using either a command-line
+# argument default or the password database (see below).
+###############################################################################
+
+##
+# Set "exp_internal" to 1 to print diagnostics describing internal operations.
+#   This is helpful in diagnosing pattern-match failures.
+##
+  exp_internal 0
+
+##
+# Set "log_user" to 1 to show the underlying dialogue establishing a connection
+#   to the console.
+##
+  log_user 0
+
+##
+# The "timeout" specifies the number of seconds before the connection attempt
+#   times-out and terminates the connection.
+##
+  set timeout 5
+
+##
+# The "password_db" specifies the location of the password database.
+#   This avoids exposing sensitive information on the command-line without
+#   needing to modify this script.
+# Whitespace and lines beginning with '#' are ignored.  The file format is:
+#   <host-regex> : <user> : <pswd> [ : <keyg> ]
+##
+  set password_db "/etc/conman.pswd"
+
+##
+# Command-line argument defaults can be specified here.  This avoids exposing
+#   sensitive information on the command-line.
+##
+# set user "foo"
+# set pswd "bar"
+# set keyg "qux"
+
+###############################################################################
+
+set env(PATH) "/usr/sbin:/sbin"
+
+proc get_password {host user index} {
+  global password_db
+  set db_pswd {}
+  if {! [info exists password_db]} {
+    return
+  }
+  if {[catch {open $password_db} input]} {
+    return
+  }
+  while {[gets $input line] != -1} {
+    if {[regexp {^[ \t]*#} $line]} {
+      continue
+    }
+    set record [split $line ":"]
+    set db_host [string trim [lindex $record 0]]
+    if {[catch {regexp "^$db_host$" $host} got_host_match]} {
+      continue
+    }
+    if {! $got_host_match && [string length $db_host]} {
+      continue
+    }
+    set db_user [string trim [lindex $record 1]]
+    if {[string compare $db_user $user]} {
+      continue
+    }
+    set db_pswd [string trim [lindex $record $index]]
+    break
+  }
+  close $input
+  return $db_pswd
+}
+
+if {! $argc} {
+  set prog [lindex [split $argv0 "/"] end]
+  send_user "Usage: $prog <host> <user> <pswd> \[<keyg>]\r\n"
+  exit 1
+}
+if {$argc > 0} {
+  set host [lindex $argv 0]
+}
+if {$argc > 1} {
+  set user [lindex $argv 1]
+}
+if {$argc > 2} {
+  set pswd [lindex $argv 2]
+}
+if {$argc > 3} {
+  set keyg [lindex $argv 3]
+}
+set authenticated 0
+set keyed 1
+if {! [info exists host]} {
+  send_user "Error: Unspecified hostname.\r\n"
+  exit 1
+}
+if {! [info exists user]} {
+  send_user "Error: Unspecified username.\r\n"
+  exit 1
+}
+if {! [info exists pswd]} {
+  set pswd [get_password $host $user 2]
+  if {! [string length $pswd]} {
+    send_user "Error: Unspecified password.\r\n"
+    exit 1
+  }
+  if {! [info exists keyg]} {
+    set keyg [get_password $host $user 3]
+    if {! [string length $keyg]} {
+      unset keyg
+    }
+  }
+}
+set cmd "ipmiconsole -h $host -u $user -P"
+if {[info exists keyg]} {
+  append cmd " -K"
+  set keyed 0
+}
+if {[catch "spawn $cmd" spawn_result]} {
+  send_user "Error: $spawn_result.\r\n"
+  exit 1
+}
+expect {
+  -nocase -re "\\\[SOL established]" {
+    ;
+  }
+  -nocase -re "^\\\[error received]: (\[^\r]*)\r+\n" {
+    send_user "Error: $expect_out(1,string)\r\n"
+    exit 1
+  }
+  eof {
+    send_user "Error: Connection closed by remote host.\r\n"
+    exit 1
+  }
+  timeout {
+    send_user "Error: Timed-out.\r\n"
+    exit 1
+  }
+  -nocase -gl "Password:" {
+    if {$authenticated == 0} {
+      send "$pswd\r"
+      incr authenticated
+    }
+    exp_continue -continue_timer
+  }
+  -nocase -gl "K_g:" {
+    if {$keyed == 0} {
+      send "$keyg\r"
+      incr keyed
+    }
+    exp_continue -continue_timer
+  }
+  -re "\[^\r]*\r+\n" {
+    exp_continue -continue_timer
+  }
+}
+send_user "Connection established via ipmiconsole (pid $spawn_result).\r\n"
+
+interact

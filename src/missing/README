@@ -1,4 +1,0 @@
-glibc-2.3.2:
-  - getopt.c
-  - getopt.h
-  - getopt1.c

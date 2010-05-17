@@ -1,0 +1,9 @@
+This directory contains scripts for the ConMan daemon to connect to
+a console via an external process.
+
+Be aware that any customizations made to these scripts will be lost
+when a new version of the package is installed.  Instead, copy those
+scripts needing local customizations to another directory (e.g.,
+/etc/conman/exec) and modify the copies.  The "execpath" directive
+in conman.conf can be used to give precedence to the local copies
+over the default scripts.

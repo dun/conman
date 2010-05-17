@@ -1,0 +1,37 @@
+###############################################################################
+# $Id$
+###############################################################################
+
+##
+# Specify an alternative configuration file.
+##
+# CONFIG="/etc/conman.conf"
+
+##
+# Pass additional command-line options to the daemon.
+##
+# DAEMON_ARGS="-c $CONFIG"
+
+##
+# Specify where the daemon's PID is written.
+##
+# PIDFILE="/var/run/conmand.pid"
+
+##
+# Adjust the scheduling priority of the daemon.
+##
+# NICE=
+
+##
+# Execute the daemon under another username.
+##
+# USER="daemon"
+
+##
+# Specify whether a SIGHUP can reload the daemon's configuration without
+#   the process being stopped and restarted.
+# Currently, a SIGHUP causes the daemon's log file and the individual
+#   console log files to be closed and re-opened, but the configuration
+#   is not reloaded.
+##
+# SIGHUP_RELOAD="1"

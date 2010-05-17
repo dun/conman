@@ -1,0 +1,178 @@
+#!/usr/bin/env perl
+
+#******************************************************************************
+# ConMen: a wrapper to aid in ConMan broadcast sessions.
+#******************************************************************************
+# $Id$
+#******************************************************************************
+# Written by Chris Dunlap <cdunlap@llnl.gov>.
+# Copyright (C) 2007-2009 Lawrence Livermore National Security, LLC.
+# Copyright (C) 2001-2007 The Regents of the University of California.
+# UCRL-CODE-2002-009.
+#
+# This file is part of ConMan: The Console Manager.
+# For details, see <http://home.gna.org/conman/>.
+#
+# This is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#******************************************************************************
+# ConMen spawns an xterm for each of the selected consoles
+#   and uses the current tty as the broadcast window.
+# All of the spawned xterm clients are terminated when the
+#   broadcast window session is closed.
+#******************************************************************************
+
+use Getopt::Std;
+
+
+$SIG{TERM} = exit_handler;
+
+$ENV{PATH} = "/usr/bin:/usr/local/bin:/usr/bin/X11:/usr/X11R6/bin:/usr/X/bin";
+
+$ENV{DISPLAY}
+    or die("ERROR: DISPLAY not set.\n");
+!system("which conman 1>/dev/null 2>&1")
+    or die("ERROR: conman not found in PATH.\n");
+!system("which xterm 1>/dev/null 2>&1")
+    or die("ERROR: xterm not found in PATH.\n");
+
+$have_genders = !system("which nodeattr 1>/dev/null 2>&1");
+$help = `conman -h`;
+($def_dst) = ($help =~ /-d .* \[([^\]]*)\]/);
+($def_esc) = ($help =~ /-e .* \[([^\]]*)\]/);
+
+print_usage() if (!@ARGV || !getopts('d:e:fg:G:hjLmqrV') || $opt_h);
+@patterns = @ARGV;
+exec("conman", "-L") or die("ERROR: Cannot exec conman: $!\n") if ($opt_L);
+exec("conman", "-V") or die("ERROR: Cannot exec conman: $!\n") if ($opt_V);
+
+($opt_f + $opt_j + $opt_m <= 1)
+    or die("ERROR: Only one mode [fjm] can be specified.\n");
+
+if ($opt_f) {
+    $mode = "-f";
+} elsif ($opt_j) {
+    $mode = "-j";
+} elsif ($opt_m) {
+    $mode = "-m";
+} else {
+    $mode = "-m";
+}
+
+@conman = ("conman", "-Q");
+push(@conman, ("-d", $opt_d)) if ($opt_d);
+push(@conman, ("-e", $opt_e)) if ($opt_e);
+push(@conman, ("-r")) if ($opt_r);
+
+@xterm = ("xterm");
+push(@xterm, ("-geometry", $opt_G)) if ($opt_G);
+
+query_consoles();
+spawn_consoles();
+exit_handler();
+kill(-9, $$);
+exit(0);
+
+
+sub exit_handler
+{
+    kill('TERM', @pids);
+    select(undef, undef, undef, 0.5);
+    kill('KILL', @pids);
+    exit(0);
+}
+
+
+sub print_usage
+{
+    ($prog) = ($0 =~ m|(?:.*/)?([^/]*)|);
+    print("Usage: $prog [OPTIONS] [CONSOLES]\n");
+    print("\n");
+    print("  -d HOST   Specify server destination. [$def_dst]\n");
+    print("  -e CHAR   Specify escape character. [$def_esc]\n");
+    print("  -f        Force connections (console-stealing).\n");
+    print("  -g QUERY  Specify nodes matching a genders nodeattr query.\n")
+        if ($have_genders);
+    print("  -G SIZE   Specify xterm geometry (eg, 80x24).\n");
+    print("  -h        Display this help.\n");
+    print("  -j        Join connections (console-sharing).\n");
+    print("  -L        Display license information.\n");
+    print("  -m        Monitor connections (read-only).\n");
+    print("  -q        Query server about specified console(s).\n");
+    print("  -r        Match console names via regex instead of globbing.\n");
+    print("  -V        Display version information.\n");
+    print("\n");
+    exit(0);
+}
+
+
+sub query_consoles
+{
+    if ($opt_g) {
+        if ($have_genders) {
+            chomp($nodes = `nodeattr -c $opt_g`);
+            push(@patterns, split(/,/, $nodes));
+        }
+        else {
+            die("ERROR: Cannot query genders: nodeattr not found\n");
+        }
+    }
+
+    die("ERROR: Cannot fork query: $!\n")
+        unless defined($pid = open(QUERY, "-|"));
+    if ($pid == 0) {
+        exec(@conman, "-q", @patterns)
+            or die("ERROR: Cannot exec query: $!\n");
+    } else {
+        chomp(@consoles = <QUERY>);
+        close(QUERY);
+    }
+
+    if ($opt_q) {
+        foreach (@consoles) { print("$_\n"); }
+        exit(0);
+    }
+    if (@consoles == 0) {
+        exit(1);
+    } elsif (@consoles == 1) {
+        exec(@conman, $mode, $consoles[0])
+            or die("ERROR: Cannot exec conman for console $consoles[0]: $!\n");
+    }
+}
+
+
+sub spawn_consoles
+{
+    foreach $console (@consoles) {
+        $name = "ConMan: $console";
+        if (!defined($pid = fork)) {
+            die("ERROR: Cannot fork xterm for console $console: $!\n");
+        } elsif ($pid == 0) {
+            local $SIG{TERM} = 'DEFAULT';
+            exec(@xterm, "-T", $name, "-e", @conman, $mode, $console)
+                or die("ERROR: Cannot exec xterm for console $console: $!\n");
+        } else {
+            push(@pids, $pid);
+        }
+    }
+    select(undef, undef, undef, 1.0);
+
+    if (!defined($pid = fork)) {
+        die("ERROR: Cannot fork xterm for console broadcast: $!\n");
+    } elsif ($pid == 0) {
+        exec(@conman, "-b", "-j", @patterns)
+            or die("ERROR: Cannot exec xterm for console broadcast: $!\n");
+    } else {
+        waitpid($pid, 0);
+    }
+}

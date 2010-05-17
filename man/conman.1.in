@@ -1,0 +1,171 @@
+.\" $Id$
+
+.TH CONMAN 1 "@DATE@" "@PROJECT@-@VERSION@" "ConMan: The Console Manager"
+
+.SH NAME
+conman \- ConMan client
+
+.SH SYNOPSIS
+.B conman
+[\fIOPTION\fR]... [\fICONSOLE\fR]...
+
+.SH DESCRIPTION
+\fBconman\fR is a program for connecting to remote consoles being managed by
+\fBconmand\fR.  Console names can be separated by spaces and/or commas.
+Globbing is used by default to match console names against the configuration,
+but regular expression matching can be enabled with the '\fB-r\fR' option.
+
+\fBconman\fR supports three modes of console access: monitor (read-only),
+interactive (read-write), and broadcast (write-only).  If neither
+the '\fB-m\fR' (monitor) nor '\fB-b\fR' (broadcast) options are specified,
+the console session is opened in interactive mode.
+
+.SH OPTIONS
+.TP
+.B \-b
+Broadcast to multiple consoles (write-only).  Data sent by the client will be
+copied to all specified consoles in parallel, but console output will not be
+sent back to the client.  This option can be used in conjunction
+with '\fB-f\fR' or '\fB-j\fR'.
+.TP
+.B \-d \fIdestination\fR
+Specify the location of the \fBconmand\fR daemon, overriding the default
+[@CONMAN_HOST@:@CONMAN_PORT@].  This location may contain a hostname or IP
+address, and be optionally followed by a colon and port number.
+.TP
+.B \-e \fIcharacter\fR
+Specify the client escape character, overriding the default [\fB&\fR].
+.TP
+.B \-f
+Specify that write-access to the console should be "forced", thereby
+stealing the console away from existing clients having write privileges.
+The original clients are informed by \fBconmand\fR of who perpetrated the
+theft as their connections are terminated.
+.TP
+.B \-F \fIfile\fR
+Read console names/patterns from file.  Only one console name may be
+specified per line.  Leading and trailing whitespace, blank lines, and
+comments (i.e., lines beginning with a '#') are ignored.
+.TP
+.B \-h
+Display a summary of the command-line options.
+.TP
+.B \-j
+Specify that write-access to the console should be "joined", thereby
+sharing the console with existing clients having write privileges.
+The original clients are informed by \fBconmand\fR that a new client has
+been granted write privileges.
+.TP
+.B \-l \fIfile\fR
+Log console session output to file.
+.TP
+.B \-L
+Display license information.
+.TP
+.B \-m
+Monitor a console (read-only).
+.TP
+.B \-q
+Query \fBconmand\fR for consoles matching the specified names/patterns.
+Output from this query can be saved to file for use with the '\fB-F\fR'
+option.
+.TP
+.B \-Q
+Enable quiet-mode, suppressing informational messages.  This mode can be
+toggled within a console session via the '\fB&Q\fR' escape.
+.TP
+.B \-r
+Match console names via regular expressions instead of globbing.
+.TP
+.B \-v
+Enable verbose mode.
+.TP
+.B \-V
+Display version information.
+
+.SH "ESCAPE CHARACTERS"
+The following escapes are supported and assume the default escape character
+[\fB&\fR]:
+.TP
+.B &?
+Display a list of currently available escapes.
+.TP
+.B &.
+Terminate the connection.
+.TP
+.B &&
+Send a single escape character.
+.TP
+.B &B
+Send a "serial-break" to the remote console.
+.TP
+.B &E
+Toggle echoing of client input.
+.TP
+.B &F
+Switch from read-only to read-write via a "force".
+.TP
+.B &I
+Display information about the connection.
+.TP
+.B &J
+Switch from read-only to read-write via a "join".
+.TP
+.B &L
+Replay up the the last 4KB of console output.  This escape requires the
+console device to have logging enabled in the \fBconmand\fR configuration.
+.TP
+.B &M
+Switch from read-write to read-only.
+.TP
+.B &Q
+Toggle quiet-mode to display/suppress informational messages.
+.TP
+.B &R
+Reset the node associated with this console.  This escape requires a
+"resetcmd" to be specified in the \fBconmand\fR configuration.
+.TP
+.B &Z
+Suspend the client.
+
+.SH ENVIRONMENT
+The following environment variables override the default settings.
+.TP
+.SM CONMAN_HOST
+Specifies the hostname or IP address at which to contact \fBconmand\fR, but
+may be overridden by the '\fB-d\fR' command-line option.  A port number
+separated by a colon may follow the hostname (i.e., \fIhost:port\fR), although
+the CONMAN_PORT environment variable takes precedence.  If not set, the
+default host [@CONMAN_HOST@] will be used.
+.TP
+.SM CONMAN_PORT
+Specifies the port on which to contact \fBconmand\fR, but may be overridden by
+the '\fB-d\fR' command-line option.  If not set, the default port
+[@CONMAN_PORT@] will be used.
+.TP
+.SM CONMAN_ESCAPE
+The first character of this variable specifies the escape character, but may
+be overridden by the '\fB-e\fR' command-line option.  If not set, the default
+escape character [\fB&\fR] will be used.
+
+.SH SECURITY
+The client/server communications are not yet encrypted.
+
+.SH AUTHOR
+Chris Dunlap <cdunlap@llnl.gov>
+
+.SH COPYRIGHT
+Copyright (C) 2007-2009 Lawrence Livermore National Security, LLC.
+.br
+Copyright (C) 2001-2007 The Regents of the University of California.
+
+ConMan is free software; you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation; either version 2 of the License, or (at your option) any later
+version.
+
+.SH "SEE ALSO"
+.BR conman.conf (5),
+.BR conmand (8).
+.PP
+\fBhttp://home.gna.org/conman/\fR

@@ -1,0 +1,111 @@
+.\" $Id$
+
+.TH CONMAND 8 "@DATE@" "@PROJECT@-@VERSION@" "ConMan: The Console Manager"
+
+.SH NAME
+conmand \- ConMan daemon
+
+.SH SYNOPSIS
+.B conmand
+[\fIOPTION\fR]...
+
+.SH DESCRIPTION
+\fBconmand\fR is the daemon responsible for managing consoles defined by its
+configuration file as well as listening for connections from clients.
+
+.SH OPTIONS
+.TP
+.B \-c \fIfile\fR
+Specify a configuration file, overriding the default location [@CONMAN_CONF@].
+.TP
+.B \-F
+Run the daemon in the foreground.
+.TP
+.B \-h
+Display a summary of the command-line options.
+.TP
+.B \-k
+Send a SIGTERM to the \fBconmand\fR process associated with the specified
+configuration, thereby killing the daemon.  Returns 0 if the daemon was
+successfully signaled; otherwise, returns 1.
+.TP
+.B \-L
+Display license information.
+.TP
+.B \-p \fIport\fR
+Specify the port on which \fBconmand\fR will listen for clients, overriding
+both the default port [@CONMAN_PORT@] and the port specified in the
+configuration file.
+.TP
+.B \-q
+Displays the PID of the \fBconmand\fR process associated with the specified
+configuration if it appears active.  Returns 0 if the configuration appears
+active; otherwise, returns 1.
+.TP
+.B \-r
+Send a SIGHUP to the \fBconmand\fR process associated with the specified
+configuration, thereby re-opening both that daemon's log file and individual
+console log files.  Returns 0 if the daemon was successfully signaled;
+otherwise, returns 1.
+.TP
+.B \-v
+Enable verbose mode.
+.TP
+.B \-V
+Display version information.
+.TP
+.B \-z
+Truncate both the daemon's log file and individual console log files
+at start-up.
+
+.SH SIGNALS
+.TP 12
+.B SIGHUP
+Close and re-open both the daemon's log file and the individual console
+log files.  Conversion specifiers within filenames will be re-evaluated.
+This is useful for \fBlogrotate\fR configurations.
+.TP
+.B SIGTERM
+Terminate the daemon.
+
+.SH SECURITY
+Connections to the server are not authenticated, and communications
+between client and server are not encrypted.  When time allows, this will
+be addressed in a future release.  Until then, the recommendation is to bind
+the server's listen socket to the loopback address (by specifying "\fBserver
+loopback=on\fR" in conman.conf) and restrict access to the server host.
+
+.SH NOTES
+Log messages are sent to standard-error until after the configuration file
+has been read, at which time future messages are discarded unless either
+the \fBlogfile\fR or \fBsyslog\fR keyword has been specified (cf.,
+\fBconman.conf(5)\fR).
+.PP
+If the configuration file is modified while the daemon is running and a
+\fBpidfile\fR was not originally specified, the '\fB-k\fR' and '\fB-r\fR'
+options may be unable to identify the daemon process; consequently, the
+appropriate signal may need to be sent to the daemon manually.
+.PP
+The number of consoles that can be simultaneously managed is limited by the
+maximum number of file descriptors a process can have open.  The daemon sets
+its "nofile" soft limit to the maximum/hard limit.  If you are encountering
+"too many open files" errors, you may need to increase the "nofile" hard limit.
+
+.SH AUTHOR
+Chris Dunlap <cdunlap@llnl.gov>
+
+.SH COPYRIGHT
+Copyright (C) 2007-2009 Lawrence Livermore National Security, LLC.
+.br
+Copyright (C) 2001-2007 The Regents of the University of California.
+
+ConMan is free software; you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation; either version 2 of the License, or (at your option) any later
+version.
+
+.SH "SEE ALSO"
+.BR conman (1),
+.BR conman.conf (5).
+.PP
+\fBhttp://home.gna.org/conman/\fR

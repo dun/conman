@@ -1,0 +1,64 @@
+ConMan FAQ
+
+-------------------------------------------------------------------------------
+
+Q:  I'm running ConMan on a large cluster and it crashes every time at startup.
+    How do I configure it to handle more than 1024 consoles?
+
+A:  ConMan versions < 0.1.9 are based on select() and are thereby limited by
+    the number of file descriptors.  A file descriptor is needed for each
+    console, and another is needed for each log file.  If you are logging each
+    console, these versions will be unable to open more than ~510 consoles.
+
+    Under Linux, versions >= 0.1.8.3 can sidestep this limitation if they are
+    compiled against an increased __FD_SETSIZE in the /usr/include headers.
+
+    Versions >= 0.1.9 are based on poll() and are no longer constrained by the
+    number of file descriptors.  The daemon sets the current RLIMIT_NOFILE
+    (ie, the limit on the number of open file descriptors) to the maximum
+    allowable "hard" limit.  On Linux, the system nofile hard limit can be
+    set in /etc/security/limits.conf.
+
+-------------------------------------------------------------------------------
+
+Q:  I have a cluster where each node's serial port is the console for the next
+    node.  I would like to be able to access all consoles from a single host.
+    Is there a "serial port forwarding" mechanism to forward the local serial
+    port to a single conmand daemon?
+
+A:  ConMan does not currently support forwarding consoles from one daemon to
+    another.  However, several serial port forwarders exist:
+
+      http://freshmeat.net/projects/sredird/
+      http://freshmeat.net/projects/sercd/
+      http://freshmeat.net/projects/ser2net/
+      http://freshmeat.net/projects/msredird/
+
+    Chris Worley reports success with ser2net:
+
+    > Date:    Tue, 02 May 2006 11:12:09 -0700
+    > From:    "Worley, Chris B" <chris.b.worley@intel.com>
+    > Subject: RE: Conman via distributed serial ports
+    >
+    > Ser2net works great.
+    >
+    > I setup my "/etc/ser2net.conf" file on each node with:
+    >
+    >   2299:telnet:100000:/dev/modem:57600,NONE,1STOPBIT,8DATABITS,-RTSCTS,-XONXOFF
+    >
+    > And my /etc/conman.conf as:
+    >
+    >   CONSOLE name="n1" dev="/dev/ttyUSB0" log="n1"
+    >   CONSOLE name="n2" dev="n1:2299" log="n2"
+    >   CONSOLE name="n3" dev="n2:2299" log="n3"
+    >   CONSOLE name="n4" dev="n3:2299" log="n4"
+    >   CONSOLE name="n5" dev="n4:2299" log="n5"
+    >   CONSOLE name="n6" dev="n5:2299" log="n6"
+    >   CONSOLE name="n7" dev="n6:2299" log="n7"
+    >   CONSOLE name="n8" dev="n7:2299" log="n8"
+    >
+    > And run ser2conf on each node from inittab with:
+    >
+    >   ser2net -n -p 2298
+
+-------------------------------------------------------------------------------

@@ -1,0 +1,194 @@
+#******************************************************************************
+# Alpha Library Functions (ALF)
+#******************************************************************************
+# $Id$
+#******************************************************************************
+# Written by Chris Dunlap <cdunlap@llnl.gov>.
+# Copyright (C) 2007-2009 Lawrence Livermore National Security, LLC.
+# Copyright (C) 2001-2007 The Regents of the University of California.
+# UCRL-CODE-2002-009.
+#
+# This file is part of ConMan: The Console Manager.
+# For details, see <http://home.gna.org/conman/>.
+#
+# This is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#******************************************************************************
+
+
+proc alpha_do_rmc_cmd {spawn_id output_id console echo cmd {tmout 10}} {
+#
+# Executes the RMC 'cmd' on the console session associated with 'spawn_id'.
+#   If 'echo' is non-zero, output will be sent to the user via 'output_id'.
+# Returns 1 if the RMC cmd is successful; o/w, returns 0.
+#
+# Commands tested: power on, power off, halt in, halt out, reset, status.
+#
+# NOTE: Does not work on ds20.
+#
+  set send_slow {1 0.25}
+  exp_send -s "\033\033rmc"
+  set timeout 2
+  expect -gl "^RMC>\$" {
+    ;# exp_break
+  } -gl "\r\n" {
+    exp_continue -continue_timer
+  } eof {
+    return 0
+  } timeout {
+    if {$timeout == 2} {                ;# already at RMC?
+      exp_send "\r"
+      set timeout 1
+      exp_continue
+    } else {                            ;# no RMC? i'm outta here!
+      return 0
+    }
+  }
+
+  set status 1
+  set timeout $tmout
+  exp_send -- "$cmd\r"
+  expect -gl "^$cmd\r\n" {
+    exp_continue -continue_timer        ;# expect the cmd just sent
+  } -nocase -re "(^\[^\r]*(unknown command|power is off)\[^\r]*)\r\n" {
+    if {$echo} {exp_send -i $output_id "$expect_out(1,string)\n"}
+    set status 0
+    exp_continue -continue_timer
+  } -gl "^RMC>\$" {
+    set echo 0
+    exp_send "quit\r"
+    exp_continue -continue_timer
+  } -gl "^Returning to COM port\r\n" {
+    ;# exp_break
+  } -re "(^\[^\r]*)\r\n" {
+    if {$echo} {exp_send -i $output_id "$expect_out(1,string)\n"}
+    exp_continue -continue_timer
+  } eof {
+    return 0
+  } timeout {
+    return 0
+  }
+  return $status
+}
+
+
+proc alpha_is_at_srm {spawn_id output_id console {tmout 3}} {
+#
+# Checks whether the console session associated with 'spawn_id' is at SRM.
+#   Times-out after approx 'tmout' secs; if you are waiting for the SRM prompt
+#   following a reset, you will want to specify a longer timeout (eg, 120secs).
+# Returns 1 if the console is at SRM; o/w, returns 0.
+#
+  set again 1                           ;# sometimes the first \r gets lost
+  set timeout 1                         ;#   so try again in a second
+  exp_send "\r"
+  expect -re "\nCPU \[0-9]+ booting" {
+    exp_send "\003"
+    exp_continue -continue_timer
+  } -gl ">>>\$" {
+    return 1
+  } -gl "\r" {
+    exp_continue -continue_timer
+  } eof {
+    return 0
+  } timeout {
+    if {$again > 0} {
+      incr again -1
+      set timeout $tmout
+      exp_send "\r"
+      exp_continue
+    } else {
+      return 0
+    }
+  }
+}
+
+
+proc alpha_do_srm_cmd {spawn_id output_id console echo cmd {tmout 10}} {
+#
+# Executes the SRM 'cmd' on the console session associated with 'spawn_id'.
+#   If 'echo' is non-zero, output will be sent to the user via 'output_id'.
+# Returns 1 if the SRM cmd is successful; o/w, returns 0.
+#
+  if {! [alpha_is_at_srm $spawn_id $output_id $console]} {
+    return 0
+  }
+  set status 1
+  set timeout $tmout
+  exp_send -- "$cmd\r"
+  expect -gl "^$cmd\r\n" {
+    exp_continue -continue_timer        ;# expect the cmd just sent
+  } -nocase -re "(^\[^\r]*jumping to bootstrap code\[^\r]*)\r\n" {
+    if {$echo} {exp_send -i $output_id "$expect_out(1,string)\n"}
+    return 1                            ;# success for "boot" cmd
+  } -nocase -re "(^\[^\r]*bootstrap code read in\[^\r]*)\r\n" {
+    if {$echo} {exp_send -i $output_id "$expect_out(1,string)\n"}
+    return 1                            ;# success for "boot" cmd via BOOTP
+  } -nocase -re "(^\[^\r]*(bad value|invalid|no such command)\[^\r]*)\r\n" {
+    if {$echo} {exp_send -i $output_id "$expect_out(1,string)\n"}
+    set status 0
+    exp_continue -continue_timer
+  } -re "^\[^\r]*>>>\$" {
+    ;# exp_break
+  } -re "(^\[^\r]*)\r\n" {
+    if {$echo} {exp_send -i $output_id "$expect_out(1,string)\n"}
+    exp_continue -continue_timer
+  } eof {
+    return 0
+  } timeout {
+    return 0
+  }
+  return $status
+}
+
+
+proc alpha_get_mac_addrs {spawn_id output_id console {errmsg_r {}}} {
+#
+# Queries SRM on the console associated with 'spawn_id' via "show dev".
+# Returns a list of MAC addresses.
+# On error, a message is written to the 'errmsg_r' var reference if present.
+#
+  upvar $errmsg_r errmsg
+  set errmsg "Undefined"
+  set macs {}
+
+  if {! [alpha_is_at_srm $spawn_id $output_id $console]} {
+    set errmsg "Not at SRM prompt"
+    return
+  }
+  set word "\[^ \t\r\n]+"
+  set x "\[0-9A-Fa-f]"
+  set addr "$x$x-$x$x-$x$x-$x$x-$x$x-$x$x"
+
+  exp_send "show dev\r"
+  set timeout 10
+  expect -gl "No such command" {
+    set errmsg "No such command"
+    return
+  } -re "\n($word) +($word) +($addr) *\r" {
+    lappend macs \
+      [list $expect_out(1,string) $expect_out(2,string) $expect_out(3,string)]
+    exp_continue -continue_timer
+  } -gl ">>>\$" {
+    ;# exp_break
+  } -gl "\r" {
+    exp_continue -continue_timer
+  } eof {
+    set errmsg "Exited"
+    return
+  } timeout {
+    set errmsg "Timed-out"
+    return
+  }
+  return $macs
+}
