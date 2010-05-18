@@ -7,7 +7,7 @@ Release:	0
 Summary:	ConMan: The Console Manager
 Group:		Applications/System
 License:	GPLv2+
-URL:		http://home.gna.org/conman/
+URL:		http://conman.googlecode.com/
 
 Requires:	expect
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
