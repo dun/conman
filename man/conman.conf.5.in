@@ -204,17 +204,17 @@ file/script, and any additional \fIargs\fR are space-delimited); the
 console types.
 .br
 .sp
-A local unix domain socket connection is defined by the "unix:\fIpath\fR"
+A local Unix domain socket connection is defined by the "unix:\fIpath\fR"
 format (where "unix:" is the literal character string prefix and \fIpath\fR
 is the pathname of the local socket).
 .br
 .sp
 An IPMI Serial-Over-LAN connection is defined by the "ipmi:\fIhost\fR" format
-(where "ipmi" is the literal string and "\fIhost\fR" is a hostname or IPv4
+(where "ipmi:" is the literal string and \fIhost\fR is a hostname or IPv4
 address).
 .br
 .sp
-The '%N' character sequence will be replaced by the console name.
+The '\fB%N\fR' character sequence will be replaced by the console name.
 .TP
 \fBlog\fR \fB=\fR "\fIfile\fR"
 Specifies the file where console output is logged.  This string undergoes

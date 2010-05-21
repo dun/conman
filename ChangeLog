@@ -1,3 +1,8 @@
+2010-05-20  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* etc/conman.conf, man/conman.conf.5.in: Tweaked formatting in
+	  Console Directives section.
+
 2010-05-17  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* : Updated homepage URL and copyleft boilerplate.
