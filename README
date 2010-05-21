@@ -1,5 +1,7 @@
 ConMan is a serial console management program designed to support a large
-number of console devices and simultaneous users.  It supports:
+number of console devices and simultaneous users.
+
+It supports:
   - local serial devices
   - remote terminal servers (via the telnet protocol)
   - IPMI Serial-Over-LAN (via FreeIPMI)
@@ -11,3 +13,12 @@ Its features include:
   - connecting to consoles in monitor (R/O) or interactive (R/W) mode
   - allowing clients to share or steal console write privileges
   - broadcasting client output to multiple consoles
+
+License:
+  ConMan is free software; you can redistribute it and/or modify it under
+  the terms of the GNU General Public License as published by the Free
+  Software Foundation; either version 2 of the License, or (at your option)
+  any later version.
+
+Homepage:
+  http://conman.googlecode.com/

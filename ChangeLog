@@ -1,5 +1,7 @@
 2010-05-20  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* README: Added license info and homepage URL.
+
 	* etc/conman.conf, man/conman.conf.5.in: Tweaked formatting in
 	  Console Directives section.
 
