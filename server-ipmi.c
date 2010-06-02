@@ -478,6 +478,7 @@ static int complete_ipmi_connect(obj_t *ipmi)
     }
     set_fd_nonblocking(ipmi->fd);
     set_fd_closed_on_exec(ipmi->fd);
+    ipmi->gotEOF = 0;
 
     DPRINTF((15, "Connection established to <%s> via IPMI for [%s].\n",
         ipmi->aux.ipmi.host, ipmi->name));
