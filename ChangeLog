@@ -1,5 +1,7 @@
 2010-06-02  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* THANKS: Updated.
+
 	* server-ipmi.c (complete_ipmi_connect): Tweaked ordering so IPMI state
 	  is reset before a timer is added.  This should have no effect other
 	  than to better mirror the other console backends.
