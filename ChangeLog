@@ -11,8 +11,8 @@
 	  upon successful ipmiconsole connection.  (Fixes issue 2)
 
 	* server-ipmi.c (fail_ipmi_connect):
-	  Applied patch from <matthieu.perotin@bull.net> to cleanup
-	  ipmiconsole ctx on failed connection attempt.  (Fixes issue 1)
+	  Applied patch from <matthieu.perotin@bull.net> to cleanup ipmiconsole
+	  ctx on failed connection attempt.  (Fixes issue 1)
 
 2010-05-20  Chris Dunlap  <cdunlap@llnl.gov>
 
