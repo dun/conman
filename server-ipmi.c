@@ -514,6 +514,9 @@ static void fail_ipmi_connect(obj_t *ipmi)
         log_msg(LOG_INFO,
             "Unable to connect to <%s> via IPMI to console [%s]: %s",
             ipmi->aux.ipmi.host, ipmi->name, ipmiconsole_ctx_strerror(e));
+
+        ipmiconsole_ctx_destroy(ipmi->aux.ipmi.ctx);
+        ipmi->aux.ipmi.ctx = NULL;
     }
 
     /*  Set timer for establishing new connection attempt.
