@@ -478,10 +478,9 @@ static int complete_ipmi_connect(obj_t *ipmi)
     }
     set_fd_nonblocking(ipmi->fd);
     set_fd_closed_on_exec(ipmi->fd);
-    ipmi->gotEOF = 0;
 
-    DPRINTF((15, "Connection established to <%s> via IPMI for [%s].\n",
-        ipmi->aux.ipmi.host, ipmi->name));
+    ipmi->gotEOF = 0;
+    ipmi->aux.ipmi.state = CONMAN_IPMI_UP;
 
     /*  Require the connection to be up for a minimum length of time before
      *    resetting the reconnect delay back to the minimum.
@@ -493,8 +492,8 @@ static int complete_ipmi_connect(obj_t *ipmi)
      */
     write_notify_msg(ipmi, LOG_INFO, "Console [%s] connected to <%s>",
         ipmi->name, ipmi->aux.ipmi.host);
-
-    ipmi->aux.ipmi.state = CONMAN_IPMI_UP;
+    DPRINTF((15, "Connection established to <%s> via IPMI for [%s].\n",
+        ipmi->aux.ipmi.host, ipmi->name));
     return (0);
 }
 
