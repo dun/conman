@@ -1,5 +1,7 @@
 2010-06-02  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* configure, config.h.in: Autoreconf'd with autoconf-2.65.
+
 	* THANKS: Updated.
 
 	* server-ipmi.c (complete_ipmi_connect): Tweaked ordering so IPMI state
