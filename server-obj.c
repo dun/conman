@@ -861,7 +861,7 @@ int read_from_obj(obj_t *obj, tpoll_t tp)
      *  The state of unixsock objs does not need to be checked here since it
      *    must be UP.
      */
-    if (is_telnet_obj(obj) && obj->aux.telnet.conState != CONMAN_TELCON_UP) {
+    if (is_telnet_obj(obj) && obj->aux.telnet.state != CONMAN_TELNET_UP) {
         return(0);
     }
 again:
@@ -952,7 +952,7 @@ int write_obj_data(obj_t *obj, const void *src, int len, int isInfo)
      *    data will be discarded so perform a no-op here.
      */
     if ( ( is_telnet_obj(obj) &&
-           obj->aux.telnet.conState != CONMAN_TELCON_UP ) || 
+           obj->aux.telnet.state != CONMAN_TELNET_UP ) || 
          ( is_unixsock_obj(obj) &&
            obj->aux.unixsock.state != CONMAN_UNIXSOCK_UP ) ||
          ( is_console_obj(obj) && (obj->fd < 0) ) )
@@ -1085,7 +1085,7 @@ int write_to_obj(obj_t *obj)
         avail = 0;
     }
     else if ( ( is_telnet_obj(obj) &&
-                obj->aux.telnet.conState != CONMAN_TELCON_UP ) || 
+                obj->aux.telnet.state != CONMAN_TELNET_UP ) || 
               ( is_unixsock_obj(obj) &&
                 obj->aux.unixsock.state != CONMAN_UNIXSOCK_UP ) )
     {

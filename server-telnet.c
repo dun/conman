@@ -102,7 +102,7 @@ obj_t * create_telnet_obj(server_conf_t *conf, char *name,
     telnet->aux.telnet.timer = -1;
     telnet->aux.telnet.delay = TELNET_MIN_TIMEOUT;
     telnet->aux.telnet.iac = -1;
-    telnet->aux.telnet.conState = CONMAN_TELCON_DOWN;
+    telnet->aux.telnet.state = CONMAN_TELNET_DOWN;
     /*
      *  Dup 'enableKeepAlive' to prevent passing 'conf'
      *    to connect_telnet_obj().
@@ -127,7 +127,7 @@ int open_telnet_obj(obj_t *telnet)
     assert(telnet != NULL);
     assert(is_telnet_obj(telnet));
 
-    if (telnet->aux.telnet.conState == CONMAN_TELCON_UP) {
+    if (telnet->aux.telnet.state == CONMAN_TELNET_UP) {
         disconnect_telnet_obj(telnet);
     }
     else {
@@ -135,7 +135,7 @@ int open_telnet_obj(obj_t *telnet)
     }
     DPRINTF((9, "Opened [%s] telnet: fd=%d host=%s port=%d state=%d.\n",
         telnet->name, telnet->fd, telnet->aux.telnet.host,
-        telnet->aux.telnet.port, (int) telnet->aux.telnet.conState));
+        telnet->aux.telnet.port, (int) telnet->aux.telnet.state));
     return(rc);
 }
 
@@ -148,13 +148,13 @@ static int connect_telnet_obj(obj_t *telnet)
     struct sockaddr_in saddr;
     const int on = 1;
 
-    assert(telnet->aux.telnet.conState != CONMAN_TELCON_UP);
+    assert(telnet->aux.telnet.state != CONMAN_TELNET_UP);
 
     if (telnet->aux.telnet.timer >= 0) {
         (void) tpoll_timeout_cancel(tp_global, telnet->aux.telnet.timer);
         telnet->aux.telnet.timer = -1;
     }
-    if (telnet->aux.telnet.conState == CONMAN_TELCON_DOWN) {
+    if (telnet->aux.telnet.state == CONMAN_TELNET_DOWN) {
         /*
          *  Initiate a non-blocking connection attempt.
          */
@@ -191,7 +191,7 @@ static int connect_telnet_obj(obj_t *telnet)
         if (connect(telnet->fd,
                 (struct sockaddr *) &saddr, sizeof(saddr)) < 0) {
             if (errno == EINPROGRESS) {
-                telnet->aux.telnet.conState = CONMAN_TELCON_PENDING;
+                telnet->aux.telnet.state = CONMAN_TELNET_PENDING;
             }
             else {
                 disconnect_telnet_obj(telnet);
@@ -199,7 +199,7 @@ static int connect_telnet_obj(obj_t *telnet)
             return(-1);
         }
     }
-    else if (telnet->aux.telnet.conState == CONMAN_TELCON_PENDING) {
+    else if (telnet->aux.telnet.state == CONMAN_TELNET_PENDING) {
         /*
          *  Did the non-blocking connect complete successfully?
          *    (cf. Stevens UNPv1 15.3 p409)
@@ -231,10 +231,10 @@ static int connect_telnet_obj(obj_t *telnet)
     }
     else {
         log_err(0, "Console [%s] is in unexpected telnet state=%d",
-            telnet->aux.telnet.conState);
+            telnet->aux.telnet.state);
     }
     telnet->gotEOF = 0;
-    telnet->aux.telnet.conState = CONMAN_TELCON_UP;
+    telnet->aux.telnet.state = CONMAN_TELNET_UP;
 
     /*  Notify linked objs when transitioning into an UP state.
      */
@@ -281,12 +281,12 @@ static void disconnect_telnet_obj(obj_t *telnet)
     }
     /*  Notify linked objs when transitioning from an UP state.
      */
-    if (telnet->aux.telnet.conState == CONMAN_TELCON_UP) {
+    if (telnet->aux.telnet.state == CONMAN_TELNET_UP) {
         write_notify_msg(telnet, LOG_NOTICE,
             "Console [%s] disconnected from <%s:%d>",
             telnet->name, telnet->aux.telnet.host, telnet->aux.telnet.port);
     }
-    telnet->aux.telnet.conState = CONMAN_TELCON_DOWN;
+    telnet->aux.telnet.state = CONMAN_TELNET_DOWN;
     /*
      *  Set timer for establishing new connection using exponential backoff.
      */
@@ -336,7 +336,7 @@ int process_telnet_escapes(obj_t *telnet, void *src, int len)
 
     assert(is_telnet_obj(telnet));
     assert(telnet->fd >= 0);
-    assert(telnet->aux.telnet.conState == CONMAN_TELCON_UP);
+    assert(telnet->aux.telnet.state == CONMAN_TELNET_UP);
 
     if (!src || len <= 0)
         return(0);
@@ -424,7 +424,7 @@ int send_telnet_cmd(obj_t *telnet, int cmd, int opt)
 
     /*  This is a no-op if the telnet connection is not yet established.
      */
-    if ((telnet->fd < 0) || (telnet->aux.telnet.conState != CONMAN_TELCON_UP))
+    if ((telnet->fd < 0) || (telnet->aux.telnet.state != CONMAN_TELNET_UP))
         return(0);
 
     *p++ = IAC;
@@ -476,7 +476,7 @@ static int process_telnet_cmd(obj_t *telnet, int cmd, int opt)
 
     assert(is_telnet_obj(telnet));
     assert(telnet->fd >= 0);
-    assert(telnet->aux.telnet.conState == CONMAN_TELCON_UP);
+    assert(telnet->aux.telnet.state == CONMAN_TELNET_UP);
 
     if (!TELCMD_OK(cmd)) {
         log_msg(LOG_DEBUG,

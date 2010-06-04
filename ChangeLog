@@ -1,3 +1,9 @@
+2010-06-03  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server.h, server.c, server-obj.c, server-sock.c, server-telnet.c:
+	  Renamed telnet_obj conState to state.  Renamed telnet_connect_state
+	  enums from CONMAN_TELCON_* to CONMAN_TELNET_*.
+
 2010-06-02  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* configure, config.h.in: Autoreconf'd with autoconf-2.65.

@@ -907,7 +907,7 @@ static void check_console_state(obj_t *console, obj_t *client)
         open_serial_obj(console);
     }
     else if (is_telnet_obj(console)
-            && (console->aux.telnet.conState != CONMAN_TELCON_UP)) {
+            && (console->aux.telnet.state != CONMAN_TELNET_UP)) {
         snprintf(buf, sizeof(buf),
             "%sConsole [%s] is currently disconnected from <%s:%d>%s",
             CONMAN_MSG_PREFIX, console->name, console->aux.telnet.host,
@@ -920,7 +920,7 @@ static void check_console_state(obj_t *console, obj_t *client)
          *    it would be misinterpreted as the completion of the non-blocking
          *    connect().
          */
-        if (console->aux.telnet.conState == CONMAN_TELCON_DOWN) {
+        if (console->aux.telnet.state == CONMAN_TELNET_DOWN) {
             open_telnet_obj(console);
         }
     }

@@ -138,11 +138,11 @@ typedef struct serial_obj {             /* SERIAL AUX OBJ DATA:              */
 } serial_obj_t;
 
 typedef enum telnet_connect_state {     /* state of n/w connection (2 bits)  */
-    CONMAN_TELCON_NONE,
-    CONMAN_TELCON_DOWN,
-    CONMAN_TELCON_PENDING,
-    CONMAN_TELCON_UP
-} telcon_state_t;
+    CONMAN_TELNET_NONE,
+    CONMAN_TELNET_DOWN,
+    CONMAN_TELNET_PENDING,
+    CONMAN_TELNET_UP
+} telnet_state_t;
 
 typedef struct telnet_obj {             /* TELNET AUX OBJ DATA:              */
     char            *host;              /*  remote telnetd host name (or ip) */
@@ -151,7 +151,7 @@ typedef struct telnet_obj {             /* TELNET AUX OBJ DATA:              */
     int              timer;             /*  timer id for reconnects          */
     int              delay;             /*  secs 'til next reconnect attempt */
     int              iac;               /*  -1, or last char if in IAC seq   */
-    unsigned         conState:2;        /*  telcon_state_t of n/w connection */
+    unsigned         state:2;           /*  telnet_state_t of n/w connection */
     unsigned         enableKeepAlive:1; /*  true if using TCP keep-alive     */
 } telnet_obj_t;
 

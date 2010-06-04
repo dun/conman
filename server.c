@@ -753,7 +753,7 @@ static void mux_io(server_conf_t *conf)
             }
             if ( (
                    ( is_telnet_obj(obj) &&
-                     obj->aux.telnet.conState == CONMAN_TELCON_UP ) ||
+                     obj->aux.telnet.state == CONMAN_TELNET_UP ) ||
 #ifdef WITH_FREEIPMI
                    ( is_ipmi_obj(obj) &&
                      obj->aux.ipmi.state == CONMAN_IPMI_UP ) ||
@@ -772,7 +772,7 @@ static void mux_io(server_conf_t *conf)
             if ( ( (obj->bufInPtr != obj->bufOutPtr) ||
                    (obj->gotEOF) ) &&
                  ( ! (is_telnet_obj(obj) &&
-                      obj->aux.telnet.conState != CONMAN_TELCON_UP) ) &&
+                      obj->aux.telnet.state != CONMAN_TELNET_UP) ) &&
 #ifdef WITH_FREEIPMI
                  ( ! (is_ipmi_obj(obj) &&
                       obj->aux.ipmi.state != CONMAN_IPMI_UP) ) &&
@@ -785,7 +785,7 @@ static void mux_io(server_conf_t *conf)
                 tpoll_set(conf->tp, obj->fd, POLLOUT);
             }
             if (is_telnet_obj(obj) &&
-                obj->aux.telnet.conState == CONMAN_TELCON_PENDING)
+                obj->aux.telnet.state == CONMAN_TELNET_PENDING)
             {
                 tpoll_set(conf->tp, obj->fd, POLLIN | POLLOUT);
             }
@@ -820,7 +820,7 @@ static void mux_io(server_conf_t *conf)
             }
             if (is_telnet_obj(obj)
               && tpoll_is_set(conf->tp, obj->fd, POLLIN | POLLOUT)
-              && (obj->aux.telnet.conState == CONMAN_TELCON_PENDING)) {
+              && (obj->aux.telnet.state == CONMAN_TELNET_PENDING)) {
                 open_telnet_obj(obj);
                 continue;
             }
