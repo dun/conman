@@ -1,3 +1,7 @@
+2010-06-07  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server-obj.c: Added DPRINTFs to show start of various routines.
+
 2010-06-03  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server.h, server.c, server-obj.c, server-sock.c, server-telnet.c:

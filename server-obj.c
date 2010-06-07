@@ -768,6 +768,8 @@ int shutdown_obj(obj_t *obj)
  */
     assert(obj != NULL);
 
+    DPRINTF((20, "Entered shutdown_obj: [%s]\n", obj->name));
+
     /*  An inactive obj should not be destroyed.
      */
     if (obj->fd < 0) {
@@ -841,6 +843,8 @@ int read_from_obj(obj_t *obj, tpoll_t tp)
     int n, m;
     ListIterator i;
     obj_t *reader;
+
+    DPRINTF((20, "Entered read_from_obj: [%s]\n", obj->name));
 
     assert(obj->fd >= 0);
 
@@ -937,6 +941,8 @@ int write_obj_data(obj_t *obj, const void *src, int len, int isInfo)
  */
     int avail;
     int n, m;
+
+    DPRINTF((20, "Entered write_obj_data: [%s]\n", obj->name));
 
     if (!src || len <= 0) {
         return(0);
@@ -1061,6 +1067,8 @@ int write_to_obj(obj_t *obj)
     int avail;
     int n;
     int isDead = 0;
+
+    DPRINTF((20, "Entered write_to_obj: [%s]\n", obj->name));
 
     assert(obj->fd >= 0);
 
