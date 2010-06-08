@@ -735,6 +735,7 @@ static void mux_io(server_conf_t *conf)
          *    tpoll() sleep timeout and greatly reduce cpu utilization.
          *    It will also eliminate the maze of twisty conditions below.
          */
+        DPRINTF((25, "Recomputing tpoll fd set\n"));
         (void) tpoll_zero(conf->tp, TPOLL_ZERO_FDS);
         tpoll_set(conf->tp, conf->ld, POLLIN);
 
@@ -754,6 +755,8 @@ static void mux_io(server_conf_t *conf)
             if ( (
                    ( is_telnet_obj(obj) &&
                      obj->aux.telnet.state == CONMAN_TELNET_UP ) ||
+                   ( is_process_obj(obj) &&
+                     obj->aux.process.state == CONMAN_PROCESS_UP ) ||
 #ifdef WITH_FREEIPMI
                    ( is_ipmi_obj(obj) &&
                      obj->aux.ipmi.state == CONMAN_IPMI_UP ) ||
@@ -761,7 +764,6 @@ static void mux_io(server_conf_t *conf)
                    ( is_unixsock_obj(obj) &&
                      obj->aux.unixsock.state == CONMAN_UNIXSOCK_UP ) ||
                    is_serial_obj(obj)  ||
-                   is_process_obj(obj) ||
                    is_client_obj(obj)
                  )
                  &&
@@ -773,6 +775,8 @@ static void mux_io(server_conf_t *conf)
                    (obj->gotEOF) ) &&
                  ( ! (is_telnet_obj(obj) &&
                       obj->aux.telnet.state != CONMAN_TELNET_UP) ) &&
+                 ( ! (is_process_obj(obj) &&
+                      obj->aux.process.state != CONMAN_PROCESS_UP) ) &&
 #ifdef WITH_FREEIPMI
                  ( ! (is_ipmi_obj(obj) &&
                       obj->aux.ipmi.state != CONMAN_IPMI_UP) ) &&
@@ -790,6 +794,7 @@ static void mux_io(server_conf_t *conf)
                 tpoll_set(conf->tp, obj->fd, POLLIN | POLLOUT);
             }
         }
+        DPRINTF((25, "Calling tpoll\n"));
         while ((n = tpoll(conf->tp, 1000)) < 0) {
             if (errno != EINTR) {
                 log_err(errno, "Unable to multiplex I/O");

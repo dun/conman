@@ -961,6 +961,8 @@ int write_obj_data(obj_t *obj, const void *src, int len, int isInfo)
            obj->aux.telnet.state != CONMAN_TELNET_UP ) || 
          ( is_unixsock_obj(obj) &&
            obj->aux.unixsock.state != CONMAN_UNIXSOCK_UP ) ||
+         ( is_process_obj(obj) &&
+           obj->aux.process.state != CONMAN_PROCESS_UP ) ||
          ( is_console_obj(obj) && (obj->fd < 0) ) )
     {
         DPRINTF((1, "Attempted to write to disconnected [%s].\n", obj->name));
@@ -1095,7 +1097,9 @@ int write_to_obj(obj_t *obj)
     else if ( ( is_telnet_obj(obj) &&
                 obj->aux.telnet.state != CONMAN_TELNET_UP ) || 
               ( is_unixsock_obj(obj) &&
-                obj->aux.unixsock.state != CONMAN_UNIXSOCK_UP ) )
+                obj->aux.unixsock.state != CONMAN_UNIXSOCK_UP ) ||
+              ( is_process_obj(obj) &&
+                obj->aux.process.state != CONMAN_PROCESS_UP ) )
     {
         avail = 0;
         obj->bufInPtr = obj->bufOutPtr = obj->buf;

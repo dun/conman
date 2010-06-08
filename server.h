@@ -59,7 +59,7 @@
 #define IPMI_MIN_TIMEOUT                60
 #endif /* WITH_FREEIPMI */
 
-#define PROCESS_MAX_COUNT               3
+#define PROCESS_MAX_TIMEOUT             1800
 #define PROCESS_MIN_TIMEOUT             60
 
 #define RESET_CMD_TIMEOUT               60
@@ -113,14 +113,20 @@ typedef struct logfile_obj {            /* LOGFILE AUX OBJ DATA:             */
     unsigned         lineState:2;       /*  log_line_state_t CR/LF state     */
 } logfile_obj_t;
 
+typedef enum process_connect_state {    /* process connection state (1 bit)  */
+    CONMAN_PROCESS_DOWN,
+    CONMAN_PROCESS_UP
+} process_state_t;
+
 typedef struct process_obj {            /* PROCESS AUX OBJ DATA              */
     char           **argv;              /*  NULL-term'd ary of ptrs to strs  */
     char            *prog;              /*  reference to basename of argv[0] */
-    int              count;             /*  num attempts at process exec     */
     int              timer;             /*  timer id for repeated attempts   */
+    int              delay;             /*  secs 'til next reconnect attempt */
     pid_t            pid;               /*  pid of forked process            */
     time_t           tStart;            /*  time at which process was exec'd */
     struct base_obj *logfile;           /*  log obj ref for console replay   */
+    unsigned         state:1;           /*  process_state_t conn state       */
 } process_obj_t;
 
 typedef struct serial_opt {             /* SERIAL OBJ OPTIONS:               */

@@ -1,5 +1,18 @@
 2010-06-08  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* : Changed external process reconnect behavior from
+	  linear-backoff with a max-count leading to a disabled state,
+	  to an exponential-backoff with no max-count.  (Fixes issue 3)
+	* server.h: Added process_obj delay and state, and removed count.
+	  Added PROCESS_MAX_TIMEOUT.  Removed PROCESS_MAX_COUNT.
+	* server.c (mux_io):
+	  Added checks for process obj state when recomputing poll set.
+	* server-obj.c (write_obj_data, write_to_obj):
+	  Added checks for process obj state.
+	* server-process.c: Revamped.  Refactored open_process_obj()
+	  into disconnect_process_obj() and connect_process_obj().
+	  Added check_process_prog() and reset_process_delay().
+
 	* auxdir/config.guess, auxdir/config.sub:
 	  Updated to autotools-dev-20100122.1 (Debian Squeeze).
 	* auxdir/install-sh, auxdir/mkinstalldirs:
