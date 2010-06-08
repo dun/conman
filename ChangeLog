@@ -1,3 +1,10 @@
+2010-06-08  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* auxdir/config.guess, auxdir/config.sub:
+	  Updated to autotools-dev-20100122.1 (Debian Squeeze).
+	* auxdir/install-sh, auxdir/mkinstalldirs:
+	  Updated to automake-1.11 (Debian Squeeze).
+
 2010-06-07  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server-obj.c: Added DPRINTFs to show start of various routines.
