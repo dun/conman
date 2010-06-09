@@ -6,7 +6,7 @@ Release:	0
 
 Summary:	ConMan: The Console Manager
 Group:		Applications/System
-License:	GPLv2+
+License:	GPLv3+
 URL:		http://conman.googlecode.com/
 
 Requires:	expect

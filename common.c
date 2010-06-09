@@ -9,9 +9,9 @@
  *  This file is part of ConMan: The Console Manager.
  *  For details, see <http://conman.googlecode.com/>.
  *
- *  ConMan is free software; you can redistribute it and/or modify it under
+ *  ConMan is free software: you can redistribute it and/or modify it under
  *  the terms of the GNU General Public License as published by the Free
- *  Software Foundation; either version 2 of the License, or (at your option)
+ *  Software Foundation, either version 3 of the License, or (at your option)
  *  any later version.
  *
  *  ConMan is distributed in the hope that it will be useful, but WITHOUT
@@ -46,9 +46,9 @@ const char *conman_license = \
     "Copyright (C) 2007-2010 Lawrence Livermore National Security, LLC.\n"    \
     "Copyright (C) 2001-2007 The Regents of the University of California.\n"  \
     "\n"                                                                      \
-    "ConMan is free software; you can redistribute it and/or modify it\n"     \
+    "ConMan is free software: you can redistribute it and/or modify it\n"     \
     "under the terms of the GNU General Public License as published by\n"     \
-    "the Free Software Foundation; either version 2 of the License, or\n"     \
+    "the Free Software Foundation; either version 3 of the License, or\n"     \
     "(at your option) any later version.\n"                                   \
     "\n";
 

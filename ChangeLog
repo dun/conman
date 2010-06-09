@@ -1,5 +1,7 @@
 2010-06-08  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* : Changed license from GPLv2+ to GPLv3+.
+
 	* : Changed external process reconnect behavior from
 	  linear-backoff with a max-count leading to a disabled state,
 	  to an exponential-backoff with no max-count.  (Fixes issue 3)
