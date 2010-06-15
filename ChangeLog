@@ -1,5 +1,9 @@
 2010-06-15  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server.h: Removed WITH_FREEIPMI #ifdef guard for CONMAN_OBJ_IPMI.
+	  Replaced conditional def for is_ipmi_obj() with constant def.
+	  Re-ordered is_console_obj().
+
 	* : Ported to FreeBSD 4.7-RELEASE-p28 (i386).
 	* configure.ac: Fixed AC check for socklen_t.
 	* configure.ac: Added AC check for how to link against Pthreads.

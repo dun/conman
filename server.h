@@ -79,9 +79,7 @@ enum obj_type {                         /* type of auxiliary obj (3 bits)    */
     CONMAN_OBJ_SERIAL,
     CONMAN_OBJ_TELNET,
     CONMAN_OBJ_UNIXSOCK,
-#ifdef WITH_FREEIPMI
     CONMAN_OBJ_IPMI,
-#endif /* WITH_FREEIPMI */
     CONMAN_OBJ_LAST_ENTRY
 };
 
@@ -308,25 +306,20 @@ typedef struct client_args {
 /*  Macros
  */
 #define is_client_obj(OBJ)   (OBJ->type == CONMAN_OBJ_CLIENT)
+#define is_ipmi_obj(OBJ)     (OBJ->type == CONMAN_OBJ_IPMI)
 #define is_logfile_obj(OBJ)  (OBJ->type == CONMAN_OBJ_LOGFILE)
 #define is_process_obj(OBJ)  (OBJ->type == CONMAN_OBJ_PROCESS)
 #define is_serial_obj(OBJ)   (OBJ->type == CONMAN_OBJ_SERIAL)
 #define is_telnet_obj(OBJ)   (OBJ->type == CONMAN_OBJ_TELNET)
 #define is_unixsock_obj(OBJ) (OBJ->type == CONMAN_OBJ_UNIXSOCK)
 
-#ifdef WITH_FREEIPMI
-#define is_ipmi_obj(OBJ)     (OBJ->type == CONMAN_OBJ_IPMI)
-#else /* !WITH_FREEIPMI */
-#define is_ipmi_obj(OBJ)     (0)
-#endif /* WITH_FREEIPMI */
-
 #define is_console_obj(OBJ) \
 ( \
   is_telnet_obj(OBJ)   || \
   is_ipmi_obj(OBJ)     || \
-  is_unixsock_obj(OBJ) || \
+  is_process_obj(OBJ)  || \
   is_serial_obj(OBJ)   || \
-  is_process_obj(OBJ)     \
+  is_unixsock_obj(OBJ)    \
 )
 
 
