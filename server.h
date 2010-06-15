@@ -31,9 +31,9 @@
 #ifdef WITH_FREEIPMI
 #include <ipmiconsole.h>
 #endif /* WITH_FREEIPMI */
+#include <sys/types.h>                  /* include before in.h for bsd */
 #include <netinet/in.h>                 /* for struct sockaddr_in            */
 #include <pthread.h>
-#include <sys/types.h>
 #include <termios.h>                    /* for struct termios, speed_t       */
 #include <time.h>                       /* for time_t                        */
 #include "common.h"

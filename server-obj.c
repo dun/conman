@@ -67,16 +67,6 @@ obj_t * create_obj(
 
     assert(conf != NULL);
     assert(name != NULL);
-    assert(type==CONMAN_OBJ_CLIENT  ||
-#ifdef WITH_FREEIPMI
-           type==CONMAN_OBJ_IPMI    ||
-#endif /* WITH_FREEIPMI */
-           type==CONMAN_OBJ_LOGFILE ||
-           type==CONMAN_OBJ_PROCESS ||
-           type==CONMAN_OBJ_SERIAL  ||
-           type==CONMAN_OBJ_TELNET  ||
-           type==CONMAN_OBJ_UNIXSOCK
-    );
 
     if (!(obj = malloc(sizeof(obj_t))))
         out_of_memory();
@@ -86,6 +76,9 @@ obj_t * create_obj(
     x_pthread_mutex_init(&obj->bufLock, NULL);
     obj->readers = list_create(NULL);
     obj->writers = list_create(NULL);
+    if ((type < 0) || (type >= CONMAN_OBJ_LAST_ENTRY)) {
+        log_err(0, "INTERNAL: Unrecognized object [%s] type=%d", name, type);
+    }
     obj->type = type;
     obj->gotBufWrap = 0;
     obj->gotEOF = 0;

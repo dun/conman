@@ -30,12 +30,12 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <sys/types.h>                  /* include before in.h for bsd */
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <sys/types.h>
 #include <unistd.h>
 #include "client.h"
 #include "common.h"

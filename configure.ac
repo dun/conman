@@ -96,7 +96,9 @@ AC_CHECK_HEADERS(sys/inotify.h)
 
 dnl Check for typedefs.
 dnl
-AC_CHECK_TYPES(socklen_t, [], [], [#include <sys/socket.h>])
+AC_CHECK_TYPES(socklen_t, [], [], [
+#include <sys/types.h>
+#include <sys/socket.h>])
 
 
 dnl Check for structures.
@@ -317,23 +319,48 @@ AC_DEFINE_UNQUOTED(CONMAN_PORT, "$CONMAN_PORT",
 AC_SUBST(CONMAN_PORT)
 
 
+dnl Check how to link against Pthreads.
+dnl
+AC_MSG_CHECKING([how to link against pthreads])
+LIBPTHREAD=""
+ac_check_pthreads_libs_save="$LIBS"
+for flag in -lpthread -pthread; do
+  LIBS="$flag"
+  AC_LINK_IFELSE([
+    AC_LANG_PROGRAM(
+      [[#include <pthread.h>]],
+      [[pthread_join (0, 0);]]
+    )],
+    [ac_check_pthreads_libs="$flag"; break],
+    [ac_check_pthreads_libs=FAILED]
+  )
+done
+LIBS="$ac_check_pthreads_libs_save"
+AC_MSG_RESULT($ac_check_pthreads_libs)
+if test "$ac_check_pthreads_libs" = "FAILED"; then
+  AC_MSG_FAILURE([cannot link against pthreads])
+fi
+LIBPTHREAD="$ac_check_pthreads_libs"
+AC_SUBST(LIBPTHREAD)
+dnl
+AC_DEFINE([_REENTRANT], [1],
+  [Define to 1 if you plan to link against multithreaded code.]
+)
+AC_DEFINE([_THREAD_SAFE], [1],
+  [Define to 1 if you plan to link against multithreaded code.]
+)
+AC_DEFINE([WITH_PTHREADS], [1],
+  [Define to 1 if using Pthreads.]
+)
+
+
 dnl Check for random silliness.
 dnl
 AC_CACHE_CHECK([for a sense of humor], ac_cv_humor, ac_cv_humor=yes)
 
 
-dnl Add defs to config.h.
-dnl
-AC_DEFINE(WITH_PTHREADS, 1, [Define if using Pthreads.])
-
 AH_BOTTOM(
 [
-#ifdef WITH_PTHREADS
-#  ifndef _REENTRANT
-#    define _REENTRANT
-#  endif /* _REENTRANT */
-#endif /* WITH_PTHREADS */
-
 /* Override default out_of_memory() macro definition. */
 #include "log.h"
 #define out_of_memory() (log_err(0, "Out of memory"), (void *) NULL)]

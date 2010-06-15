@@ -592,6 +592,7 @@ ac_includes_default="\
 #endif"
 
 ac_subst_vars='LTLIBOBJS
+LIBPTHREAD
 CONMAN_PORT
 CONMAN_HOST
 CONMAN_CONF
@@ -3832,7 +3833,9 @@ done
 
 
 
-ac_fn_c_check_type "$LINENO" "socklen_t" "ac_cv_type_socklen_t" "#include <sys/socket.h>
+ac_fn_c_check_type "$LINENO" "socklen_t" "ac_cv_type_socklen_t" "
+#include <sys/types.h>
+#include <sys/socket.h>
 "
 if test "x$ac_cv_type_socklen_t" = x""yes; then :
 
@@ -4508,6 +4511,56 @@ _ACEOF
 
 
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking how to link against pthreads" >&5
+$as_echo_n "checking how to link against pthreads... " >&6; }
+LIBPTHREAD=""
+ac_check_pthreads_libs_save="$LIBS"
+for flag in -lpthread -pthread; do
+  LIBS="$flag"
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+    #include <pthread.h>
+int
+main ()
+{
+pthread_join (0, 0);
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_check_pthreads_libs="$flag"; break
+else
+  ac_check_pthreads_libs=FAILED
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+done
+LIBS="$ac_check_pthreads_libs_save"
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_check_pthreads_libs" >&5
+$as_echo "$ac_check_pthreads_libs" >&6; }
+if test "$ac_check_pthreads_libs" = "FAILED"; then
+  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error "cannot link against pthreads
+See \`config.log' for more details." "$LINENO" 5; }
+fi
+LIBPTHREAD="$ac_check_pthreads_libs"
+
+
+$as_echo "#define _REENTRANT 1" >>confdefs.h
+
+
+$as_echo "#define _THREAD_SAFE 1" >>confdefs.h
+
+
+$as_echo "#define WITH_PTHREADS 1" >>confdefs.h
+
+
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for a sense of humor" >&5
 $as_echo_n "checking for a sense of humor... " >&6; }
 if test "${ac_cv_humor+set}" = set; then :
@@ -4517,10 +4570,6 @@ else
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_humor" >&5
 $as_echo "$ac_cv_humor" >&6; }
-
-
-
-$as_echo "#define WITH_PTHREADS 1" >>confdefs.h
 
 
 

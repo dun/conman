@@ -32,6 +32,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/types.h>                  /* include before socket.h for bsd */
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/un.h>

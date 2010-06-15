@@ -30,11 +30,12 @@
 #  include "config.h"
 #endif /* HAVE_CONFIG_H */
 
+#include <sys/types.h>                  /* include before in.h for bsd */
+#include <netinet/in.h>                 /* include before inet.h for bsd */
 #include <arpa/inet.h>
 #include <assert.h>
 #include <errno.h>
 #include <netdb.h>
-#include <netinet/in.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>

@@ -1,3 +1,16 @@
+2010-06-15  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* : Ported to FreeBSD 4.7-RELEASE-p28 (i386).
+	* configure.ac: Fixed AC check for socklen_t.
+	* configure.ac: Added AC check for how to link against Pthreads.
+	* Makefile.in: Replaced "-lpthread" with $LIBPTHREAD.
+	* configure, config.h.in: Rebuilt.
+	* client-sock.c, server.h, server-sock.c, server-telnet.c,
+	  server-unixsock.c, util-net.c: Twiddled header includes for BSD.
+	* server-obj.c (create_obj): Replaced assert for checking "type" arg
+	  with runtime check against CONMAN_OBJ_LAST_ENTRY due to
+	  "preprocessing directive not recognized within macro arg" warning.
+
 2010-06-08  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* : Changed license from GPLv2+ to GPLv3+.
