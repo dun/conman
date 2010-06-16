@@ -1,8 +1,8 @@
 # $Id$
 
 Name:		conman
-Version:	0
-Release:	0
+Version:	0.2.6
+Release:	1%{?dist}
 
 Summary:	ConMan: The Console Manager
 Group:		Applications/System
@@ -28,7 +28,7 @@ BuildRequires:  tcpd-devel
 %endif
 %endif
 
-Source0:	%{name}-%{version}.tar
+Source0:	%{name}-%{version}.tar.bz2
 
 %description
 ConMan is a serial console management program designed to support a large

@@ -1,3 +1,9 @@
+conman-0.2.6 (2010-06-15):
+- Changed license to GPLv3+.
+- Changed project homepage to <http://conman.googlecode.com/>.
+- Fixed bugs with IPMI SOL reconnects.
+- Fixed bug with process-driven reconnects.
+
 conman-0.2.5 (2009-05-19):
 - Fixed bug with consoles trapped in downed state causing poll loop to spin.
 - Added 'server coredump' & 'server coredumpdir' config directives.

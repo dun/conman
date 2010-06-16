@@ -1,5 +1,7 @@
 2010-06-15  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* META, NEWS, conman.spec: Updated metadata for 0.2.6 release.
+
 	* server.h: Removed WITH_FREEIPMI #ifdef guard for CONMAN_OBJ_IPMI.
 	  Replaced conditional def for is_ipmi_obj() with constant def.
 	  Re-ordered is_console_obj().
