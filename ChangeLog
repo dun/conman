@@ -1,5 +1,7 @@
 2011-01-26  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* configure: Autoreconf'd with autoconf-2.67.
+
 	* : Applied patch from <marc.girard92@gmail.com> to add console logfile
 	  lock/nolock option to toggle write lock.  (Fixes issue 6)
 	* server.h: Added enableLock to struct logfile_opt.
