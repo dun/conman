@@ -115,7 +115,7 @@ affect the output of the console's log-replay escape.  The valid \fBlogopts\fR
 include the following:
 .br
 .sp
-\fBlock\fR or \fBnolock\fR - locked log files are protected with a write lock.
+\fBlock\fR or \fBnolock\fR - locked logs are protected with a write lock.
 .br
 .sp
 \fBsanitize\fR or \fBnosanitize\fR - sanitized logs convert non-printable
@@ -128,7 +128,7 @@ timestamp is generated when the first character following the line break is
 output.
 .br
 .sp
-The default is "\fBnosanitize\fR,\fBnotimestamp\fR".
+The default is "\fBlock\fR,\fBnosanitize\fR,\fBnotimestamp\fR".
 .TP
 \fBseropts\fR \fB=\fR "\fIbps\fR[,\fIdatabits\fR[\fIparity\fR[\fIstopbits\fR]]]"
 Specifies global options for local serial devices.  These options can be
