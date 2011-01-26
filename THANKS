@@ -21,3 +21,6 @@ the following people have contributed in its development:
 
   Matthieu Perotin <matthieu.perotin@bull.net>
   - IPMI SOL bugfixes
+
+  <marc.girard92@gmail.com>
+  - console logfile lock/nolock option

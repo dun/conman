@@ -1,5 +1,14 @@
 2011-01-26  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* : Applied patch from <marc.girard92@gmail.com> to add console logfile
+	  lock/nolock option to toggle write lock.  (Fixes issue 6)
+	* server.h: Added enableLock to struct logfile_opt.
+	* server-conf.c (create_server_conf): Initialized enableLock.
+	* server-logfile.c (parse_logfile_opts, open_logfile_obj):
+	  Set/Test enableLock for console logfile write lock.
+	* etc/conman.conf, man/conman.conf.5.in: Documented lock/nolock opt.
+	* THANKS: Updated.
+
 	* : Updated copyright date range.
 
 2010-06-15  Chris Dunlap  <cdunlap@llnl.gov>

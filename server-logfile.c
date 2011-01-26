@@ -80,7 +80,11 @@ int parse_logfile_opts(logopt_t *opts, const char *str,
      */
     tok = strtok(buf, separators);
     while (tok != NULL) {
-        if (!strcasecmp(tok, "sanitize"))
+        if (!strcasecmp(tok, "lock"))
+            optsTmp.enableLock = 1;
+        else if (!strcasecmp(tok, "nolock"))
+            optsTmp.enableLock = 0;
+	else if (!strcasecmp(tok, "sanitize"))
             optsTmp.enableSanitize = 1;
         else if (!strcasecmp(tok, "nosanitize"))
             optsTmp.enableSanitize = 0;
@@ -269,7 +273,8 @@ int open_logfile_obj(obj_t *logfile)
             logfile->name, strerror(errno));
         return(-1);
     }
-    if (get_write_lock(logfile->fd) < 0) {
+    if (logfile->aux.logfile.opts.enableLock
+            && (get_write_lock(logfile->fd) < 0)) {
         log_msg(LOG_WARNING, "Unable to lock \"%s\"", logfile->name);
         close(logfile->fd);             /* ignore err on close() */
         logfile->fd = -1;
