@@ -257,6 +257,7 @@ server_conf_t * create_server_conf(void)
     conf->globalLogName = NULL;
     conf->globalLogOpts.enableSanitize = DEFAULT_LOGOPT_SANITIZE;
     conf->globalLogOpts.enableTimestamp = DEFAULT_LOGOPT_TIMESTAMP;
+    conf->globalLogOpts.enableLock = DEFAULT_LOGOPT_LOCK;
     conf->globalSerOpts.bps = DEFAULT_SEROPT_BPS;
     conf->globalSerOpts.databits = DEFAULT_SEROPT_DATABITS;
     conf->globalSerOpts.parity = DEFAULT_SEROPT_PARITY;

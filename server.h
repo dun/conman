@@ -41,6 +41,7 @@
 #include "tpoll.h"
 
 
+#define DEFAULT_LOGOPT_LOCK             1
 #define DEFAULT_LOGOPT_SANITIZE         0
 #define DEFAULT_LOGOPT_TIMESTAMP        0
 
@@ -91,6 +92,7 @@ typedef struct client_obj {             /* CLIENT AUX OBJ DATA:              */
 } client_obj_t;
 
 typedef struct logfile_opt {            /* LOGFILE OBJ OPTIONS:              */
+    unsigned         enableLock:1;      /*  true if logfile being locked     */
     unsigned         enableSanitize:1;  /*  true if logfile being sanitized  */
     unsigned         enableTimestamp:1; /*  true if timestamping each line   */
 } logopt_t;

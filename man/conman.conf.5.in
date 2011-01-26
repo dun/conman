@@ -107,7 +107,7 @@ not given, the file's location is relative to either \fBlogdir\fR (if
 defined) or the current working directory.  Intermediate directories
 will be created as needed.
 .TP
-\fBlogopts\fR \fB=\fR "(\fBsanitize\fR|\fBnosanitize\fR),(\fBtimestamp\fR|\fBnotimestamp\fR)"
+\fBlogopts\fR \fB=\fR "(\fBlock\fR|\fBnolock\fR),(\fBsanitize\fR|\fBnosanitize\fR),(\fBtimestamp\fR|\fBnotimestamp\fR)"
 Specifies global options for the console log files.  These options can be
 overridden on a per-console basis by specifying the \fBCONSOLE\fR \fBlogopts\fR
 keyword.  Note that options affecting the output of the console's logfile also
@@ -115,7 +115,10 @@ affect the output of the console's log-replay escape.  The valid \fBlogopts\fR
 include the following:
 .br
 .sp
-\fBsanitize\fR or \fBnosanitize\fR - sanitized log files convert non-printable
+\fBlock\fR or \fBnolock\fR - locked log files are protected with a write lock.
+.br
+.sp
+\fBsanitize\fR or \fBnosanitize\fR - sanitized logs convert non-printable
 characters into 7-bit printable characters.
 .br
 .sp
