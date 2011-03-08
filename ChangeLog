@@ -1,5 +1,7 @@
 2011-03-08  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-ipmi.c (connect_ipmi_obj): Replaced log_err() with log_msg().
+
 	* server-ipmi.c (connect_ipmi_obj): Fixed missing arg in log_err().
 
 2011-01-31  Chris Dunlap  <cdunlap@llnl.gov>
