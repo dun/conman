@@ -373,8 +373,8 @@ static int connect_ipmi_obj(obj_t *ipmi)
         rc = complete_ipmi_connect(ipmi);
     }
     else {
-        log_err(0, "Console [%s] is in unexpected ipmi state=%d",
-            ipmi->aux.ipmi.state);
+        log_err(0, "Console [%s] in unexpected IPMI state=%d",
+            ipmi->name, (int) ipmi->aux.ipmi.state);
     }
 
     if (rc < 0) {
