@@ -1,5 +1,8 @@
 2011-03-08  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-ipmi.c (create_ipmi_ctx): Destroy an existing ipmi.ctx
+	  immediately before creating a new one.
+
 	* server-ipmi.c (initiate_ipmi_connect): Tweaked comment.
 
 	* server-ipmi.c (open_ipmi_obj): Tweaked wording of DPRINTF.

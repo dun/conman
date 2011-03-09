@@ -421,8 +421,7 @@ static int initiate_ipmi_connect(obj_t *ipmi)
 
 static int create_ipmi_ctx(obj_t *ipmi)
 {
-/*  Creates a new IPMI context 'ipmi'.  Note that the context cannot be
- *    submitted to the ipmiconsole engine more than once.
+/*  Creates a new IPMI context 'ipmi'.
  *  Returns 0 if the context is successfully created; o/w, returns -1.
  */
     struct ipmiconsole_ipmi_config ipmi_config;
@@ -449,8 +448,12 @@ static int create_ipmi_ctx(obj_t *ipmi)
     engine_config.behavior_flags = 0;
     engine_config.debug_flags = 0;
 
-    assert(ipmi->aux.ipmi.ctx == NULL);
-
+    /*  A context cannot be submitted to the ipmiconsole engine more than once,
+     *    so create a new context if one already exists.
+     */
+    if (ipmi->aux.ipmi.ctx) {
+        ipmiconsole_ctx_destroy(ipmi->aux.ipmi.ctx);
+    }
     ipmi->aux.ipmi.ctx = ipmiconsole_ctx_create(
         ipmi->aux.ipmi.host, &ipmi_config, &protocol_config, &engine_config);
 
