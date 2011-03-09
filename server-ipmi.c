@@ -46,6 +46,7 @@
 #include "util.h"
 #include "util-file.h"
 #include "util-str.h"
+#include "wrapper.h"
 
 
 static int parse_key(char *dst, const char *src, size_t dstlen);
@@ -281,6 +282,7 @@ obj_t * create_ipmi_obj(server_conf_t *conf, char *name,
     ipmi->aux.ipmi.state = CONMAN_IPMI_DOWN;
     ipmi->aux.ipmi.timer = -1;
     ipmi->aux.ipmi.delay = IPMI_MIN_TIMEOUT;
+    x_pthread_mutex_init(&ipmi->aux.ipmi.mutex, NULL);
     conf->numIpmiObjs++;
     /*
      *  Add obj to the master conf->objs list.
@@ -298,14 +300,20 @@ int open_ipmi_obj(obj_t *ipmi)
  *  Returns 0 if the IPMI console is successfully opened; o/w, returns -1.
  */
     int rc = 0;
+    ipmi_state_t state;
 
     assert(ipmi != NULL);
     assert(is_ipmi_obj(ipmi));
 
-    if (ipmi->aux.ipmi.state == CONMAN_IPMI_UP) {
+    x_pthread_mutex_lock(&ipmi->aux.ipmi.mutex);
+    state = ipmi->aux.ipmi.state;
+    x_pthread_mutex_unlock(&ipmi->aux.ipmi.mutex);
+
+    if (state == CONMAN_IPMI_UP) {
         disconnect_ipmi_obj(ipmi);
+        rc = connect_ipmi_obj(ipmi);
     }
-    if (ipmi->aux.ipmi.state == CONMAN_IPMI_DOWN) {
+    else if (state == CONMAN_IPMI_DOWN) {
         rc = connect_ipmi_obj(ipmi);
     }
     DPRINTF((9, "Opened [%s] via IPMI: fd=%d host=%s state=%d.\n",
@@ -319,10 +327,10 @@ static void disconnect_ipmi_obj(obj_t *ipmi)
 {
 /*  Closes the existing connection with the specified 'ipmi' obj.
  */
-    assert(ipmi->aux.ipmi.state != CONMAN_IPMI_DOWN);
-
     DPRINTF((10, "Disconnecting from <%s> via IPMI for [%s].\n",
         ipmi->aux.ipmi.host, ipmi->name));
+
+    x_pthread_mutex_lock(&ipmi->aux.ipmi.mutex);
 
     if (ipmi->aux.ipmi.timer >= 0) {
         (void) tpoll_timeout_cancel(tp_global, ipmi->aux.ipmi.timer);
@@ -344,6 +352,9 @@ static void disconnect_ipmi_obj(obj_t *ipmi)
             ipmi->name, ipmi->aux.ipmi.host);
     }
     ipmi->aux.ipmi.state = CONMAN_IPMI_DOWN;
+
+    x_pthread_mutex_unlock(&ipmi->aux.ipmi.mutex);
+
     return;
 }
 
@@ -352,31 +363,45 @@ static int connect_ipmi_obj(obj_t *ipmi)
 {
 /*  Establishes a non-blocking connect with the specified (ipmi) obj.
  *  Returns 0 if the connection is successfully completed; o/w, returns -1.
+ *
+ *  Note that this routine can be invoked from both the main thread and the
+ *    ipmiconsole engine thread.
  */
     int rc = 0;
 
-    assert(ipmi->aux.ipmi.state != CONMAN_IPMI_UP);
+    x_pthread_mutex_lock(&ipmi->aux.ipmi.mutex);
 
-    if (ipmi->aux.ipmi.timer >= 0) {
-        (void) tpoll_timeout_cancel(tp_global, ipmi->aux.ipmi.timer);
-        ipmi->aux.ipmi.timer = -1;
-    }
+    /*  The if-guard for a !UP state is to protect against a race-condition
+     *    where both the main thread and the ipmiconsole engine thread call
+     *    this routine at the same time.  If the first thread successfully
+     *    completes the connection and transitions to an UP state, it will
+     *    set a reset_ipmi_delay timer.  The if-guard protects against the
+     *    subsequent thread cancelling this timer.
+     *  If the first thread fails to complete the connection, the subsequent
+     *    thread will just retry a bit sooner than planned.
+     */
+    if (ipmi->aux.ipmi.state != CONMAN_IPMI_UP) {
 
-    if (ipmi->aux.ipmi.state == CONMAN_IPMI_DOWN) {
-        rc = initiate_ipmi_connect(ipmi);
+        if (ipmi->aux.ipmi.timer >= 0) {
+            (void) tpoll_timeout_cancel(tp_global, ipmi->aux.ipmi.timer);
+            ipmi->aux.ipmi.timer = -1;
+        }
+        if (ipmi->aux.ipmi.state == CONMAN_IPMI_DOWN) {
+            rc = initiate_ipmi_connect(ipmi);
+        }
+        else if (ipmi->aux.ipmi.state == CONMAN_IPMI_PENDING) {
+            rc = complete_ipmi_connect(ipmi);
+        }
+        else {
+            log_msg(LOG_ERR, "Console [%s] in unexpected IPMI state=%d",
+                ipmi->name, (int) ipmi->aux.ipmi.state);
+            rc = -1;
+        }
+        if (rc < 0) {
+            fail_ipmi_connect(ipmi);
+        }
     }
-    else if (ipmi->aux.ipmi.state == CONMAN_IPMI_PENDING) {
-        rc = complete_ipmi_connect(ipmi);
-    }
-    else {
-        log_msg(LOG_ERR, "Console [%s] in unexpected IPMI state=%d",
-            ipmi->name, (int) ipmi->aux.ipmi.state);
-        rc = -1;
-    }
-
-    if (rc < 0) {
-        fail_ipmi_connect(ipmi);
-    }
+    x_pthread_mutex_unlock(&ipmi->aux.ipmi.mutex);
     return(rc);
 }
 
@@ -385,6 +410,8 @@ static int initiate_ipmi_connect(obj_t *ipmi)
 {
 /*  Initiates an IPMI connection attempt.
  *  Returns 0 if the connection initiation is successful, or -1 on error.
+ *
+ *  XXX: This routine assumes the ipmi mutex is already locked.
  */
     int rc;
 
@@ -406,7 +433,10 @@ static int initiate_ipmi_connect(obj_t *ipmi)
      *  ipmiconsole_engine_submit() should always call its callback function,
      *    at which point the connection will be established or retried.
      *  This timer is simply an additional safety measure in case it doesn't.
+     *  Any existing timer should have already been cancelled at the start of
+     *    connect_ipmi_obj().
      */
+    assert(ipmi->aux.ipmi.timer == -1);
     ipmi->aux.ipmi.timer = tpoll_timeout_relative(tp_global,
         (callback_f) connect_ipmi_obj, ipmi,
         IPMI_CONNECT_TIMEOUT * 1000);
@@ -419,6 +449,8 @@ static int create_ipmi_ctx(obj_t *ipmi)
 {
 /*  Creates a new IPMI context 'ipmi'.
  *  Returns 0 if the context is successfully created; o/w, returns -1.
+ *
+ *  XXX: This routine assumes the ipmi mutex is already locked.
  */
     struct ipmiconsole_ipmi_config ipmi_config;
     struct ipmiconsole_protocol_config protocol_config;
@@ -464,6 +496,8 @@ static int complete_ipmi_connect(obj_t *ipmi)
 {
 /*  Completes an IPMI connection attempt.
  *  Returns 0 if the connection is successfully established, or -1 on error.
+ *
+ *  XXX: This routine assumes the ipmi mutex is already locked.
  */
     ipmiconsole_ctx_status_t status;
 
@@ -482,9 +516,12 @@ static int complete_ipmi_connect(obj_t *ipmi)
     ipmi->gotEOF = 0;
     ipmi->aux.ipmi.state = CONMAN_IPMI_UP;
 
-    /*  Require the connection to be up for a minimum length of time before
-     *    resetting the reconnect delay back to the minimum.
+    /*  Require the connection to be up for a minimum length of time
+     *    before resetting the reconnect delay back to the minimum.
+     *  Any existing timer should have already been cancelled at the start of
+     *    connect_ipmi_obj().
      */
+    assert(ipmi->aux.ipmi.timer == -1);
     ipmi->aux.ipmi.timer = tpoll_timeout_relative(tp_global,
         (callback_f) reset_ipmi_delay, ipmi, IPMI_MIN_TIMEOUT * 1000);
 
@@ -502,6 +539,8 @@ static void fail_ipmi_connect(obj_t *ipmi)
 {
 /*  Logs an error message for the connection failure and sets a timer to
  *    establish a new connection attempt.
+ *
+ *  XXX: This routine assumes the ipmi mutex is already locked.
  */
     ipmi->aux.ipmi.state = CONMAN_IPMI_DOWN;
 
@@ -516,14 +555,14 @@ static void fail_ipmi_connect(obj_t *ipmi)
             ipmi->aux.ipmi.host, ipmi->name, ipmiconsole_ctx_strerror(e));
     }
     /*  Set timer for establishing new connection attempt.
+     *  Any existing timer should have already been cancelled at the start of
+     *    connect_ipmi_obj().
      */
-    DPRINTF((15, "Reconnect attempt to <%s> via IPMI for [%s] in %ds.\n",
-        ipmi->aux.ipmi.host, ipmi->name, ipmi->aux.ipmi.delay));
-
-    assert(ipmi->aux.ipmi.timer == -1);
     assert(ipmi->aux.ipmi.delay >= IPMI_MIN_TIMEOUT);
     assert(ipmi->aux.ipmi.delay <= IPMI_MAX_TIMEOUT);
-
+    DPRINTF((15, "Reconnect attempt to <%s> via IPMI for [%s] in %ds.\n",
+        ipmi->aux.ipmi.host, ipmi->name, ipmi->aux.ipmi.delay));
+    assert(ipmi->aux.ipmi.timer == -1);
     ipmi->aux.ipmi.timer = tpoll_timeout_relative(tp_global,
         (callback_f) connect_ipmi_obj, ipmi,
         ipmi->aux.ipmi.delay * 1000);
@@ -543,11 +582,15 @@ static void reset_ipmi_delay(obj_t *ipmi)
  */
     assert(is_ipmi_obj(ipmi));
 
+    x_pthread_mutex_lock(&ipmi->aux.ipmi.mutex);
+
     ipmi->aux.ipmi.delay = IPMI_MIN_TIMEOUT;
 
     /*  Also reset the timer ID since this routine is only invoked via a timer.
      */
     ipmi->aux.ipmi.timer = -1;
+
+    x_pthread_mutex_unlock(&ipmi->aux.ipmi.mutex);
     return;
 }
 
@@ -557,9 +600,21 @@ int send_ipmi_break(obj_t *ipmi)
 /*  Generates a serial-break for the specified 'ipmi' obj.
  *  Returns 0 on success; o/w, returns -1.
  */
+    int rc;
+
     assert(ipmi != NULL);
     assert(is_ipmi_obj(ipmi));
-    assert(ipmi->aux.ipmi.ctx != NULL);
 
-    return(ipmiconsole_ctx_generate_break(ipmi->aux.ipmi.ctx));
+    x_pthread_mutex_lock(&ipmi->aux.ipmi.mutex);
+    if (!ipmi->aux.ipmi.ctx) {
+        log_msg(LOG_ERR,
+            "Unable to send serial-break to [%s]: NULL IPMI context",
+            ipmi->name);
+        rc = -1;
+    }
+    else {
+        rc = ipmiconsole_ctx_generate_break(ipmi->aux.ipmi.ctx);
+    }
+    x_pthread_mutex_unlock(&ipmi->aux.ipmi.mutex);
+    return(rc);
 }
