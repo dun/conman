@@ -409,7 +409,7 @@ static int initiate_ipmi_connect(obj_t *ipmi)
     /*
      *  ipmiconsole_engine_submit() should always call its callback function,
      *    at which point the connection will be established or retried.
-     *  This is simply an additional safety measure in case it doesn't.
+     *  This timer is simply an additional safety measure in case it doesn't.
      */
     ipmi->aux.ipmi.timer = tpoll_timeout_relative(tp_global,
         (callback_f) connect_ipmi_obj, ipmi,
