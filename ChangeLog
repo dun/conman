@@ -1,5 +1,14 @@
 2011-03-08  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-ipmi.c (disconnect_ipmi_obj, fail_ipmi_connect):
+	  Removed calls to ipmiconsole_ctx_destroy().  An existing ctx
+	  is now destroyed immediately before a new one is created
+	  in create_ipmi_ctx().  According to Al Chu (FreeIPMI),
+	  ipmiconsole_ctx_destroy() should be safe to call in these places.
+	  This change is more of a precautionary measure.  With the ctx now
+	  being destroyed in create_ipmi_ctx(), these other calls should
+	  be redundant.
+
 	* server-ipmi.c (create_ipmi_ctx): Destroy an existing ipmi.ctx
 	  immediately before creating a new one.
 

@@ -336,10 +336,6 @@ static void disconnect_ipmi_obj(obj_t *ipmi)
         }
         ipmi->fd = -1;
     }
-    if (ipmi->aux.ipmi.ctx) {
-        ipmiconsole_ctx_destroy(ipmi->aux.ipmi.ctx);
-        ipmi->aux.ipmi.ctx = NULL;
-    }
     /*  Notify linked objs when transitioning from an UP state.
      */
     if (ipmi->aux.ipmi.state == CONMAN_IPMI_UP) {
@@ -518,11 +514,7 @@ static void fail_ipmi_connect(obj_t *ipmi)
         log_msg(LOG_INFO,
             "Unable to connect to <%s> via IPMI for [%s]: %s",
             ipmi->aux.ipmi.host, ipmi->name, ipmiconsole_ctx_strerror(e));
-
-        ipmiconsole_ctx_destroy(ipmi->aux.ipmi.ctx);
-        ipmi->aux.ipmi.ctx = NULL;
     }
-
     /*  Set timer for establishing new connection attempt.
      */
     DPRINTF((15, "Reconnect attempt to <%s> via IPMI for [%s] in %ds.\n",
