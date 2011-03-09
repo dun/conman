@@ -1,5 +1,8 @@
 2011-03-08  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-ipmi.c (open_ipmi_obj): Tweaked wording of DPRINTF.
+	* server-ipmi.c (fail_ipmi_connect): Tweaked wording of log_msg().
+
 	* server-ipmi.c (connect_ipmi_obj): Replaced log_err() with log_msg().
 
 	* server-ipmi.c (connect_ipmi_obj): Fixed missing arg in log_err().

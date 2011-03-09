@@ -308,7 +308,7 @@ int open_ipmi_obj(obj_t *ipmi)
     if (ipmi->aux.ipmi.state == CONMAN_IPMI_DOWN) {
         rc = connect_ipmi_obj(ipmi);
     }
-    DPRINTF((9, "Opened [%s] ipmi: fd=%d host=%s state=%d.\n",
+    DPRINTF((9, "Opened [%s] via IPMI: fd=%d host=%s state=%d.\n",
         ipmi->name, ipmi->fd, ipmi->aux.ipmi.host,
         (int) ipmi->aux.ipmi.state));
     return(rc);
@@ -508,12 +508,12 @@ static void fail_ipmi_connect(obj_t *ipmi)
 
     if (!ipmi->aux.ipmi.ctx) {
         log_msg(LOG_INFO,
-            "Unable to create IPMI context for console [%s]", ipmi->name);
+            "Unable to create IPMI context for [%s]", ipmi->name);
     }
     else {
         int e = ipmiconsole_ctx_errnum(ipmi->aux.ipmi.ctx);
         log_msg(LOG_INFO,
-            "Unable to connect to <%s> via IPMI to console [%s]: %s",
+            "Unable to connect to <%s> via IPMI for [%s]: %s",
             ipmi->aux.ipmi.host, ipmi->name, ipmiconsole_ctx_strerror(e));
 
         ipmiconsole_ctx_destroy(ipmi->aux.ipmi.ctx);
