@@ -1,5 +1,11 @@
 2011-03-08  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-ipmi.c (connect_ipmi_obj): Reverted log_msg() to log_err().
+	  With a non-fatal log_msg() here, control would be passed to
+	  fail_ipmi_connect() which could now behave incorrectly.  Besides,
+	  since all connection states are already accounted for, this check
+	  is largely to catch atypical conditions.
+
 	* : Added mutex to protect against concurrent access to the ipmi_obj
 	  since connect_ipmi_obj() can be invoked from either the main thread
 	  or the ipmiconsole engine thread.
