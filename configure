@@ -1798,6 +1798,52 @@ $as_echo "$ac_res" >&6; }
   eval $as_lineno_stack; test "x$as_lineno_stack" = x && { as_lineno=; unset as_lineno;}
 
 } # ac_fn_c_check_func
+
+# ac_fn_c_check_decl LINENO SYMBOL VAR INCLUDES
+# ---------------------------------------------
+# Tests whether SYMBOL is declared in INCLUDES, setting cache variable VAR
+# accordingly.
+ac_fn_c_check_decl ()
+{
+  as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
+  as_decl_name=`echo $2|sed 's/ *(.*//'`
+  as_decl_use=`echo $2|sed -e 's/(/((/' -e 's/)/) 0&/' -e 's/,/) 0& (/g'`
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $as_decl_name is declared" >&5
+$as_echo_n "checking whether $as_decl_name is declared... " >&6; }
+if eval "test \"\${$3+set}\"" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+$4
+int
+main ()
+{
+#ifndef $as_decl_name
+#ifdef __cplusplus
+  (void) $as_decl_use;
+#else
+  (void) $as_decl_name;
+#endif
+#endif
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  eval "$3=yes"
+else
+  eval "$3=no"
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+eval ac_res=\$$3
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+  eval $as_lineno_stack; test "x$as_lineno_stack" = x && { as_lineno=; unset as_lineno;}
+
+} # ac_fn_c_check_decl
 cat >config.log <<_ACEOF
 This file contains any messages produced by compilers while
 running configure, to aid debugging if configure makes a mistake.
@@ -4396,11 +4442,18 @@ $as_echo "doh!" >&6; }
 fi
 
 if test "$freeipmi" != no; then
+  ac_save_LIBS="$LIBS"
+  for ac_header in ipmiconsole.h
+do :
   ac_fn_c_check_header_mongrel "$LINENO" "ipmiconsole.h" "ac_cv_header_ipmiconsole_h" "$ac_includes_default"
 if test "x$ac_cv_header_ipmiconsole_h" = x""yes; then :
-  ac_have_ipmiconsole_h=yes
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_IPMICONSOLE_H 1
+_ACEOF
+
 fi
 
+done
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ipmiconsole_engine_init in -lipmiconsole" >&5
 $as_echo_n "checking for ipmiconsole_engine_init in -lipmiconsole... " >&6; }
@@ -4439,10 +4492,26 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ipmiconsole_ipmiconsole_engine_init" >&5
 $as_echo "$ac_cv_lib_ipmiconsole_ipmiconsole_engine_init" >&6; }
 if test "x$ac_cv_lib_ipmiconsole_ipmiconsole_engine_init" = x""yes; then :
-  ac_have_ipmiconsole=yes
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBIPMICONSOLE 1
+_ACEOF
+
+  LIBS="-lipmiconsole $LIBS"
+
 fi
 
-  if test "$ac_have_ipmiconsole_h" = yes -a "$ac_have_ipmiconsole" = yes; then
+  ac_fn_c_check_decl "$LINENO" "LIBIPMICONSOLE_VERSION_MAJOR" "ac_cv_have_decl_LIBIPMICONSOLE_VERSION_MAJOR" "#include <ipmiconsole.h>\"
+"
+if test "x$ac_cv_have_decl_LIBIPMICONSOLE_VERSION_MAJOR" = x""yes; then :
+
+fi
+
+  LIBS="$ac_save_LIBS"
+  freeipmi=no
+  if   test "$ac_cv_header_ipmiconsole_h" != yes; then : ;
+  elif test "$ac_cv_lib_ipmiconsole_ipmiconsole_engine_init" != yes; then : ;
+  elif test "$ac_cv_have_decl_LIBIPMICONSOLE_VERSION_MAJOR" != yes; then : ;
+  else
 
 cat >>confdefs.h <<_ACEOF
 #define WITH_FREEIPMI 1
@@ -4451,8 +4520,6 @@ _ACEOF
     freeipmi=yes
     IPMI_OBJS="server-ipmi.o"
     IPMI_LIBS="-lipmiconsole"
-  else
-    freeipmi=no
   fi
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to use FreeIPMI's libipmiconsole" >&5

@@ -255,17 +255,27 @@ AC_ARG_WITH(freeipmi,
     esac
   ]
 )
+dnl Require FreeIPMI 1.0.3+ for fixed behavior in ipmiconsole_engine_submit().
+dnl This is checked for by the presence of LIBIPMICONSOLE_VERSION_MAJOR which
+dnl was added in FreeIPMI 1.0.3.
+dnl
 if test "$freeipmi" != no; then
-  AC_CHECK_HEADER(ipmiconsole.h, ac_have_ipmiconsole_h=yes)
-  AC_CHECK_LIB(ipmiconsole, ipmiconsole_engine_init, ac_have_ipmiconsole=yes)
-  if test "$ac_have_ipmiconsole_h" = yes -a "$ac_have_ipmiconsole" = yes; then
+  ac_save_LIBS="$LIBS"
+  AC_CHECK_HEADERS(ipmiconsole.h)
+  AC_CHECK_LIB(ipmiconsole, ipmiconsole_engine_init)
+  AC_CHECK_DECL(LIBIPMICONSOLE_VERSION_MAJOR, [], [],
+    [#include <ipmiconsole.h>"])
+  LIBS="$ac_save_LIBS"
+  freeipmi=no
+  if   test "$ac_cv_header_ipmiconsole_h" != yes; then : ;
+  elif test "$ac_cv_lib_ipmiconsole_ipmiconsole_engine_init" != yes; then : ;
+  elif test "$ac_cv_have_decl_LIBIPMICONSOLE_VERSION_MAJOR" != yes; then : ;
+  else
     AC_DEFINE_UNQUOTED(WITH_FREEIPMI, 1,
       [Define if using FreeIPMI's libipmiconsole.])
     freeipmi=yes
     IPMI_OBJS="server-ipmi.o"
     IPMI_LIBS="-lipmiconsole"
-  else
-    freeipmi=no
   fi
 fi
 AC_MSG_CHECKING(whether to use FreeIPMI's libipmiconsole)

@@ -30,6 +30,12 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
+/* Define to 1 if you have the <ipmiconsole.h> header file. */
+#undef HAVE_IPMICONSOLE_H
+
+/* Define to 1 if you have the `ipmiconsole' library (-lipmiconsole). */
+#undef HAVE_LIBIPMICONSOLE
+
 /* Define to 1 if you have the `nsl' library (-lnsl). */
 #undef HAVE_LIBNSL
 

@@ -1,3 +1,9 @@
+2011-04-04  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* configure.ac: Changed autoconf tests for ipmiconsole.
+	  The autoconf tests now indirectly check for FreeIPMI 1.0.3+
+	  which fixes ipmiconsole_engine_submit() behavior.
+
 2011-03-08  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server-ipmi.c (connect_ipmi_obj): Reverted log_msg() to log_err().
