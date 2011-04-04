@@ -197,6 +197,7 @@ typedef struct ipmi_obj {               /* IPMI AUX OBJ DATA:                */
     ipmi_state_t     state;             /*  connection state                 */
     int              timer;             /*  timer id                         */
     int              delay;             /*  secs 'til next reconnect attempt */
+    pthread_mutex_t  mutex;             /*  lock for ctx/state/timer/delay   */
 } ipmi_obj_t;
 #endif /* WITH_FREEIPMI */
 

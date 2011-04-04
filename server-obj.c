@@ -214,6 +214,7 @@ void destroy_obj(obj_t *obj)
         if (obj->aux.ipmi.ctx) {
             ipmiconsole_ctx_destroy(obj->aux.ipmi.ctx);
         }
+        x_pthread_mutex_destroy(&obj->aux.ipmi.mutex);
         break;
 #endif /* WITH_FREEIPMI */
     default:
