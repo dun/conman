@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
     int fd = -1;
     pid_t pgid = -1;
     server_conf_t *conf;
-    int log_priority = LOG_NOTICE;
+    int log_priority = LOG_INFO;
 
 #ifndef NDEBUG
     log_priority = LOG_DEBUG;
