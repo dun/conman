@@ -4431,7 +4431,7 @@ $as_echo "${tcp_wrappers=no}" >&6; }
 # Check whether --with-freeipmi was given.
 if test "${with_freeipmi+set}" = set; then :
   withval=$with_freeipmi;  case "$withval" in
-      yes) freeipmi=yes ;;
+      yes) freeipmi=req ;;
       no)  freeipmi=no ;;
       *)   { $as_echo "$as_me:${as_lineno-$LINENO}: result: doh!" >&5
 $as_echo "doh!" >&6; }
@@ -4507,7 +4507,6 @@ if test "x$ac_cv_have_decl_LIBIPMICONSOLE_VERSION_MAJOR" = x""yes; then :
 fi
 
   LIBS="$ac_save_LIBS"
-  freeipmi=no
   if   test "$ac_cv_header_ipmiconsole_h" != yes; then : ;
   elif test "$ac_cv_lib_ipmiconsole_ipmiconsole_engine_init" != yes; then : ;
   elif test "$ac_cv_have_decl_LIBIPMICONSOLE_VERSION_MAJOR" != yes; then : ;
@@ -4521,11 +4520,15 @@ _ACEOF
     IPMI_OBJS="server-ipmi.o"
     IPMI_LIBS="-lipmiconsole"
   fi
+  test "$freeipmi" = req && freeipmi=failed
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to use FreeIPMI's libipmiconsole" >&5
 $as_echo_n "checking whether to use FreeIPMI's libipmiconsole... " >&6; }
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: ${freeipmi=no}" >&5
 $as_echo "${freeipmi=no}" >&6; }
+if test "$freeipmi" = failed; then
+  as_fn_error $? "unable to locate FreeIPMI 1.0.3 or later" "$LINENO" 5
+fi
 
 
 

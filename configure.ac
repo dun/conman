@@ -248,7 +248,7 @@ dnl
 AC_ARG_WITH(freeipmi,
   AS_HELP_STRING([--with-freeipmi], [use FreeIPMI's Serial-Over-LAN console]),
   [ case "$withval" in
-      yes) freeipmi=yes ;;
+      yes) freeipmi=req ;;
       no)  freeipmi=no ;;
       *)   AC_MSG_RESULT(doh!)
            AC_MSG_ERROR([bad value "$withval" for --with-freeipmi]) ;;
@@ -266,7 +266,6 @@ if test "$freeipmi" != no; then
   AC_CHECK_DECL(LIBIPMICONSOLE_VERSION_MAJOR, [], [],
     [#include <ipmiconsole.h>])
   LIBS="$ac_save_LIBS"
-  freeipmi=no
   if   test "$ac_cv_header_ipmiconsole_h" != yes; then : ;
   elif test "$ac_cv_lib_ipmiconsole_ipmiconsole_engine_init" != yes; then : ;
   elif test "$ac_cv_have_decl_LIBIPMICONSOLE_VERSION_MAJOR" != yes; then : ;
@@ -277,9 +276,13 @@ if test "$freeipmi" != no; then
     IPMI_OBJS="server-ipmi.o"
     IPMI_LIBS="-lipmiconsole"
   fi
+  test "$freeipmi" = req && freeipmi=failed
 fi
 AC_MSG_CHECKING(whether to use FreeIPMI's libipmiconsole)
 AC_MSG_RESULT(${freeipmi=no})
+if test "$freeipmi" = failed; then
+  AC_MSG_ERROR([unable to locate FreeIPMI 1.0.3 or later])
+fi
 AC_SUBST(IPMI_OBJS)
 AC_SUBST(IPMI_LIBS)
 
