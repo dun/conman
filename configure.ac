@@ -152,7 +152,7 @@ dnl Check for debug vs. production compilation.
 dnl
 AC_MSG_CHECKING(whether debugging is enabled)
 AC_ARG_ENABLE(debug,
-  AC_HELP_STRING([--enable-debug], [enable debugging for development work]),
+  AS_HELP_STRING([--enable-debug], [enable debugging for development work]),
   [ case "$enableval" in
       yes) debug=yes ;;
       no)  debug=no ;;
@@ -179,7 +179,7 @@ dnl Check for Gray Watson's Debug Malloc Library <http://dmalloc.com/>.
 dnl
 AC_MSG_CHECKING(whether to use the Debug Malloc Library)
 AC_ARG_WITH(dmalloc,
-  AC_HELP_STRING([--with-dmalloc], [use Gray Watson's dmalloc library]),
+  AS_HELP_STRING([--with-dmalloc], [use Gray Watson's dmalloc library]),
   [ case "$withval" in
       yes) dmalloc=yes ;;
       no)  dmalloc=no ;;
@@ -213,7 +213,7 @@ AH_BOTTOM(
 dnl Check for TCP Wrappers.
 dnl
 AC_ARG_WITH(tcp-wrappers,
-  AC_HELP_STRING([--with-tcp-wrappers], [use Wietse Venema's TCP Wrappers]),
+  AS_HELP_STRING([--with-tcp-wrappers], [use Wietse Venema's TCP Wrappers]),
   [ case "$withval" in
       yes) tcp_wrappers=yes ;;
       no)  tcp_wrappers=no ;;
@@ -246,7 +246,7 @@ AC_MSG_RESULT(${tcp_wrappers=no})
 dnl Check for FreeIPMI libraries
 dnl
 AC_ARG_WITH(freeipmi,
-  AC_HELP_STRING([--with-freeipmi], [use FreeIPMI's Serial-Over-LAN console]),
+  AS_HELP_STRING([--with-freeipmi], [use FreeIPMI's Serial-Over-LAN console]),
   [ case "$withval" in
       yes) freeipmi=yes ;;
       no)  freeipmi=no ;;
@@ -299,7 +299,7 @@ dnl Check for ConMan daemon host name.
 dnl
 AC_MSG_CHECKING(for ConMan daemon host name)
 AC_ARG_WITH(conman-host,
-  AC_HELP_STRING([--with-conman-host=HOST],
+  AS_HELP_STRING([--with-conman-host=HOST],
     [default host name of daemon [[127.0.0.1]]]),
   [ if test -n "$withval" -a "$withval" != yes -a "$withval" != no; then
       CONMAN_HOST="$withval"
@@ -316,7 +316,7 @@ dnl Check for ConMan daemon port number.
 dnl
 AC_MSG_CHECKING(for ConMan daemon port number)
 AC_ARG_WITH(conman-port,
-  AC_HELP_STRING([--with-conman-port=PORT],
+  AS_HELP_STRING([--with-conman-port=PORT],
     [default port number of daemon [[7890]]]),
   [ if test `expr match "$withval" '[[0-9]]*$'` -gt 0; then
       CONMAN_PORT="$withval"
