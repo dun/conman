@@ -90,8 +90,8 @@ dnl Check for header files.
 dnl
 AC_CHECK_HEADERS( \
   paths.h \
+  sys/inotify.h \
 )
-AC_CHECK_HEADERS(sys/inotify.h)
 
 
 dnl Check for typedefs.

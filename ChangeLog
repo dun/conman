@@ -1,5 +1,7 @@
 2011-04-05  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* configure.ac: Combined adjacent AC_CHECK_HEADERS.
+
 	* configure.ac: Made AC with-freeipmi fatal if FreeIPMI not found.
 
 	* configure.ac: Replaced AC_HELP_STRING with AS_HELP_STRING.
