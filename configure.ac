@@ -264,7 +264,7 @@ if test "$freeipmi" != no; then
   AC_CHECK_HEADERS(ipmiconsole.h)
   AC_CHECK_LIB(ipmiconsole, ipmiconsole_engine_init)
   AC_CHECK_DECL(LIBIPMICONSOLE_VERSION_MAJOR, [], [],
-    [#include <ipmiconsole.h>"])
+    [#include <ipmiconsole.h>])
   LIBS="$ac_save_LIBS"
   freeipmi=no
   if   test "$ac_cv_header_ipmiconsole_h" != yes; then : ;

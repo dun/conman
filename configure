@@ -4500,7 +4500,7 @@ _ACEOF
 
 fi
 
-  ac_fn_c_check_decl "$LINENO" "LIBIPMICONSOLE_VERSION_MAJOR" "ac_cv_have_decl_LIBIPMICONSOLE_VERSION_MAJOR" "#include <ipmiconsole.h>\"
+  ac_fn_c_check_decl "$LINENO" "LIBIPMICONSOLE_VERSION_MAJOR" "ac_cv_have_decl_LIBIPMICONSOLE_VERSION_MAJOR" "#include <ipmiconsole.h>
 "
 if test "x$ac_cv_have_decl_LIBIPMICONSOLE_VERSION_MAJOR" = x""yes; then :
 

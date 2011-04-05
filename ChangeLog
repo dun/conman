@@ -1,5 +1,7 @@
 2011-04-04  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* configure.ac: Fixed spurious quote in AC_CHECK_DECL.
+
 	* conman.spec: Added freeipmi-devel version to BuildRequires tag.
 
 	* server.c (main): Changed default log priority to LOG_INFO.
