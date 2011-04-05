@@ -1,5 +1,7 @@
 2011-04-04  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* conman.spec: Added freeipmi-devel version to BuildRequires tag.
+
 	* server.c (main): Changed default log priority to LOG_INFO.
 
 	* : Fixed race conditions & segfaults when using libipmiconsole.
