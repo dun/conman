@@ -1,5 +1,9 @@
 2011-04-06  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* configure.ac: Fixed "--enable-debug" building when CFLAGS are set.
+	  Added DEBUG_CFLAGS substitution.
+	* Makefile.in: Added DEBUG_CFLAGS to COMPILE_OPTS.
+
 	* tpoll.h: Removed comma at end of tpoll_zero_t enumerator list
 	  in order to build with -pedantic.
 

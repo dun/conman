@@ -162,16 +162,13 @@ AC_ARG_ENABLE(debug,
   ]
 )
 if test "$debug" = yes; then
-  if test -z "$ac_save_CFLAGS"; then
-    test "$ac_cv_prog_cc_g" = yes && CFLAGS="-g"
-    test "$GCC" = yes && CFLAGS="$CFLAGS -Wall"
-  fi
+  test -z "$ac_test_CFLAGS" && CFLAGS=
+  test "$ac_cv_prog_cc_g" = yes && DEBUG_CFLAGS="-g"
+  test "$GCC" = yes && DEBUG_CFLAGS="$DEBUG_CFLAGS -Wall"
 else
-  if test -z "$ac_save_CFLAGS"; then
-    test "$GCC" = yes && CFLAGS="-O2 -Wall" || CFLAGS="-O"
-  fi
   AC_DEFINE(NDEBUG, 1, [Define if you are building a production release.])
 fi
+AC_SUBST(DEBUG_CFLAGS)
 AC_MSG_RESULT(${debug=no})
 
 
