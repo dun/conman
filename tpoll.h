@@ -51,7 +51,7 @@ typedef enum {
  */
     TPOLL_ZERO_FDS    = 0x01,           /* zero fds but not timers */
     TPOLL_ZERO_TIMERS = 0x02,           /* zero timers but not fds */
-    TPOLL_ZERO_ALL    = 0x03,           /* zero both fds and timers */
+    TPOLL_ZERO_ALL    = 0x03            /* zero both fds and timers */
 } tpoll_zero_t;
 
 

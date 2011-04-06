@@ -1,5 +1,8 @@
 2011-04-06  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* tpoll.h: Removed comma at end of tpoll_zero_t enumerator list
+	  in order to build with -pedantic.
+
 	* : Cleaned up preprocessor conditionals.
 
 2011-04-05  Chris Dunlap  <cdunlap@llnl.gov>
