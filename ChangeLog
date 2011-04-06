@@ -1,3 +1,7 @@
+2011-04-06  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* : Cleaned up preprocessor conditionals.
+
 2011-04-05  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* configure.ac: Combined adjacent AC_CHECK_HEADERS.

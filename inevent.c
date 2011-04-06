@@ -43,9 +43,8 @@
  *    periodically resurrect downed objects.
  */
 
-
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
+#if HAVE_CONFIG_H
+#  include <config.h>
 #endif /* HAVE_CONFIG_H */
 
 
@@ -57,7 +56,7 @@
  *    no function call overhead is incurred.
  *****************************************************************************/
 
-#ifndef HAVE_SYS_INOTIFY_H
+#if ! HAVE_SYS_INOTIFY_H
 
 #include "inevent.h"
 

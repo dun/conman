@@ -1,6 +1,5 @@
 ##
 # ConMan Makefile
-#   by Chris Dunlap <cdunlap@llnl.gov>
 ##
 # $Id$
 ##
@@ -10,6 +9,7 @@ PROJECT=	conman
 SHELL=		@SHELL@
 CC=		@CC@
 DEFS=		@DEFS@
+DEFAULT_INCS=	-I.
 CFLAGS=		@CFLAGS@
 CPPFLAGS=	@CPPFLAGS@
 LDFLAGS=	@LDFLAGS@
@@ -20,7 +20,8 @@ IPMI_LIBS=	@IPMI_LIBS@
 RANLIB=		@RANLIB@
 INSTALL=	@INSTALL@
 @SET_MAKE@
-COPTS=		$(CFLAGS) $(CPPFLAGS) $(DEFS)
+COMPILE_OPTS=	$(DEFS) $(DEFAULT_INCS) $(CPPFLAGS) $(CFLAGS)
+COMPILE=	$(CC) $(COMPILE_OPTS)
 
 top_srcdir=	@top_srcdir@
 prefix=		@prefix@
@@ -74,13 +75,13 @@ SERVER_LIBS=	$(COMMON_LIBS) $(IPMI_LIBS)
 all: $(PROGS) tags
 
 conman: $(CLIENT_OBJS)
-	$(CC) $(COPTS) $(LDFLAGS) $(CLIENT_OBJS) $(CLIENT_LIBS) -o $@
+	$(COMPILE) $(LDFLAGS) $(CLIENT_OBJS) $(CLIENT_LIBS) -o $@
 
 conmand: $(SERVER_OBJS)
-	$(CC) $(COPTS) $(LDFLAGS) $(SERVER_OBJS) $(SERVER_LIBS) -o $@
+	$(COMPILE) $(LDFLAGS) $(SERVER_OBJS) $(SERVER_LIBS) -o $@
 
 .c.o:
-	$(CC) $(COPTS) -c $<
+	$(COMPILE) -c $<
 
 install: $(PROGS)
 	$(INSTALL) -m 755 -d $(DESTDIR)$(bindir)
@@ -158,7 +159,7 @@ distclean: realclean
 	-rm -f $(AC_OUTPUT)
 
 depend:
-	-makedepend -Y -- $(COPTS) -- *.[ch] 2>/dev/null
+	-makedepend -Y -- $(COMPILE_OPTS) -- *.[ch] 2>/dev/null
 
 tags: *.[ch]
 	-ctags *.[ch] 2>/dev/null

@@ -26,14 +26,17 @@
  *****************************************************************************/
 
 
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
+#if HAVE_CONFIG_H
+#  include <config.h>
 #endif /* HAVE_CONFIG_H */
+
+#if HAVE_IPMICONSOLE_H
+#  include <ipmiconsole.h>
+#endif /* HAVE_IPMICONSOLE_H */
 
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
-#include <ipmiconsole.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

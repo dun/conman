@@ -24,8 +24,8 @@
  *****************************************************************************/
 
 
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
+#if HAVE_CONFIG_H
+#  include <config.h>
 #endif /* HAVE_CONFIG_H */
 
 #include <assert.h>
@@ -61,7 +61,7 @@ enum server_conf_toks {
     SERVER_CONF_DEV,
     SERVER_CONF_EXECPATH,
     SERVER_CONF_GLOBAL,
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
     SERVER_CONF_IPMIOPTS,
 #endif /* WITH_FREEIPMI */
     SERVER_CONF_KEEPALIVE,
@@ -94,7 +94,7 @@ static char *server_conf_strs[] = {
     "DEV",
     "EXECPATH",
     "GLOBAL",
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
     "IPMIOPTS",
 #endif /* WITH_FREEIPMI */
     "KEEPALIVE",
@@ -173,7 +173,7 @@ typedef struct console_strs {
     char *log;
     char *lopts;
     char *sopts;
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
     char *iopts;
 #endif /* WITH_FREEIPMI */
 } console_strs_t;
@@ -188,7 +188,7 @@ static int is_telnet_dev(const char *dev, char **host_ref, int *port_ref);
 static int is_serial_dev(const char *dev, const char *cwd, char **path_ref);
 static int is_process_dev(const char *dev, const char *cwd,
     const char *exec_path, char **path_ref);
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
 static int is_ipmi_dev(const char *dev, char **host_ref);
 #endif /* WITH_FREEIPMI */
 static int search_exec_path(const char *path, const char *src,
@@ -262,7 +262,7 @@ server_conf_t * create_server_conf(void)
     conf->globalSerOpts.databits = DEFAULT_SEROPT_DATABITS;
     conf->globalSerOpts.parity = DEFAULT_SEROPT_PARITY;
     conf->globalSerOpts.stopbits = DEFAULT_SEROPT_STOPBITS;
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
     memset(&conf->globalIpmiOpts, 0, sizeof(conf->globalIpmiOpts));
     conf->numIpmiObjs = 0;
 #endif /* WITH_FREEIPMI */
@@ -586,7 +586,7 @@ static void signal_daemon(server_conf_t *conf)
         fprintf(stderr, "Configuration \"%s\" (pid %d) %s signal=%d\n",
             conf->confFileName, (int) pid, msg, conf->throwSignal);
     }
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
     ipmi_fini();
 #endif /* WITH_FREEIPMI */
 
@@ -707,7 +707,7 @@ static void parse_console_directive(server_conf_t *conf, Lex l)
             }
             break;
 
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
         case SERVER_CONF_IPMIOPTS:
             if (lex_next(l) != '=') {
                 snprintf(err, sizeof(err), "unexpected '=' after %s keyword",
@@ -757,7 +757,7 @@ static void parse_console_directive(server_conf_t *conf, Lex l)
     destroy_string(con.log);
     destroy_string(con.lopts);
     destroy_string(con.sopts);
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
     destroy_string(con.iopts);
 #endif /* WITH_FREEIPMI */
     return;
@@ -779,7 +779,7 @@ static int process_console(server_conf_t *conf, console_strs_t *con_p,
     char        *path = NULL;
     obj_t       *console;
     seropt_t     seropts;
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
     ipmiopt_t    ipmiopts;
 #endif /* WITH_FREEIPMI */
     logopt_t     logopts;
@@ -878,7 +878,7 @@ static int process_console(server_conf_t *conf, console_strs_t *con_p,
             goto err;
         }
     }
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
     else if (is_ipmi_dev(arg0, &host)) {
         if (list_count(args) != 1) {
             snprintf(errbuf, errbuflen,
@@ -971,7 +971,7 @@ static int is_telnet_dev(const char *dev, char **host_ref, int *port_ref)
 }
 
 
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
 static int is_ipmi_dev(const char *dev, char **host_ref)
 {
     const char *prefix = "ipmi:";
@@ -1220,7 +1220,7 @@ static void parse_global_directive(server_conf_t *conf, Lex l)
             }
             break;
 
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
         case SERVER_CONF_IPMIOPTS:
             if (lex_next(l) != '=') {
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
@@ -1530,7 +1530,7 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
             break;
 
         case SERVER_CONF_TCPWRAPPERS:
-#ifndef WITH_TCP_WRAPPERS
+#if ! WITH_TCP_WRAPPERS
             snprintf(err, sizeof(err),
                 "%s keyword requires compile-time support",
                 server_conf_strs[LEX_UNTOK(tok)]);

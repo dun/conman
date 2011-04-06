@@ -24,12 +24,13 @@
  *****************************************************************************/
 
 
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
+#if HAVE_CONFIG_H
+#  include <config.h>
 #endif /* HAVE_CONFIG_H */
 
 #ifndef _BOOL_H
 #define _BOOL_H
+
 
 #if BROKEN_STDBOOL
 #  define bool int
@@ -38,5 +39,6 @@
 #else
 #  include <stdbool.h>
 #endif /* BROKEN_STDBOOL */
+
 
 #endif /* !_BOOL_H */

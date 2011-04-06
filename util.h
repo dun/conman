@@ -27,9 +27,8 @@
 #ifndef _UTIL_H
 #define _UTIL_H
 
-
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
+#if HAVE_CONFIG_H
+#  include <config.h>
 #endif /* HAVE_CONFIG_H */
 
 
@@ -41,6 +40,7 @@ typedef void SigFunc(int);
 #ifndef MAX
 #  define MAX(x,y) (((x) >= (y)) ? (x) : (y))
 #endif /* !MAX */
+
 #ifndef MIN
 #  define MIN(x,y) (((x) <= (y)) ? (x) : (y))
 #endif /* !MIN */

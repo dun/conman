@@ -24,8 +24,8 @@
  *****************************************************************************/
 
 
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
+#if HAVE_CONFIG_H
+#  include <config.h>
 #endif /* HAVE_CONFIG_H */
 
 #include <assert.h>
@@ -145,14 +145,14 @@ int main(int argc, char *argv[])
     log_msg(LOG_NOTICE, "Starting ConMan daemon %s (pid %d)",
         VERSION, (int) getpid());
 
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
     ipmi_init(conf->numIpmiObjs);
 #endif /* WITH_FREEIPMI */
 
     open_objs(conf);
     mux_io(conf);
 
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
     ipmi_fini();
 #endif /* WITH_FREEIPMI */
 
@@ -757,7 +757,7 @@ static void mux_io(server_conf_t *conf)
                      obj->aux.telnet.state == CONMAN_TELNET_UP ) ||
                    ( is_process_obj(obj) &&
                      obj->aux.process.state == CONMAN_PROCESS_UP ) ||
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
                    ( is_ipmi_obj(obj) &&
                      obj->aux.ipmi.state == CONMAN_IPMI_UP ) ||
 #endif /* WITH_FREEIPMI */
@@ -777,7 +777,7 @@ static void mux_io(server_conf_t *conf)
                       obj->aux.telnet.state != CONMAN_TELNET_UP) ) &&
                  ( ! (is_process_obj(obj) &&
                       obj->aux.process.state != CONMAN_PROCESS_UP) ) &&
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
                  ( ! (is_ipmi_obj(obj) &&
                       obj->aux.ipmi.state != CONMAN_IPMI_UP) ) &&
 #endif /* WITH_FREEIPMI */

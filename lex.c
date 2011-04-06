@@ -26,8 +26,8 @@
  *****************************************************************************/
 
 
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
+#if HAVE_CONFIG_H
+#  include <config.h>
 #endif /* HAVE_CONFIG_H */
 
 #include <assert.h>
@@ -258,7 +258,7 @@ const char * lex_text(Lex l)
 }
 
 
-#ifndef HAVE_STRCASECMP
+#if ! HAVE_STRCASECMP
 static int xstrcasecmp(const char *s1, const char *s2)
 {
 /*  Compares the two strings (s1) and (s2), ignoring the case of the chars.

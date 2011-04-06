@@ -26,8 +26,8 @@
  *****************************************************************************/
 
 
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
+#if HAVE_CONFIG_H
+#  include <config.h>
 #endif /* HAVE_CONFIG_H */
 
 #include <assert.h>
@@ -360,7 +360,7 @@ int write_time_string(time_t t, char *dst, size_t dstlen)
 
 struct tm * get_localtime(time_t *tPtr, struct tm *tmPtr)
 {
-#ifndef HAVE_LOCALTIME_R
+#if ! HAVE_LOCALTIME_R
 
     static pthread_mutex_t localtimeLock = PTHREAD_MUTEX_INITIALIZER;
     struct tm *tmTmpPtr;
@@ -376,7 +376,7 @@ struct tm * get_localtime(time_t *tPtr, struct tm *tmPtr)
         }
     }
 
-#ifndef HAVE_LOCALTIME_R
+#if ! HAVE_LOCALTIME_R
 
     /*  localtime() is not thread-safe, so it is protected by a mutex.
      */
@@ -399,7 +399,7 @@ struct tm * get_localtime(time_t *tPtr, struct tm *tmPtr)
 }
 
 
-#ifndef HAVE_STRCASECMP
+#if ! HAVE_STRCASECMP
 int strcasecmp(const char *s1, const char *s2)
 {
     const char *p, *q;
@@ -414,7 +414,7 @@ int strcasecmp(const char *s1, const char *s2)
 #endif /* !HAVE_STRCASECMP */
 
 
-#ifndef HAVE_STRNCASECMP
+#if ! HAVE_STRNCASECMP
 int strncasecmp(const char *s1, const char *s2, size_t n)
 {
     const char *p, *q;
@@ -432,7 +432,7 @@ int strncasecmp(const char *s1, const char *s2, size_t n)
 #endif /* !HAVE_STRNCASECMP */
 
 
-#ifndef HAVE_TOINT
+#if ! HAVE_TOINT
 int toint(int c)
 {
 /*  Returns the "weight" (0-15) of a hexadecimal digit 'c'.

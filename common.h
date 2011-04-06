@@ -32,11 +32,11 @@
 #include "list.h"
 
 #if HAVE_PATHS_H
-#include <paths.h>
+#  include <paths.h>
 #endif /* HAVE_PATHS_H */
 
 #ifndef _PATH_STDPATH
-#define _PATH_STDPATH "/usr/bin:/bin:/usr/sbin:/sbin"
+#  define _PATH_STDPATH "/usr/bin:/bin:/usr/sbin:/sbin"
 #endif /* !_PATH_STDPATH */
 
 
@@ -94,19 +94,19 @@
 #  define FEATURE_DEBUG ""
 #endif /* !NDEBUG */
 
-#ifdef WITH_DMALLOC
+#if WITH_DMALLOC
 #  define FEATURE_DMALLOC " DMALLOC"
 #else
 #  define FEATURE_DMALLOC ""
 #endif /* WITH_DMALLOC */
 
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
 #  define FEATURE_FREEIPMI " FREEIPMI"
 #else
 #  define FEATURE_FREEIPMI ""
 #endif /* WITH_FREEIPMI */
 
-#ifdef WITH_TCP_WRAPPERS
+#if WITH_TCP_WRAPPERS
 #  define FEATURE_TCP_WRAPPERS " TCP-WRAPPERS"
 #else
 #  define FEATURE_TCP_WRAPPERS ""
@@ -117,7 +117,7 @@
 #define SERVER_FEATURES \
     (FEATURE_DEBUG FEATURE_DMALLOC FEATURE_FREEIPMI FEATURE_TCP_WRAPPERS)
 
-#ifndef HAVE_SOCKLEN_T
+#if ! HAVE_SOCKLEN_T
 typedef int socklen_t;                  /* socklen_t is uint32_t in Posix.1g */
 #endif /* !HAVE_SOCKLEN_T */
 

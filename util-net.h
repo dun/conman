@@ -27,9 +27,8 @@
 #ifndef _UTIL_NET_H
 #define _UTIL_NET_H
 
-
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
+#if HAVE_CONFIG_H
+#  include <config.h>
 #endif /* HAVE_CONFIG_H */
 
 #include <netdb.h>
@@ -91,7 +90,7 @@ char * host_name_to_cname(const char *src, char *dst, int dstlen);
  *  Note that this routine is thread-safe.
  */
 
-#ifndef HAVE_INET_PTON
+#if ! HAVE_INET_PTON
 int inet_pton(int family, const char *str, void *addr);
 /*
  *  Convert from presentation format of an internet number in (str)
@@ -101,7 +100,7 @@ int inet_pton(int family, const char *str, void *addr);
  */
 #endif /* !HAVE_INET_PTON */
 
-#ifndef HAVE_INET_NTOP
+#if ! HAVE_INET_NTOP
 const char * inet_ntop(int family, const void *addr, char *str, size_t len);
 /*
  *  Convert an Internet address in binary network format for interface

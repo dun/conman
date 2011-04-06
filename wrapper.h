@@ -27,16 +27,15 @@
 #ifndef _WRAPPER_H
 #define _WRAPPER_H
 
-
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
+#if HAVE_CONFIG_H
+#  include <config.h>
 #endif /* HAVE_CONFIG_H */
 
 #include <errno.h>
 #include "log.h"
 
 
-#ifdef WITH_PTHREADS
+#if WITH_PTHREADS
 
 #  define x_pthread_mutex_init(MUTEX,ATTR)                                    \
      do {                                                                     \

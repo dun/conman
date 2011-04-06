@@ -24,8 +24,8 @@
  *****************************************************************************/
 
 
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
+#if HAVE_CONFIG_H
+#  include <config.h>
 #endif /* HAVE_CONFIG_H */
 
 #include <assert.h>
@@ -185,7 +185,7 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name,
     else if (is_unixsock_obj(console)) {
         console->aux.unixsock.logfile = logfile;
     }
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
     else if (is_ipmi_obj(console)) {
         console->aux.ipmi.logfile = logfile;
     }
@@ -326,7 +326,7 @@ obj_t * get_console_logfile_obj(obj_t *console)
     else if (is_unixsock_obj(console)) {
         logfile = console->aux.unixsock.logfile;
     }
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
     else if (is_ipmi_obj(console)) {
         logfile = console->aux.ipmi.logfile;
     }

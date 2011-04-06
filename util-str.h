@@ -27,9 +27,8 @@
 #ifndef _UTIL_STR_H
 #define _UTIL_STR_H
 
-
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
+#if HAVE_CONFIG_H
+#  include <config.h>
 #endif /* HAVE_CONFIG_H */
 
 #include <time.h>
@@ -146,7 +145,7 @@ struct tm * get_localtime(time_t *tPtr, struct tm *tmPtr);
  *  Returns the ptr to the time struct arg (tmPtr).
  */
 
-#ifndef HAVE_STRCASECMP
+#if ! HAVE_STRCASECMP
 int strcasecmp(const char *s1, const char *s2);
 /*
  *  Compares the two strings 's1' and 's2', ignoring the case of the chars.
@@ -155,7 +154,7 @@ int strcasecmp(const char *s1, const char *s2);
  */
 #endif /* !HAVE_STRCASECMP */
 
-#ifndef HAVE_STRNCASECMP
+#if ! HAVE_STRNCASECMP
 int strncasecmp(const char *s1, const char *s2, size_t n);
 /*
  *  Compares up to the first 'n' bytes of the two strings 's1' and 's2',
@@ -165,7 +164,7 @@ int strncasecmp(const char *s1, const char *s2, size_t n);
  */
 #endif /* !HAVE_STRNCASECMP */
 
-#ifndef HAVE_STRLCAT
+#if ! HAVE_STRLCAT
 size_t strlcat(char *dst, const char *src, size_t siz);
 /*
  *  Appends src to string dst of size siz (unlike strncat, siz is the
@@ -175,7 +174,7 @@ size_t strlcat(char *dst, const char *src, size_t siz);
  */
 #endif /* !HAVE_STRLCAT */
 
-#ifndef HAVE_STRLCPY
+#if ! HAVE_STRLCPY
 size_t strlcpy(char *dst, const char *src, size_t siz);
 /*
  *  Copy src to string dst of size siz.  At most siz-1 characters
@@ -184,7 +183,7 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
  */
 #endif /* !HAVE_STRLCPY */
 
-#ifndef HAVE_TOINT
+#if ! HAVE_TOINT
 int toint(int c);
 /*
  *  Returns the "weight" (0-15) of a hexadecimal digit 'c'.

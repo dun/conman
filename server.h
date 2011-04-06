@@ -27,10 +27,14 @@
 #ifndef _SERVER_H
 #define _SERVER_H
 
+#if HAVE_CONFIG_H
+#  include <config.h>
+#endif /* HAVE_CONFIG_H */
 
-#ifdef WITH_FREEIPMI
-#include <ipmiconsole.h>
-#endif /* WITH_FREEIPMI */
+#if HAVE_IPMICONSOLE_H
+#  include <ipmiconsole.h>
+#endif /* HAVE_IPMICONSOLE_H */
+
 #include <sys/types.h>                  /* include before in.h for bsd */
 #include <netinet/in.h>                 /* for struct sockaddr_in            */
 #include <pthread.h>
@@ -50,7 +54,7 @@
 #define DEFAULT_SEROPT_PARITY           0
 #define DEFAULT_SEROPT_STOPBITS         1
 
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
 #define IPMI_ENGINE_CONSOLES_PER_THREAD 128
 #define IPMI_MAX_USER_LEN               IPMI_MAX_USER_NAME_LENGTH
 #define IPMI_MAX_PSWD_LEN               IPMI_2_0_MAX_PASSWORD_LENGTH
@@ -173,7 +177,7 @@ typedef struct unixsock_obj {           /* UNIXSOCK AUX OBJ DATA:            */
     unsigned         state:1;           /*  unixsock_state_t conn state      */
 } unixsock_obj_t;
 
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
 typedef struct ipmi_opt {                               /* IPMI OBJ OPTIONS: */
     char             username[ IPMI_MAX_USER_LEN + 1 ]; /*  BMC username     */
     char             password[ IPMI_MAX_PSWD_LEN + 1 ]; /*  BMC password     */
@@ -208,7 +212,7 @@ typedef union aux_obj {
     serial_obj_t     serial;
     telnet_obj_t     telnet;
     unixsock_obj_t   unixsock;
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
     ipmi_obj_t       ipmi;
 #endif /* WITH_FREEIPMI */
 } aux_obj_t;
@@ -253,7 +257,7 @@ typedef struct server_conf {
     char            *globalLogName;     /* global log name (must contain &)  */
     logopt_t         globalLogOpts;     /* global opts for logfile objects   */
     seropt_t         globalSerOpts;     /* global opts for serial objects    */
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
     ipmiopt_t        globalIpmiOpts;    /* global opts for ipmi objects      */
     int              numIpmiObjs;       /* number of ipmi consoles in config */
 #endif /* WITH_FREEIPMI */
@@ -344,7 +348,7 @@ int process_client_escapes(obj_t *client, void *src, int len);
 
 /* server-ipmi.c
  */
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
 
 void ipmi_init(int num_consoles);
 
