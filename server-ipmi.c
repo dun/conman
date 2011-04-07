@@ -112,6 +112,26 @@ void ipmi_fini(void)
 }
 
 
+int is_ipmi_dev(const char *dev, char **host_ref)
+{
+    const char *prefix = "ipmi:";
+
+    assert(dev != NULL);
+
+    if (strncasecmp(dev, prefix, strlen(prefix)) != 0) {
+        return(0);
+    }
+    dev += strlen(prefix);
+    if (dev[0] == '\0') {
+        return(0);
+    }
+    if (host_ref) {
+        *host_ref = create_string(dev);
+    }
+    return(1);
+}
+
+
 int parse_ipmi_opts(
     ipmiopt_t *iopts, const char *str, char *errbuf, int errlen)
 {

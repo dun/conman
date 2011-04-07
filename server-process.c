@@ -30,6 +30,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <limits.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,12 +48,103 @@
 #include "util-str.h"
 
 
+static int search_exec_path(const char *path, const char *src,
+    char *dst, int dstlen);
 static int  disconnect_process_obj(obj_t *process);
 static int  connect_process_obj(obj_t *process);
 static int  check_process_prog(obj_t *process);
 static void reset_process_delay(obj_t *process);
 
 extern tpoll_t tp_global;               /* defined in server.c */
+
+
+int is_process_dev(const char *dev, const char *cwd,
+    const char *exec_path, char **path_ref)
+{
+    char         buf[PATH_MAX];
+    int          n;
+    struct stat  st;
+
+    assert(dev != NULL);
+
+    if (!strchr(dev, '/')
+            && (search_exec_path(exec_path, dev, buf, sizeof(buf)) == 0)) {
+        dev = buf;
+    }
+    else if ((dev[0] != '/') && (cwd != NULL)) {
+        n = snprintf(buf, sizeof(buf), "%s/%s", cwd, dev);
+        if ((n < 0) || (n >= sizeof(buf))) {
+            return(0);
+        }
+        dev = buf;
+    }
+    if (stat(dev, &st) < 0) {
+        return(0);
+    }
+    if (!S_ISREG(st.st_mode)) {
+        return(0);
+    }
+    if (access(dev, X_OK) < 0) {
+        return(0);
+    }
+    if (path_ref) {
+        *path_ref = create_string(dev);
+    }
+    return(1);
+}
+
+
+static int search_exec_path(const char *path, const char *src,
+    char *dst, int dstlen)
+{
+    char         path_buf[PATH_MAX];
+    char         file_buf[PATH_MAX];
+    char        *p;
+    char        *q;
+    struct stat  st;
+    int          n;
+
+    assert((path == NULL) || (strlen(path) < PATH_MAX));
+    assert(src != NULL);
+    assert(strchr(src, '/') == NULL);
+    assert(dst != NULL);
+    assert(dstlen >= 0);
+
+    if (!path) {
+        return(-1);
+    }
+    if (strlcpy(path_buf, path, sizeof(path_buf)) >= sizeof(path_buf)) {
+        return(-1);
+    }
+    for (p = path_buf; p && *p; p = q) {
+        if ((q = strchr(p, ':'))) {
+            *q++ = '\0';
+        }
+        else {
+            q = strchr(p, '\0');
+        }
+        if (stat(p, &st) < 0) {
+            continue;
+        }
+        if (!S_ISDIR(st.st_mode)) {
+            continue;
+        }
+        n = snprintf(file_buf, sizeof(file_buf), "%s/%s", p, src);
+        if ((n < 0) || (n >= sizeof(file_buf))) {
+            continue;
+        }
+        if (access(file_buf, X_OK) < 0) {
+            continue;
+        }
+        if ((dst != NULL) && (dstlen > 0)) {
+            if (strlcpy(dst, file_buf, dstlen) >= dstlen) {
+                return(1);
+            }
+        }
+        return(0);
+    }
+    return(-1);
+}
 
 
 obj_t * create_process_obj(server_conf_t *conf, char *name, List args,

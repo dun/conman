@@ -30,6 +30,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>                  /* include before socket.h for bsd */
@@ -49,6 +50,35 @@ static int connect_unixsock_obj(obj_t *unixsock);
 static int disconnect_unixsock_obj(obj_t *unixsock);
 
 extern tpoll_t tp_global;               /* defined in server.c */
+
+
+int is_unixsock_dev(const char *dev, const char *cwd, char **path_ref)
+{
+    const char *prefix = "unix:";
+    int         n;
+    char        buf[PATH_MAX];
+
+    assert(dev != NULL);
+
+    if (strncasecmp(dev, prefix, strlen(prefix)) != 0) {
+        return(0);
+    }
+    dev += strlen(prefix);
+    if (dev[0] == '\0') {
+        return(0);
+    }
+    if ((dev[0] != '/') && (cwd != NULL)) {
+        n = snprintf(buf, sizeof(buf), "%s/%s", cwd, dev);
+        if ((n < 0) || (n >= sizeof(buf))) {
+            return(0);
+        }
+        dev = buf;
+    }
+    if (path_ref) {
+        *path_ref = create_string(dev);
+    }
+    return(1);
+}
 
 
 obj_t * create_unixsock_obj(server_conf_t *conf, char *name, char *dev,

@@ -354,6 +354,8 @@ void ipmi_init(int num_consoles);
 
 void ipmi_fini(void);
 
+int is_ipmi_dev(const char *dev, char **host_ref);
+
 int parse_ipmi_opts(
     ipmiopt_t *iopts, const char *str, char *errbuf, int errlen);
 
@@ -420,6 +422,9 @@ int write_to_obj(obj_t *obj);
 
 /*  server-process.c
  */
+int is_process_dev(const char *dev, const char *cwd,
+    const char *exec_path, char **path_ref);
+
 obj_t * create_process_obj(server_conf_t *conf, char *name, List args,
     char *errbuf, int errlen);
 
@@ -428,6 +433,8 @@ int open_process_obj(obj_t *process);
 
 /*  server-serial.c
  */
+int is_serial_dev(const char *dev, const char *cwd, char **path_ref);
+
 int parse_serial_opts(
     seropt_t *opts, const char *str, char *errbuf, int errlen);
 
@@ -446,6 +453,8 @@ void process_client(client_arg_t *args);
 
 /*  server-telnet.c
  */
+int is_telnet_dev(const char *dev, char **host_ref, int *port_ref);
+
 obj_t * create_telnet_obj(server_conf_t *conf, char *name,
     char *host, int port, char *errbuf, int errlen);
 
@@ -458,6 +467,8 @@ int send_telnet_cmd(obj_t *telnet, int cmd, int opt);
 
 /*  server-unixsock.c
  */
+int is_unixsock_dev(const char *dev, const char *cwd, char **path_ref);
+
 obj_t * create_unixsock_obj(server_conf_t *conf, char *name, char *dev,
     char *errbuf, int errlen);
 

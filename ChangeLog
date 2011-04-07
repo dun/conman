@@ -1,3 +1,10 @@
+2011-04-07  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server.h, server-conf.c, server-ipmi.c, server-process.c,
+	  server-serial.c, server-telnet.c, server-unixsock.c:
+	  Moved is_ipmi_dev(), is_process_dev(), is_serial_dev(),
+	  is_telnet_dev(), and is_unixsock_dev() out of server-conf.c.
+
 2011-04-06  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* configure.ac: Fixed "--enable-debug" building when CFLAGS are set.
