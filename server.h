@@ -177,12 +177,17 @@ typedef struct unixsock_obj {           /* UNIXSOCK AUX OBJ DATA:            */
     unsigned         state:1;           /*  unixsock_state_t conn state      */
 } unixsock_obj_t;
 
+/*  Refer to struct ipmiconsole_ipmi_config in <ipmiconsole.h>.
+ */
 #if WITH_FREEIPMI
 typedef struct ipmi_opt {                               /* IPMI OBJ OPTIONS: */
     char             username[ IPMI_MAX_USER_LEN + 1 ]; /*  BMC username     */
     char             password[ IPMI_MAX_PSWD_LEN + 1 ]; /*  BMC password     */
     unsigned char    kg[ IPMI_MAX_KG_LEN + 1 ];         /*  BMC K_g key      */
     unsigned int     kgLen;                             /*  BMC K_g key len  */
+    int              privilegeLevel;                    /*  auth priv level  */
+    int              cipherSuite;                       /*  cipher suite id  */
+    unsigned int     workaroundFlags;                   /*  workaround flags */
 } ipmiopt_t;
 
 typedef struct ipmiconsole_ctx ipmictx_t;
@@ -355,6 +360,8 @@ void ipmi_init(int num_consoles);
 void ipmi_fini(void);
 
 int is_ipmi_dev(const char *dev, char **host_ref);
+
+int init_ipmi_opts(ipmiopt_t *iopts);
 
 int parse_ipmi_opts(
     ipmiopt_t *iopts, const char *str, char *errbuf, int errlen);

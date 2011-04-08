@@ -1,5 +1,11 @@
 2011-04-07  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-ipmi.c (init_ipmi_opts): Added.
+	* server-conf.c (create_server_conf), server-ipmi.c (parse_ipmi_opts):
+	  Replaced memset() of struct ipmi_opt with init_ipmi_opts().
+	* server.h, server-ipmi.c (create_ipmi_ctx): Added privilegeLevel,
+	  cipherSuite, and workaroundFlags to struct ipmi_opt.
+
 	* server.h, server-conf.c, server-ipmi.c, server-process.c,
 	  server-serial.c, server-telnet.c, server-unixsock.c:
 	  Moved is_ipmi_dev(), is_process_dev(), is_serial_dev(),

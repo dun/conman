@@ -132,6 +132,22 @@ int is_ipmi_dev(const char *dev, char **host_ref)
 }
 
 
+int init_ipmi_opts(ipmiopt_t *iopts)
+{
+/*  Initializes [iopts] to the default values.
+ *  Returns 0 on success, -1 on error.
+ */
+    if (iopts == NULL) {
+        return(-1);
+    }
+    memset(iopts, 0, sizeof(ipmiopt_t));
+    iopts->privilegeLevel = -1;
+    iopts->cipherSuite = -1;
+    iopts->workaroundFlags = IPMICONSOLE_WORKAROUND_DEFAULT;
+    return(0);
+}
+
+
 int parse_ipmi_opts(
     ipmiopt_t *iopts, const char *str, char *errbuf, int errlen)
 {
@@ -150,7 +166,7 @@ int parse_ipmi_opts(
 
     assert(iopts != NULL);
 
-    memset(&ioptsTmp, 0, sizeof(ioptsTmp));
+    init_ipmi_opts(&ioptsTmp);
 
     if (strlcpy(buf, str, sizeof(buf)) >= sizeof(buf)) {
         if ((errbuf != NULL) && (errlen > 0)) {
@@ -482,9 +498,9 @@ static int create_ipmi_ctx(obj_t *ipmi)
     ipmi_config.password = ipmi->aux.ipmi.iconf.password;
     ipmi_config.k_g = ipmi->aux.ipmi.iconf.kg;
     ipmi_config.k_g_len = ipmi->aux.ipmi.iconf.kgLen;
-    ipmi_config.privilege_level = -1;
-    ipmi_config.cipher_suite_id = -1;
-    ipmi_config.workaround_flags = 0;
+    ipmi_config.privilege_level = ipmi->aux.ipmi.iconf.privilegeLevel;
+    ipmi_config.cipher_suite_id = ipmi->aux.ipmi.iconf.cipherSuite;
+    ipmi_config.workaround_flags = ipmi->aux.ipmi.iconf.workaroundFlags;
 
     protocol_config.session_timeout_len = -1;
     protocol_config.retransmission_timeout_len = -1;

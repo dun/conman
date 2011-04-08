@@ -252,10 +252,14 @@ server_conf_t * create_server_conf(void)
     conf->globalSerOpts.databits = DEFAULT_SEROPT_DATABITS;
     conf->globalSerOpts.parity = DEFAULT_SEROPT_PARITY;
     conf->globalSerOpts.stopbits = DEFAULT_SEROPT_STOPBITS;
+
 #if WITH_FREEIPMI
-    memset(&conf->globalIpmiOpts, 0, sizeof(conf->globalIpmiOpts));
+    if (init_ipmi_opts(&conf->globalIpmiOpts) < 0) {
+        log_err(0, "Unable to initialize default IPMI options");
+    }
     conf->numIpmiObjs = 0;
 #endif /* WITH_FREEIPMI */
+
     conf->enableCoreDump = 0;
     conf->enableKeepAlive = 1;
     conf->enableLoopBack = 0;
