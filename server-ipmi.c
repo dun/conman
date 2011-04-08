@@ -26,14 +26,17 @@
  *****************************************************************************/
 
 
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
+#if HAVE_CONFIG_H
+#  include <config.h>
 #endif /* HAVE_CONFIG_H */
+
+#if HAVE_IPMICONSOLE_H
+#  include <ipmiconsole.h>
+#endif /* HAVE_IPMICONSOLE_H */
 
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
-#include <ipmiconsole.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -106,6 +109,26 @@ void ipmi_fini(void)
     ipmiconsole_engine_teardown(do_sol_session_cleanup);
     is_ipmi_engine_started = 0;
     return;
+}
+
+
+int is_ipmi_dev(const char *dev, char **host_ref)
+{
+    const char *prefix = "ipmi:";
+
+    assert(dev != NULL);
+
+    if (strncasecmp(dev, prefix, strlen(prefix)) != 0) {
+        return(0);
+    }
+    dev += strlen(prefix);
+    if (dev[0] == '\0') {
+        return(0);
+    }
+    if (host_ref) {
+        *host_ref = create_string(dev);
+    }
+    return(1);
 }
 
 

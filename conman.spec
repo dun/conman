@@ -13,17 +13,17 @@ Requires:	expect
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 %if 0%{?chaos} >= 4 || 0%{?rhel} >= 6 || 0%{?fedora} >= 9
-BuildRequires:  freeipmi-devel
+BuildRequires:	freeipmi-devel >= 1.0.3
 %endif
 
 %if 0%{?rhel} >= 6 || 0%{?fedora} >= 7
-BuildRequires:  tcp_wrappers-devel
+BuildRequires:	tcp_wrappers-devel
 %else
 %if 0%{?rhel} < 6 || 0%{?fedora} < 7 || 0%{?rhl}
-BuildRequires:  tcp_wrappers
+BuildRequires:	tcp_wrappers
 %else
 %if "%{_vendor}" == "suse"
-BuildRequires:  tcpd-devel
+BuildRequires:	tcpd-devel
 %endif
 %endif
 %endif

@@ -26,8 +26,8 @@
  *****************************************************************************/
 
 
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
+#if HAVE_CONFIG_H
+#  include <config.h>
 #endif /* HAVE_CONFIG_H */
 
 #include <sys/types.h>                  /* include before in.h for bsd */
@@ -306,7 +306,7 @@ static int validate_hostent_copy(
 #endif /* !NDEBUG */
 
 
-#ifndef HAVE_INET_PTON
+#if ! HAVE_INET_PTON
 int inet_pton(int family, const char *str, void *addr)
 {
 /*  cf. Stevens UNPv1 p72.
@@ -317,7 +317,7 @@ int inet_pton(int family, const char *str, void *addr)
         errno = EAFNOSUPPORT;
         return(-1);
     }
-#ifdef HAVE_INET_ATON
+#if HAVE_INET_ATON
     if (!inet_aton(str, &tmpaddr))
         return(0);
 #else /* !HAVE_INET_ATON */
@@ -331,7 +331,7 @@ int inet_pton(int family, const char *str, void *addr)
 #endif /* !HAVE_INET_PTON */
 
 
-#ifndef HAVE_INET_NTOP
+#if ! HAVE_INET_NTOP
 const char * inet_ntop(int family, const void *addr, char *str, size_t len)
 {
 /*  cf. Stevens UNPv1 p72.

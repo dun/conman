@@ -1,30 +1,48 @@
+2011-04-07  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server.h, server-conf.c, server-ipmi.c, server-process.c,
+	  server-serial.c, server-telnet.c, server-unixsock.c:
+	  Moved is_ipmi_dev(), is_process_dev(), is_serial_dev(),
+	  is_telnet_dev(), and is_unixsock_dev() out of server-conf.c.
+
+2011-04-06  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* configure.ac: Fixed "--enable-debug" building when CFLAGS are set.
+	  Added DEBUG_CFLAGS substitution.
+	* Makefile.in: Added DEBUG_CFLAGS to COMPILE_OPTS.
+
+	* tpoll.h: Removed comma at end of tpoll_zero_t enumerator list
+	  in order to build with -pedantic.
+
+	* : Cleaned up preprocessor conditionals.
+
+2011-04-05  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* configure.ac: Combined adjacent AC_CHECK_HEADERS.
+
+	* configure.ac: Made "--with-freeipmi" fatal if FreeIPMI not found.
+
+	* configure.ac: Replaced AC_HELP_STRING with AS_HELP_STRING.
+
 2011-04-04  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* configure.ac: Fixed spurious quote in AC_CHECK_DECL.
+
+	* conman.spec: Added freeipmi-devel version to BuildRequires tag.
 
 	* server.c (main): Changed default log priority to LOG_INFO.
 
-2011-04-04  Chris Dunlap  <cdunlap@llnl.gov>
-
-	* configure.ac: Changed autoconf tests for ipmiconsole.
-	  The autoconf tests now indirectly check for FreeIPMI 1.0.3+
-	  which fixes ipmiconsole_engine_submit() behavior.
-
-2011-03-08  Chris Dunlap  <cdunlap@llnl.gov>
-
-	* server-ipmi.c (connect_ipmi_obj): Reverted log_msg() to log_err().
-	  With a non-fatal log_msg() here, control would be passed to
-	  fail_ipmi_connect() which could now behave incorrectly.  Besides,
-	  since all connection states are already accounted for, this check
-	  is largely to catch atypical conditions.
-
-	* : Added mutex to protect against concurrent access to the ipmi_obj
-	  since connect_ipmi_obj() can be invoked from either the main thread
-	  or the ipmiconsole engine thread.
+	* : Fixed race conditions & segfaults when using libipmiconsole.
+	  Added mutex to protect against concurrent access to the ipmi_obj
+	  since connect_ipmi_obj() can be invoked from either the main
+	  thread or the ipmiconsole engine thread.  (Fixes issue 7)
+	* configure.ac: Changed ipmiconsole autoconf tests to indirectly check
+	  for FreeIPMI 1.0.3+ which fixes ipmiconsole_engine_submit() behavior.
 	* server.h: Added mutex to struct ipmi_obj.
 	* server-obj.c (destroy_obj): Added call to destroy ipmi mutex.
 	* server-ipmi.c (create_ipmi_obj, open_ipmi_obj, disconnect_ipmi_obj,
 	  connect_ipmi_obj, reset_ipmi_delay, send_ipmi_break): Added support
 	  for ipmi mutex to protect the ctx, state, timer, and delay vars.
-
 	* server-ipmi.c (disconnect_ipmi_obj, fail_ipmi_connect):
 	  Removed calls to ipmiconsole_ctx_destroy().  An existing ctx
 	  is now destroyed immediately before a new one is created
@@ -33,18 +51,8 @@
 	  This change is more of a precautionary measure.  With the ctx now
 	  being destroyed in create_ipmi_ctx(), these other calls should
 	  be redundant.
-
 	* server-ipmi.c (create_ipmi_ctx): Destroy an existing ipmi.ctx
 	  immediately before creating a new one.
-
-	* server-ipmi.c (initiate_ipmi_connect): Tweaked comment.
-
-	* server-ipmi.c (open_ipmi_obj): Tweaked wording of DPRINTF.
-	* server-ipmi.c (fail_ipmi_connect): Tweaked wording of log_msg().
-
-	* server-ipmi.c (connect_ipmi_obj): Replaced log_err() with log_msg().
-
-	* server-ipmi.c (connect_ipmi_obj): Fixed missing arg in log_err().
 
 2011-01-31  Chris Dunlap  <cdunlap@llnl.gov>
 

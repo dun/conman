@@ -24,8 +24,8 @@
  *****************************************************************************/
 
 
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
+#if HAVE_CONFIG_H
+#  include <config.h>
 #endif /* HAVE_CONFIG_H */
 
 #include <sys/types.h>                  /* include before in.h for bsd */
@@ -52,7 +52,7 @@
 #include "wrapper.h"
 
 
-#ifdef WITH_TCP_WRAPPERS
+#if WITH_TCP_WRAPPERS
 /*
  *  TCP-Wrappers support.
  */
@@ -197,7 +197,7 @@ static int resolve_addr(server_conf_t *conf, req_t *req, int sd)
         req->host = create_string(buf);
     }
 
-#ifdef WITH_TCP_WRAPPERS
+#if WITH_TCP_WRAPPERS
     /*
      *  Check via TCP-Wrappers.
      */
@@ -936,7 +936,7 @@ static void check_console_state(obj_t *console, obj_t *client)
         write_obj_data(client, buf, strlen(buf), 1);
         open_unixsock_obj(console);
     }
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
     else if (is_ipmi_obj(console)
             && (console->aux.ipmi.state != CONMAN_IPMI_UP)) {
         snprintf(buf, sizeof(buf),

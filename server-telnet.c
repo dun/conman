@@ -24,8 +24,8 @@
  *****************************************************************************/
 
 
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
+#if HAVE_CONFIG_H
+#  include <config.h>
 #endif /* HAVE_CONFIG_H */
 
 #define TELCMDS
@@ -60,6 +60,37 @@ static int process_telnet_cmd(obj_t *telnet, int cmd, int opt);
 static char * opt2str(int opt, char *buf, int buflen);
 
 extern tpoll_t tp_global;               /* defined in server.c */
+
+
+int is_telnet_dev(const char *dev, char **host_ref, int *port_ref)
+{
+    char  buf[MAX_LINE];
+    char *p;
+    int   n;
+
+    assert(dev != NULL);
+
+    if (strlcpy(buf, dev, sizeof(buf)) >= sizeof(buf)) {
+        return(0);
+    }
+    if (!(p = strchr(buf, ':'))) {
+        return(0);
+    }
+    if ((n = strspn(p+1, "0123456789")) == 0) {
+        return(0);
+    }
+    if (p[ n + 1 ] != '\0') {
+        return(0);
+    }
+    *p++ = '\0';
+    if (host_ref) {
+        *host_ref = create_string(buf);
+    }
+    if (port_ref) {
+        *port_ref = atoi(p);
+    }
+    return(1);
+}
 
 
 obj_t * create_telnet_obj(server_conf_t *conf, char *name,

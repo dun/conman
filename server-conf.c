@@ -24,8 +24,8 @@
  *****************************************************************************/
 
 
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
+#if HAVE_CONFIG_H
+#  include <config.h>
 #endif /* HAVE_CONFIG_H */
 
 #include <assert.h>
@@ -61,7 +61,7 @@ enum server_conf_toks {
     SERVER_CONF_DEV,
     SERVER_CONF_EXECPATH,
     SERVER_CONF_GLOBAL,
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
     SERVER_CONF_IPMIOPTS,
 #endif /* WITH_FREEIPMI */
     SERVER_CONF_KEEPALIVE,
@@ -94,7 +94,7 @@ static char *server_conf_strs[] = {
     "DEV",
     "EXECPATH",
     "GLOBAL",
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
     "IPMIOPTS",
 #endif /* WITH_FREEIPMI */
     "KEEPALIVE",
@@ -173,7 +173,7 @@ typedef struct console_strs {
     char *log;
     char *lopts;
     char *sopts;
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
     char *iopts;
 #endif /* WITH_FREEIPMI */
 } console_strs_t;
@@ -184,16 +184,6 @@ static void signal_daemon(server_conf_t *conf);
 static void parse_console_directive(server_conf_t *conf, Lex l);
 static int process_console(server_conf_t *conf, console_strs_t *con_p,
     char *errbuf, int errbuflen);
-static int is_telnet_dev(const char *dev, char **host_ref, int *port_ref);
-static int is_serial_dev(const char *dev, const char *cwd, char **path_ref);
-static int is_process_dev(const char *dev, const char *cwd,
-    const char *exec_path, char **path_ref);
-#ifdef WITH_FREEIPMI
-static int is_ipmi_dev(const char *dev, char **host_ref);
-#endif /* WITH_FREEIPMI */
-static int search_exec_path(const char *path, const char *src,
-    char *dst, int dstlen);
-static int is_unixsock_dev(const char *dev, const char *cwd, char **path_ref);
 static void parse_global_directive(server_conf_t *conf, Lex l);
 static void parse_server_directive(server_conf_t *conf, Lex l);
 static int read_pidfile(const char *pidfile);
@@ -262,7 +252,7 @@ server_conf_t * create_server_conf(void)
     conf->globalSerOpts.databits = DEFAULT_SEROPT_DATABITS;
     conf->globalSerOpts.parity = DEFAULT_SEROPT_PARITY;
     conf->globalSerOpts.stopbits = DEFAULT_SEROPT_STOPBITS;
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
     memset(&conf->globalIpmiOpts, 0, sizeof(conf->globalIpmiOpts));
     conf->numIpmiObjs = 0;
 #endif /* WITH_FREEIPMI */
@@ -586,7 +576,7 @@ static void signal_daemon(server_conf_t *conf)
         fprintf(stderr, "Configuration \"%s\" (pid %d) %s signal=%d\n",
             conf->confFileName, (int) pid, msg, conf->throwSignal);
     }
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
     ipmi_fini();
 #endif /* WITH_FREEIPMI */
 
@@ -707,7 +697,7 @@ static void parse_console_directive(server_conf_t *conf, Lex l)
             }
             break;
 
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
         case SERVER_CONF_IPMIOPTS:
             if (lex_next(l) != '=') {
                 snprintf(err, sizeof(err), "unexpected '=' after %s keyword",
@@ -757,7 +747,7 @@ static void parse_console_directive(server_conf_t *conf, Lex l)
     destroy_string(con.log);
     destroy_string(con.lopts);
     destroy_string(con.sopts);
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
     destroy_string(con.iopts);
 #endif /* WITH_FREEIPMI */
     return;
@@ -779,7 +769,7 @@ static int process_console(server_conf_t *conf, console_strs_t *con_p,
     char        *path = NULL;
     obj_t       *console;
     seropt_t     seropts;
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
     ipmiopt_t    ipmiopts;
 #endif /* WITH_FREEIPMI */
     logopt_t     logopts;
@@ -878,7 +868,7 @@ static int process_console(server_conf_t *conf, console_strs_t *con_p,
             goto err;
         }
     }
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
     else if (is_ipmi_dev(arg0, &host)) {
         if (list_count(args) != 1) {
             snprintf(errbuf, errbuflen,
@@ -937,205 +927,6 @@ err:
     destroy_string(host);
     destroy_string(path);
     return(-1);
-}
-
-
-static int is_telnet_dev(const char *dev, char **host_ref, int *port_ref)
-{
-    char  buf[MAX_LINE];
-    char *p;
-    int   n;
-
-    assert(dev != NULL);
-
-    if (strlcpy(buf, dev, sizeof(buf)) >= sizeof(buf)) {
-        return(0);
-    }
-    if (!(p = strchr(buf, ':'))) {
-        return(0);
-    }
-    if ((n = strspn(p+1, "0123456789")) == 0) {
-        return(0);
-    }
-    if (p[ n + 1 ] != '\0') {
-        return(0);
-    }
-    *p++ = '\0';
-    if (host_ref) {
-        *host_ref = create_string(buf);
-    }
-    if (port_ref) {
-        *port_ref = atoi(p);
-    }
-    return(1);
-}
-
-
-#ifdef WITH_FREEIPMI
-static int is_ipmi_dev(const char *dev, char **host_ref)
-{
-    const char *prefix = "ipmi:";
-
-    assert(dev != NULL);
-
-    if (strncasecmp(dev, prefix, strlen(prefix)) != 0) {
-        return(0);
-    }
-    dev += strlen(prefix);
-    if (dev[0] == '\0') {
-        return(0);
-    }
-    if (host_ref) {
-        *host_ref = create_string(dev);
-    }
-    return(1);
-}
-#endif /* WITH_FREEIPMI */
-
-
-static int is_serial_dev(const char *dev, const char *cwd, char **path_ref)
-{
-    char         buf[PATH_MAX];
-    int          n;
-    struct stat  st;
-
-    assert(dev != NULL);
-
-    if ((dev[0] != '/') && (cwd != NULL)) {
-        n = snprintf(buf, sizeof(buf), "%s/%s", cwd, dev);
-        if ((n < 0) || (n >= sizeof(buf))) {
-            return(0);
-        }
-        dev = buf;
-    }
-    if (stat(dev, &st) < 0) {
-        return(0);
-    }
-    if (!S_ISCHR(st.st_mode)) {
-        return(0);
-    }
-    if (path_ref) {
-        *path_ref = create_string(dev);
-    }
-    return(1);
-}
-
-
-static int is_process_dev(const char *dev, const char *cwd,
-    const char *exec_path, char **path_ref)
-{
-    char         buf[PATH_MAX];
-    int          n;
-    struct stat  st;
-
-    assert(dev != NULL);
-
-    if (!strchr(dev, '/')
-            && (search_exec_path(exec_path, dev, buf, sizeof(buf)) == 0)) {
-        dev = buf;
-    }
-    else if ((dev[0] != '/') && (cwd != NULL)) {
-        n = snprintf(buf, sizeof(buf), "%s/%s", cwd, dev);
-        if ((n < 0) || (n >= sizeof(buf))) {
-            return(0);
-        }
-        dev = buf;
-    }
-    if (stat(dev, &st) < 0) {
-        return(0);
-    }
-    if (!S_ISREG(st.st_mode)) {
-        return(0);
-    }
-    if (access(dev, X_OK) < 0) {
-        return(0);
-    }
-    if (path_ref) {
-        *path_ref = create_string(dev);
-    }
-    return(1);
-}
-
-
-static int search_exec_path(const char *path, const char *src,
-    char *dst, int dstlen)
-{
-    char         path_buf[PATH_MAX];
-    char         file_buf[PATH_MAX];
-    char        *p;
-    char        *q;
-    struct stat  st;
-    int          n;
-
-    assert((path == NULL) || (strlen(path) < PATH_MAX));
-    assert(src != NULL);
-    assert(strchr(src, '/') == NULL);
-    assert(dst != NULL);
-    assert(dstlen >= 0);
-
-    if (!path) {
-        return(-1);
-    }
-    if (strlcpy(path_buf, path, sizeof(path_buf)) >= sizeof(path_buf)) {
-        return(-1);
-    }
-    for (p = path_buf; p && *p; p = q) {
-        if ((q = strchr(p, ':'))) {
-            *q++ = '\0';
-        }
-        else {
-            q = strchr(p, '\0');
-        }
-        if (stat(p, &st) < 0) {
-            continue;
-        }
-        if (!S_ISDIR(st.st_mode)) {
-            continue;
-        }
-        n = snprintf(file_buf, sizeof(file_buf), "%s/%s", p, src);
-        if ((n < 0) || (n >= sizeof(file_buf))) {
-            continue;
-        }
-        if (access(file_buf, X_OK) < 0) {
-            continue;
-        }
-        if ((dst != NULL) && (dstlen > 0)) {
-            if (strlcpy(dst, file_buf, dstlen) >= dstlen) {
-                return(1);
-            }
-        }
-        return(0);
-    }
-    return(-1);
-}
-
-
-static int is_unixsock_dev(const char *dev, const char *cwd, char **path_ref)
-{
-    const char *prefix = "unix:";
-    int         n;
-    char        buf[PATH_MAX];
-
-    assert(dev != NULL);
-
-    if (strncasecmp(dev, prefix, strlen(prefix)) != 0) {
-        return(0);
-    }
-    dev += strlen(prefix);
-    if (dev[0] == '\0') {
-        return(0);
-    }
-    if ((dev[0] != '/') && (cwd != NULL)) {
-        n = snprintf(buf, sizeof(buf), "%s/%s", cwd, dev);
-        if ((n < 0) || (n >= sizeof(buf))) {
-            return(0);
-        }
-        dev = buf;
-    }
-    if (path_ref) {
-        *path_ref = create_string(dev);
-    }
-    return(1);
 }
 
 
@@ -1220,7 +1011,7 @@ static void parse_global_directive(server_conf_t *conf, Lex l)
             }
             break;
 
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
         case SERVER_CONF_IPMIOPTS:
             if (lex_next(l) != '=') {
                 snprintf(err, sizeof(err), "expected '=' after %s keyword",
@@ -1530,7 +1321,7 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
             break;
 
         case SERVER_CONF_TCPWRAPPERS:
-#ifndef WITH_TCP_WRAPPERS
+#if ! WITH_TCP_WRAPPERS
             snprintf(err, sizeof(err),
                 "%s keyword requires compile-time support",
                 server_conf_strs[LEX_UNTOK(tok)]);

@@ -27,7 +27,6 @@
 #ifndef _CLIENT_H
 #define _CLIENT_H
 
-
 #include <termios.h>
 #include "common.h"
 

@@ -24,8 +24,8 @@
  *****************************************************************************/
 
 
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
+#if HAVE_CONFIG_H
+#  include <config.h>
 #endif /* HAVE_CONFIG_H */
 
 #include <arpa/telnet.h>
@@ -173,7 +173,7 @@ static void perform_serial_break(obj_t *client)
                     console->name);
             }
         }
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
         else if (is_ipmi_obj(console)) {
             if (send_ipmi_break(console) < 0) {
                 log_msg(LOG_WARNING,

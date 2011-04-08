@@ -24,16 +24,17 @@
  *****************************************************************************/
 
 
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
+#if HAVE_CONFIG_H
+#  include <config.h>
 #endif /* HAVE_CONFIG_H */
+
+#if HAVE_IPMICONSOLE_H
+#  include <ipmiconsole.h>
+#endif /* HAVE_IPMICONSOLE_H */
 
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
-#ifdef WITH_FREEIPMI
-#include <ipmiconsole.h>
-#endif /* WITH_FREEIPMI */
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -206,7 +207,7 @@ void destroy_obj(obj_t *obj)
         /*  Do not destroy obj->aux.unixsock.logfile since it is only a ref.
          */
         break;
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
     case CONMAN_OBJ_IPMI:
         if (obj->aux.ipmi.host) {
             free(obj->aux.ipmi.host);
@@ -262,7 +263,7 @@ void reopen_obj(obj_t *obj)
     else if (is_unixsock_obj(obj)) {
         open_unixsock_obj(obj);
     }
-#ifdef WITH_FREEIPMI
+#if WITH_FREEIPMI
     else if (is_ipmi_obj(obj)) {
         open_ipmi_obj(obj);
     }
@@ -952,7 +953,7 @@ int write_obj_data(obj_t *obj, const void *src, int len, int isInfo)
      *    data will be discarded so perform a no-op here.
      */
     if ( ( is_telnet_obj(obj) &&
-           obj->aux.telnet.state != CONMAN_TELNET_UP ) || 
+           obj->aux.telnet.state != CONMAN_TELNET_UP ) ||
          ( is_unixsock_obj(obj) &&
            obj->aux.unixsock.state != CONMAN_UNIXSOCK_UP ) ||
          ( is_process_obj(obj) &&
@@ -1089,7 +1090,7 @@ int write_to_obj(obj_t *obj)
         avail = 0;
     }
     else if ( ( is_telnet_obj(obj) &&
-                obj->aux.telnet.state != CONMAN_TELNET_UP ) || 
+                obj->aux.telnet.state != CONMAN_TELNET_UP ) ||
               ( is_unixsock_obj(obj) &&
                 obj->aux.unixsock.state != CONMAN_UNIXSOCK_UP ) ||
               ( is_process_obj(obj) &&

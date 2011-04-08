@@ -90,8 +90,8 @@ dnl Check for header files.
 dnl
 AC_CHECK_HEADERS( \
   paths.h \
+  sys/inotify.h \
 )
-AC_CHECK_HEADERS(sys/inotify.h)
 
 
 dnl Check for typedefs.
@@ -152,7 +152,7 @@ dnl Check for debug vs. production compilation.
 dnl
 AC_MSG_CHECKING(whether debugging is enabled)
 AC_ARG_ENABLE(debug,
-  AC_HELP_STRING([--enable-debug], [enable debugging for development work]),
+  AS_HELP_STRING([--enable-debug], [enable debugging for development work]),
   [ case "$enableval" in
       yes) debug=yes ;;
       no)  debug=no ;;
@@ -162,16 +162,13 @@ AC_ARG_ENABLE(debug,
   ]
 )
 if test "$debug" = yes; then
-  if test -z "$ac_save_CFLAGS"; then
-    test "$ac_cv_prog_cc_g" = yes && CFLAGS="-g"
-    test "$GCC" = yes && CFLAGS="$CFLAGS -Wall"
-  fi
+  test -z "$ac_test_CFLAGS" && CFLAGS=
+  test "$ac_cv_prog_cc_g" = yes && DEBUG_CFLAGS="-g"
+  test "$GCC" = yes && DEBUG_CFLAGS="$DEBUG_CFLAGS -Wall"
 else
-  if test -z "$ac_save_CFLAGS"; then
-    test "$GCC" = yes && CFLAGS="-O2 -Wall" || CFLAGS="-O"
-  fi
   AC_DEFINE(NDEBUG, 1, [Define if you are building a production release.])
 fi
+AC_SUBST(DEBUG_CFLAGS)
 AC_MSG_RESULT(${debug=no})
 
 
@@ -179,7 +176,7 @@ dnl Check for Gray Watson's Debug Malloc Library <http://dmalloc.com/>.
 dnl
 AC_MSG_CHECKING(whether to use the Debug Malloc Library)
 AC_ARG_WITH(dmalloc,
-  AC_HELP_STRING([--with-dmalloc], [use Gray Watson's dmalloc library]),
+  AS_HELP_STRING([--with-dmalloc], [use Gray Watson's dmalloc library]),
   [ case "$withval" in
       yes) dmalloc=yes ;;
       no)  dmalloc=no ;;
@@ -213,7 +210,7 @@ AH_BOTTOM(
 dnl Check for TCP Wrappers.
 dnl
 AC_ARG_WITH(tcp-wrappers,
-  AC_HELP_STRING([--with-tcp-wrappers], [use Wietse Venema's TCP Wrappers]),
+  AS_HELP_STRING([--with-tcp-wrappers], [use Wietse Venema's TCP Wrappers]),
   [ case "$withval" in
       yes) tcp_wrappers=yes ;;
       no)  tcp_wrappers=no ;;
@@ -246,9 +243,9 @@ AC_MSG_RESULT(${tcp_wrappers=no})
 dnl Check for FreeIPMI libraries
 dnl
 AC_ARG_WITH(freeipmi,
-  AC_HELP_STRING([--with-freeipmi], [use FreeIPMI's Serial-Over-LAN console]),
+  AS_HELP_STRING([--with-freeipmi], [use FreeIPMI's Serial-Over-LAN console]),
   [ case "$withval" in
-      yes) freeipmi=yes ;;
+      yes) freeipmi=req ;;
       no)  freeipmi=no ;;
       *)   AC_MSG_RESULT(doh!)
            AC_MSG_ERROR([bad value "$withval" for --with-freeipmi]) ;;
@@ -264,9 +261,8 @@ if test "$freeipmi" != no; then
   AC_CHECK_HEADERS(ipmiconsole.h)
   AC_CHECK_LIB(ipmiconsole, ipmiconsole_engine_init)
   AC_CHECK_DECL(LIBIPMICONSOLE_VERSION_MAJOR, [], [],
-    [#include <ipmiconsole.h>"])
+    [#include <ipmiconsole.h>])
   LIBS="$ac_save_LIBS"
-  freeipmi=no
   if   test "$ac_cv_header_ipmiconsole_h" != yes; then : ;
   elif test "$ac_cv_lib_ipmiconsole_ipmiconsole_engine_init" != yes; then : ;
   elif test "$ac_cv_have_decl_LIBIPMICONSOLE_VERSION_MAJOR" != yes; then : ;
@@ -277,9 +273,13 @@ if test "$freeipmi" != no; then
     IPMI_OBJS="server-ipmi.o"
     IPMI_LIBS="-lipmiconsole"
   fi
+  test "$freeipmi" = req && freeipmi=failed
 fi
 AC_MSG_CHECKING(whether to use FreeIPMI's libipmiconsole)
 AC_MSG_RESULT(${freeipmi=no})
+if test "$freeipmi" = failed; then
+  AC_MSG_ERROR([unable to locate FreeIPMI 1.0.3 or later])
+fi
 AC_SUBST(IPMI_OBJS)
 AC_SUBST(IPMI_LIBS)
 
@@ -299,7 +299,7 @@ dnl Check for ConMan daemon host name.
 dnl
 AC_MSG_CHECKING(for ConMan daemon host name)
 AC_ARG_WITH(conman-host,
-  AC_HELP_STRING([--with-conman-host=HOST],
+  AS_HELP_STRING([--with-conman-host=HOST],
     [default host name of daemon [[127.0.0.1]]]),
   [ if test -n "$withval" -a "$withval" != yes -a "$withval" != no; then
       CONMAN_HOST="$withval"
@@ -316,7 +316,7 @@ dnl Check for ConMan daemon port number.
 dnl
 AC_MSG_CHECKING(for ConMan daemon port number)
 AC_ARG_WITH(conman-port,
-  AC_HELP_STRING([--with-conman-port=PORT],
+  AS_HELP_STRING([--with-conman-port=PORT],
     [default port number of daemon [[7890]]]),
   [ if test `expr match "$withval" '[[0-9]]*$'` -gt 0; then
       CONMAN_PORT="$withval"

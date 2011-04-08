@@ -26,11 +26,11 @@
  *****************************************************************************/
 
 
-#ifdef HAVE_CONFIG_H
-#  include "config.h"
+#if HAVE_CONFIG_H
+#  include <config.h>
 #endif /* HAVE_CONFIG_H */
 
-#ifdef WITH_PTHREADS
+#if WITH_PTHREADS
 #  include <errno.h>
 #  include <pthread.h>
 #  include <stdio.h>
@@ -90,7 +90,7 @@ struct list {
     struct listIterator  *iNext;        /* iterator chain for list_destroy() */
     ListDelF              fDel;         /* function to delete node data      */
     int                   count;        /* number of nodes in list           */
-#ifdef WITH_PTHREADS
+#if WITH_PTHREADS
     pthread_mutex_t       mutex;        /* mutex to protect access to list   */
 #endif /* WITH_PTHREADS */
 #ifndef NDEBUG
@@ -122,7 +122,7 @@ static void list_iterator_free(ListIterator i);
 static List freeLists = NULL;
 static ListNode freeListNodes = NULL;
 static ListIterator freeListIterators = NULL;
-#ifdef WITH_PTHREADS
+#if WITH_PTHREADS
 static pthread_mutex_t freeListsLock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t freeListNodesLock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t freeListIteratorsLock = PTHREAD_MUTEX_INITIALIZER;
@@ -133,7 +133,7 @@ static pthread_mutex_t freeListIteratorsLock = PTHREAD_MUTEX_INITIALIZER;
 **  Macros  **
 \************/
 
-#ifdef WITH_PTHREADS
+#if WITH_PTHREADS
 
 #  define list_mutex_init(mutex)                                              \
      do {                                                                     \
