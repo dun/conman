@@ -52,6 +52,23 @@
 #include "wrapper.h"
 
 
+static int is_ipmi_opt_tag(const char *str);
+static int parse_ipmi_opts_v1(
+    ipmiopt_t *iopts, char *str, char *errbuf, int errlen);
+static int process_ipmi_opt(
+    ipmiopt_t *iopts, const char *str, char *errbuf, int errlen);
+static int process_ipmi_opt_username(
+    ipmiopt_t *iopts, const char *str, char *errbuf, int errlen);
+static int process_ipmi_opt_password(
+    ipmiopt_t *iopts, const char *str, char *errbuf, int errlen);
+static int process_ipmi_opt_k_g(
+    ipmiopt_t *iopts, const char *str, char *errbuf, int errlen);
+static int process_ipmi_opt_privilege(
+    ipmiopt_t *iopts, const char *str, char *errbuf, int errlen);
+static int process_ipmi_opt_cipher(
+    ipmiopt_t *iopts, const char *str, char *errbuf, int errlen);
+static int process_ipmi_opt_workaround(
+    ipmiopt_t *iopts, const char *str, char *errbuf, int errlen);
 static int parse_key(char *dst, const char *src, size_t dstlen);
 static void disconnect_ipmi_obj(obj_t *ipmi);
 static int connect_ipmi_obj(obj_t *ipmi);
@@ -99,7 +116,7 @@ void ipmi_fini(void)
  */
     /*  Setting do_sol_session_cleanup to nonzero will cause
      *    ipmiconsole_engine_teardown() to block until all active
-     *    ipmi sol sessions have been cleanly closed or timed-out.
+     *    IPMI SOL sessions have been cleanly closed or timed-out.
      */
     int do_sol_session_cleanup = 1;
 
@@ -114,10 +131,15 @@ void ipmi_fini(void)
 
 int is_ipmi_dev(const char *dev, char **host_ref)
 {
-    const char *prefix = "ipmi:";
+/*  Returns 1 if 'dev' appears to be a valid IPMI device name
+ *    (ie, contains the "ipmi" tag), storing a new string containing
+ *    the hostname in the reference parm 'host_ref'; o/w, returns 0.
+ */
+    const char * const prefix = "ipmi:";
 
-    assert(dev != NULL);
-
+    if (dev == NULL) {
+        return(0);
+    }
     if (strncasecmp(dev, prefix, strlen(prefix)) != 0) {
         return(0);
     }
@@ -134,7 +156,7 @@ int is_ipmi_dev(const char *dev, char **host_ref)
 
 int init_ipmi_opts(ipmiopt_t *iopts)
 {
-/*  Initializes [iopts] to the default values.
+/*  Initializes 'iopts' to the default values.
  *  Returns 0 on success, -1 on error.
  */
     if (iopts == NULL) {
@@ -151,75 +173,400 @@ int init_ipmi_opts(ipmiopt_t *iopts)
 int parse_ipmi_opts(
     ipmiopt_t *iopts, const char *str, char *errbuf, int errlen)
 {
-/*  Parses 'str' for ipmi device options 'iopts'.
- *    The 'iopts' struct should be initialized to a default value.
- *    The 'str' string is of the form "[<username>[,<password>[,<K_g key>]]]".
- *  An empty 'str' is valid and denotes specifying no username & password.
- *  Returns 0 and overwrites the 'iopts' struct on success; o/w, returns -1
- *    (writing an error message into 'errbuf' if defined).
+/*  Parses 'str' for IPMI device options 'iopts'.
+ *    The 'iopts' should be initialized to a default value beforehand.
+ *  Returns 0 and updates the 'iopts' struct on success; o/w, returns -1
+ *    (writing an error message into buffer 'errbuf' of length 'errlen').
  */
-    ipmiopt_t ioptsTmp;
-    char buf[MAX_LINE];
-    const char * const separators = ",";
-    char *tok;
-    int n;
+    ipmiopt_t           ioptsTmp;
+    char                buf[MAX_LINE];
+    char               *tok;
+    const char * const  separators = ",";
 
-    assert(iopts != NULL);
-
-    init_ipmi_opts(&ioptsTmp);
+    if (iopts == NULL) {
+        log_err(0, "parse_ipmi_opts: iopts ptr is NULL");
+    }
+    ioptsTmp = *iopts;
 
     if (strlcpy(buf, str, sizeof(buf)) >= sizeof(buf)) {
         if ((errbuf != NULL) && (errlen > 0)) {
             snprintf(errbuf, errlen,
-                "ipmiopt string exceeded buffer size");
+                "ipmiopts string exceeds %lu-byte maximum", sizeof(buf) - 1);
         }
         return(-1);
     }
-    if ((tok = strtok(buf, separators))) {
-        n = strlcpy(ioptsTmp.username, tok, sizeof(ioptsTmp.username));
-        if (n >= sizeof(ioptsTmp.username)) {
+    /*  Support previous ipmiopts format for backwards-compatibility.
+     */
+    if (!is_ipmi_opt_tag(buf)) {
+        if (parse_ipmi_opts_v1(&ioptsTmp, buf, errbuf, errlen) < 0) {
+            return(-1);
+        }
+    }
+    else {
+        tok = strtok(buf, separators);
+        while (tok != NULL) {
+            if (process_ipmi_opt(&ioptsTmp, tok, errbuf, errlen) < 0) {
+                return(-1);
+            }
+            tok = strtok(NULL, separators);
+        }
+    }
+    *iopts = ioptsTmp;
+    return(0);
+}
+
+
+static int is_ipmi_opt_tag(const char *str)
+{
+/*  Returns 1 if 'str' is a recognized ipmiopts tag; o/w, returns 0.
+ */
+    if ((str == NULL) || (str[0] == '\0') || (str[1] != ':')) {
+        return(0);
+    }
+    switch (toupper(str[0])) {
+        case 'U': case 'P': case 'K': case 'L': case 'C': case 'W':
+            return(1);
+    }
+    return(0);
+}
+
+
+static int parse_ipmi_opts_v1(
+    ipmiopt_t *iopts, char *str, char *errbuf, int errlen)
+{
+/*  Parses/modifies 'str' for IPMI device options.
+ *    The 'str' string is of the form "[<user>[,<pswd[,<K_g>[,<w-flags>]]]]".
+ *    An empty 'str' is valid and denotes specifying the default behavior.
+ *  Returns 0 and updates the 'iopts' struct on success; o/w, returns -1
+ *    (writing an error message into buffer 'errbuf' of length 'errlen').
+ */
+    char               *tok;
+    const char * const  separators = ",";
+
+    assert(iopts != NULL);
+    assert(str != NULL);
+
+    if ((tok = strtok(str, separators))) {
+        if (process_ipmi_opt_username(iopts, tok, errbuf, errlen) < 0) {
+            return(-1);
+        }
+    }
+    if ((tok = strtok(NULL, separators))) {
+        if (process_ipmi_opt_password(iopts, tok, errbuf, errlen) < 0) {
+            return(-1);
+        }
+    }
+    if ((tok = strtok(NULL, separators))) {
+        if (process_ipmi_opt_k_g(iopts, tok, errbuf, errlen) < 0) {
+            return(-1);
+        }
+    }
+    while ((tok = strtok(NULL, separators))) {
+        if (process_ipmi_opt_workaround(iopts, tok, errbuf, errlen) < 0) {
+            return(-1);
+        }
+    }
+    return(0);
+}
+
+
+static int process_ipmi_opt(
+    ipmiopt_t *iopts, const char *str, char *errbuf, int errlen)
+{
+/*  Parses 'str' for a single IPMI device option.
+ *    The 'str' string is of the form "K:VAL", where "K" is a single-char
+ *    key tag specifying the option type and "VAL" is its corresponding value.
+ *  Returns 0 and updates the 'iopts' struct on success; o/w, returns -1
+ *    (writing an error message into buffer 'errbuf' of length 'errlen').
+ */
+    char        c;
+    const char *p;
+    int         rv;
+
+    assert(iopts != NULL);
+    assert(str != NULL);
+
+    if (!is_ipmi_opt_tag(str)) {
+        if ((errbuf != NULL) && (errlen > 0)) {
+            snprintf(errbuf, errlen, "invalid ipmiopts string \"%s\"", str);
+        }
+        return(-1);
+    }
+    c = toupper(str[0]);
+    p = str + 2;
+    switch (c) {
+        case 'U':
+            rv = process_ipmi_opt_username(iopts, p, errbuf, errlen);
+            break;
+        case 'P':
+            rv = process_ipmi_opt_password(iopts, p, errbuf, errlen);
+            break;
+        case 'K':
+            rv = process_ipmi_opt_k_g(iopts, p, errbuf, errlen);
+            break;
+        case 'L':
+            rv = process_ipmi_opt_privilege(iopts, p, errbuf, errlen);
+            break;
+        case 'C':
+            rv = process_ipmi_opt_cipher(iopts, p, errbuf, errlen);
+            break;
+        case 'W':
+            rv = process_ipmi_opt_workaround(iopts, p, errbuf, errlen);
+            break;
+        default:
+            /*  This case should never happen since is_ipmi_opt_tag() above
+             *    has already validated the option tag.
+             */
+            log_err(0, "invalid ipmiopts tag '%c'", c);
+            break;
+    }
+    return(!rv ? 0 : -1);
+}
+
+
+static int process_ipmi_opt_username(
+    ipmiopt_t *iopts, const char *str, char *errbuf, int errlen)
+{
+/*  Parses 'str' for the IPMI device username.
+ *    If the option value is the empty string, the IPMI default will be used.
+ *  Returns 0 and updates the 'iopts' struct on success; o/w, returns -1
+ *    (writing an error message into buffer 'errbuf' of length 'errlen').
+ */
+    assert(iopts != NULL);
+    assert(str != NULL);
+
+    if (str[0] == '\0') {
+        iopts->username[0] = '\0';
+    }
+    else {
+        long int n;
+
+        n = strlcpy(iopts->username, str, sizeof(iopts->username));
+        if (n >= sizeof(iopts->username)) {
             if ((errbuf != NULL) && (errlen > 0)) {
                 snprintf(errbuf, errlen,
-                    "ipmiopt username exceeds %d-byte max length",
+                    "IPMI username exceeds %d-byte maximum",
                     IPMI_MAX_USER_LEN);
             }
             return(-1);
         }
     }
-    if ((tok = strtok(NULL, separators))) {
-        n = parse_key(ioptsTmp.password, tok, sizeof(ioptsTmp.password));
+    return(0);
+}
+
+
+static int process_ipmi_opt_password(
+    ipmiopt_t *iopts, const char *str, char *errbuf, int errlen)
+{
+/*  Parses 'str' for the IPMI device password.
+ *    If the option value is the empty string, the IPMI default will be used.
+ *  Returns 0 and updates the 'iopts' struct on success; o/w, returns -1
+ *    (writing an error message into buffer 'errbuf' of length 'errlen').
+ */
+    assert(iopts != NULL);
+    assert(str != NULL);
+
+    if (str[0] == '\0') {
+        iopts->password[0] = '\0';
+    }
+    else {
+        long int n; 
+
+        n = parse_key(iopts->password, str, sizeof(iopts->password));
         if (n < 0) {
             if ((errbuf != NULL) && (errlen > 0)) {
                 snprintf(errbuf, errlen,
-                    "ipmiopt password exceeds %d-byte max length",
+                    "IPMI password exceeds %d-byte maximum",
                     IPMI_MAX_PSWD_LEN);
             }
             return(-1);
         }
-#if 0
-        /*  FIXME: A warning should be logged here when characters in the
-         *    password key are ignored due to an embedded NUL character.
-         *    But currently there is no clean way to pass this warning back up
-         *    to the caller in order to associate it with a line number and
-         *    console name.
-         */
-        if (n > strlen(ioptsTmp.password)) {
-        }
-#endif
     }
-    if ((tok = strtok(NULL, separators))) {
-        n = parse_key((char *) ioptsTmp.kg, tok, sizeof(ioptsTmp.kg));
+    return(0);
+}
+
+
+static int process_ipmi_opt_k_g(
+    ipmiopt_t *iopts, const char *str, char *errbuf, int errlen)
+{
+/*  Parses 'str' for the IPMI device k_g key.
+ *    If the option value is the empty string, the IPMI default will be used.
+ *  Returns 0 and updates the 'iopts' struct on success; o/w, returns -1
+ *    (writing an error message into buffer 'errbuf' of length 'errlen').
+ */
+    assert(iopts != NULL);
+    assert(str != NULL);
+
+    if (str[0] == '\0') {
+        iopts->kg[0] = '\0';
+        iopts->kgLen = 0;
+    }
+    else {
+        long int n; 
+
+        n = parse_key((char *) iopts->kg, str, sizeof(iopts->kg));
         if (n < 0) {
             if ((errbuf != NULL) && (errlen > 0)) {
                 snprintf(errbuf, errlen,
-                    "ipmiopt k_g exceeds %d-byte max length",
+                    "IPMI k_g exceeds %d-byte maximum",
                     IPMI_MAX_KG_LEN);
             }
             return(-1);
         }
-        ioptsTmp.kgLen = n;
+        iopts->kgLen = n;
     }
-    *iopts = ioptsTmp;
+    return(0);
+}
+
+
+static int process_ipmi_opt_privilege(
+    ipmiopt_t *iopts, const char *str, char *errbuf, int errlen)
+{
+/*  Parses 'str' for the IPMI device privilege level.
+ *    If the option value is the empty string, the IPMI default will be used.
+ *  Returns 0 and updates the 'iopts' struct on success; o/w, returns -1
+ *    (writing an error message into buffer 'errbuf' of length 'errlen').
+ */
+    assert(iopts != NULL);
+    assert(str != NULL);
+
+    if (str[0] == '\0') {
+        iopts->privilegeLevel = -1;
+    }
+    else if (!strcasecmp(str, "user")) {
+        iopts->privilegeLevel = IPMICONSOLE_PRIVILEGE_USER;
+    }
+    else if (!strcasecmp(str, "operator")) {
+        iopts->privilegeLevel = IPMICONSOLE_PRIVILEGE_OPERATOR;
+    }
+    else if (!strcasecmp(str, "admin") || !strcasecmp(str, "administrator")) {
+        iopts->privilegeLevel = IPMICONSOLE_PRIVILEGE_ADMIN;
+    }
+    else {
+        long int  n;
+        char     *p;
+
+        errno = 0;
+        n = strtol(str, &p, 0);
+
+        if ((*p != '\0') || (errno == ERANGE)) {
+            if ((errbuf != NULL) && (errlen > 0)) {
+                snprintf(errbuf, errlen,
+                    "invalid IPMI privilege level \"%s\"", str);
+            }
+            return(-1);
+        }
+        iopts->privilegeLevel = n;
+    }
+    return(0);
+}
+
+
+static int process_ipmi_opt_cipher(
+    ipmiopt_t *iopts, const char *str, char *errbuf, int errlen)
+{
+/*  Parses 'str' for the IPMI device cipher suite.
+ *    If the option value is the empty string, the IPMI default will be used.
+ *  Returns 0 and updates the 'iopts' struct on success; o/w, returns -1
+ *    (writing an error message into buffer 'errbuf' of length 'errlen').
+ */
+    assert(iopts != NULL);
+    assert(str != NULL);
+
+    if (str[0] == '\0') {
+        iopts->cipherSuite = -1;
+    }
+    else {
+        long int  n;
+        char     *p;
+
+        errno = 0;
+        n = strtol(str, &p, 0);
+
+        if ((*p != '\0') || (errno == ERANGE)) {
+            if ((errbuf != NULL) && (errlen > 0)) {
+                snprintf(errbuf, errlen,
+                    "invalid IPMI cipher suite \"%s\"", str);
+            }
+            return(-1);
+        }
+        iopts->cipherSuite = n;
+    }
+    return(0);
+}
+
+
+static int process_ipmi_opt_workaround(
+    ipmiopt_t *iopts, const char *str, char *errbuf, int errlen)
+{
+/*  Parses 'str' for the IPMI device workaround flag.
+ *    If the option value is the empty string, the IPMI default will be used.
+ *  Returns 0 and updates the 'iopts' struct on success; o/w, returns -1
+ *    (writing an error message into buffer 'errbuf' of length 'errlen').
+ */
+    assert(iopts != NULL);
+    assert(str != NULL);
+
+    if (str[0] == '\0') {
+        iopts->workaroundFlags = IPMICONSOLE_WORKAROUND_DEFAULT;
+    }
+    else if (!strcasecmp(str, "authcap")) {
+        iopts->workaroundFlags |=
+            IPMICONSOLE_WORKAROUND_AUTHENTICATION_CAPABILITIES;
+    }
+    else if (!strcasecmp(str, "intel20")) {
+        iopts->workaroundFlags |=
+            IPMICONSOLE_WORKAROUND_INTEL_2_0_SESSION;
+    }
+    else if (!strcasecmp(str, "supermicro20")) {
+        iopts->workaroundFlags |=
+            IPMICONSOLE_WORKAROUND_SUPERMICRO_2_0_SESSION;
+    }
+    else if (!strcasecmp(str, "sun20")) {
+        iopts->workaroundFlags |=
+            IPMICONSOLE_WORKAROUND_SUN_2_0_SESSION;
+    }
+    else if (!strcasecmp(str, "opensesspriv")) {
+        iopts->workaroundFlags |=
+            IPMICONSOLE_WORKAROUND_OPEN_SESSION_PRIVILEGE;
+    }
+    else if (!strcasecmp(str, "integritycheckvalue")) {
+        iopts->workaroundFlags |=
+            IPMICONSOLE_WORKAROUND_NON_EMPTY_INTEGRITY_CHECK_VALUE;
+    }
+    else if (!strcasecmp(str, "solpayloadsize")) {
+        iopts->workaroundFlags |=
+            IPMICONSOLE_WORKAROUND_IGNORE_SOL_PAYLOAD_SIZE;
+    }
+    else if (!strcasecmp(str, "solport")) {
+        iopts->workaroundFlags |=
+            IPMICONSOLE_WORKAROUND_IGNORE_SOL_PORT;
+    }
+    else if (!strcasecmp(str, "solstatus")) {
+        iopts->workaroundFlags |=
+            IPMICONSOLE_WORKAROUND_SKIP_SOL_ACTIVATION_STATUS;
+    }
+    else {
+        long int  n;
+        char     *p;
+
+        errno = 0;
+        n = strtol(str, &p, 0);
+
+        if ((*p != '\0') || (n < 0) || (errno == ERANGE)) {
+            if ((errbuf != NULL) && (errlen > 0)) {
+                snprintf(errbuf, errlen,
+                    "invalid IPMI workaround flag \"%s\"", str);
+            }
+            return(-1);
+        }
+        else if (n == 0) {
+            iopts->workaroundFlags = IPMICONSOLE_WORKAROUND_DEFAULT;
+        }
+        else {
+            iopts->workaroundFlags |= n;
+        }
+    }
     return(0);
 }
 
@@ -234,7 +581,7 @@ static int parse_key(char *dst, const char *src, size_t dstlen)
  *    A hexadecimal string will be converted to binary and may contain
  *    embedded NUL characters.
  *  Returns the length of the key (in bytes) written to 'dst'
- *    (not including the final NUL-termination character),
+ *    (not including the terminating null character),
  *    or -1 if truncation occurred.
  */
     const char *hexdigits = "0123456789ABCDEFabcdef";
@@ -449,7 +796,7 @@ static int initiate_ipmi_connect(obj_t *ipmi)
 /*  Initiates an IPMI connection attempt.
  *  Returns 0 if the connection initiation is successful, or -1 on error.
  *
- *  XXX: This routine assumes the ipmi mutex is already locked.
+ *  XXX: This routine assumes the ipmi obj mutex is already locked.
  */
     int rc;
 
@@ -488,7 +835,7 @@ static int create_ipmi_ctx(obj_t *ipmi)
 /*  Creates a new IPMI context 'ipmi'.
  *  Returns 0 if the context is successfully created; o/w, returns -1.
  *
- *  XXX: This routine assumes the ipmi mutex is already locked.
+ *  XXX: This routine assumes the ipmi obj mutex is already locked.
  */
     struct ipmiconsole_ipmi_config ipmi_config;
     struct ipmiconsole_protocol_config protocol_config;
@@ -535,7 +882,7 @@ static int complete_ipmi_connect(obj_t *ipmi)
 /*  Completes an IPMI connection attempt.
  *  Returns 0 if the connection is successfully established, or -1 on error.
  *
- *  XXX: This routine assumes the ipmi mutex is already locked.
+ *  XXX: This routine assumes the ipmi obj mutex is already locked.
  */
     ipmiconsole_ctx_status_t status;
 
@@ -578,7 +925,7 @@ static void fail_ipmi_connect(obj_t *ipmi)
 /*  Logs an error message for the connection failure and sets a timer to
  *    establish a new connection attempt.
  *
- *  XXX: This routine assumes the ipmi mutex is already locked.
+ *  XXX: This routine assumes the ipmi obj mutex is already locked.
  */
     ipmi->aux.ipmi.state = CONMAN_IPMI_DOWN;
 
