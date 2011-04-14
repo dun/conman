@@ -165,7 +165,7 @@ int init_ipmi_opts(ipmiopt_t *iopts)
     memset(iopts, 0, sizeof(ipmiopt_t));
     iopts->privilegeLevel = -1;
     iopts->cipherSuite = -1;
-    iopts->workaroundFlags = IPMICONSOLE_WORKAROUND_DEFAULT;
+    iopts->workaroundFlags = 0;
     return(0);
 }
 
@@ -508,7 +508,7 @@ static int process_ipmi_opt_workaround(
     assert(str != NULL);
 
     if (str[0] == '\0') {
-        iopts->workaroundFlags = IPMICONSOLE_WORKAROUND_DEFAULT;
+        iopts->workaroundFlags = 0;
     }
     else if (!strcasecmp(str, "authcap")) {
         iopts->workaroundFlags |=
@@ -561,7 +561,7 @@ static int process_ipmi_opt_workaround(
             return(-1);
         }
         else if (n == 0) {
-            iopts->workaroundFlags = IPMICONSOLE_WORKAROUND_DEFAULT;
+            iopts->workaroundFlags = 0;
         }
         else {
             iopts->workaroundFlags |= n;
