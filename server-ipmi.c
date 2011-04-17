@@ -173,7 +173,9 @@ int init_ipmi_opts(ipmiopt_t *iopts)
 int parse_ipmi_opts(
     ipmiopt_t *iopts, const char *str, char *errbuf, int errlen)
 {
-/*  Parses 'str' for IPMI device options 'iopts'.
+/*  Parses string 'str' for IPMI device options 'iopts'.
+ *    The string 'str' is broken up into comma-delimited tokens; as such,
+ *    token values for a given IPMI device option cannot contain commas.
  *    The 'iopts' should be initialized to a default value beforehand.
  *  Returns 0 and updates the 'iopts' struct on success; o/w, returns -1
  *    (writing an error message into buffer 'errbuf' of length 'errlen').
@@ -196,6 +198,7 @@ int parse_ipmi_opts(
         return(-1);
     }
     /*  Support previous ipmiopts format for backwards-compatibility.
+     *  This behavior is considered deprecated and may be removed at any time.
      */
     if (!is_ipmi_opt_tag(buf)) {
         if (parse_ipmi_opts_v1(&ioptsTmp, buf, errbuf, errlen) < 0) {
@@ -218,7 +221,7 @@ int parse_ipmi_opts(
 
 static int is_ipmi_opt_tag(const char *str)
 {
-/*  Returns 1 if 'str' is a recognized ipmiopts tag; o/w, returns 0.
+/*  Returns 1 if string 'str' is a recognized ipmiopts tag; o/w, returns 0.
  */
     if ((str == NULL) || (str[0] == '\0') || (str[1] != ':')) {
         return(0);
@@ -234,11 +237,12 @@ static int is_ipmi_opt_tag(const char *str)
 static int parse_ipmi_opts_v1(
     ipmiopt_t *iopts, char *str, char *errbuf, int errlen)
 {
-/*  Parses/modifies 'str' for IPMI device options.
- *    The 'str' string is of the form "[<user>[,<pswd[,<K_g>[,<w-flags>]]]]".
+/*  Parses/modifies string 'str' for IPMI device options.
+ *    The string 'str' is of the form "[<user>[,<pswd[,<K_g>[,<w-flags>]]]]".
  *    An empty 'str' is valid and denotes specifying the default behavior.
  *  Returns 0 and updates the 'iopts' struct on success; o/w, returns -1
  *    (writing an error message into buffer 'errbuf' of length 'errlen').
+ *  This behavior is considered deprecated and may be removed at any time.
  */
     char               *tok;
     const char * const  separators = ",";
@@ -273,9 +277,9 @@ static int parse_ipmi_opts_v1(
 static int process_ipmi_opt(
     ipmiopt_t *iopts, const char *str, char *errbuf, int errlen)
 {
-/*  Parses 'str' for a single IPMI device option.
- *    The 'str' string is of the form "K:VAL", where "K" is a single-char
- *    key tag specifying the option type and "VAL" is its corresponding value.
+/*  Parses string 'str' for a single IPMI device option.
+ *    The string 'str' is of the form "X:VALUE", where "X" is a single-char key
+ *    tag specifying the option type and "VALUE" is its corresponding value.
  *  Returns 0 and updates the 'iopts' struct on success; o/w, returns -1
  *    (writing an error message into buffer 'errbuf' of length 'errlen').
  */
@@ -327,7 +331,7 @@ static int process_ipmi_opt(
 static int process_ipmi_opt_username(
     ipmiopt_t *iopts, const char *str, char *errbuf, int errlen)
 {
-/*  Parses 'str' for the IPMI device username.
+/*  Parses string 'str' for the IPMI device username.
  *    If the option value is the empty string, the IPMI default will be used.
  *  Returns 0 and updates the 'iopts' struct on success; o/w, returns -1
  *    (writing an error message into buffer 'errbuf' of length 'errlen').
@@ -358,7 +362,7 @@ static int process_ipmi_opt_username(
 static int process_ipmi_opt_password(
     ipmiopt_t *iopts, const char *str, char *errbuf, int errlen)
 {
-/*  Parses 'str' for the IPMI device password.
+/*  Parses string 'str' for the IPMI device password.
  *    If the option value is the empty string, the IPMI default will be used.
  *  Returns 0 and updates the 'iopts' struct on success; o/w, returns -1
  *    (writing an error message into buffer 'errbuf' of length 'errlen').
@@ -389,7 +393,7 @@ static int process_ipmi_opt_password(
 static int process_ipmi_opt_k_g(
     ipmiopt_t *iopts, const char *str, char *errbuf, int errlen)
 {
-/*  Parses 'str' for the IPMI device k_g key.
+/*  Parses string 'str' for the IPMI device k_g key.
  *    If the option value is the empty string, the IPMI default will be used.
  *  Returns 0 and updates the 'iopts' struct on success; o/w, returns -1
  *    (writing an error message into buffer 'errbuf' of length 'errlen').
@@ -422,7 +426,7 @@ static int process_ipmi_opt_k_g(
 static int process_ipmi_opt_privilege(
     ipmiopt_t *iopts, const char *str, char *errbuf, int errlen)
 {
-/*  Parses 'str' for the IPMI device privilege level.
+/*  Parses string 'str' for the IPMI device privilege level.
  *    If the option value is the empty string, the IPMI default will be used.
  *  Returns 0 and updates the 'iopts' struct on success; o/w, returns -1
  *    (writing an error message into buffer 'errbuf' of length 'errlen').
@@ -465,7 +469,7 @@ static int process_ipmi_opt_privilege(
 static int process_ipmi_opt_cipher(
     ipmiopt_t *iopts, const char *str, char *errbuf, int errlen)
 {
-/*  Parses 'str' for the IPMI device cipher suite.
+/*  Parses string 'str' for the IPMI device cipher suite.
  *    If the option value is the empty string, the IPMI default will be used.
  *  Returns 0 and updates the 'iopts' struct on success; o/w, returns -1
  *    (writing an error message into buffer 'errbuf' of length 'errlen').
@@ -499,7 +503,7 @@ static int process_ipmi_opt_cipher(
 static int process_ipmi_opt_workaround(
     ipmiopt_t *iopts, const char *str, char *errbuf, int errlen)
 {
-/*  Parses 'str' for the IPMI device workaround flag.
+/*  Parses string 'str' for the IPMI device workaround flag.
  *    If the option value is the empty string, the IPMI default will be used.
  *  Returns 0 and updates the 'iopts' struct on success; o/w, returns -1
  *    (writing an error message into buffer 'errbuf' of length 'errlen').
