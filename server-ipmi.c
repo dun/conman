@@ -436,7 +436,7 @@ static int process_ipmi_opt_privilege(
     else if (!strcasecmp(str, "user")) {
         iopts->privilegeLevel = IPMICONSOLE_PRIVILEGE_USER;
     }
-    else if (!strcasecmp(str, "operator")) {
+    else if (!strcasecmp(str, "op") || !strcasecmp(str, "operator")) {
         iopts->privilegeLevel = IPMICONSOLE_PRIVILEGE_OPERATOR;
     }
     else if (!strcasecmp(str, "admin") || !strcasecmp(str, "administrator")) {
