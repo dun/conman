@@ -393,7 +393,7 @@ static int process_ipmi_opt_password(
 static int process_ipmi_opt_k_g(
     ipmiopt_t *iopts, const char *str, char *errbuf, int errlen)
 {
-/*  Parses string 'str' for the IPMI device k_g key.
+/*  Parses string 'str' for the IPMI device K_g key.
  *    If the option value is the empty string, the IPMI default will be used.
  *  Returns 0 and updates the 'iopts' struct on success; o/w, returns -1
  *    (writing an error message into buffer 'errbuf' of length 'errlen').
@@ -412,7 +412,7 @@ static int process_ipmi_opt_k_g(
         if (n < 0) {
             if ((errbuf != NULL) && (errlen > 0)) {
                 snprintf(errbuf, errlen,
-                    "IPMI k_g exceeds %d-byte maximum",
+                    "IPMI K_g exceeds %d-byte maximum",
                     IPMI_MAX_KG_LEN);
             }
             return(-1);
