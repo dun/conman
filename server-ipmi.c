@@ -735,6 +735,12 @@ obj_t * create_ipmi_obj(server_conf_t *conf, char *name,
      */
     list_append(conf->objs, ipmi);
 
+    DPRINTF((10,
+        " IPMI [%s] H:%s U:%s P:%s K:%s L:%d C:%d W:0x%X\n",
+        ipmi->name, ipmi->aux.ipmi.host, ipmi->aux.ipmi.iconf.username,
+        ipmi->aux.ipmi.iconf.password, ipmi->aux.ipmi.iconf.kg,
+        ipmi->aux.ipmi.iconf.privilegeLevel, ipmi->aux.ipmi.iconf.cipherSuite,
+        ipmi->aux.ipmi.iconf.workaroundFlags));
     return(ipmi);
 }
 
