@@ -200,7 +200,7 @@ int parse_ipmi_opts(
     /*  Support previous ipmiopts format for backwards-compatibility.
      *  This behavior is considered deprecated and may be removed at any time.
      */
-    if (!is_ipmi_opt_tag(buf)) {
+    if ((buf[0] != '\0') && (buf[1] != ':')) {
         if (parse_ipmi_opts_v1(&ioptsTmp, buf, errbuf, errlen) < 0) {
             return(-1);
         }
