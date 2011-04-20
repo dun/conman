@@ -298,7 +298,7 @@ static int process_ipmi_opt(
  */
     char        c;
     const char *p;
-    int         rv;
+    int         rv = -1;
 
     assert(iopts != NULL);
     assert(str != NULL);
@@ -337,7 +337,7 @@ static int process_ipmi_opt(
             log_err(0, "invalid ipmiopts tag '%c'", c);
             break;
     }
-    return(!rv ? 0 : -1);
+    return((rv == 0) ? 0 : -1);
 }
 
 
