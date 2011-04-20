@@ -52,11 +52,11 @@
 #include "wrapper.h"
 
 
-static int is_ipmi_opt_tag(const char *str);
 static int parse_ipmi_opts_v1(
     ipmiopt_t *iopts, char *str, char *errbuf, int errlen);
 static int process_ipmi_opt(
     ipmiopt_t *iopts, const char *str, char *errbuf, int errlen);
+static int is_ipmi_opt_tag(const char *str);
 static int process_ipmi_opt_username(
     ipmiopt_t *iopts, const char *str, char *errbuf, int errlen);
 static int process_ipmi_opt_password(
@@ -219,21 +219,6 @@ int parse_ipmi_opts(
 }
 
 
-static int is_ipmi_opt_tag(const char *str)
-{
-/*  Returns 1 if string 'str' is a recognized ipmiopts tag; o/w, returns 0.
- */
-    if ((str == NULL) || (str[0] == '\0') || (str[1] != ':')) {
-        return(0);
-    }
-    switch (toupper(str[0])) {
-        case 'U': case 'P': case 'K': case 'L': case 'C': case 'W':
-            return(1);
-    }
-    return(0);
-}
-
-
 static int parse_ipmi_opts_v1(
     ipmiopt_t *iopts, char *str, char *errbuf, int errlen)
 {
@@ -338,6 +323,21 @@ static int process_ipmi_opt(
             break;
     }
     return((rv == 0) ? 0 : -1);
+}
+
+
+static int is_ipmi_opt_tag(const char *str)
+{
+/*  Returns 1 if string 'str' is a recognized ipmiopts tag; o/w, returns 0.
+ */
+    if ((str == NULL) || (str[0] == '\0') || (str[1] != ':')) {
+        return(0);
+    }
+    switch (toupper(str[0])) {
+        case 'U': case 'P': case 'K': case 'L': case 'C': case 'W':
+            return(1);
+    }
+    return(0);
 }
 
 
