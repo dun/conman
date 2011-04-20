@@ -612,8 +612,7 @@ static int process_ipmi_opt_workaround(
             }
             return(-1);
         }
-        else if (!ipmiconsole_workaround_flags_is_valid(
-                iopts->workaroundFlags)) {
+        else if (!ipmiconsole_workaround_flags_is_valid(u)) {
             if ((errbuf != NULL) && (errlen > 0)) {
                 snprintf(errbuf, errlen,
                     "invalid IPMI workaround flag 0x%X", u);
