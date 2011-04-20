@@ -356,9 +356,10 @@ static int process_ipmi_opt_username(
         iopts->username[0] = '\0';
     }
     else {
-        long int n;
+        int n;
 
         n = strlcpy(iopts->username, str, sizeof(iopts->username));
+
         if (n >= sizeof(iopts->username)) {
             if ((errbuf != NULL) && (errlen > 0)) {
                 snprintf(errbuf, errlen,
@@ -393,9 +394,10 @@ static int process_ipmi_opt_password(
         iopts->password[0] = '\0';
     }
     else {
-        long int n; 
+        int n; 
 
         n = parse_key(iopts->password, str, sizeof(iopts->password));
+
         if (n < 0) {
             if ((errbuf != NULL) && (errlen > 0)) {
                 snprintf(errbuf, errlen,
@@ -431,9 +433,10 @@ static int process_ipmi_opt_k_g(
         iopts->kgLen = 0;
     }
     else {
-        long int n; 
+        int n; 
 
         n = parse_key((char *) iopts->kg, str, sizeof(iopts->kg));
+
         if (n < 0) {
             if ((errbuf != NULL) && (errlen > 0)) {
                 snprintf(errbuf, errlen,
@@ -442,14 +445,13 @@ static int process_ipmi_opt_k_g(
             }
             return(-1);
         }
-        iopts->kgLen = n;
-
-        if (!ipmiconsole_k_g_is_valid(iopts->kg, iopts->kgLen)) {
+        if (!ipmiconsole_k_g_is_valid(iopts->kg, n)) {
             if ((errbuf != NULL) && (errlen > 0)) {
                 snprintf(errbuf, errlen, "invalid IPMI K_g");
             }
             return(-1);
         }
+        iopts->kgLen = n;
     }
     return(0);
 }
@@ -492,15 +494,14 @@ static int process_ipmi_opt_privilege(
             }
             return(-1);
         }
-        iopts->privilegeLevel = n;
-
-        if (!ipmiconsole_privilege_level_is_valid(iopts->privilegeLevel)) {
+        if (!ipmiconsole_privilege_level_is_valid(n)) {
             if ((errbuf != NULL) && (errlen > 0)) {
                 snprintf(errbuf, errlen,
-                    "invalid IPMI privilege level %d", iopts->privilegeLevel);
+                    "invalid IPMI privilege level %ld", n);
             }
             return(-1);
         }
+        iopts->privilegeLevel = n;
     }
     return(0);
 }
@@ -534,15 +535,14 @@ static int process_ipmi_opt_cipher(
             }
             return(-1);
         }
-        iopts->cipherSuite = n;
-
-        if (!ipmiconsole_cipher_suite_id_is_valid(iopts->cipherSuite)) {
+        if (!ipmiconsole_cipher_suite_id_is_valid(n)) {
             if ((errbuf != NULL) && (errlen > 0)) {
                 snprintf(errbuf, errlen,
-                    "invalid IPMI cipher suite %d", iopts->cipherSuite);
+                    "invalid IPMI cipher suite %ld", n);
             }
             return(-1);
         }
+        iopts->cipherSuite = n;
     }
     return(0);
 }
