@@ -354,6 +354,12 @@ static int process_ipmi_opt_username(
             }
             return(-1);
         }
+        if (!ipmiconsole_username_is_valid(iopts->username)) {
+            if ((errbuf != NULL) && (errlen > 0)) {
+                snprintf(errbuf, errlen, "invalid IPMI username");
+            }
+            return(-1);
+        }
     }
     return(0);
 }
@@ -382,6 +388,12 @@ static int process_ipmi_opt_password(
                 snprintf(errbuf, errlen,
                     "IPMI password exceeds %d-byte maximum",
                     IPMI_MAX_PSWD_LEN);
+            }
+            return(-1);
+        }
+        if (!ipmiconsole_password_is_valid(iopts->password)) {
+            if ((errbuf != NULL) && (errlen > 0)) {
+                snprintf(errbuf, errlen, "invalid IPMI password");
             }
             return(-1);
         }
@@ -418,6 +430,13 @@ static int process_ipmi_opt_k_g(
             return(-1);
         }
         iopts->kgLen = n;
+
+        if (!ipmiconsole_k_g_is_valid(iopts->kg, iopts->kgLen)) {
+            if ((errbuf != NULL) && (errlen > 0)) {
+                snprintf(errbuf, errlen, "invalid IPMI K_g");
+            }
+            return(-1);
+        }
     }
     return(0);
 }
@@ -461,6 +480,14 @@ static int process_ipmi_opt_privilege(
             return(-1);
         }
         iopts->privilegeLevel = n;
+
+        if (!ipmiconsole_privilege_level_is_valid(iopts->privilegeLevel)) {
+            if ((errbuf != NULL) && (errlen > 0)) {
+                snprintf(errbuf, errlen,
+                    "invalid IPMI privilege level %d", iopts->privilegeLevel);
+            }
+            return(-1);
+        }
     }
     return(0);
 }
@@ -495,6 +522,14 @@ static int process_ipmi_opt_cipher(
             return(-1);
         }
         iopts->cipherSuite = n;
+
+        if (!ipmiconsole_cipher_suite_id_is_valid(iopts->cipherSuite)) {
+            if ((errbuf != NULL) && (errlen > 0)) {
+                snprintf(errbuf, errlen,
+                    "invalid IPMI cipher suite %d", iopts->cipherSuite);
+            }
+            return(-1);
+        }
     }
     return(0);
 }
@@ -551,24 +586,32 @@ static int process_ipmi_opt_workaround(
             IPMICONSOLE_WORKAROUND_SKIP_SOL_ACTIVATION_STATUS;
     }
     else {
-        long int  n;
-        char     *p;
+        unsigned int  u;
+        char         *p;
 
         errno = 0;
-        n = strtol(str, &p, 0);
+        u = strtoul(str, &p, 0);
 
-        if ((*p != '\0') || (n < 0) || (errno == ERANGE)) {
+        if ((*p != '\0') || (errno == ERANGE)) {
             if ((errbuf != NULL) && (errlen > 0)) {
                 snprintf(errbuf, errlen,
                     "invalid IPMI workaround flag \"%s\"", str);
             }
             return(-1);
         }
-        else if (n == 0) {
+        else if (!ipmiconsole_workaround_flags_is_valid(
+                iopts->workaroundFlags)) {
+            if ((errbuf != NULL) && (errlen > 0)) {
+                snprintf(errbuf, errlen,
+                    "invalid IPMI workaround flag 0x%X", u);
+            }
+            return(-1);
+        }
+        else if (u == 0) {
             iopts->workaroundFlags = 0;
         }
         else {
-            iopts->workaroundFlags |= n;
+            iopts->workaroundFlags |= u;
         }
     }
     return(0);
