@@ -201,8 +201,7 @@ or hexadecimal; in the latter case, the string should begin with "0x" and
 contain at most 40 hexadecimal digits.  A \fIK_g\fR key entered in hexadecimal
 may contain embedded null characters, but any characters following the first
 null character in the \fIpassword\fR key will be ignored.
-.br
-.sp
+
 .SH CONSOLE DIRECTIVES
 This directive defines an individual console being managed by the daemon.
 The \fBCONSOLE\fR keyword is followed by one or more of the following
