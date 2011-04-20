@@ -253,34 +253,33 @@ static int parse_ipmi_opts_v1(
 
     if ((tok = strtok(str, separators))) {
         if ((tok[0] == '-') && (tok[1] == '\0')) {
-            iopts->username[0] = '\0';
+            tok++;
         }
-        else if (process_ipmi_opt_username(iopts, tok, errbuf, errlen) < 0) {
+        if (process_ipmi_opt_username(iopts, tok, errbuf, errlen) < 0) {
             return(-1);
         }
     }
     if ((tok = strtok(NULL, separators))) {
         if ((tok[0] == '-') && (tok[1] == '\0')) {
-            iopts->password[0] = '\0';
+            tok++;
         }
-        else if (process_ipmi_opt_password(iopts, tok, errbuf, errlen) < 0) {
+        if (process_ipmi_opt_password(iopts, tok, errbuf, errlen) < 0) {
             return(-1);
         }
     }
     if ((tok = strtok(NULL, separators))) {
         if ((tok[0] == '-') && (tok[1] == '\0')) {
-            iopts->kg[0] = '\0';
-            iopts->kgLen = 0;
+            tok++;
         }
-        else if (process_ipmi_opt_k_g(iopts, tok, errbuf, errlen) < 0) {
+        if (process_ipmi_opt_k_g(iopts, tok, errbuf, errlen) < 0) {
             return(-1);
         }
     }
     while ((tok = strtok(NULL, separators))) {
         if ((tok[0] == '-') && (tok[1] == '\0')) {
-            iopts->workaroundFlags = 0;
+            tok++;
         }
-        else if (process_ipmi_opt_workaround(iopts, tok, errbuf, errlen) < 0) {
+        if (process_ipmi_opt_workaround(iopts, tok, errbuf, errlen) < 0) {
             return(-1);
         }
     }
