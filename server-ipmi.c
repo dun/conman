@@ -240,6 +240,7 @@ static int parse_ipmi_opts_v1(
 /*  Parses/modifies string 'str' for IPMI device options.
  *    The string 'str' is of the form "[<user>[,<pswd[,<K_g>[,<w-flags>]]]]".
  *    An empty 'str' is valid and denotes specifying the default behavior.
+ *    A "-" may be used to advance the parser to the next option.
  *  Returns 0 and updates the 'iopts' struct on success; o/w, returns -1
  *    (writing an error message into buffer 'errbuf' of length 'errlen').
  *  This behavior is considered deprecated and may be removed at any time.
@@ -251,22 +252,26 @@ static int parse_ipmi_opts_v1(
     assert(str != NULL);
 
     if ((tok = strtok(str, separators))) {
-        if (process_ipmi_opt_username(iopts, tok, errbuf, errlen) < 0) {
+        if (strcmp(tok, "-") &&
+                process_ipmi_opt_username(iopts, tok, errbuf, errlen) < 0) {
             return(-1);
         }
     }
     if ((tok = strtok(NULL, separators))) {
-        if (process_ipmi_opt_password(iopts, tok, errbuf, errlen) < 0) {
+        if (strcmp(tok, "-") &&
+                process_ipmi_opt_password(iopts, tok, errbuf, errlen) < 0) {
             return(-1);
         }
     }
     if ((tok = strtok(NULL, separators))) {
-        if (process_ipmi_opt_k_g(iopts, tok, errbuf, errlen) < 0) {
+        if (strcmp(tok, "-") &&
+                process_ipmi_opt_k_g(iopts, tok, errbuf, errlen) < 0) {
             return(-1);
         }
     }
     while ((tok = strtok(NULL, separators))) {
-        if (process_ipmi_opt_workaround(iopts, tok, errbuf, errlen) < 0) {
+        if (strcmp(tok, "-") &&
+                process_ipmi_opt_workaround(iopts, tok, errbuf, errlen) < 0) {
             return(-1);
         }
     }
