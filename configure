@@ -1799,52 +1799,6 @@ $as_echo "$ac_res" >&6; }
   eval $as_lineno_stack; test "x$as_lineno_stack" = x && { as_lineno=; unset as_lineno;}
 
 } # ac_fn_c_check_func
-
-# ac_fn_c_check_decl LINENO SYMBOL VAR INCLUDES
-# ---------------------------------------------
-# Tests whether SYMBOL is declared in INCLUDES, setting cache variable VAR
-# accordingly.
-ac_fn_c_check_decl ()
-{
-  as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
-  as_decl_name=`echo $2|sed 's/ *(.*//'`
-  as_decl_use=`echo $2|sed -e 's/(/((/' -e 's/)/) 0&/' -e 's/,/) 0& (/g'`
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $as_decl_name is declared" >&5
-$as_echo_n "checking whether $as_decl_name is declared... " >&6; }
-if eval "test \"\${$3+set}\"" = set; then :
-  $as_echo_n "(cached) " >&6
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-$4
-int
-main ()
-{
-#ifndef $as_decl_name
-#ifdef __cplusplus
-  (void) $as_decl_use;
-#else
-  (void) $as_decl_name;
-#endif
-#endif
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  eval "$3=yes"
-else
-  eval "$3=no"
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
-eval ac_res=\$$3
-	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
-$as_echo "$ac_res" >&6; }
-  eval $as_lineno_stack; test "x$as_lineno_stack" = x && { as_lineno=; unset as_lineno;}
-
-} # ac_fn_c_check_decl
 cat >config.log <<_ACEOF
 This file contains any messages produced by compilers while
 running configure, to aid debugging if configure makes a mistake.
@@ -4442,9 +4396,9 @@ fi
 
 done
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ipmiconsole_engine_init in -lipmiconsole" >&5
-$as_echo_n "checking for ipmiconsole_engine_init in -lipmiconsole... " >&6; }
-if test "${ac_cv_lib_ipmiconsole_ipmiconsole_engine_init+set}" = set; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ipmiconsole_workaround_flags_is_valid in -lipmiconsole" >&5
+$as_echo_n "checking for ipmiconsole_workaround_flags_is_valid in -lipmiconsole... " >&6; }
+if test "${ac_cv_lib_ipmiconsole_ipmiconsole_workaround_flags_is_valid+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -4458,27 +4412,27 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 #ifdef __cplusplus
 extern "C"
 #endif
-char ipmiconsole_engine_init ();
+char ipmiconsole_workaround_flags_is_valid ();
 int
 main ()
 {
-return ipmiconsole_engine_init ();
+return ipmiconsole_workaround_flags_is_valid ();
   ;
   return 0;
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_ipmiconsole_ipmiconsole_engine_init=yes
+  ac_cv_lib_ipmiconsole_ipmiconsole_workaround_flags_is_valid=yes
 else
-  ac_cv_lib_ipmiconsole_ipmiconsole_engine_init=no
+  ac_cv_lib_ipmiconsole_ipmiconsole_workaround_flags_is_valid=no
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ipmiconsole_ipmiconsole_engine_init" >&5
-$as_echo "$ac_cv_lib_ipmiconsole_ipmiconsole_engine_init" >&6; }
-if test "x$ac_cv_lib_ipmiconsole_ipmiconsole_engine_init" = x""yes; then :
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ipmiconsole_ipmiconsole_workaround_flags_is_valid" >&5
+$as_echo "$ac_cv_lib_ipmiconsole_ipmiconsole_workaround_flags_is_valid" >&6; }
+if test "x$ac_cv_lib_ipmiconsole_ipmiconsole_workaround_flags_is_valid" = x""yes; then :
   cat >>confdefs.h <<_ACEOF
 #define HAVE_LIBIPMICONSOLE 1
 _ACEOF
@@ -4487,16 +4441,9 @@ _ACEOF
 
 fi
 
-  ac_fn_c_check_decl "$LINENO" "LIBIPMICONSOLE_VERSION_MAJOR" "ac_cv_have_decl_LIBIPMICONSOLE_VERSION_MAJOR" "#include <ipmiconsole.h>
-"
-if test "x$ac_cv_have_decl_LIBIPMICONSOLE_VERSION_MAJOR" = x""yes; then :
-
-fi
-
   LIBS="$ac_save_LIBS"
   if   test "$ac_cv_header_ipmiconsole_h" != yes; then : ;
-  elif test "$ac_cv_lib_ipmiconsole_ipmiconsole_engine_init" != yes; then : ;
-  elif test "$ac_cv_have_decl_LIBIPMICONSOLE_VERSION_MAJOR" != yes; then : ;
+  elif test "$ac_cv_lib_ipmiconsole_ipmiconsole_workaround_flags_is_valid" != yes; then : ;
   else
 
 cat >>confdefs.h <<_ACEOF
@@ -4514,7 +4461,7 @@ $as_echo_n "checking whether to use FreeIPMI's libipmiconsole... " >&6; }
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: ${freeipmi=no}" >&5
 $as_echo "${freeipmi=no}" >&6; }
 if test "$freeipmi" = failed; then
-  as_fn_error $? "unable to locate FreeIPMI 1.0.3 or later" "$LINENO" 5
+  as_fn_error $? "unable to locate FreeIPMI 1.0.4 or later" "$LINENO" 5
 fi
 
 

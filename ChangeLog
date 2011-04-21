@@ -1,3 +1,22 @@
+2011-04-20  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* : Added support for new IPMIOPTS syntax.  (Fixes issue 5)
+	* server-ipmi.c (parse_ipmi_opts): Rewrote for new ipmiopts syntax.
+	* server-ipmi.c (init_ipmi_opts, parse_ipmi_opts_v1, process_ipmi_opt,
+	  is_ipmi_opt_tag, process_ipmi_opt_username,
+	  process_ipmi_opt_password, process_ipmi_opt_k_g,
+	  process_ipmi_opt_privilege, process_ipmi_opt_cipher,
+	  process_ipmi_opt_workaround): Added.
+	* server-ipmi.c (create_ipmi_obj): Added DPRINTF to dump ipmiopts.
+	* server-ipmi.c (create_ipmi_ctx): Updated to use new ipmiopts.
+	* server-conf.c (create_server_conf):
+	  Replaced memset() of globalIpmiOpts with init_ipmi_opts().
+	* server.h: Added privilegeLevel, cipherSuite, and workaroundFlags to
+	  struct ipmi_opt.
+	* etc/conman.conf, man/conman.conf.5.in: Documented new ipmiopts.
+	* configure.ac: Updated tests to require freeipmi-1.0.4 or later.
+	* conman.spec: Updated BuildRequires for freeipmi-devel.
+
 2011-04-07  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* server.h, server-conf.c, server-ipmi.c, server-process.c,
