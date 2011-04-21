@@ -1,5 +1,7 @@
 2011-04-21  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* server-ipmi.c (parse_ipmi_opts): Fixed snprintf() format warning.
+
 	* server.c (reset_console): Added cast to execl() NULL ptr arg to
 	  resolve "missing sentinel in function call" warning on OpenBSD-4.7.
 

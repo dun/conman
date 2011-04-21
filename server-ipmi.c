@@ -192,8 +192,8 @@ int parse_ipmi_opts(
 
     if (strlcpy(buf, str, sizeof(buf)) >= sizeof(buf)) {
         if ((errbuf != NULL) && (errlen > 0)) {
-            snprintf(errbuf, errlen,
-                "ipmiopts string exceeds %lu-byte maximum", sizeof(buf) - 1);
+            snprintf(errbuf, errlen, "ipmiopts string exceeds %d-byte maximum",
+                (int) sizeof(buf) - 1);
         }
         return(-1);
     }
