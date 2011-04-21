@@ -1,5 +1,7 @@
 2011-04-21  Chris Dunlap  <cdunlap@llnl.gov>
 
+	* META, NEWS, conman.spec: Updated metadata for 0.2.7 release.
+
 	* server-ipmi.c (parse_ipmi_opts): Fixed snprintf() format warning.
 
 	* server.c (reset_console): Added cast to execl() NULL ptr arg to
