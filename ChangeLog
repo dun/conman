@@ -1,3 +1,8 @@
+2011-04-21  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server.c (reset_console): Added cast to execl() NULL ptr arg to
+	  resolve "missing sentinel in function call" warning on OpenBSD-4.7.
+
 2011-04-20  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* : Added support for new IPMIOPTS syntax.  (Fixes issue 5)

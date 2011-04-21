@@ -1076,7 +1076,7 @@ static void reset_console(obj_t *console, const char *cmd)
         close(STDIN_FILENO);            /* ignore errors on close() */
         close(STDOUT_FILENO);
         close(STDERR_FILENO);
-        execl("/bin/sh", "sh", "-c", buf, NULL);
+        execl("/bin/sh", "sh", "-c", buf, (char *) NULL);
         _exit(127);                     /* execl() error */
     }
     /*  Both parent and child call setpgid() to make the child a process
