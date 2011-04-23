@@ -172,28 +172,28 @@ delimited by commas, substring values cannot contain commas.
 The valid \fBIPMIOPTS\fR substrings include the following (in any order):
 .br
 .sp
-\fBU\fR:\fIusername\fR - a string of at most 16 bytes for the username with
-which to authenticate to the BMCs serving the remote consoles.
+\fBU\fR:\fIusername\fR - a string of at most 16 bytes for the username.
 .br
 .sp
-\fBP\fR:\fIpassword\fR - a string of at most 20 bytes for the password with
-which to authenticate to the BMCs serving the remote consoles.
+\fBP\fR:\fIpassword\fR - a string of at most 20 bytes for the password.
 .br
 .sp
-\fBK\fR:\fIK_g\fR - a string of at most 20 bytes for the K_g key with which
-to authenticate to the BMCs serving the remote consoles.
+\fBK\fR:\fIK_g\fR - a string of at most 20 bytes for the K_g key.
 .br
 .sp
 \fBC\fR:\fIcipher_suite\fR - an integer for the IPMI cipher suite ID.
-Refer to \fBipmiconsole(8)\fR for a list of currently supported IDs.
+Refer to \fBipmiconsole(8)\fR for a list of supported IDs.
 .br
 .sp
 \fBL\fR:\fIprivilege_level\fR - the string "user", "op", or "admin".
 .br
 .sp
 \fBW\fR:\fIworkaround_flag\fR - a string or integer for an IPMI workaround.
-Refer to \fBipmiconsole(8)\fR for a list of currently supported flags.
-This substring may be repeated to specify multiple workaround flags.
+The following strings are recognized: "authcap", "intel20", "supermicro20",
+"sun20", "opensesspriv", "integritycheckvalue", "solpayloadsize", "solport",
+and "solstatus".  Refer to \fBipmiconsole(8)\fR for more information on
+these workarounds.  This substring may be repeated in order to specify
+multiple workarounds.
 .br
 .sp
 Both the \fIpassword\fR and \fIK_g\fR values can be specified in either ASCII
