@@ -1,3 +1,8 @@
+2011-07-21  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* lib/exec/cyclades-telnet.exp, lib/exec/cyclades-ssh.exp:
+	  Fixed unescaped '[' in send_user.
+
 2011-04-21  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* : Released 0.2.7.

@@ -106,7 +106,7 @@ proc get_password {host user index} {
 
 if {! $argc} {
   set prog [lindex [split $argv0 "/"] end]
-  send_user "Usage: $prog <host> <port> [<user> <pswd>]\r\n"
+  send_user "Usage: $prog <host> <port> \[<user> <pswd>]\r\n"
   exit 1
 }
 if {$argc > 0} {
