@@ -1,3 +1,17 @@
+2011-09-30  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* : Fixed nonterminating telnet option ack loop.  (Fixes issue 9)
+	* server-telnet.c (connect_telnet_obj): Added DO BINARY, WILL BINARY,
+	  and WILL SGA to the set of telnet options sent upon connection
+	  establishment.
+	* server-telnet.c (process_telnet_cmd): Changed response to receipt of
+	  DO/DONT/WILL/WONT commands to reduce the likelihood of nonterminating
+	  acknowledgment loops.  Note that ack loops are still possible since
+	  option state is not tracked -- support for the rfc1143 Q-Method would
+	  solve that.  But this fixes behavior to better comply with rfc854
+	  sections 3A/3B based on the state we expect to be in following the
+	  options sent in connect_telnet_obj().
+
 2011-07-21  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* lib/exec/cyclades-telnet.exp, lib/exec/cyclades-ssh.exp:
