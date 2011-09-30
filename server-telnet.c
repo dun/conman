@@ -284,8 +284,11 @@ static int connect_telnet_obj(obj_t *telnet)
     telnet->aux.telnet.timer = tpoll_timeout_relative(tp_global,
         (callback_f) reset_telnet_delay, telnet, TELNET_MIN_TIMEOUT * 1000);
 
-    send_telnet_cmd(telnet, DO, TELOPT_SGA);
+    send_telnet_cmd(telnet, DO, TELOPT_BINARY);
     send_telnet_cmd(telnet, DO, TELOPT_ECHO);
+    send_telnet_cmd(telnet, DO, TELOPT_SGA);
+    send_telnet_cmd(telnet, WILL, TELOPT_BINARY);
+    send_telnet_cmd(telnet, WILL, TELOPT_SGA);
 
     return(0);
 }
@@ -539,16 +542,35 @@ static int process_telnet_cmd(obj_t *telnet, int cmd, int opt)
 
     switch(cmd) {
     case DONT:
-        /* fall-thru */
+        break;
     case DO:
-        if ((opt != TELOPT_ECHO) && (opt != TELOPT_SGA))
+        if (    (opt != TELOPT_BINARY) &&
+                (opt != TELOPT_SGA))
+        {
             send_telnet_cmd(telnet, WONT, opt);
+        }
         break;
     case WONT:
-        /* fall-thru */
+        if (    (opt == TELOPT_BINARY) ||
+                (opt == TELOPT_ECHO)   ||
+                (opt == TELOPT_SGA))
+        {
+            log_msg(LOG_NOTICE,
+                "Received telnet cmd %s %s from console [%s]",
+                telcmds[cmd - TELCMD_FIRST],
+                (TELOPT_OK(opt)
+                    ? telopts[opt - TELOPT_FIRST]
+                    : opt2str(opt, opt_buf, sizeof(opt_buf))),
+                telnet->name);
+        }
+        break;
     case WILL:
-        if ((opt != TELOPT_ECHO) && (opt != TELOPT_SGA))
+        if (    (opt != TELOPT_BINARY) &&
+                (opt != TELOPT_ECHO)   &&
+                (opt != TELOPT_SGA))
+        {
             send_telnet_cmd(telnet, DONT, opt);
+        }
         break;
     default:
         log_msg(LOG_INFO, "Ignoring telnet cmd %s %s from console [%s]",
