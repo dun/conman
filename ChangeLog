@@ -1,3 +1,7 @@
+2011-10-03  Chris Dunlap  <cdunlap@llnl.gov>
+
+	* server-telnet.c (process_telnet_cmd): Fixed comment.
+
 2011-09-30  Chris Dunlap  <cdunlap@llnl.gov>
 
 	* : Fixed nonterminating telnet option ack loop.  (Fixes issue 9)

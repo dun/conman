@@ -504,7 +504,6 @@ int send_telnet_cmd(obj_t *telnet, int cmd, int opt)
 static int process_telnet_cmd(obj_t *telnet, int cmd, int opt)
 {
 /*  Processes the given telnet cmd received from the (telnet) console.
- *  Telnet option negotiation is performed using the Q-Method (rfc1143).
  *  Returns 0 if the command is valid, or -1 on error.
  */
     char opt_buf[OPTBUFLEN];
