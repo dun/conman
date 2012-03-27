@@ -307,6 +307,10 @@ The console name (\fB%N\fR) and device (\fB%D\fR) specifiers are "sanitized"
 in that non-printable characters and the forward-slash (/) character are
 replaced with underscores.
 
+Conversion specifiers within console log filenames are evaluated when the file
+is opened; this occurs when \fBconmand\fR first starts and whenever it receives
+a \fBSIGHUP\fR.
+
 .SH FILES
 .I @CONMAN_CONF@
 
