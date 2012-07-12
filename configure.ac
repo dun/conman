@@ -1,9 +1,7 @@
-#******************************************************************************
+###############################################################################
 # ConMan AutoConf Configuration
 #   Process this file with autoconf to produce a configure script.
-#******************************************************************************
-# $Id$
-#******************************************************************************
+###############################################################################
 # Written by Chris Dunlap <cdunlap@llnl.gov>.
 # Copyright (C) 2007-2011 Lawrence Livermore National Security, LLC.
 # Copyright (C) 2001-2007 The Regents of the University of California.
@@ -24,7 +22,7 @@
 #
 # You should have received a copy of the GNU General Public License along
 # with ConMan.  If not, see <http://www.gnu.org/licenses/>.
-#******************************************************************************
+###############################################################################
 
 
 dnl Prologue.

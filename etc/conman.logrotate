@@ -1,8 +1,6 @@
 ##
 # ConMan Logrotate Configuration
 ##
-# $Id$
-##
 
 ##
 # Example logrotate entry for ConMan.

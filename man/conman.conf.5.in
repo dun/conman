@@ -1,5 +1,3 @@
-.\" $Id$
-
 .TH CONMAN.CONF 5 "@DATE@" "@PROJECT@-@VERSION@" "ConMan: The Console Manager"
 
 .SH NAME

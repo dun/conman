@@ -1,7 +1,12 @@
 #!/usr/bin/expect --
 ###############################################################################
-# $Id$
-#   by Chris Dunlap <cdunlap@llnl.gov>
+# Written by Chris Dunlap <cdunlap@llnl.gov>.
+# Copyright (C) 2007-2011 Lawrence Livermore National Security, LLC.
+# Copyright (C) 2001-2007 The Regents of the University of California.
+# UCRL-CODE-2002-009.
+#
+# This file is part of ConMan: The Console Manager.
+# For details, see <http://conman.googlecode.com/>.
 ###############################################################################
 # USAGE:
 #   shell_cmd_n.exp <console(s)...> <command>

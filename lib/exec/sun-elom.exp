@@ -1,7 +1,5 @@
 #!/usr/bin/expect -f
 ###############################################################################
-# $Id$
-###############################################################################
 # Adapted for ELOM from sun-ilom.exp by Dave Love <d.love@liverpool.ac.uk>
 #   (mods not significant for copyright purposes).
 # Works with ELOM 3.15, at least.

@@ -1,5 +1,3 @@
-# $Id$
-
 Name:		conman
 Version:	0.2.7
 Release:	1%{?dist}
