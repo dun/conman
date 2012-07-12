@@ -392,7 +392,7 @@ static int process_ipmi_opt_password(
         iopts->password[0] = '\0';
     }
     else {
-        int n; 
+        int n;
 
         n = parse_key(iopts->password, str, sizeof(iopts->password));
 
@@ -431,7 +431,7 @@ static int process_ipmi_opt_k_g(
         iopts->kgLen = 0;
     }
     else {
-        int n; 
+        int n;
 
         n = parse_key((char *) iopts->kg, str, sizeof(iopts->kg));
 

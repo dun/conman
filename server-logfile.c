@@ -82,7 +82,7 @@ int parse_logfile_opts(logopt_t *opts, const char *str,
             optsTmp.enableLock = 1;
         else if (!strcasecmp(tok, "nolock"))
             optsTmp.enableLock = 0;
-	else if (!strcasecmp(tok, "sanitize"))
+        else if (!strcasecmp(tok, "sanitize"))
             optsTmp.enableSanitize = 1;
         else if (!strcasecmp(tok, "nosanitize"))
             optsTmp.enableSanitize = 0;

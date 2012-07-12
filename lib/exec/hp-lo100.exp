@@ -211,7 +211,7 @@ expect {
   }
   -re "\[^\r]*\r+\n" {
     if {$state != 4} {
-    	exp_continue -continue_timer
+      exp_continue -continue_timer
     }
     incr state
     ; # success
