@@ -1,0 +1,11 @@
+*.o
+/Makefile
+/config.cache
+/config.h
+/config.log
+/config.status
+/conman
+/conmand
+/etc/conman.init
+/man/*.[158]
+/tags
