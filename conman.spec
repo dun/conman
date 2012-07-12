@@ -86,7 +86,6 @@ fi
 %files
 %defattr(-,root,root,-)
 %doc AUTHORS
-%doc ChangeLog
 %doc COPYING
 %doc DISCLAIMER*
 %doc FAQ
