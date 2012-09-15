@@ -72,7 +72,8 @@
 #define TELNET_MAX_TIMEOUT              1800
 #define TELNET_MIN_TIMEOUT              15
 
-#define UNIXSOCK_RETRY_TIMEOUT          60
+#define UNIXSOCK_MAX_TIMEOUT		 60
+#define UNIXSOCK_MIN_TIMEOUT      	 1
 
 
 enum obj_type {                         /* type of auxiliary obj (3 bits)    */
@@ -172,6 +173,7 @@ typedef struct unixsock_obj {           /* UNIXSOCK AUX OBJ DATA:            */
     char            *dev;               /*  unix domain socket device name   */
     struct base_obj *logfile;           /*  log obj ref for console replay   */
     int              timer;             /*  timer id for reconnects          */
+    int              delay;             /*  secs 'til next reconnect attempt */
     unsigned         state:1;           /*  unixsock_state_t conn state      */
 } unixsock_obj_t;
 

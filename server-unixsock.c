@@ -39,6 +39,7 @@
 #include "list.h"
 #include "server.h"
 #include "tpoll.h"
+#include "util.h"
 #include "util-file.h"
 #include "util-str.h"
 
@@ -129,6 +130,7 @@ obj_t * create_unixsock_obj(server_conf_t *conf, char *name, char *dev,
     unixsock->aux.unixsock.logfile = NULL;
     unixsock->aux.unixsock.timer = -1;
     unixsock->aux.unixsock.state = CONMAN_UNIXSOCK_DOWN;
+    unixsock->aux.unixsock.delay = UNIXSOCK_MIN_TIMEOUT;
     /*
      *  Add obj to the master conf->objs list.
      */
@@ -253,6 +255,7 @@ static int connect_unixsock_obj(obj_t *unixsock)
      */
     unixsock->gotEOF = 0;
     auxp->state = CONMAN_UNIXSOCK_UP;
+    auxp->delay = 0;
 
     /*  Notify linked objs when transitioning into an UP state.
      */
@@ -300,9 +303,13 @@ static int disconnect_unixsock_obj(obj_t *unixsock)
     }
     /*  Set timer for establishing new connection.
      */
+    auxp->delay = (auxp->delay == 0)
+            ? UNIXSOCK_MIN_TIMEOUT
+            : MIN(auxp->delay * 2, UNIXSOCK_MAX_TIMEOUT);
+
     auxp->timer = tpoll_timeout_relative(tp_global,
         (callback_f) connect_unixsock_obj, unixsock,
-        UNIXSOCK_RETRY_TIMEOUT * 1000);
+        auxp->delay * 1000);
 
     return(-1);
 }
