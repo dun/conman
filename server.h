@@ -52,6 +52,8 @@
 #define DEFAULT_SEROPT_PARITY           0
 #define DEFAULT_SEROPT_STOPBITS         1
 
+#define MIN_CONNECT_SECS                60
+
 #if WITH_FREEIPMI
 #define IPMI_ENGINE_CONSOLES_PER_THREAD 128
 #define IPMI_MAX_USER_LEN               IPMI_MAX_USER_NAME_LENGTH
@@ -72,8 +74,8 @@
 #define TELNET_MAX_TIMEOUT              1800
 #define TELNET_MIN_TIMEOUT              15
 
-#define UNIXSOCK_MAX_TIMEOUT		 60
-#define UNIXSOCK_MIN_TIMEOUT      	 1
+#define UNIXSOCK_MAX_TIMEOUT            60
+#define UNIXSOCK_MIN_TIMEOUT            1
 
 
 enum obj_type {                         /* type of auxiliary obj (3 bits)    */

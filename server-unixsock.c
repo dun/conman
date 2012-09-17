@@ -47,6 +47,7 @@
 static int max_unixsock_dev_strlen(void);
 static int connect_unixsock_obj(obj_t *unixsock);
 static int disconnect_unixsock_obj(obj_t *unixsock);
+static void reset_unixsock_delay(obj_t *unixsock);
 
 extern tpoll_t tp_global;               /* defined in server.c */
 
@@ -255,7 +256,12 @@ static int connect_unixsock_obj(obj_t *unixsock)
      */
     unixsock->gotEOF = 0;
     auxp->state = CONMAN_UNIXSOCK_UP;
-    auxp->delay = 0;
+
+    /*  Require the connection to be up for a minimum length of time before
+     *    resetting the reconnect-delay back to the minimum.
+     */
+    auxp->timer = tpoll_timeout_relative(tp_global,
+        (callback_f) reset_unixsock_delay, unixsock, MIN_CONNECT_SECS * 1000);
 
     /*  Notify linked objs when transitioning into an UP state.
      */
@@ -303,13 +309,35 @@ static int disconnect_unixsock_obj(obj_t *unixsock)
     }
     /*  Set timer for establishing new connection.
      */
-    auxp->delay = (auxp->delay == 0)
-            ? UNIXSOCK_MIN_TIMEOUT
-            : MIN(auxp->delay * 2, UNIXSOCK_MAX_TIMEOUT);
-
     auxp->timer = tpoll_timeout_relative(tp_global,
         (callback_f) connect_unixsock_obj, unixsock,
         auxp->delay * 1000);
 
+    if (auxp->delay < UNIXSOCK_MAX_TIMEOUT) {
+        auxp->delay = MIN(auxp->delay * 2, UNIXSOCK_MAX_TIMEOUT);
+    }
     return(-1);
+}
+
+
+static void reset_unixsock_delay(obj_t *unixsock)
+{
+/*  Resets the unixsock obj's reconnect-delay after the connection has been up
+ *    for the minimum length of time.  This protects against spinning on
+ *    reconnects when the connection immediately terminates.
+ */
+    unixsock_obj_t *auxp;
+
+    assert(unixsock != NULL);
+    assert(is_unixsock_obj(unixsock));
+
+    auxp = &(unixsock->aux.unixsock);
+
+    /*  Reset the timer ID since this routine is only invoked by a timer.
+     */
+    auxp->timer = -1;
+
+    DPRINTF((15, "Reset [%s] reconnect delay\n", unixsock->name));
+    auxp->delay = UNIXSOCK_MIN_TIMEOUT;
+    return;
 }
