@@ -93,6 +93,7 @@ void ipmi_init(int num_consoles)
         return;
     }
     num_threads = ((num_consoles - 1) / IPMI_ENGINE_CONSOLES_PER_THREAD) + 1;
+    num_threads = MIN(num_threads, IPMICONSOLE_THREAD_COUNT_MAX);
 
     if (ipmiconsole_engine_init(num_threads, 0) < 0) {
         log_err(0, "Unable to start IPMI SOL engine");
