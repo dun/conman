@@ -17,7 +17,7 @@ BuildRequires:	freeipmi-devel >= 1.0.4
 %if 0%{?rhel} >= 6 || 0%{?fedora} >= 7
 BuildRequires:	tcp_wrappers-devel
 %else
-%if 0%{?rhel} < 6 || 0%{?fedora} < 7 || 0%{?rhl}
+%if "%{_vendor}" == "redhat"
 BuildRequires:	tcp_wrappers
 %else
 %if "%{_vendor}" == "suse"
