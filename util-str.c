@@ -254,7 +254,7 @@ char * create_long_time_string(time_t t)
 {
     char *p;
     struct tm tm;
-    const int len = 25;                 /* YYYY-MM-DD HH:MM:SS ZONE + NUL */
+    const int len = 32;
 
     if (!(p = malloc(len))) {
         out_of_memory();
