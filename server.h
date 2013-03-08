@@ -246,6 +246,7 @@ typedef struct server_conf {
     char            *logFmtName;        /* name with conversion specifiers   */
     FILE            *logFilePtr;        /* msg log file ptr, !closed at exit */
     int              logFileLevel;      /* level at which to log msg to file */
+    int              numOpenFiles;      /* rlimit for number of open files   */
     char            *pidFileName;       /* file to which pid is written      */
     char            *resetCmd;          /* cmd to invoke for reset esc-seq   */
     int              syslogFacility;    /* syslog facility or -1 if disabled */

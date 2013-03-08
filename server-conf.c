@@ -69,6 +69,7 @@ enum server_conf_toks {
     SERVER_CONF_LOGOPTS,
     SERVER_CONF_LOOPBACK,
     SERVER_CONF_NAME,
+    SERVER_CONF_NOFILE,
     SERVER_CONF_OFF,
     SERVER_CONF_ON,
     SERVER_CONF_PIDFILE,
@@ -102,6 +103,7 @@ static char *server_conf_strs[] = {
     "LOGOPTS",
     "LOOPBACK",
     "NAME",
+    "NOFILE",
     "OFF",
     "ON",
     "PIDFILE",
@@ -207,6 +209,7 @@ server_conf_t * create_server_conf(void)
     conf->logFmtName = NULL;
     conf->logFilePtr = NULL;
     conf->logFileLevel = LOG_INFO;
+    conf->numOpenFiles = 0;
     conf->pidFileName = NULL;
     conf->resetCmd = NULL;
     conf->syslogFacility = -1;
@@ -1236,6 +1239,21 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
             else {
                 snprintf(err, sizeof(err), "expected ON or OFF for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
+            }
+            break;
+
+        case SERVER_CONF_NOFILE:
+            if (lex_next(l) != '=') {
+                snprintf(err, sizeof(err), "expected '=' after %s keyword",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            }
+            else if (lex_next(l) != LEX_INT) {
+                snprintf(err, sizeof(err), "expected INTEGER for %s value",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            }
+            else {
+                n = atoi(lex_text(l));
+                conf->numOpenFiles = n;
             }
             break;
 

@@ -59,6 +59,11 @@ Specifies whether the daemon will bind its socket to the loopback address,
 thereby only accepting local client connections directed to that address
 (127.0.0.1).  The default is \fBoff\fR.
 .TP
+\fBnofile\fR \fB=\fR \fIinteger\fR
+Specifies the maximum number of open files for the daemon.  If set to 0, use
+the current (soft) limit.  If set to -1, use the the maximum (hard) limit.
+The default is 0.
+.TP
 \fBpidfile\fR \fB=\fR "\fIfile\fR"
 Specifies the file to which the daemon's PID is written.  Intermediate
 directories will be created as needed.  The use of a pidfile is recommended
