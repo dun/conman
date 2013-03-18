@@ -55,7 +55,6 @@
 
 static void begin_daemonize(int *fd_ptr, pid_t *pgid_ptr);
 static void end_daemonize(int fd);
-static void setup_nofile_limit(server_conf_t *conf);
 static void setup_coredump(server_conf_t *conf);
 static void setup_signals(server_conf_t *conf);
 static void sig_chld_handler(int signum);
@@ -67,6 +66,7 @@ static void display_configuration(server_conf_t *conf);
 static void schedule_timestamp(server_conf_t *conf);
 static void timestamp_logfiles(server_conf_t *conf);
 static void create_listen_socket(server_conf_t *conf);
+static void setup_nofile_limit(server_conf_t *conf);
 static void open_objs(server_conf_t *conf);
 static void mux_io(server_conf_t *conf);
 static void open_daemon_logfile(server_conf_t *conf);
@@ -110,7 +110,6 @@ int main(int argc, char *argv[])
         begin_daemonize(&fd, &pgid);
     }
     process_config(conf);
-    setup_nofile_limit(conf);
     setup_coredump(conf);
     setup_signals(conf);
 
@@ -149,6 +148,7 @@ int main(int argc, char *argv[])
     ipmi_init(conf->numIpmiObjs);
 #endif /* WITH_FREEIPMI */
 
+    setup_nofile_limit(conf);
     open_objs(conf);
     mux_io(conf);
 
@@ -310,39 +310,6 @@ static void end_daemonize(int fd)
     if ((fd >= 0) && (close(fd) < 0)) {
         log_err(errno, "Unable to close write-pipe in grandchild process");
     }
-    return;
-}
-
-
-static void setup_nofile_limit(server_conf_t *conf)
-{
-/*  Sets the NOFILE limit as specified in the configuration file.
- *  If set to  0, use the current (soft) limit. (default)
- *  If set to -1, use the maximum (hard) limit.
- */
-    struct rlimit limit;
-
-    if (getrlimit(RLIMIT_NOFILE, &limit) < 0) {
-        log_err(errno, "Unable to get open file limit");
-    }
-
-    if (conf->numOpenFiles > 0) {
-        limit.rlim_cur = conf->numOpenFiles;
-        if (limit.rlim_cur > limit.rlim_max) {
-            limit.rlim_max = limit.rlim_cur;
-        }
-    }
-    else if (conf->numOpenFiles < 0) {
-        limit.rlim_cur = limit.rlim_max;
-    }
-
-    if (conf->numOpenFiles) {
-        if (setrlimit(RLIMIT_NOFILE, &limit) < 0) {
-            log_err(errno, "Unable to set open file limit to %d",
-                    limit.rlim_cur);
-        }
-    }
-    log_msg(LOG_INFO, "Open file limit set to %d", limit.rlim_cur);
     return;
 }
 
@@ -697,6 +664,39 @@ static void create_listen_socket(server_conf_t *conf)
         log_err(errno, "Unable to listen on port %d", conf->port);
     }
     conf->ld = ld;
+    return;
+}
+
+
+static void setup_nofile_limit(server_conf_t *conf)
+{
+/*  Sets the NOFILE limit as specified in the configuration file.
+ *  If set to  0, use the current (soft) limit. (default)
+ *  If set to -1, use the maximum (hard) limit.
+ */
+    struct rlimit limit;
+
+    if (getrlimit(RLIMIT_NOFILE, &limit) < 0) {
+        log_err(errno, "Unable to get open file limit");
+    }
+
+    if (conf->numOpenFiles > 0) {
+        limit.rlim_cur = conf->numOpenFiles;
+        if (limit.rlim_cur > limit.rlim_max) {
+            limit.rlim_max = limit.rlim_cur;
+        }
+    }
+    else if (conf->numOpenFiles < 0) {
+        limit.rlim_cur = limit.rlim_max;
+    }
+
+    if (conf->numOpenFiles) {
+        if (setrlimit(RLIMIT_NOFILE, &limit) < 0) {
+            log_err(errno, "Unable to set open file limit to %d",
+                    limit.rlim_cur);
+        }
+    }
+    log_msg(LOG_INFO, "Open file limit set to %d", limit.rlim_cur);
     return;
 }
 
