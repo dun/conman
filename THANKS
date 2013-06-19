@@ -24,3 +24,6 @@ the following people have contributed in its development:
 
   Marc Girard <marc.girard@bull.net>
   - console logfile lock/nolock option
+
+  Dmitry Monakhov <dmonakhov@openvz.org>
+  - unixsock exponential timeout
