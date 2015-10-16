@@ -6,7 +6,7 @@
 # UCRL-CODE-2002-009.
 #
 # This file is part of ConMan: The Console Manager.
-# For details, see <http://conman.googlecode.com/>.
+# For details, see <https://dun.github.io/conman/>.
 ###############################################################################
 # This script connects to a port on a Cyclades terminal server using the SSH
 # protocol (protocol socket_ssh or socket_server_ssh).  It supports consoles

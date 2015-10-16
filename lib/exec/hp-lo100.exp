@@ -6,7 +6,7 @@
 # UCRL-CODE-2002-009.
 #
 # This file is part of ConMan: The Console Manager.
-# For details, see <http://conman.googlecode.com/>.
+# For details, see <https://dun.github.io/conman/>.
 ###############################################################################
 # This script connects to a console managed by HP's "Lights Out 100" option
 # using the telnet protocol.  The LO100 is a traditional IPMI BMC and does

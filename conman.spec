@@ -5,7 +5,7 @@ Release:	1%{?dist}
 Summary:	ConMan: The Console Manager
 Group:		Applications/System
 License:	GPLv3+
-URL:		http://conman.googlecode.com/
+URL:		https://dun.github.io/conman/
 
 Requires:	expect
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)

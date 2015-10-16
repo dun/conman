@@ -5,7 +5,7 @@
  *  UCRL-CODE-2002-009.
  *
  *  This file is part of ConMan: The Console Manager.
- *  For details, see <http://conman.googlecode.com/>.
+ *  For details, see <https://dun.github.io/conman/>.
  *
  *  ConMan is free software: you can redistribute it and/or modify it under
  *  the terms of the GNU General Public License as published by the Free
@@ -38,7 +38,7 @@
 
 const char *conman_license = \
     "ConMan: The Console Manager\n"                                           \
-    "http://conman.googlecode.com/\n"                                         \
+    "https://dun.github.io/conman/\n"                                         \
     "\n"                                                                      \
     "Written by Chris Dunlap <cdunlap@llnl.gov>.\n"                           \
     "Copyright (C) 2007-2013 Lawrence Livermore National Security, LLC.\n"    \

@@ -7,7 +7,7 @@
  *  UCRL-CODE-2002-009.
  *
  *  This file is part of ConMan: The Console Manager.
- *  For details, see <http://conman.googlecode.com/>.
+ *  For details, see <https://dun.github.io/conman/>.
  *
  *  ConMan is free software: you can redistribute it and/or modify it under
  *  the terms of the GNU General Public License as published by the Free

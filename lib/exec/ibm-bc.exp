@@ -6,7 +6,7 @@
 # UCRL-CODE-2002-009.
 #
 # This file is part of ConMan: The Console Manager.
-# For details, see <http://conman.googlecode.com/>.
+# For details, see <https://dun.github.io/conman/>.
 ###############################################################################
 # This script connects to a console on a given blade in an IBM BladeCenter
 # via Serial Over LAN (SOL) using the telnet protocol.
