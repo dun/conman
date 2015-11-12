@@ -61,13 +61,14 @@ thereby only accepting local client connections directed to that address
 .TP
 \fBnofile\fR \fB=\fR \fIinteger\fR
 Specifies the maximum number of open files for the daemon.  If set to 0, use
-the current (soft) limit.  If set to -1, use the the maximum (hard) limit.
+the current (soft) limit.  If set to \-1, use the the maximum (hard) limit.
 The default is 0.
 .TP
 \fBpidfile\fR \fB=\fR "\fIfile\fR"
 Specifies the file to which the daemon's PID is written.  Intermediate
 directories will be created as needed.  The use of a pidfile is recommended
-if you want to use the daemon's '\fB-k\fR', '\fB-q\fR', or '\fB-r\fR' options.
+if you want to use the daemon's '\fB\-k\fR', '\fB\-q\fR', or '\fB\-r\fR'
+options.
 .TP
 \fBport\fR \fB=\fR \fIinteger\fR
 Specifies the port on which the daemon will listen for client connections.
@@ -88,7 +89,7 @@ list of facilities.  If this keyword is used in conjunction with the
 \fBtcpwrappers\fR \fB=\fR (\fBon\fR|\fBoff\fR)
 Specifies whether the daemon will use TCP-Wrappers when accepting client
 connections.  Support for this feature must be enabled at compile-time (via
-configure's "--with-tcp-wrappers" option).  Refer to \fBhosts_access(5)\fR
+configure's "\-\-with\-tcp\-wrappers" option).  Refer to \fBhosts_access(5)\fR
 and \fBhosts_options(5)\fR for more details.  The default is \fBoff\fR.
 .TP
 \fBtimestamp\fR \fB=\fR \fIinteger\fB (\fBm\fR|\fBh\fR|\fBd\fR)
@@ -126,7 +127,7 @@ characters into 7-bit printable characters.
 .br
 .sp
 \fBtimestamp\fR or \fBnotimestamp\fR - timestamped logs prepend each line
-of console output with a timestamp in "YYYY-MM-DD HH:MM:SS" format.  This
+of console output with a timestamp in "YYYY\-MM\-DD HH:MM:SS" format.  This
 timestamp is generated when the first character following the line break is
 output.
 .br
@@ -160,7 +161,7 @@ The default is "9600,8n1" for 9600 bps, 8 data bits, no parity, and 1 stop bit.
 Specifies global options for IPMI Serial-Over-LAN devices.  These options can
 be overridden on a per-console basis by specifying the \fBCONSOLE\fR
 \fBIPMIOPTS\fR keyword.  This directive is only available if configured using
-the "--with-freeipmi" option.
+the "\-\-with\-freeipmi" option.
 .br
 .sp
 The \fBIPMIOPTS\fR string is parsed into comma-delimited substrings where each

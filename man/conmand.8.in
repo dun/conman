@@ -80,7 +80,7 @@ the \fBlogfile\fR or \fBsyslog\fR keyword has been specified (cf.,
 \fBconman.conf(5)\fR).
 .PP
 If the configuration file is modified while the daemon is running and a
-\fBpidfile\fR was not originally specified, the '\fB-k\fR' and '\fB-r\fR'
+\fBpidfile\fR was not originally specified, the '\fB\-k\fR' and '\fB\-r\fR'
 options may be unable to identify the daemon process; consequently, the
 appropriate signal may need to be sent to the daemon manually.
 .PP

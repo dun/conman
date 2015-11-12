@@ -11,11 +11,11 @@ conman \- ConMan client
 \fBconman\fR is a program for connecting to remote consoles being managed by
 \fBconmand\fR.  Console names can be separated by spaces and/or commas.
 Globbing is used by default to match console names against the configuration,
-but regular expression matching can be enabled with the '\fB-r\fR' option.
+but regular expression matching can be enabled with the '\fB\-r\fR' option.
 
 \fBconman\fR supports three modes of console access: monitor (read-only),
 interactive (read-write), and broadcast (write-only).  If neither
-the '\fB-m\fR' (monitor) nor '\fB-b\fR' (broadcast) options are specified,
+the '\fB\-m\fR' (monitor) nor '\fB\-b\fR' (broadcast) options are specified,
 the console session is opened in interactive mode.
 
 .SH OPTIONS
@@ -24,7 +24,7 @@ the console session is opened in interactive mode.
 Broadcast to multiple consoles (write-only).  Data sent by the client will be
 copied to all specified consoles in parallel, but console output will not be
 sent back to the client.  This option can be used in conjunction
-with '\fB-f\fR' or '\fB-j\fR'.
+with '\fB\-f\fR' or '\fB\-j\fR'.
 .TP
 .B \-d \fIdestination\fR
 Specify the location of the \fBconmand\fR daemon, overriding the default
@@ -65,7 +65,7 @@ Monitor a console (read-only).
 .TP
 .B \-q
 Query \fBconmand\fR for consoles matching the specified names/patterns.
-Output from this query can be saved to file for use with the '\fB-F\fR'
+Output from this query can be saved to file for use with the '\fB\-F\fR'
 option.
 .TP
 .B \-Q
@@ -131,19 +131,19 @@ The following environment variables override the default settings.
 .TP
 .SM CONMAN_HOST
 Specifies the hostname or IP address at which to contact \fBconmand\fR, but
-may be overridden by the '\fB-d\fR' command-line option.  A port number
+may be overridden by the '\fB\-d\fR' command-line option.  A port number
 separated by a colon may follow the hostname (i.e., \fIhost:port\fR), although
 the CONMAN_PORT environment variable takes precedence.  If not set, the
 default host [@CONMAN_HOST@] will be used.
 .TP
 .SM CONMAN_PORT
 Specifies the port on which to contact \fBconmand\fR, but may be overridden by
-the '\fB-d\fR' command-line option.  If not set, the default port
+the '\fB\-d\fR' command-line option.  If not set, the default port
 [@CONMAN_PORT@] will be used.
 .TP
 .SM CONMAN_ESCAPE
 The first character of this variable specifies the escape character, but may
-be overridden by the '\fB-e\fR' command-line option.  If not set, the default
+be overridden by the '\fB\-e\fR' command-line option.  If not set, the default
 escape character [\fB&\fR] will be used.
 
 .SH SECURITY
