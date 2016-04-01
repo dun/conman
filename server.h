@@ -78,14 +78,14 @@
 #define UNIXSOCK_MIN_TIMEOUT            1
 
 
-enum obj_type {                         /* type of auxiliary obj (3 bits)    */
-    CONMAN_OBJ_CLIENT,
-    CONMAN_OBJ_LOGFILE,
-    CONMAN_OBJ_PROCESS,
-    CONMAN_OBJ_SERIAL,
-    CONMAN_OBJ_TELNET,
-    CONMAN_OBJ_UNIXSOCK,
-    CONMAN_OBJ_IPMI,
+enum obj_type {                         /* type of auxiliary obj             */
+    CONMAN_OBJ_CLIENT   = 0x01,
+    CONMAN_OBJ_LOGFILE  = 0x02,
+    CONMAN_OBJ_PROCESS  = 0x04,
+    CONMAN_OBJ_SERIAL   = 0x08,
+    CONMAN_OBJ_TELNET   = 0x10,
+    CONMAN_OBJ_UNIXSOCK = 0x20,
+    CONMAN_OBJ_IPMI     = 0x40,
     CONMAN_OBJ_LAST_ENTRY
 };
 
@@ -233,7 +233,7 @@ typedef struct base_obj {               /* BASE OBJ:                         */
     pthread_mutex_t  bufLock;           /*  lock protecting access to buf    */
     List             readers;           /*  list of objs that read from me   */
     List             writers;           /*  list of objs that write to me    */
-    unsigned         type:3;            /*  enum obj_type of auxiliary obj   */
+    unsigned         type;              /*  enum obj_type of auxiliary obj   */
     unsigned         gotBufWrap:1;      /*  true if circular-buf has wrapped */
     unsigned         gotEOF:1;          /*  true if obj got EOF on last read */
     unsigned         gotReset:1;        /*  true if resetting a console obj  */
@@ -320,6 +320,13 @@ typedef struct client_args {
 
 /*  Macros
  */
+#define CONMAN_OBJ_IS_CONSOLE \
+  ( CONMAN_OBJ_PROCESS  |     \
+    CONMAN_OBJ_SERIAL   |     \
+    CONMAN_OBJ_TELNET   |     \
+    CONMAN_OBJ_UNIXSOCK |     \
+    CONMAN_OBJ_IPMI           \
+  )
 #define is_client_obj(OBJ)   (OBJ->type == CONMAN_OBJ_CLIENT)
 #define is_ipmi_obj(OBJ)     (OBJ->type == CONMAN_OBJ_IPMI)
 #define is_logfile_obj(OBJ)  (OBJ->type == CONMAN_OBJ_LOGFILE)
@@ -327,15 +334,7 @@ typedef struct client_args {
 #define is_serial_obj(OBJ)   (OBJ->type == CONMAN_OBJ_SERIAL)
 #define is_telnet_obj(OBJ)   (OBJ->type == CONMAN_OBJ_TELNET)
 #define is_unixsock_obj(OBJ) (OBJ->type == CONMAN_OBJ_UNIXSOCK)
-
-#define is_console_obj(OBJ) \
-( \
-  is_telnet_obj(OBJ)   || \
-  is_ipmi_obj(OBJ)     || \
-  is_process_obj(OBJ)  || \
-  is_serial_obj(OBJ)   || \
-  is_unixsock_obj(OBJ)    \
-)
+#define is_console_obj(OBJ)  (OBJ->type &  CONMAN_OBJ_IS_CONSOLE)
 
 
 /*  server-conf.c
