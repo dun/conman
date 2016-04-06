@@ -58,13 +58,15 @@
 
 /*  Notes regarding the recommended sizes of various constants:
  *
- *    - MAX_BUF_SIZE >= CONMAN_REPLAY_LEN * 2
+ *    - OBJ_BUF_SIZE >= LOG_REPLAY_LEN * 2
+ *    - OBJ_BUF_SIZE >= MAX_LINE
  *    - MAX_BUF_SIZE >= MAX_LINE
  *    - MAX_SOCK_LINE >= MAX_LINE
  */
-#define CONMAN_REPLAY_LEN       4096
-#define MAX_BUF_SIZE            8192
-#define MAX_SOCK_LINE           32768   /* XXX: MCR kludge (was 8192) */
+#define OBJ_BUF_SIZE            16384
+#define LOG_REPLAY_LEN          4096
+#define MAX_BUF_SIZE            4096
+#define MAX_SOCK_LINE           32768
 #define MAX_LINE                1024
 
 /*  Escape codes used to send ctrl info 'tween client & server.

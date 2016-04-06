@@ -827,12 +827,12 @@ int read_from_obj(obj_t *obj, tpoll_t tp)
  *    latency.  Without it, these objs would be tpoll()'d on the next list
  *    iteration in mux_io()'s outer-loop.
  *  An obj's circular-buffer is empty when (bufInPtr == bufOutPtr).
- *    Thus, it can hold at most (MAX_BUF_SIZE - 1) bytes of data.
+ *    Thus, it can hold at most (OBJ_BUF_SIZE - 1) bytes of data.
  *  But if the obj is a logfile, its data can grow as a result of the
  *    additional processing.  This routine's internal buffer is reduced
  *    somewhat to reduce the likelihood of log data being dropped.
  */
-    unsigned char buf[(MAX_BUF_SIZE / 2) - 1];
+    unsigned char buf[(OBJ_BUF_SIZE / 2) - 1];
     int n, m;
     ListIterator i;
     obj_t *reader;
@@ -929,7 +929,7 @@ int write_obj_data(obj_t *obj, const void *src, int len, int isInfo)
  *    an informational message which a client may suppress.
  *  Returns the number of bytes written.
  *
- *  Note that this routine can write at most (MAX_BUF_SIZE - 1) bytes
+ *  Note that this routine can write at most (OBJ_BUF_SIZE - 1) bytes
  *    of data into the object's circular-buffer.
  */
     int avail;
@@ -962,10 +962,10 @@ int write_obj_data(obj_t *obj, const void *src, int len, int isInfo)
         return(0);
     }
     /*  An obj's circular-buffer is empty when (bufInPtr == bufOutPtr).
-     *    Thus, it can hold at most (MAX_BUF_SIZE - 1) bytes of data.
+     *    Thus, it can hold at most (OBJ_BUF_SIZE - 1) bytes of data.
      */
-    if (len >= MAX_BUF_SIZE) {
-        len = MAX_BUF_SIZE - 1;
+    if (len >= OBJ_BUF_SIZE) {
+        len = OBJ_BUF_SIZE - 1;
     }
     x_pthread_mutex_lock(&obj->bufLock);
 
@@ -979,9 +979,9 @@ int write_obj_data(obj_t *obj, const void *src, int len, int isInfo)
     /*  Assert the buffer's input and output ptrs are valid upon entry.
      */
     assert(obj->bufInPtr >= obj->buf);
-    assert(obj->bufInPtr < &obj->buf[MAX_BUF_SIZE]);
+    assert(obj->bufInPtr < &obj->buf[OBJ_BUF_SIZE]);
     assert(obj->bufOutPtr >= obj->buf);
-    assert(obj->bufOutPtr < &obj->buf[MAX_BUF_SIZE]);
+    assert(obj->bufOutPtr < &obj->buf[OBJ_BUF_SIZE]);
 
     n = len;
 
@@ -992,18 +992,18 @@ int write_obj_data(obj_t *obj, const void *src, int len, int isInfo)
      *    subtract one byte from 'avail' to account for this sentinel.
      */
     if (obj->bufOutPtr == obj->bufInPtr) {
-        avail = MAX_BUF_SIZE - 1;
+        avail = OBJ_BUF_SIZE - 1;
     }
     else if (obj->bufOutPtr > obj->bufInPtr) {
         avail = obj->bufOutPtr - obj->bufInPtr - 1;
     }
     else {
-        avail = (&obj->buf[MAX_BUF_SIZE] - obj->bufInPtr) +
+        avail = (&obj->buf[OBJ_BUF_SIZE] - obj->bufInPtr) +
             (obj->bufOutPtr - obj->buf) - 1;
     }
     /*  Copy first chunk of data (ie, up to the end of the buffer).
      */
-    m = MIN(len, &obj->buf[MAX_BUF_SIZE] - obj->bufInPtr);
+    m = MIN(len, &obj->buf[OBJ_BUF_SIZE] - obj->bufInPtr);
     if (m > 0) {
         memcpy(obj->bufInPtr, src, m);
         n -= m;
@@ -1012,7 +1012,7 @@ int write_obj_data(obj_t *obj, const void *src, int len, int isInfo)
         /*
          *  Do the hokey-pokey and perform a circular-buffer wrap-around.
          */
-        if (obj->bufInPtr == &obj->buf[MAX_BUF_SIZE]) {
+        if (obj->bufInPtr == &obj->buf[OBJ_BUF_SIZE]) {
             obj->bufInPtr = obj->buf;
             obj->gotBufWrap = 1;
         }
@@ -1031,16 +1031,16 @@ int write_obj_data(obj_t *obj, const void *src, int len, int isInfo)
                 len-avail, obj->name);
         }
         obj->bufOutPtr = obj->bufInPtr + 1;
-        if (obj->bufOutPtr == &obj->buf[MAX_BUF_SIZE]) {
+        if (obj->bufOutPtr == &obj->buf[OBJ_BUF_SIZE]) {
             obj->bufOutPtr = obj->buf;
         }
     }
     /*  Assert the buffer's input and output ptrs are valid upon exit.
      */
     assert(obj->bufInPtr >= obj->buf);
-    assert(obj->bufInPtr < &obj->buf[MAX_BUF_SIZE]);
+    assert(obj->bufInPtr < &obj->buf[OBJ_BUF_SIZE]);
     assert(obj->bufOutPtr >= obj->buf);
-    assert(obj->bufOutPtr < &obj->buf[MAX_BUF_SIZE]);
+    assert(obj->bufOutPtr < &obj->buf[OBJ_BUF_SIZE]);
 
     x_pthread_mutex_unlock(&obj->bufLock);
 
@@ -1072,9 +1072,9 @@ int write_to_obj(obj_t *obj)
     /*  Assert the buffer's input and output ptrs are valid upon entry.
      */
     assert(obj->bufInPtr >= obj->buf);
-    assert(obj->bufInPtr < &obj->buf[MAX_BUF_SIZE]);
+    assert(obj->bufInPtr < &obj->buf[OBJ_BUF_SIZE]);
     assert(obj->bufOutPtr >= obj->buf);
-    assert(obj->bufOutPtr < &obj->buf[MAX_BUF_SIZE]);
+    assert(obj->bufOutPtr < &obj->buf[OBJ_BUF_SIZE]);
 
     /*  The number of available bytes to write out to the file descriptor
      *    does not take into account data that has wrapped-around in the
@@ -1101,7 +1101,7 @@ int write_to_obj(obj_t *obj)
         avail = obj->bufInPtr - obj->bufOutPtr;
     }
     else {
-        avail = &obj->buf[MAX_BUF_SIZE] - obj->bufOutPtr;
+        avail = &obj->buf[OBJ_BUF_SIZE] - obj->bufOutPtr;
     }
     if (avail > 0) {
 again:
@@ -1125,7 +1125,7 @@ again:
             /*
              *  Do the hokey-pokey and perform a circular-buffer wrap-around.
              */
-            if (obj->bufOutPtr == &obj->buf[MAX_BUF_SIZE]) {
+            if (obj->bufOutPtr == &obj->buf[OBJ_BUF_SIZE]) {
                 obj->bufOutPtr = obj->buf;
             }
         }
@@ -1143,9 +1143,9 @@ again:
     /*  Assert the buffer's input and output ptrs are valid upon exit.
      */
     assert(obj->bufInPtr >= obj->buf);
-    assert(obj->bufInPtr < &obj->buf[MAX_BUF_SIZE]);
+    assert(obj->bufInPtr < &obj->buf[OBJ_BUF_SIZE]);
     assert(obj->bufOutPtr >= obj->buf);
-    assert(obj->bufOutPtr < &obj->buf[MAX_BUF_SIZE]);
+    assert(obj->bufOutPtr < &obj->buf[OBJ_BUF_SIZE]);
 
     x_pthread_mutex_unlock(&obj->bufLock);
 

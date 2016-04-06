@@ -452,7 +452,7 @@ static int perform_help_esc(client_conf_t *conf, char c)
         write_esc_char(ESC_CHAR_REPLAY, tmp);
         n = append_format_string(buf, sizeof(buf),
             "  %2s%-2s -  Replay up to the last %d bytes of the log.\r\n",
-            esc, tmp, CONMAN_REPLAY_LEN);
+            esc, tmp, LOG_REPLAY_LEN);
     }
 
     if ((conf->req->command == CONMAN_CMD_CONNECT)

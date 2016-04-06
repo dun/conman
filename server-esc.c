@@ -260,14 +260,14 @@ static void perform_log_replay(obj_t *client)
  *    with this client (in either a R/O or R/W session, but not a B/C session).
  *
  *  The maximum amount of data that can be written into an object's
- *    circular-buffer via write_obj_data() is (MAX_BUF_SIZE - 1) bytes.
+ *    circular-buffer via write_obj_data() is (OBJ_BUF_SIZE - 1) bytes.
  *    But writing this much data may likely overwrite data in the buffer that
  *    has not been flushed to the object's file descriptor via write_to_obj().
- *    Therefore, it is recommended (CONMAN_REPLAY_LEN <= MAX_BUF_SIZE / 2).
+ *    Therefore, it is recommended (LOG_REPLAY_LEN <= OBJ_BUF_SIZE / 2).
  */
     obj_t *console;
     obj_t *logfile;
-    unsigned char buf[MAX_BUF_SIZE - 1];
+    unsigned char buf[OBJ_BUF_SIZE - 1];
     unsigned char *ptr = buf;
     int len = sizeof(buf);
     unsigned char *p;
@@ -323,9 +323,9 @@ static void perform_log_replay(obj_t *client)
          *    don't wrap back into uncharted buffer territory.
          */
         if (!logfile->gotBufWrap)
-            n = MIN(CONMAN_REPLAY_LEN, logfile->bufInPtr - logfile->buf);
+            n = MIN(LOG_REPLAY_LEN, logfile->bufInPtr - logfile->buf);
         else
-            n = MIN(CONMAN_REPLAY_LEN, MAX_BUF_SIZE - 1);
+            n = MIN(LOG_REPLAY_LEN, OBJ_BUF_SIZE - 1);
         n = MIN(n, len);
 
         p = logfile->bufInPtr - n;
@@ -335,7 +335,7 @@ static void perform_log_replay(obj_t *client)
         }
         else {                          /* wrap backwards */
             m = logfile->buf - p;
-            p = &logfile->buf[MAX_BUF_SIZE] - m;
+            p = &logfile->buf[OBJ_BUF_SIZE] - m;
             memcpy(ptr, p, m);
             ptr += m;
             n -= m;

@@ -227,7 +227,7 @@ typedef union aux_obj {
 typedef struct base_obj {               /* BASE OBJ:                         */
     char            *name;              /*  obj name                         */
     int              fd;                /*  file descriptor                  */
-    unsigned char    buf[MAX_BUF_SIZE]; /*  circular-buf to be written to fd */
+    unsigned char    buf[OBJ_BUF_SIZE]; /*  circular-buf to be written to fd */
     unsigned char   *bufInPtr;          /*  ptr for data written in to buf   */
     unsigned char   *bufOutPtr;         /*  ptr for data written out to fd   */
     pthread_mutex_t  bufLock;           /*  lock protecting access to buf    */

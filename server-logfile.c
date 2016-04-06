@@ -355,7 +355,7 @@ int write_log_data(obj_t *log, const void *src, int len)
  *  Returns the number of bytes written into the logfile obj's buffer.
  */
     const int minbuf = 25;              /* cr/lf + timestamp + meta/char */
-    unsigned char buf[MAX_BUF_SIZE - 1];
+    unsigned char buf[OBJ_BUF_SIZE - 1];
     const unsigned char *p;
     unsigned char *q;
     const unsigned char * const qLast = buf + sizeof(buf);
