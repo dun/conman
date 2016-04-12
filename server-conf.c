@@ -224,21 +224,6 @@ server_conf_t * create_server_conf(void)
      *    '-k' and '-r' cmdline options.
      */
     conf->fd = -1;
-    /*
-     *  The port is initialized to zero here because it can be set
-     *    (in order of precedence, from highest to lowest) via:
-     *    1. command-line option (-p)
-     *    2. configuration file (SERVER PORT=<int>)
-     *    3. macro def (CONMAN_PORT in "config.h")
-     *  The problem is that the command-line options need to be processed
-     *    before the configuration file, because an alternative configuration
-     *    can be specified via the command-line.  If the port is set to its
-     *    default value here, the configuration parsing routine cannot tell
-     *    whether it should overwrite the value because it cannot tell whether
-     *    the current value is from the command-line or the macro def.
-     *  Therefore, we add a kludge at the end of process_server_conf_file()
-     *    to set the default value if one has not already been specified.
-     */
     conf->port = 0;
     conf->ld = -1;
     conf->objs = list_create((ListDelF) destroy_obj);
@@ -391,7 +376,6 @@ void process_cmdline(server_conf_t *conf, int argc, char *argv[])
 
 void process_config(server_conf_t *conf)
 {
-    int port;
     pid_t pid;
     struct stat fdStat;
     int len;
@@ -400,12 +384,7 @@ void process_config(server_conf_t *conf)
     Lex l;
     int tok;
 
-    /*  Save conf->port 'cause it may be redefined by parse_server_directive().
-     *  If (port > 0), port was specified via the command-line.
-     */
-    port = conf->port;
-    /*
-     *  Keep conf->fd open after parsing the file in order to obtain the lock.
+    /*  Keep conf->fd open after parsing the file in order to obtain the lock.
      */
     if ((conf->fd = open(conf->confFileName, O_RDONLY)) < 0) {
         log_err(errno, "Unable to open \"%s\"", conf->confFileName);
@@ -476,12 +455,7 @@ void process_config(server_conf_t *conf)
     lex_destroy(l);
     free(buf);
 
-    /*  Kludge to ensure port is properly set (cf, create_server_conf()).
-     */
-    if (port > 0) {                     /* restore port set via cmdline */
-        conf->port = port;
-    }
-    else if (conf->port <= 0) {         /* port not set so use default */
+    if (conf->port <= 0) {              /* port not set so use default */
         conf->port = atoi(CONMAN_PORT);
     }
     if (conf->logFileName) {
@@ -1080,6 +1054,7 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
     /* Prevent command-line options from being overridden by the config file.
      */
     const int isPidFileNameSet = (conf->pidFileName != NULL);
+    const int isPortSet = (conf->port > 0);
 
     directive = server_conf_strs[LEX_UNTOK(lex_prev(l))];
 
@@ -1303,7 +1278,7 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
                 snprintf(err, sizeof(err), "invalid %s value %d",
                     server_conf_strs[LEX_UNTOK(tok)], n);
             }
-            else {
+            else if (!isPortSet) {
                 conf->port = n;
             }
             break;
