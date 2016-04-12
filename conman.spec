@@ -7,24 +7,10 @@ Group:		Applications/System
 License:	GPLv3+
 URL:		https://dun.github.io/conman/
 
+BuildRequires:	freeipmi-devel >= 1.0.4
+BuildRequires:	tcp_wrappers-devel
 Requires:	expect
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-
-%if 0%{?chaos} >= 4 || 0%{?rhel} >= 6 || 0%{?fedora} >= 9
-BuildRequires:	freeipmi-devel >= 1.0.4
-%endif
-
-%if 0%{?rhel} >= 6 || 0%{?fedora} >= 7
-BuildRequires:	tcp_wrappers-devel
-%else
-%if "%{_vendor}" == "redhat"
-BuildRequires:	tcp_wrappers
-%else
-%if "%{_vendor}" == "suse"
-BuildRequires:	tcpd-devel
-%endif
-%endif
-%endif
 
 Source0:	%{name}-%{version}.tar.bz2
 
