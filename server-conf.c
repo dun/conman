@@ -333,7 +333,7 @@ void process_cmdline(server_conf_t *conf, int argc, char *argv[])
     int c;
 
     opterr = 0;
-    while ((c = getopt(argc, argv, "c:FhkLp:qrvVz")) != -1) {
+    while ((c = getopt(argc, argv, "c:FhkLp:P:qrvVz")) != -1) {
         switch(c) {
         case 'c':
             destroy_string(conf->confFileName);
@@ -355,6 +355,12 @@ void process_cmdline(server_conf_t *conf, int argc, char *argv[])
             if ((conf->port = atoi(optarg)) <= 0) {
                 log_err(0, "CMDLINE: invalid port \"%d\"", conf->port);
             }
+            break;
+        case 'P':
+            destroy_string(conf->pidFileName);
+            conf->pidFileName = (optarg[0] == '/') ?
+                create_string(optarg) :
+                create_format_string("%s/%s", conf->cwd, optarg);
             break;
         case 'q':
             conf->throwSignal = 0;      /* null signal for error checking */
@@ -505,6 +511,7 @@ static void display_server_help(char *prog)
     printf("  -k        Kill daemon.\n");
     printf("  -L        Display license information.\n");
     printf("  -p PORT   Specify port number. [%d]\n", atoi(CONMAN_PORT));
+    printf("  -P FILE   Specify PID file.\n");
     printf("  -q        Query daemon's pid.\n");
     printf("  -r        Re-open log files.\n");
     printf("  -v        Be verbose.\n");
@@ -1070,6 +1077,10 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
     int n;
     struct stat st;
 
+    /* Prevent command-line options from being overridden by the config file.
+     */
+    const int isPidFileNameSet = (conf->pidFileName != NULL);
+
     directive = server_conf_strs[LEX_UNTOK(lex_prev(l))];
 
     while (!done && !*err) {
@@ -1267,7 +1278,7 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
                 snprintf(err, sizeof(err), "expected STRING for %s value",
                     server_conf_strs[LEX_UNTOK(tok)]);
             }
-            else {
+            else if (!isPidFileNameSet) {
                 destroy_string(conf->pidFileName);
                 if (lex_text(l)[0] != '/') {
                     conf->pidFileName = create_format_string("%s/%s",

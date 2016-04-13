@@ -35,6 +35,10 @@ Specify the port on which \fBconmand\fR will listen for clients, overriding
 both the default port [@CONMAN_PORT@] and the port specified in the
 configuration file.
 .TP
+.B \-P \fIfile\fR
+Specify the PID file for storing the daemon's PID, overriding the "\fBserver
+pidfile\fR" directive in the configuration file.
+.TP
 .B \-q
 Displays the PID of the \fBconmand\fR process associated with the specified
 configuration if it appears active.  Returns 0 if the configuration appears
