@@ -75,7 +75,7 @@ obj_t * create_obj(
     x_pthread_mutex_init(&obj->bufLock, NULL);
     obj->readers = list_create(NULL);
     obj->writers = list_create(NULL);
-    if ((type < 0) || (type >= CONMAN_OBJ_LAST_ENTRY)) {
+    if ((type == 0) || (type >= CONMAN_OBJ_LAST_ENTRY)) {
         log_err(0, "INTERNAL: Unrecognized object [%s] type=%d", name, type);
     }
     obj->type = type;
