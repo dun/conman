@@ -325,8 +325,8 @@ static void setup_coredump(server_conf_t *conf)
         if (conf->coreDumpDir) {
             strlcpy(coredumpdir, conf->coreDumpDir, sizeof(coredumpdir));
         }
-        else {
-            getcwd(coredumpdir, sizeof(coredumpdir));
+        else if (!getcwd(coredumpdir, sizeof(coredumpdir))) {
+            log_err(errno, "Unable to get current working directory");
         }
     }
     else {
