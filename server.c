@@ -397,8 +397,10 @@ static void coredump_handler(int signum)
     }
 
     umask(077);
-    if (coredump && *coredumpdir) {
-        (void) chdir(coredumpdir);
+    if (coredump && *coredumpdir && (chdir(coredumpdir) < 0)) {
+        log_msg(LOG_ERR,
+            "Unable to change directory to coredumpdir \"%s\": %s",
+            coredumpdir, strerror(errno));
     }
     posix_signal(signum, SIG_DFL);
     (void) kill(getpid(), signum);
