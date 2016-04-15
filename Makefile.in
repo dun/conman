@@ -96,6 +96,14 @@ install: $(PROGS)
 	    $(DESTDIR)$(sysconfdir)/conman.conf$${new}; \
 	  $(INSTALL) -m 600 etc/conman.conf \
 	    $(DESTDIR)$(sysconfdir)/conman.conf$${new}
+	@ if test -d $(prefix)/lib/systemd/system; then \
+	  echo $(INSTALL) -m 755 -d $(DESTDIR)$(prefix)/lib/systemd/system; \
+	  $(INSTALL) -m 755 -d $(DESTDIR)$(prefix)/lib/systemd/system; \
+	  echo $(INSTALL) -m 644 etc/conman.service \
+	    $(DESTDIR)$(prefix)/lib/systemd/system/conman.service; \
+	  $(INSTALL) -m 644 etc/conman.service \
+	    $(DESTDIR)$(prefix)/lib/systemd/system/conman.service; \
+	fi
 	$(INSTALL) -m 755 -d $(DESTDIR)$(sysconfdir)/init.d
 	@ test ! -f $(DESTDIR)$(sysconfdir)/init.d/conman \
 	    || cmp etc/conman.init $(DESTDIR)$(sysconfdir)/init.d/conman \

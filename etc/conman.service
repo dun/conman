@@ -1,0 +1,15 @@
+[Unit]
+Description=ConMan Console Manager
+Documentation=man:conmand(8)
+After=network.target
+After=time-sync.target
+
+[Service]
+Type=forking
+ExecStart=/usr/sbin/conmand -P /var/run/conmand.pid
+PIDFile=/var/run/conmand.pid
+LimitNOFILE=infinity
+Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target

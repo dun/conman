@@ -9,7 +9,12 @@ URL:		https://dun.github.io/conman/
 
 BuildRequires:	freeipmi-devel >= 1.0.4
 BuildRequires:	tcp_wrappers-devel
+BuildRequires:	systemd
 Requires:	expect
+Requires(post): systemd
+Requires(preun): systemd
+Requires(postun): systemd
+
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 Source0:	%{name}-%{version}.tar.bz2
@@ -40,32 +45,21 @@ make %{?_smp_mflags}
 rm -rf "%{buildroot}"
 mkdir -p "%{buildroot}"
 make install DESTDIR="%{buildroot}"
-#
-%if 0%{?_initrddir:1}
-if [ "%{_sysconfdir}/init.d" != "%{_initrddir}" ]; then
-  mkdir -p "%{buildroot}%{_initrddir}"
-  mv "%{buildroot}%{_sysconfdir}/init.d"/* "%{buildroot}%{_initrddir}/"
-fi
-%endif
+rm -f %{buildroot}/%{_sysconfdir}/init.d/conman
+rm -f %{buildroot}/%{_sysconfdir}/default/conman
+rm -f %{buildroot}/%{_sysconfdir}/sysconfig/conman
 
 %clean
 rm -rf "%{buildroot}"
 
 %post
-if [ -x /sbin/chkconfig ]; then /sbin/chkconfig --add conman; fi
+%systemd_post conman.service
 
 %preun
-if [ "$1" = 0 ]; then
-  INITRDDIR=%{?_initrddir:%{_initrddir}}%{!?_initrddir:%{_sysconfdir}/init.d}
-  $INITRDDIR/conman stop >/dev/null 2>&1 || :
-  if [ -x /sbin/chkconfig ]; then /sbin/chkconfig --del conman; fi
-fi
+%systemd_preun conman.service
 
 %postun
-if [ "$1" -ge 1 ]; then
-  INITRDDIR=%{?_initrddir:%{_initrddir}}%{!?_initrddir:%{_sysconfdir}/init.d}
-  $INITRDDIR/conman condrestart >/dev/null 2>&1 || :
-fi
+%systemd_postun_with_restart conman.service
 
 %files
 %defattr(-,root,root,-)
@@ -77,9 +71,9 @@ fi
 %doc README
 %doc THANKS
 %config(noreplace) %{_sysconfdir}/conman.conf
-%config(noreplace) %{_sysconfdir}/[dls]*/conman
-%{?_initrddir:%{_initrddir}}%{!?_initrddir:%{_sysconfdir}/init.d}/conman
+%config(noreplace) %{_sysconfdir}/logrotate.d/conman
 %{_bindir}/*
 %{_sbindir}/*
 %{_prefix}/lib/*
 %{_mandir}/*/*
+%{_unitdir}/conman.service
