@@ -6,6 +6,7 @@ Summary:	ConMan: The Console Manager
 Group:		Applications/System
 License:	GPLv3+
 URL:		https://dun.github.io/conman/
+Source0:	https://github.com/dun/conman/releases/download/%{name}-%{version}/%{name}-%{version}.tar.xz
 
 BuildRequires:	freeipmi-devel >= 1.0.4
 BuildRequires:	tcp_wrappers-devel
@@ -14,10 +15,6 @@ Requires:	expect
 Requires(post): systemd
 Requires(preun): systemd
 Requires(postun): systemd
-
-BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-
-Source0:	%{name}-%{version}.tar.bz2
 
 %description
 ConMan is a serial console management program designed to support a large
@@ -35,7 +32,7 @@ Its features include:
   - broadcasting client output to multiple consoles
 
 %prep
-%setup
+%setup -q
 
 %build
 %configure
@@ -62,9 +59,9 @@ rm -rf "%{buildroot}"
 %systemd_postun_with_restart conman.service
 
 %files
-%defattr(-,root,root,-)
+%{!?_licensedir:%global license %doc}
+%license COPYING
 %doc AUTHORS
-%doc COPYING
 %doc DISCLAIMER*
 %doc FAQ
 %doc NEWS
