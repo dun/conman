@@ -248,13 +248,6 @@ static int connect_telnet_obj(obj_t *telnet)
             err = errno;
         }
         if (err) {
-            /*
-             *  On some systems (eg, Tru64), the close() of a socket
-             *    that failed to connect() will return with an error of
-             *    "invalid argument".  So close & ignore the return code here.
-             */
-            (void) close(telnet->fd);
-            telnet->fd = -1;
             disconnect_telnet_obj(telnet);
             return(-1);
         }
