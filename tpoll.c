@@ -330,8 +330,8 @@ tpoll_is_set (tpoll_t tp, int fd, short int events)
 {
 /*  Tests whether any of the bitwise-OR'd [events] have occurred for file
  *    descriptor [fd] within the tpoll object [tp].
- *  Returns true (ie, non-zero) if any of the specified [events] have occurred,
- *    or 0 otherwise.
+ *  Returns >0  if any of the specified [events] have occurred,
+ *    0 if none of the specified [events] have occurred, or -1 on error.
  */
     int rc;
     int e;
