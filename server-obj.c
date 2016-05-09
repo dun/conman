@@ -169,8 +169,9 @@ void destroy_obj(obj_t *obj)
         }
         break;
     case CONMAN_OBJ_LOGFILE:
-        if (obj->aux.logfile.fmtName)
+        if (obj->aux.logfile.fmtName) {
             free(obj->aux.logfile.fmtName);
+        }
         break;
     case CONMAN_OBJ_PROCESS:
         for (pp = obj->aux.process.argv; *pp != NULL; pp++) {
@@ -790,7 +791,7 @@ static int validate_obj_links(obj_t *obj)
 
 int shutdown_obj(obj_t *obj)
 {
-/*  Shuts down the specified obj.
+/*  Shuts down (and potentially re-opens) the specified obj.
  *  Returns -1 if the obj is ready to be removed from the master objs list
  *    and destroyed; o/w, returns 0.
  */
@@ -803,6 +804,8 @@ int shutdown_obj(obj_t *obj)
     /*  An inactive obj should not be destroyed.
      */
     if (obj->fd < 0) {
+        log_msg(LOG_INFO, "Attempted to shutdown [%s] when fd=%d",
+            obj->name, obj->fd);
         return(0);
     }
     /*  Close the existing connection.
@@ -1032,15 +1035,16 @@ int write_obj_data(obj_t *obj, const void *src, int len, int isInfo)
      */
     if (len > avail) {
         if (!is_client_obj(obj) || !obj->aux.client.gotSuspend) {
-            log_msg(LOG_NOTICE, "Overwrote %d bytes in buffer for %s",
-                len-avail, obj->name);
+            log_msg(LOG_NOTICE, "Overwrote %d bytes for \"%s\"",
+                len - avail, obj->name);
         }
         obj->bufOutPtr = obj->bufInPtr + 1;
         if (obj->bufOutPtr == &obj->buf[OBJ_BUF_SIZE]) {
             obj->bufOutPtr = obj->buf;
         }
     }
-    /*  Notify tpoll that data is available for writing.
+    /*  Notify tpoll that data is available for writing
+     *    unless it is a client obj that is currently suspended.
      */
     if (!is_client_obj(obj) || !obj->aux.client.gotSuspend) {
         tpoll_set(tp_global, obj->fd, POLLOUT);
