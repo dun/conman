@@ -258,7 +258,6 @@ static int disconnect_process_obj(obj_t *process)
  */
     process_obj_t *auxp;
     time_t         tNow;
-    int            n;
     char          *delta_str;
 
     assert(process != NULL);
@@ -275,7 +274,6 @@ static int disconnect_process_obj(obj_t *process)
     if (time(&tNow) == (time_t) -1) {
         log_err(errno, "time() failed");
     }
-    n = tNow - auxp->tStart;
     delta_str = create_time_delta_string(auxp->tStart, tNow);
 
     /*  Notify linked objs when transitioning from an UP state.
