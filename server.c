@@ -666,6 +666,7 @@ static void create_listen_socket(server_conf_t *conf)
         log_err(errno, "Unable to listen on port %d", conf->port);
     }
     conf->ld = ld;
+    tpoll_set(conf->tp, conf->ld, POLLIN);
     return;
 }
 
@@ -728,10 +729,15 @@ static void mux_io(server_conf_t *conf)
     int n;
     obj_t *obj;
     int inevent_fd;
+    int rv;
 
     assert(conf->tp != NULL);
     assert(!list_is_empty(conf->objs));
 
+    inevent_fd = inevent_get_fd();
+    if (inevent_fd >= 0) {
+        tpoll_set(conf->tp, inevent_get_fd(), POLLIN);
+    }
     i = list_iterator_create(conf->objs);
 
     while (!done) {
@@ -745,73 +751,15 @@ static void mux_io(server_conf_t *conf)
             reopen_logfiles(conf);
             reconfig = 0;
         }
-
-        /*  FIXME: Switch from recomputing the tpoll set on each loop iteration
-         *    to modifying it based on events.  This will eliminate the 1sec
-         *    tpoll() sleep timeout and greatly reduce cpu utilization.
-         *    It will also eliminate the maze of twisty conditions below.
+        /*  FIXME: Rework console reset to avoid additional list traversal.
          */
-        DPRINTF((25, "Recomputing tpoll fd set\n"));
-        (void) tpoll_zero(conf->tp, TPOLL_ZERO_FDS);
-        tpoll_set(conf->tp, conf->ld, POLLIN);
-
-        inevent_fd = inevent_get_fd();
-        if (inevent_fd >= 0) {
-            tpoll_set(conf->tp, inevent_get_fd(), POLLIN);
-        }
         list_iterator_reset(i);
         while ((obj = list_next(i))) {
-
             if (obj->gotReset) {
                 reset_console(obj, conf->resetCmd);
             }
-            if (obj->fd < 0) {
-                continue;
-            }
-            if ( (
-                   ( is_telnet_obj(obj) &&
-                     obj->aux.telnet.state == CONMAN_TELNET_UP ) ||
-                   ( is_process_obj(obj) &&
-                     obj->aux.process.state == CONMAN_PROCESS_UP ) ||
-#if WITH_FREEIPMI
-                   ( is_ipmi_obj(obj) &&
-                     obj->aux.ipmi.state == CONMAN_IPMI_UP ) ||
-#endif /* WITH_FREEIPMI */
-                   ( is_unixsock_obj(obj) &&
-                     obj->aux.unixsock.state == CONMAN_UNIXSOCK_UP ) ||
-                   is_serial_obj(obj)  ||
-                   is_client_obj(obj)
-                 )
-                 &&
-                 ( ! obj->gotEOF ) )
-            {
-                tpoll_set(conf->tp, obj->fd, POLLIN);
-            }
-            if ( ( (obj->bufInPtr != obj->bufOutPtr) ||
-                   (obj->gotEOF) ) &&
-                 ( ! (is_telnet_obj(obj) &&
-                      obj->aux.telnet.state != CONMAN_TELNET_UP) ) &&
-                 ( ! (is_process_obj(obj) &&
-                      obj->aux.process.state != CONMAN_PROCESS_UP) ) &&
-#if WITH_FREEIPMI
-                 ( ! (is_ipmi_obj(obj) &&
-                      obj->aux.ipmi.state != CONMAN_IPMI_UP) ) &&
-#endif /* WITH_FREEIPMI */
-                 ( ! (is_unixsock_obj(obj) &&
-                      obj->aux.unixsock.state != CONMAN_UNIXSOCK_UP) ) &&
-                 ( ! (is_client_obj(obj) &&
-                      obj->aux.client.gotSuspend) ) )
-            {
-                tpoll_set(conf->tp, obj->fd, POLLOUT);
-            }
-            if (is_telnet_obj(obj) &&
-                obj->aux.telnet.state == CONMAN_TELNET_PENDING)
-            {
-                tpoll_set(conf->tp, obj->fd, POLLIN | POLLOUT);
-            }
         }
-        DPRINTF((25, "Calling tpoll\n"));
-        while ((n = tpoll(conf->tp, 1000)) < 0) {
+        while ((n = tpoll(conf->tp, -1)) < 0) {
             if (errno != EINTR) {
                 log_err(errno, "Unable to multiplex I/O");
             }
@@ -822,46 +770,30 @@ static void mux_io(server_conf_t *conf)
         if (n <= 0) {
             continue;
         }
-        if (tpoll_is_set(conf->tp, conf->ld, POLLIN)) {
+        if (tpoll_is_set(conf->tp, conf->ld, POLLIN) > 0) {
             accept_client(conf);
         }
-        if ((inevent_fd >= 0) && tpoll_is_set(conf->tp, inevent_fd, POLLIN)) {
+        if ((inevent_fd >= 0) &&
+                tpoll_is_set(conf->tp, inevent_fd, POLLIN) > 0) {
             inevent_process();
         }
         /*  If read_from_obj() or write_to_obj() returns -1,
-         *    the obj's buffer has been flushed.  If it is a telnet obj,
+         *    the obj's buffer has been flushed.  If it is a console obj,
          *    retain it and attempt to re-establish the connection;
          *    o/w, give up and remove it from the master objs list.
          */
         list_iterator_reset(i);
         while ((obj = list_next(i))) {
 
-            if (obj->fd < 0) {
+            rv = tpoll_is_set(conf->tp, obj->fd, POLLIN | POLLHUP | POLLERR);
+            if ((rv > 0) && (read_from_obj(obj) < 0)) {
+                list_delete(i);
                 continue;
             }
-            if (is_telnet_obj(obj)
-              && tpoll_is_set(conf->tp, obj->fd, POLLIN | POLLOUT)
-              && (obj->aux.telnet.state == CONMAN_TELNET_PENDING)) {
-                open_telnet_obj(obj);
+            rv = tpoll_is_set(conf->tp, obj->fd, POLLOUT);
+            if ((rv > 0) && (write_to_obj(obj) < 0)) {
+                list_delete(i);
                 continue;
-            }
-            if (tpoll_is_set(conf->tp, obj->fd, POLLIN | POLLHUP | POLLERR)) {
-                if (read_from_obj(obj, conf->tp) < 0) {
-                    list_delete(i);
-                    continue;
-                }
-                if (obj->fd < 0) {
-                    continue;
-                }
-            }
-            if (tpoll_is_set(conf->tp, obj->fd, POLLOUT)) {
-                if (write_to_obj(obj) < 0) {
-                    list_delete(i);
-                    continue;
-                }
-                if (obj->fd < 0) {
-                    continue;
-                }
             }
         }
     }

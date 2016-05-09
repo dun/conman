@@ -49,6 +49,8 @@
 #include "util.h"
 #include "wrapper.h"
 
+extern tpoll_t tp_global;               /* defined in server.c */
+
 
 static char * sanitize_file_string(char *str);
 static char * find_trailing_int_str(char *str);
@@ -110,6 +112,7 @@ obj_t * create_client_obj(server_conf_t *conf, req_t *req)
 
     set_fd_nonblocking(req->sd);
     set_fd_closed_on_exec(req->sd);
+    tpoll_set(tp_global, req->sd, POLLIN);
 
     snprintf(name, sizeof(name), "%s@%s:%d", req->user, req->host, req->port);
     name[sizeof(name) - 1] = '\0';
@@ -230,6 +233,7 @@ void destroy_obj(obj_t *obj)
         list_destroy(obj->writers);
     }
     if (obj->fd >= 0) {
+        tpoll_clear(tp_global, obj->fd, POLLIN | POLLOUT);
         if (close(obj->fd) < 0) {
             log_msg(LOG_WARNING, "Unable to close [%s] during destruction: %s",
                 obj->name, strerror(errno));
@@ -772,6 +776,7 @@ int shutdown_obj(obj_t *obj)
     }
     /*  Close the existing connection.
      */
+    tpoll_clear(tp_global, obj->fd, POLLIN | POLLOUT);
     if (close(obj->fd) < 0) {
         log_msg(LOG_WARNING, "Unable to close [%s] during shutdown: %s",
             obj->name, strerror(errno));
@@ -818,17 +823,13 @@ int shutdown_obj(obj_t *obj)
 }
 
 
-int read_from_obj(obj_t *obj, tpoll_t tp)
+int read_from_obj(obj_t *obj)
 {
 /*  Reads data from the obj's file descriptor and writes it out
  *    to the circular-buffer of each obj in its "readers" list.
- *  Returns >=0 on success, or -1 if the obj is ready to be destroyed.
+ *  Returns the number of bytes read (>=0 on success),
+ *    or -1 if the obj is ready to be destroyed.
  *
- *  The tpoll (tp) ref is an optimization used to "prime" the set for
- *    write_to_obj().  This allows data read to be written out to those objs
- *    not yet traversed during the current list iteration, thereby reducing the
- *    latency.  Without it, these objs would be tpoll()'d on the next list
- *    iteration in mux_io()'s outer-loop.
  *  An obj's circular-buffer is empty when (bufInPtr == bufOutPtr).
  *    Thus, it can hold at most (OBJ_BUF_SIZE - 1) bytes of data.
  *  But if the obj is a logfile, its data can grow as a result of the
@@ -836,14 +837,15 @@ int read_from_obj(obj_t *obj, tpoll_t tp)
  *    somewhat to reduce the likelihood of log data being dropped.
  */
     unsigned char buf[(OBJ_BUF_SIZE / 2) - 1];
-    int n, m;
+    int n;
     ListIterator i;
     obj_t *reader;
 
     DPRINTF((20, "Entered read_from_obj: [%s]\n", obj->name));
 
-    assert(obj->fd >= 0);
-
+    if (obj->fd < 0) {
+        return(0);
+    }
     if (obj->gotEOF) {
         /*
          *  This code path can happen on POLLHUP or POLLERR.
@@ -879,7 +881,6 @@ again:
     else if (n == 0) {
         DPRINTF((15, "Read EOF from [%s].\n", obj->name));
         obj->gotEOF = 1;
-        tpoll_set(tp, obj->fd, POLLOUT);        /* attempt to flush buffer */
         return(0);
     }
     else {
@@ -902,20 +903,17 @@ again:
         if (n > 0) {
             i = list_iterator_create(obj->readers);
             while ((reader = list_next(i))) {
-                /*
-                 *  If the obj's gotEOF flag is set,
-                 *    no more data can be written into its buffer.
-                 */
-                if (!reader->gotEOF) {
-                    if (is_logfile_obj(reader)) {
-                        m = write_log_data(reader, buf, n);
-                    }
-                    else {
-                        m = write_obj_data(reader, buf, n, 0);
-                    }
-                    if (m > 0) {
-                        tpoll_set(tp, reader->fd, POLLOUT);
-                    }
+
+                if (reader->gotEOF) {
+                    log_msg(LOG_INFO,
+                        "Unable to write %d bytes to [%s]: EOF is set",
+                        n, reader->name);
+                }
+                else if (is_logfile_obj(reader)) {
+                    write_log_data(reader, buf, n);
+                }
+                else {
+                    write_obj_data(reader, buf, n, 0);
                 }
             }
             list_iterator_destroy(i);
@@ -1038,6 +1036,10 @@ int write_obj_data(obj_t *obj, const void *src, int len, int isInfo)
             obj->bufOutPtr = obj->buf;
         }
     }
+    /*  Notify tpoll that data is available for writing.
+     */
+    tpoll_set(tp_global, obj->fd, POLLOUT);
+
     /*  Assert the buffer's input and output ptrs are valid upon exit.
      */
     assert(obj->bufInPtr >= obj->buf);
@@ -1068,8 +1070,17 @@ int write_to_obj(obj_t *obj)
 
     DPRINTF((20, "Entered write_to_obj: [%s]\n", obj->name));
 
-    assert(obj->fd >= 0);
-
+    if (obj->fd < 0) {
+        return(0);
+    }
+    /*  The completion of a nonblocking connect() makes the socket writable,
+     *    so complete the telnet obj non-blocking connect here if needed.
+     */
+    if (is_telnet_obj(obj) && (obj->aux.telnet.state == CONMAN_TELNET_PENDING))
+    {
+        open_telnet_obj(obj);
+        return(0);
+    }
     x_pthread_mutex_lock(&obj->bufLock);
 
     /*  Assert the buffer's input and output ptrs are valid upon entry.
@@ -1142,6 +1153,11 @@ again:
      */
     if (obj->gotEOF && (obj->bufInPtr == obj->bufOutPtr)) {
         isDead = 1;
+    }
+    /*  Notify tpoll that all available data has been written.
+     */
+    if (obj->bufInPtr == obj->bufOutPtr) {
+        tpoll_clear(tp_global, obj->fd, POLLOUT);
     }
     /*  Assert the buffer's input and output ptrs are valid upon exit.
      */

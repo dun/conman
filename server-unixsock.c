@@ -256,6 +256,7 @@ static int connect_unixsock_obj(obj_t *unixsock)
      */
     unixsock->gotEOF = 0;
     auxp->state = CONMAN_UNIXSOCK_UP;
+    tpoll_set(tp_global, unixsock->fd, POLLIN);
 
     /*  Require the connection to be up for a minimum length of time before
      *    resetting the reconnect-delay back to the minimum.
@@ -292,6 +293,7 @@ static int disconnect_unixsock_obj(obj_t *unixsock)
         auxp->timer = -1;
     }
     if (unixsock->fd >= 0) {
+        tpoll_clear(tp_global, unixsock->fd, POLLIN | POLLOUT);
         if (close(unixsock->fd) < 0) {
             log_msg(LOG_WARNING,
                 "Unable to close console [%s] socket \"%s\": %s",

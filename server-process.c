@@ -268,6 +268,7 @@ static int disconnect_process_obj(obj_t *process)
     auxp = &(process->aux.process);
 
     if (process->fd >= 0) {
+        tpoll_clear(tp_global, process->fd, POLLIN | POLLOUT);
         (void) close(process->fd);
         process->fd = -1;
     }
@@ -354,6 +355,7 @@ static int connect_process_obj(obj_t *process)
     auxp->pid = pid;
     process->gotEOF = 0;
     auxp->state = CONMAN_PROCESS_UP;
+    tpoll_set(tp_global, process->fd, POLLIN);
 
     /*  Require the connection to be up for a minimum length of time before
      *    resetting the reconnect-delay back to zero.

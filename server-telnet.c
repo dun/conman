@@ -222,6 +222,7 @@ static int connect_telnet_obj(obj_t *telnet)
                 (struct sockaddr *) &saddr, sizeof(saddr)) < 0) {
             if (errno == EINPROGRESS) {
                 telnet->aux.telnet.state = CONMAN_TELNET_PENDING;
+                tpoll_set(tp_global, telnet->fd, POLLIN | POLLOUT);
             }
             else {
                 disconnect_telnet_obj(telnet);
@@ -251,6 +252,9 @@ static int connect_telnet_obj(obj_t *telnet)
             disconnect_telnet_obj(telnet);
             return(-1);
         }
+        tpoll_clear(tp_global, telnet->fd, POLLOUT);
+        DPRINTF((10, "Completing connection to <%s:%d> for [%s].\n",
+            telnet->aux.telnet.host, telnet->aux.telnet.port, telnet->name));
     }
     else {
         log_err(0, "Console [%s] is in unexpected telnet state=%d",
@@ -258,6 +262,7 @@ static int connect_telnet_obj(obj_t *telnet)
     }
     telnet->gotEOF = 0;
     telnet->aux.telnet.state = CONMAN_TELNET_UP;
+    tpoll_set(tp_global, telnet->fd, POLLIN);
 
     /*  Notify linked objs when transitioning into an UP state.
      */
@@ -298,6 +303,7 @@ static void disconnect_telnet_obj(obj_t *telnet)
         telnet->aux.telnet.timer = -1;
     }
     if (telnet->fd >= 0) {
+        tpoll_clear(tp_global, telnet->fd, POLLIN | POLLOUT);
         if (close(telnet->fd) < 0)
             log_msg(LOG_WARNING,
                 "Unable to close connection to <%s:%d> for [%s]: %s",

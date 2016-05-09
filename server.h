@@ -422,7 +422,7 @@ void unlink_obj(obj_t *obj);
 
 int shutdown_obj(obj_t *obj);
 
-int read_from_obj(obj_t *obj, tpoll_t tp);
+int read_from_obj(obj_t *obj);
 
 int write_obj_data(obj_t *obj, const void *src, int len, int isInfo);
 

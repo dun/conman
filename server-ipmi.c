@@ -787,6 +787,7 @@ static void disconnect_ipmi_obj(obj_t *ipmi)
         ipmi->aux.ipmi.timer = -1;
     }
     if (ipmi->fd >= 0) {
+        tpoll_clear(tp_global, ipmi->fd, POLLIN | POLLOUT);
         if (close(ipmi->fd) < 0) {
             log_msg(LOG_WARNING,
                 "Unable to close connection to <%s> for console [%s]: %s",
@@ -964,6 +965,7 @@ static int complete_ipmi_connect(obj_t *ipmi)
 
     ipmi->gotEOF = 0;
     ipmi->aux.ipmi.state = CONMAN_IPMI_UP;
+    tpoll_set(tp_global, ipmi->fd, POLLIN);
 
     /*  Require the connection to be up for a minimum length of time
      *    before resetting the reconnect delay back to the minimum.

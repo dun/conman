@@ -40,6 +40,8 @@
 #include "util-file.h"
 #include "util-str.h"
 
+extern tpoll_t tp_global;               /* defined in server.c */
+
 
 int parse_logfile_opts(logopt_t *opts, const char *str,
     char *errbuf, int errlen)
@@ -231,6 +233,7 @@ int open_logfile_obj(obj_t *logfile)
     assert(logfile->aux.logfile.console->name != NULL);
 
     if (logfile->fd >= 0) {
+        tpoll_clear(tp_global, logfile->fd, POLLOUT);
         if (close(logfile->fd) < 0)
             log_msg(LOG_WARNING, "Unable to close logfile \"%s\": %s",
                 logfile->name, strerror(errno));

@@ -43,6 +43,8 @@
 #include "util-file.h"
 #include "util-str.h"
 
+extern tpoll_t tp_global;               /* defined in server.c */
+
 
 typedef struct bps_tag {
     speed_t bps;
@@ -382,6 +384,7 @@ int open_serial_obj(obj_t *serial)
         write_notify_msg(serial, LOG_INFO,
             "Console [%s] disconnected from \"%s\"",
             serial->name, serial->aux.serial.dev);
+        tpoll_clear(tp_global, serial->fd, POLLIN | POLLOUT);
         set_tty_mode(&serial->aux.serial.tty, serial->fd);
         if (close(serial->fd) < 0)      /* log err and continue */
             log_msg(LOG_WARNING, "Unable to close [%s] device \"%s\": %s",
@@ -428,6 +431,7 @@ int open_serial_obj(obj_t *serial)
     set_tty_mode(&tty, fd);
     serial->fd = fd;
     serial->gotEOF = 0;
+    tpoll_set(tp_global, serial->fd, POLLIN);
     /*
      *  Success!
      */
