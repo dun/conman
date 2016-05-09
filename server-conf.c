@@ -578,7 +578,6 @@ static void parse_console_directive(server_conf_t *conf, Lex l)
  *  Note: IPMIOPTS is only available if WITH_FREEIPMI is defined.
  */
     char *directive;                    /* name of directive being parsed */
-    int line;                           /* line # where directive begins */
     int tok;
     int done = 0;
     char err[MAX_LINE] = "";
@@ -587,7 +586,6 @@ static void parse_console_directive(server_conf_t *conf, Lex l)
     memset(&con, 0, sizeof(con));
 
     directive = server_conf_strs[LEX_UNTOK(lex_prev(l))];
-    line = lex_line(l);
 
     while (!done && !*err) {
         tok = lex_next(l);
