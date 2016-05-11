@@ -440,7 +440,7 @@ int open_serial_obj(obj_t *serial)
 
 err:
     if (fd >= 0) {
-        close(fd);                      /* ignore errors */
+        (void) close(fd);
     }
     return(-1);
 }

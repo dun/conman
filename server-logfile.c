@@ -274,7 +274,7 @@ int open_logfile_obj(obj_t *logfile)
     if (logfile->aux.logfile.opts.enableLock
             && (get_write_lock(logfile->fd) < 0)) {
         log_msg(LOG_WARNING, "Unable to lock \"%s\"", logfile->name);
-        close(logfile->fd);             /* ignore err on close() */
+        (void) close(logfile->fd);
         logfile->fd = -1;
         return(-1);
     }

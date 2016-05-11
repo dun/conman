@@ -1089,9 +1089,9 @@ static void reset_console(obj_t *console, const char *cmd)
     }
     else if (pid == 0) {
         setpgid(pid, 0);
-        close(STDIN_FILENO);            /* ignore errors on close() */
-        close(STDOUT_FILENO);
-        close(STDERR_FILENO);
+        (void) close(STDIN_FILENO);
+        (void) close(STDOUT_FILENO);
+        (void) close(STDERR_FILENO);
         execl("/bin/sh", "sh", "-c", buf, (char *) NULL);
         _exit(127);                     /* execl() error */
     }
