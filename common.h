@@ -66,7 +66,7 @@
 #define OBJ_BUF_SIZE            16384
 #define LOG_REPLAY_LEN          4096
 #define MAX_BUF_SIZE            4096
-#define MAX_SOCK_LINE           32768
+#define MAX_SOCK_LINE           131072
 #define MAX_LINE                1024
 
 /*  Escape codes used to send ctrl info 'tween client & server.
