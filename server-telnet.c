@@ -299,7 +299,7 @@ static void disconnect_telnet_obj(obj_t *telnet)
     }
     if (telnet->fd >= 0) {
         if (close(telnet->fd) < 0)
-            log_msg(LOG_ERR,
+            log_msg(LOG_WARNING,
                 "Unable to close connection to <%s:%d> for [%s]: %s",
                 telnet->aux.telnet.host, telnet->aux.telnet.port,
                 telnet->name, strerror(errno));

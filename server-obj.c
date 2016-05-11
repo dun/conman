@@ -230,8 +230,10 @@ void destroy_obj(obj_t *obj)
         list_destroy(obj->writers);
     }
     if (obj->fd >= 0) {
-        if (close(obj->fd) < 0)
-            log_err(errno, "Unable to close object [%s]", obj->name);
+        if (close(obj->fd) < 0) {
+            log_msg(LOG_WARNING, "Unable to close [%s] during destruction: %s",
+                obj->name, strerror(errno));
+        }
         obj->fd = -1;
     }
     if (obj->name) {
@@ -771,7 +773,8 @@ int shutdown_obj(obj_t *obj)
     /*  Close the existing connection.
      */
     if (close(obj->fd) < 0) {
-        log_err(errno, "Unable to close object [%s]", obj->name);
+        log_msg(LOG_WARNING, "Unable to close [%s] during shutdown: %s",
+            obj->name, strerror(errno));
     }
     obj->fd = -1;
     /*

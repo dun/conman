@@ -231,7 +231,7 @@ int open_logfile_obj(obj_t *logfile)
     assert(logfile->aux.logfile.console->name != NULL);
 
     if (logfile->fd >= 0) {
-        if (close(logfile->fd) < 0)     /* log err and continue */
+        if (close(logfile->fd) < 0)
             log_msg(LOG_WARNING, "Unable to close logfile \"%s\": %s",
                 logfile->name, strerror(errno));
         logfile->fd = -1;

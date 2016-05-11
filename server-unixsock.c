@@ -293,7 +293,7 @@ static int disconnect_unixsock_obj(obj_t *unixsock)
     }
     if (unixsock->fd >= 0) {
         if (close(unixsock->fd) < 0) {
-            log_msg(LOG_ERR,
+            log_msg(LOG_WARNING,
                 "Unable to close console [%s] socket \"%s\": %s",
                 unixsock->name, auxp->dev, strerror(errno));
         }

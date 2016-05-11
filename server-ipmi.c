@@ -788,7 +788,7 @@ static void disconnect_ipmi_obj(obj_t *ipmi)
     }
     if (ipmi->fd >= 0) {
         if (close(ipmi->fd) < 0) {
-            log_msg(LOG_ERR,
+            log_msg(LOG_WARNING,
                 "Unable to close connection to <%s> for console [%s]: %s",
                 ipmi->aux.ipmi.host, ipmi->name, strerror(errno));
         }
