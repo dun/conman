@@ -331,7 +331,7 @@ static void perform_log_replay(obj_t *client)
         p = logfile->bufInPtr - n;
         if (p >= logfile->buf) {        /* no wrap needed */
             memcpy(ptr, p, n);
-            ptr += n;
+            ptr =  (ptr - buf + n > MAX_BUF_SIZE - 1 ? buf + MAX_BUF_SIZE - 1 : ptr + n);
         }
         else {                          /* wrap backwards */
             m = logfile->buf - p;
@@ -349,6 +349,9 @@ static void perform_log_replay(obj_t *client)
          *    for this string.  We could get away with just sprintf() here.
          */
         len = &buf[sizeof(buf)] - ptr;
+        if( len > sizeof(buf) - 1 ) {  /* Ensure buffer overflow cannot happen */
+                len = sizeof(buf) - 1;
+        }
         n = snprintf((char *) ptr, len, "%sEnd log replay of console [%s]%s",
             CONMAN_MSG_PREFIX, console->name, CONMAN_MSG_SUFFIX);
         assert((n >= 0) && (n < len));
