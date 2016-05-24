@@ -261,6 +261,7 @@ tpoll_zero (tpoll_t tp, tpoll_zero_t how)
     _tpoll_init (tp, how);
     _tpoll_signal_send (tp);
 
+    DPRINTF((21, "tpoll_zero how=%d.\n", how));
     if ((e = pthread_mutex_unlock (&tp->mutex)) != 0) {
         log_err (errno = e, "Unable to unlock tpoll mutex");
     }
@@ -318,6 +319,8 @@ tpoll_clear (tpoll_t tp, int fd, short int events)
             _tpoll_signal_send (tp);
         }
     }
+    DPRINTF((21, "tpoll_clear fd=%d e=0x%02x r=0x%02x.\n",
+        fd, events, events_new));
     if ((e = pthread_mutex_unlock (&tp->mutex)) != 0) {
         log_err (errno = e, "Unable to unlock tpoll mutex");
     }
@@ -357,6 +360,8 @@ tpoll_is_set (tpoll_t tp, int fd, short int events)
         assert (tp->fd_array[ fd ].fd == fd);
         rc = tp->fd_array[ fd ].revents & events;
     }
+    DPRINTF((21, "tpoll_is_set fd=%d e=0x%02x r=0x%02x rc=%d.\n",
+        fd, events, tp->fd_array[ fd ].revents, rc));
     if ((e = pthread_mutex_unlock (&tp->mutex)) != 0) {
         log_err (errno = e, "Unable to unlock tpoll mutex");
     }
@@ -415,6 +420,8 @@ tpoll_set (tpoll_t tp, int fd, short int events)
         }
         rc = 0;
     }
+    DPRINTF((21, "tpoll_set fd=%d e=0x%02x r=0x%02x.\n",
+        fd, events, events_new));
     if ((e = pthread_mutex_unlock (&tp->mutex)) != 0) {
         log_err (errno = e, "Unable to unlock tpoll mutex");
     }
@@ -472,6 +479,7 @@ tpoll_timeout_absolute (tpoll_t tp, callback_f cb, void *arg,
     t->next = *t_ptr;
     *t_ptr = t;
 
+    DPRINTF((22, "tpoll timer set id=%d.\n", t->id));
     if ((e = pthread_mutex_unlock (&tp->mutex)) != 0) {
         log_err (errno = e, "Unable to unlock tpoll mutex");
     }
@@ -525,6 +533,7 @@ tpoll_timeout_cancel (tpoll_t tp, int id)
         rc = 0;
     }
     else {
+        DPRINTF((22, "tpoll timer cancel id=%d.\n", (*t_ptr)->id));
         if (*t_ptr == tp->timers_active) {
             _tpoll_signal_send (tp);
         }
@@ -575,6 +584,8 @@ tpoll (tpoll_t tp, int ms)
     if ((e = pthread_mutex_lock (&tp->mutex)) != 0) {
         log_err (errno = e, "Unable to lock tpoll mutex");
     }
+    DPRINTF((23, "tpoll enter ms=%d nfd=%d mfd=%d.\n",
+        ms, tp->num_fds_used, tp->max_fd));
     _tpoll_get_timeval (&tv_now, 0);
 
     for (;;) {
@@ -586,6 +597,7 @@ tpoll (tpoll_t tp, int ms)
 
             t = tp->timers_active;
             tp->timers_active = t->next;
+            DPRINTF((22, "tpoll timer dispatch id=%d.\n", t->id));
             /*
              *  Release the mutex while performing the callback function
              *    in case the callback wants to set/cancel another timer.
@@ -650,7 +662,9 @@ tpoll (tpoll_t tp, int ms)
         if ((e = pthread_mutex_unlock (&tp->mutex)) != 0) {
             log_err (errno = e, "Unable to unlock tpoll mutex");
         }
+        DPRINTF((25, "tpoll poll enter ms=%d mfd=%d.\n", timeout, tp->max_fd));
         n = poll (tp->fd_array, tp->max_fd + 1, timeout);
+        DPRINTF((25, "tpoll poll return n=%d.\n", n));
 
         if ((e = pthread_mutex_lock (&tp->mutex)) != 0) {
             log_err (errno = e, "Unable to lock tpoll mutex");
@@ -681,6 +695,7 @@ tpoll (tpoll_t tp, int ms)
             break;
         }
     }
+    DPRINTF((23, "tpoll return n=%d.\n", n));
     if ((e = pthread_mutex_unlock (&tp->mutex)) != 0) {
         log_err (errno = e, "Unable to unlock tpoll mutex");
     }
@@ -761,6 +776,7 @@ _tpoll_signal_send (tpoll_t tp)
         break;
     }
     tp->is_signaled = true;
+    DPRINTF((24, "tpoll signal sent.\n"));
     return;
 }
 
@@ -802,6 +818,7 @@ _tpoll_signal_recv (tpoll_t tp)
         break;
     }
     tp->is_signaled = false;
+    DPRINTF((24, "tpoll signal received.\n"));
     return;
 }
 
