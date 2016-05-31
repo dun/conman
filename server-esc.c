@@ -29,6 +29,8 @@
 #include <arpa/telnet.h>
 #include <assert.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,6 +42,8 @@
 #include "util.h"
 #include "wrapper.h"
 
+extern tpoll_t tp_global;               /* defined in server.c */
+
 
 static void perform_serial_break(obj_t *client);
 static void perform_del_char_seq(obj_t *client);
@@ -47,6 +51,7 @@ static void perform_console_writer_linkage(obj_t *client);
 static void perform_log_replay(obj_t *client);
 static void perform_quiet_toggle(obj_t *client);
 static void perform_reset(obj_t *client);
+static void kill_reset_cmd(obj_t *console);
 static void perform_suspend(obj_t *client);
 
 
@@ -394,40 +399,109 @@ static void perform_quiet_toggle(obj_t *client)
 static void perform_reset(obj_t *client)
 {
 /*  Resets all consoles for which this client has write-access.
- *
- *  Actually, this routine cannot perform the reset command because
- *    the command string is stored within the server_conf struct.
- *    Therefore, this routine sets a reset flag for each affected
- *    console.  And mux_io() will do the dirty deed when we return.
  */
     ListIterator i;
     obj_t *console;
-    char *tty;
-    char *now;
-    char buf[MAX_LINE];
+    char cmd[MAX_LINE];
+    int fd;
 
     assert(is_client_obj(client));
 
-    tty = client->aux.client.req->tty;
-    now = create_short_time_string(0);
     i = list_iterator_create(client->readers);
     while ((console = list_next(i))) {
+
         assert(is_console_obj(console));
-        if (console->gotReset)          /* prior reset not yet processed */
+
+        if (console->resetCmdRef == NULL) {
             continue;
-        console->gotReset = 1;
-        log_msg(LOG_NOTICE, "Console [%s] reset by <%s@%s>", console->name,
-            client->aux.client.req->user, client->aux.client.req->host);
-        snprintf(buf, sizeof(buf),
-            "%sConsole [%s] reset by <%s@%s>%s%s at %s%s",
-            CONMAN_MSG_PREFIX, console->name,
-            client->aux.client.req->user, client->aux.client.req->host,
-            (tty ? " on " : ""), (tty ? tty : ""), now, CONMAN_MSG_SUFFIX);
-        strcpy(&buf[sizeof(buf) - 3], "\r\n");
-        notify_console_objs(console, buf);
+        }
+        if (console->resetCmdPid > 0) {
+            write_notify_msg(console, LOG_INFO,
+                "Ignoring reset of console [%s]: pid %d still active",
+                console->name, (int) console->resetCmdPid);
+            continue;
+        }
+        if (format_obj_string(
+                cmd, sizeof(cmd), console, console->resetCmdRef) < 0) {
+            write_notify_msg(console, LOG_WARNING,
+                "Unable to reset console [%s]: command too long",
+                console->name);
+            continue;
+        }
+        console->resetCmdPid = fork();
+        if (console->resetCmdPid < 0) {
+            write_notify_msg(console, LOG_WARNING,
+                "Unable to reset console [%s]: fork failed: %s",
+                console->name, strerror(errno));
+            continue;
+        }
+        else if (console->resetCmdPid == 0) {
+            setpgid(console->resetCmdPid, 0);
+            fd = open("/dev/null", O_RDWR);
+            (void) dup2(fd, STDIN_FILENO);
+            (void) dup2(fd, STDOUT_FILENO);
+            (void) dup2(fd, STDERR_FILENO);
+            if (fd > STDERR_FILENO) {
+                (void) close(fd);
+            }
+            execl("/bin/sh", "sh", "-c", cmd, (char *) NULL);
+            _exit(127);                 /* execl() error */
+        }
+        /*  Both parent and child call setpgid() to make the child a process
+         *    group leader.  One of these calls is redundant, but by doing
+         *    both we avoid a race condition.  (cf. APUE 9.4 p244)
+         */
+        setpgid(console->resetCmdPid, 0);
+
+        write_notify_msg(console, LOG_NOTICE,
+            "Console [%s] reset by <%s@%s> (pid %d)",
+            console->name, client->aux.client.req->user,
+            client->aux.client.req->host, (int) console->resetCmdPid);
+
+        /*  Set a timer to ensure the reset cmd does not exceed its time limit.
+         */
+        console->resetCmdTimer = tpoll_timeout_relative(tp_global,
+            (callback_f) kill_reset_cmd, console, RESET_CMD_TIMEOUT * 1000);
+        if (console->resetCmdTimer < 0) {
+            write_notify_msg(console, LOG_WARNING,
+                "Unable to create timer for reset of console [%s]: %s",
+                console->name, strerror(errno));
+        }
     }
     list_iterator_destroy(i);
-    free(now);
+    return;
+}
+
+
+static void kill_reset_cmd(obj_t *console)
+{
+/*  Terminates the "ResetCmd" process associated with 'console' if it has
+ *    exceeded its time limit.
+ */
+    pid_t pid;
+
+    assert(console != NULL);
+
+    pid = console->resetCmdPid;
+    console->resetCmdPid = 0;
+    console->resetCmdTimer = 0;
+
+    if (pid <= 0) {
+        return;
+    }
+    if (kill(pid, 0) < 0) {             /* process is no longer running */
+        return;
+    }
+    if (kill(-pid, SIGKILL) == 0) {     /* kill entire process group */
+        log_msg(LOG_NOTICE,
+            "Console [%s] reset terminated after %ds (pid %d)",
+            console->name, RESET_CMD_TIMEOUT, (int) pid);
+    }
+    else {
+        log_msg(LOG_WARNING,
+            "Unable to terminate console [%s] reset after %ds (pid %d): %s",
+            console->name, RESET_CMD_TIMEOUT, (int) pid, strerror(errno));
+    }
     return;
 }
 

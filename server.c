@@ -72,8 +72,6 @@ static void mux_io(server_conf_t *conf);
 static void open_daemon_logfile(server_conf_t *conf);
 static void reopen_logfiles(server_conf_t *conf);
 static void accept_client(server_conf_t *conf);
-static void reset_console(obj_t *console, const char *cmd);
-static void kill_console_reset(pid_t *arg);
 
 /*  Signal handler flags and whatnot.
  */
@@ -707,12 +705,25 @@ static void setup_nofile_limit(server_conf_t *conf)
 static void open_objs(server_conf_t *conf)
 {
 /*  Initially opens everything in the 'objs' list.
+ *  A ptr to conf->resetCmd is copied into all console objs to avoid passing
+ *    the resetCmd string as a global.  When the reset escape sequence is
+ *    processed by process_client_escapes(), perform_reset() has a ptr to the
+ *    client obj but does not have access to the conf struct in which the
+ *    resetCmd string resides.
+ *  Setting resetCmdRef must occur after the entire config file has been parsed
+ *    (in process_config()); the ResetCmd string might not yet have been
+ *    specified when create_obj() initializes the obj members.
+ *  This function is called once, performs a full traversal of the obj list,
+ *    and allows resetCmdRef to be set before entering mux_io().
  */
     ListIterator i;
     obj_t *obj;
 
     i = list_iterator_create(conf->objs);
     while ((obj = list_next(i))) {
+        if (is_console_obj(obj)) {
+            obj->resetCmdRef = conf->resetCmd;
+        }
         reopen_obj(obj);
     }
     list_iterator_destroy(i);
@@ -750,14 +761,6 @@ static void mux_io(server_conf_t *conf)
             log_msg(LOG_NOTICE, "Performing reconfig on signal=%d", reconfig);
             reopen_logfiles(conf);
             reconfig = 0;
-        }
-        /*  FIXME: Rework console reset to avoid additional list traversal.
-         */
-        list_iterator_reset(i);
-        while ((obj = list_next(i))) {
-            if (obj->gotReset) {
-                reset_console(obj, conf->resetCmd);
-            }
         }
         while ((n = tpoll(conf->tp, -1)) < 0) {
             if (errno != EINTR) {
@@ -990,100 +993,6 @@ static void accept_client(server_conf_t *conf)
     if ((rc = pthread_create(&tid, NULL,
       (PthreadFunc) process_client, args)) != 0) {
         log_err(rc, "Unable to create new thread");
-    }
-    return;
-}
-
-
-static void reset_console(obj_t *console, const char *cmd)
-{
-/*  Resets the 'console' obj by performing the reset 'cmd' in a subshell.
- */
-    char buf[MAX_LINE];
-    pid_t pid;
-    pid_t *arg;
-
-    assert(is_console_obj(console));
-    assert(console->gotReset);
-    assert(cmd != NULL);
-
-    console->gotReset = 0;
-
-    if (format_obj_string(buf, sizeof(buf), console, cmd) < 0) {
-        log_msg(LOG_NOTICE, "Unable to reset console [%s]: command too long",
-            console->name);
-        return;
-    }
-    if ((pid = fork()) < 0) {
-        log_msg(LOG_NOTICE, "Unable to reset console [%s]: %s",
-            console->name, strerror(errno));
-        return;
-    }
-    else if (pid == 0) {
-        setpgid(pid, 0);
-        (void) close(STDIN_FILENO);
-        (void) close(STDOUT_FILENO);
-        (void) close(STDERR_FILENO);
-        execl("/bin/sh", "sh", "-c", buf, (char *) NULL);
-        _exit(127);                     /* execl() error */
-    }
-    /*  Both parent and child call setpgid() to make the child a process
-     *    group leader.  One of these calls is redundant, but by doing
-     *    both we avoid a race condition.  (cf. APUE 9.4 p244)
-     */
-    setpgid(pid, 0);
-
-    /*  FIXME: Have perform_reset() store the client info instead of a bool
-     *    for gotReset.  Then remove the notify_objs msg from perform_reset()
-     *    and replace it with the following:
-     */
-    log_msg(LOG_INFO, "Reset console [%s] (pid %d)", console->name, pid);
-#if 0
-    snprintf(buf, sizeof(buf), "%sConsole [%s] reset (pid %d)%s",
-        CONMAN_MSG_PREFIX, console->name, (int) pid, CONMAN_MSG_SUFFIX);
-    strcpy(&buf[sizeof(buf) - 3], "\r\n");
-    notify_console_objs(console, buf);
-#endif
-
-    /*  Set a timer to ensure the reset cmd does not exceed its time limit.
-     *  The callback function's arg must be allocated on the heap since
-     *    local vars on the stack will be lost once this routine returns.
-     */
-    if (!(arg = malloc(sizeof *arg))) {
-        out_of_memory();
-    }
-    *arg = pid;
-
-    if (tpoll_timeout_relative (tp_global,
-            (callback_f) kill_console_reset, arg,
-            RESET_CMD_TIMEOUT * 1000) < 0) {
-        log_msg(LOG_ERR,
-            "Unable to create timer for resetting console [%s]",
-            console->name);
-    }
-    return;
-}
-
-
-static void kill_console_reset(pid_t *arg)
-{
-/*  Terminates the "ResetCmd" process associated with 'arg' if it has
- *    exceeded its time limit.
- *  Memory allocated to 'arg' will be free()'d by this routine.
- */
-    pid_t pid;
-
-    assert(arg != NULL);
-    pid = *arg;
-    assert(pid > 0);
-    free(arg);
-
-    if (kill(pid, 0) < 0) {             /* process is no longer running */
-        return;
-    }
-    if (kill(-pid, SIGKILL) == 0) {     /* kill entire process group */
-        log_msg(LOG_NOTICE, "ResetCmd process pid=%d exceeded %ds time limit",
-            (int) pid, RESET_CMD_TIMEOUT);
     }
     return;
 }

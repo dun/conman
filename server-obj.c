@@ -84,11 +84,12 @@ obj_t * create_obj(
     obj->gotBufWrap = 0;
     obj->gotEOF = 0;
     /*
-     *  The gotReset flag only applies to "console" objs.
-     *  But the code is simplified if it is placed in the base obj.
-     *  Besides, the base obj remains the same size due to the bitfields.
+     *  resetCmdRef, resetCmdPid, and resetCmdTimer only apply to console objs.
+     *  But the code is simplified if they are placed in the base obj.
      */
-    obj->gotReset = 0;
+    obj->resetCmdRef = NULL;
+    obj->resetCmdPid = 0;
+    obj->resetCmdTimer = 0;
 
     DPRINTF((10, "Created object [%s].\n", obj->name));
     return(obj);

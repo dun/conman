@@ -233,10 +233,12 @@ typedef struct base_obj {               /* BASE OBJ:                         */
     pthread_mutex_t  bufLock;           /*  lock protecting access to buf    */
     List             readers;           /*  list of objs that read from me   */
     List             writers;           /*  list of objs that write to me    */
+    char            *resetCmdRef;       /*  console reset cmd string ref     */
+    pid_t            resetCmdPid;       /*  console reset cmd active pid     */
+    int              resetCmdTimer;     /*  console reset cmd timer id       */
     unsigned         type;              /*  enum obj_type of auxiliary obj   */
     unsigned         gotBufWrap:1;      /*  true if circular-buf has wrapped */
     unsigned         gotEOF:1;          /*  true if obj got EOF on last read */
-    unsigned         gotReset:1;        /*  true if resetting a console obj  */
     aux_obj_t        aux;               /*  auxiliary obj data union         */
 } obj_t;
 
