@@ -496,42 +496,57 @@ int write_notify_msg(obj_t *console, int priority, char *fmt, ...)
 /*  Writes a notification message to the daemon logfile and all attached
  *    readers & writers of (console).
  */
-    int      n;
     char     buf[MAX_LINE];
     char    *p;
     int      len;
+    int      n;
     va_list  vargs;
-    char    *now;
 
     assert(console != NULL);
     assert(is_console_obj(console));
     assert(fmt != NULL);
 
+    if (!console || !is_console_obj(console) || !fmt) {
+        errno = EINVAL;
+        return(-1);
+    }
+
     p = buf;
     len = sizeof(buf);
     n = snprintf(p, len, "%s", CONMAN_MSG_PREFIX);
     if ((n < 0) || (n >= len)) {
-        return(-1);
+        len = 0;
     }
-    p += n;
-    len -= n;
+    else {
+        p += n;
+        len -= n;
+    }
 
-    va_start(vargs, fmt);
-    n = vsnprintf(p, len, fmt, vargs);
-    va_end(vargs);
-    if ((n < 0) || (n >= len)) {
-        return(-1);
+    if (len > 0) {
+        va_start(vargs, fmt);
+        n = vsnprintf(p, len, fmt, vargs);
+        va_end(vargs);
+        log_msg(priority, "%s", p);
+        if ((n < 0) || (n >= len)) {
+            len = 0;
+        }
+        else {
+            p += n;
+            len -= n;
+        }
     }
-    log_msg(priority, "%s", p);
-    p += n;
-    len -= n;
 
-    now = create_short_time_string(0);
-    n = snprintf(p, len, " at %s%s", now, CONMAN_MSG_SUFFIX);
-    free(now);
-    if ((n < 0) || (n >= len)) {
-        return(-1);
+    if (len < strlen(CONMAN_MSG_SUFFIX) + 1) {
+        p = buf + sizeof(buf) - strlen(CONMAN_MSG_SUFFIX) - 1;
+        if (p < buf)
+            p = buf;
+        len = buf + sizeof(buf) - p;
     }
+    n = snprintf(p, len, "%s", CONMAN_MSG_SUFFIX);
+    if ((n < 0) || (n >= len)) {
+        log_msg(LOG_ERR, "INTERNAL: Exceeded write_notify_msg buffer");
+    }
+
     notify_console_objs(console, buf);
     return(0);
 }
