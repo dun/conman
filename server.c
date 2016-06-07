@@ -740,7 +740,7 @@ static void mux_io(server_conf_t *conf)
     int n;
     obj_t *obj;
     int inevent_fd;
-    int rv;
+    int rvr, rvw;
 
     assert(conf->tp != NULL);
     assert(!list_is_empty(conf->objs));
@@ -770,14 +770,15 @@ static void mux_io(server_conf_t *conf)
                 break;
             }
         }
-        if (n <= 0) {
-            continue;
-        }
-        if (tpoll_is_set(conf->tp, conf->ld, POLLIN) > 0) {
+        if ((n > 0) &&
+                (tpoll_is_set(conf->tp, conf->ld, POLLIN) > 0)) {
+            n--;
             accept_client(conf);
         }
         if ((inevent_fd >= 0) &&
-                tpoll_is_set(conf->tp, inevent_fd, POLLIN) > 0) {
+                (n > 0) &&
+                (tpoll_is_set(conf->tp, inevent_fd, POLLIN) > 0)) {
+            n--;
             inevent_process();
         }
         /*  If read_from_obj() or write_to_obj() returns -1,
@@ -786,15 +787,19 @@ static void mux_io(server_conf_t *conf)
          *    o/w, give up and remove it from the master objs list.
          */
         list_iterator_reset(i);
-        while ((obj = list_next(i))) {
+        while ((n > 0) &&
+                ((obj = list_next(i)) != NULL)) {
 
-            rv = tpoll_is_set(conf->tp, obj->fd, POLLIN | POLLHUP | POLLERR);
-            if ((rv > 0) && (read_from_obj(obj) < 0)) {
+            rvr = tpoll_is_set(conf->tp, obj->fd, POLLIN | POLLHUP | POLLERR);
+            rvw = tpoll_is_set(conf->tp, obj->fd, POLLOUT);
+            if ((rvr > 0) || (rvw > 0)) {
+                n--;
+            }
+            if ((rvr > 0) && (read_from_obj(obj) < 0)) {
                 list_delete(i);
                 continue;
             }
-            rv = tpoll_is_set(conf->tp, obj->fd, POLLOUT);
-            if ((rv > 0) && (write_to_obj(obj) < 0)) {
+            if ((rvw > 0) && (write_to_obj(obj) < 0)) {
                 list_delete(i);
                 continue;
             }
