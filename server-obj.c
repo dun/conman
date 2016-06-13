@@ -37,6 +37,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/uio.h>
 #include <time.h>
 #include <unistd.h>
 #include "common.h"
@@ -1080,9 +1081,10 @@ int write_to_obj(obj_t *obj)
 /*  Writes data from the obj's circular-buffer out to its file descriptor.
  *  Returns 0 on success, or -1 if the obj is ready to be destroyed.
  */
-    int avail;
-    int n;
+    struct iovec iov[2];
+    int iovcnt = 0;
     int isDead = 0;
+    int n;
 
     DPRINTF((20, "Entered write_to_obj: [%s]\n", obj->name));
 
@@ -1097,6 +1099,11 @@ int write_to_obj(obj_t *obj)
         open_telnet_obj(obj);
         return(0);
     }
+    /*  If a client is suspended, no data is written out to its fd.
+     */
+    if (is_client_obj(obj) && obj->aux.client.gotSuspend) {
+        return(0);
+    }
     x_pthread_mutex_lock(&obj->bufLock);
 
     /*  Assert the buffer's input and output ptrs are valid upon entry.
@@ -1106,36 +1113,33 @@ int write_to_obj(obj_t *obj)
     assert(obj->bufOutPtr >= obj->buf);
     assert(obj->bufOutPtr < &obj->buf[OBJ_BUF_SIZE]);
 
-    /*  The number of available bytes to write out to the file descriptor
-     *    does not take into account data that has wrapped-around in the
-     *    circular-buffer.  This remaining data will be written on the
-     *    next invocation of this routine.  It's just simpler that way.
-     *  If a client is suspended, no data is written out to its fd.
-     *  If a connection goes down, the buffer is cleared.
-     *  Note that if (bufInPtr == bufOutPtr), the obj's buffer is empty.
+    /*  IOV for object buffer cases OIO (wrap-around pt1) & IO (no-wrap).
      */
-    if (is_client_obj(obj) && obj->aux.client.gotSuspend) {
-        avail = 0;
+    if (obj->bufOutPtr > obj->bufInPtr) {
+        iov[0].iov_base = obj->bufOutPtr;
+        iov[0].iov_len = &obj->buf[OBJ_BUF_SIZE] - obj->bufOutPtr;
+        iovcnt = 1;
+        /*
+         *  IOV for object buffer case OIO (wrap-around pt2).
+         */
+        if (obj->bufInPtr > obj->buf) {
+            iov[1].iov_base = obj->buf;
+            iov[1].iov_len = obj->bufInPtr - obj->buf;
+            iovcnt = 2;
+        }
     }
-    else if ( ( is_telnet_obj(obj) &&
-                obj->aux.telnet.state != CONMAN_TELNET_UP ) ||
-              ( is_unixsock_obj(obj) &&
-                obj->aux.unixsock.state != CONMAN_UNIXSOCK_UP ) ||
-              ( is_process_obj(obj) &&
-                obj->aux.process.state != CONMAN_PROCESS_UP ) )
-    {
-        avail = 0;
-        obj->bufInPtr = obj->bufOutPtr = obj->buf;
+    /*  IOV for object buffer cases IOI & OI.
+     */
+    else if (obj->bufInPtr > obj->bufOutPtr) {
+        iov[0].iov_base = obj->bufOutPtr;
+        iov[0].iov_len = obj->bufInPtr - obj->bufOutPtr;
+        iovcnt = 1;
     }
-    else if (obj->bufInPtr >= obj->bufOutPtr) {
-        avail = obj->bufInPtr - obj->bufOutPtr;
-    }
-    else {
-        avail = &obj->buf[OBJ_BUF_SIZE] - obj->bufOutPtr;
-    }
-    if (avail > 0) {
+
+    if (iovcnt > 0) {
 again:
-        if ((n = write(obj->fd, obj->bufOutPtr, avail)) < 0) {
+        n = writev(obj->fd, iov, iovcnt);
+        if (n < 0) {
             if (errno == EINTR) {
                 goto again;
             }
@@ -1152,15 +1156,11 @@ again:
         else if (n > 0) {
             DPRINTF((15, "Wrote %d bytes to [%s].\n", n, obj->name));
             obj->bufOutPtr += n;
-            /*
-             *  Do the hokey-pokey and perform a circular-buffer wrap-around.
-             */
-            if (obj->bufOutPtr == &obj->buf[OBJ_BUF_SIZE]) {
-                obj->bufOutPtr = obj->buf;
+            if (obj->bufOutPtr >= &obj->buf[OBJ_BUF_SIZE]) {
+                obj->bufOutPtr -= OBJ_BUF_SIZE;
             }
         }
     }
-
     /*  If the gotEOF flag in enabled, no additional data can be
      *    written into the buffer.  And if (bufInPtr == bufOutPtr),
      *    all data in the buffer has been written out to its fd.
