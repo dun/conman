@@ -276,7 +276,7 @@ tpoll_clear (tpoll_t tp, int fd, short int events)
  *    descriptor [fd] within the tpoll object [tp].
  *  Returns 0 on success, or -1 on error.
  */
-    short int events_new;
+    short int events_new = 0;
     int       i;
     int       e;
 
@@ -378,7 +378,7 @@ tpoll_set (tpoll_t tp, int fd, short int events)
  *  Returns 0 on success, or -1 on error.
  */
     int       rc;
-    short int events_new;
+    short int events_new = 0;
     int       e;
 
     if (!tp) {
