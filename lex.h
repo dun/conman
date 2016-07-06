@@ -86,7 +86,7 @@ typedef struct lexer_state *Lex;
 \************/
 
 #define LEX_UNTOK(tok) \
-    ( ((tok) < LEX_TOK_OFFSET) ? (tok) : ((tok) - LEX_TOK_OFFSET) )
+    ( ((int) (tok) < (int) LEX_TOK_OFFSET) ? (tok) : ((tok) - LEX_TOK_OFFSET) )
 /*
  *  LEX_TOK_OFFSET specifies the next available enumeration at which
  *    the array of strings supplied to lex_create (toks) can begin.
