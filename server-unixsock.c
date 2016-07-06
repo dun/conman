@@ -37,6 +37,7 @@
 #include <sys/un.h>
 #include "inevent.h"
 #include "list.h"
+#include "log.h"
 #include "server.h"
 #include "tpoll.h"
 #include "util.h"
