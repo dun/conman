@@ -39,6 +39,7 @@
 #include <time.h>
 #include "log.h"
 #include "util-str.h"
+#include "util.h"
 #include "wrapper.h"
 
 

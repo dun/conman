@@ -167,9 +167,3 @@
 #  include <dmalloc.h>
 #endif /* WITH_DMALLOC */
 
-
-
-/* Override default out_of_memory() macro definition. */
-#include "log.h"
-#define out_of_memory() (log_err(0, "Out of memory"), (void *) NULL)
-

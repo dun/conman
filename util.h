@@ -43,6 +43,11 @@ typedef void SigFunc(int);
 #  define MIN(x,y) (((x) <= (y)) ? (x) : (y))
 #endif /* !MIN */
 
+#ifdef WITH_OOMF
+#undef out_of_memory
+void * out_of_memory(void);
+#endif /* WITH_OOMF */
+
 
 SigFunc * posix_signal(int signum, SigFunc *f);
 /*

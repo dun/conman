@@ -43,6 +43,7 @@
 #include "log.h"
 #include "util-file.h"
 #include "util-str.h"
+#include "util.h"
 
 
 static void read_consoles_from_file(List consoles, char *file);

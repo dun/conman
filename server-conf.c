@@ -47,6 +47,7 @@
 #include "tpoll.h"
 #include "util-file.h"
 #include "util-str.h"
+#include "util.h"
 
 
 enum server_conf_toks {

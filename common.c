@@ -34,6 +34,7 @@
 #include "common.h"
 #include "log.h"
 #include "util-str.h"
+#include "util.h"
 
 
 const char *conman_license = \

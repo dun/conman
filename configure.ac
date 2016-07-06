@@ -366,14 +366,6 @@ dnl
 AC_CACHE_CHECK([for a sense of humor], ac_cv_humor, ac_cv_humor=yes)
 
 
-AH_BOTTOM(
-[
-/* Override default out_of_memory() macro definition. */
-#include "log.h"
-#define out_of_memory() (log_err(0, "Out of memory"), (void *) NULL)]
-)
-
-
 dnl Epilogue.
 dnl
 AC_OUTPUT_COMMANDS(echo "creating dependencies"; make depend >/dev/null)

@@ -4608,9 +4608,6 @@ fi
 $as_echo "$ac_cv_humor" >&6; }
 
 
-
-
-
 ac_config_commands="$ac_config_commands default-1"
 
 ac_config_files="$ac_config_files Makefile etc/conman.init man/conman.1 man/conman.conf.5 man/conmand.8"
