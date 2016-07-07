@@ -164,11 +164,12 @@ void destroy_obj(obj_t *obj)
     switch(obj->type) {
     case CONMAN_OBJ_CLIENT:
         if (obj->aux.client.req) {
-            /*
-             *  Prevent destroy_req() from closing 'sd' a second time.
-             */
-            obj->aux.client.req->sd = -1;
-            destroy_req(obj->aux.client.req);
+            req_t *req = obj->aux.client.req;
+            log_msg(LOG_INFO, "Client <%s@%s:%d> disconnected",
+                req->user, req->fqdn, req->port);
+            req->sd = -1;       /* prevent destroy_req from also closing sd */
+            destroy_req(req);
+            obj->aux.client.req = NULL;
         }
         break;
     case CONMAN_OBJ_LOGFILE:

@@ -792,11 +792,12 @@ static int perform_query_cmd(req_t *req)
     assert(req->command == CONMAN_CMD_QUERY);
     assert(!list_is_empty(req->consoles));
 
-    log_msg(LOG_INFO, "Client <%s@%s:%d> issued query command",
+    log_msg(LOG_INFO, "Client <%s@%s:%d> issued query",
         req->user, req->fqdn, req->port);
 
-    if (send_rsp(req, CONMAN_ERR_NONE, NULL) < 0)
+    if (send_rsp(req, CONMAN_ERR_NONE, NULL) < 0) {
         return(-1);
+    }
     destroy_req(req);
     return(0);
 }
@@ -815,16 +816,18 @@ static int perform_monitor_cmd(req_t *req, server_conf_t *conf)
     assert(req->command == CONMAN_CMD_MONITOR);
     assert(list_count(req->consoles) == 1);
 
-    log_msg(LOG_INFO, "Client <%s@%s:%d> issued monitor command",
-        req->user, req->fqdn, req->port);
-
-    if (send_rsp(req, CONMAN_ERR_NONE, NULL) < 0)
+    if (send_rsp(req, CONMAN_ERR_NONE, NULL) < 0) {
         return(-1);
+    }
     client = create_client_obj(conf, req);
     console = list_peek(req->consoles);
     assert(is_console_obj(console));
     link_objs(console, client);
     check_console_state(console, client);
+
+    log_msg(LOG_INFO, "Client <%s@%s:%d> connected to [%s] (read-only)",
+        req->user, req->fqdn, req->port, console->name);
+
     return(0);
 }
 
@@ -844,11 +847,9 @@ static int perform_connect_cmd(req_t *req, server_conf_t *conf)
     assert(req->sd >= 0);
     assert(req->command == CONMAN_CMD_CONNECT);
 
-    log_msg(LOG_INFO, "Client <%s@%s:%d> issued connect command",
-        req->user, req->fqdn, req->port);
-
-    if (send_rsp(req, CONMAN_ERR_NONE, NULL) < 0)
+    if (send_rsp(req, CONMAN_ERR_NONE, NULL) < 0) {
         return(-1);
+    }
     client = create_client_obj(conf, req);
 
     if (list_count(req->consoles) == 1) {
@@ -860,6 +861,9 @@ static int perform_connect_cmd(req_t *req, server_conf_t *conf)
         link_objs(client, console);
         link_objs(console, client);
         check_console_state(console, client);
+
+        log_msg(LOG_INFO, "Client <%s@%s:%d> connected to [%s]",
+            req->user, req->fqdn, req->port, console->name);
     }
     else {
         /*
@@ -872,6 +876,10 @@ static int perform_connect_cmd(req_t *req, server_conf_t *conf)
             check_console_state(console, client);
         }
         list_iterator_destroy(i);
+
+        log_msg(LOG_INFO,
+            "Client <%s@%s:%d> connected to %d consoles (broadcast)",
+            req->user, req->fqdn, req->port, list_count(req->consoles));
     }
     return(0);
 }
