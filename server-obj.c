@@ -1066,8 +1066,9 @@ int write_obj_data(obj_t *obj, const void *src, int len, int isInfo)
     }
     /*  Notify tpoll that data is available for writing.
      */
-    tpoll_set(tp_global, obj->fd, POLLOUT);
-
+    if (!is_client_obj(obj) || !obj->aux.client.gotSuspend) {
+        tpoll_set(tp_global, obj->fd, POLLOUT);
+    }
     /*  Assert the buffer's input and output ptrs are valid upon exit.
      */
     assert(obj->bufInPtr >= obj->buf);
@@ -1108,11 +1109,6 @@ int write_to_obj(obj_t *obj)
     if (is_telnet_obj(obj) && (obj->aux.telnet.state == CONMAN_TELNET_PENDING))
     {
         open_telnet_obj(obj);
-        return(0);
-    }
-    /*  If a client is suspended, no data is written out to its fd.
-     */
-    if (is_client_obj(obj) && obj->aux.client.gotSuspend) {
         return(0);
     }
     x_pthread_mutex_lock(&obj->bufLock);

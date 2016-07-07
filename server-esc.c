@@ -518,8 +518,15 @@ static void perform_suspend(obj_t *client)
     assert(is_client_obj(client));
 
     gotSuspend = client->aux.client.gotSuspend ^= 1;
-    /*
-     *  FIXME: Do check_console_state() here looking for downed telnets.
+
+    if (client->aux.client.gotSuspend) {
+        tpoll_clear(tp_global, client->fd, POLLOUT);
+    }
+    else {
+        tpoll_set(tp_global, client->fd, POLLOUT);
+    }
+
+    /*  FIXME: Do check_console_state() here looking for downed telnets.
      *    Should it check the state of all readers & writers?
      */
     DPRINTF((5, "%s output to client [%s].\n",
