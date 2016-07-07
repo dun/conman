@@ -142,15 +142,25 @@ void destroy_obj(obj_t *obj)
  *  This routine should only be called via the obj's list destructor, thereby
  *    ensuring it will be removed from the master objs list before destruction.
  */
+    int n;
     char **pp;
 
     assert(obj != NULL);
     DPRINTF((10, "Destroying object [%s].\n", obj->name));
 
-/*  FIXME? Ensure obj buf is flushed (if not suspended) before destruction.
- *
- *  assert(obj->bufInPtr == obj->bufOutPtr);
- */
+    if (obj->bufInPtr < obj->bufOutPtr) {
+        n = (&obj->buf[OBJ_BUF_SIZE] - obj->bufOutPtr)
+            + (obj->bufInPtr - obj->buf);
+    }
+    else {
+        n = obj->bufInPtr - obj->bufOutPtr;
+    }
+    if (n > 0) {
+        log_msg(LOG_WARNING,
+            "Destroying [%s] with %d byte%s of unwritten data",
+            obj->name, n, (n == 1 ? "" : "s"));
+    }
+
     switch(obj->type) {
     case CONMAN_OBJ_CLIENT:
         if (obj->aux.client.req) {
