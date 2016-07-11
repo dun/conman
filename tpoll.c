@@ -308,7 +308,7 @@ tpoll_clear (tpoll_t tp, int fd, short int events)
                 tp->num_fds_used--;
 
                 if (tp->max_fd == fd) {
-                    for (i = fd - 1; i > -1; i--) {
+                    for (i = fd - 1; i >= 0; i--) {
                         if (tp->fd_array[ i ].fd > -1) {
                             break;
                         }
