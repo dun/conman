@@ -404,18 +404,16 @@ tpoll_set (tpoll_t tp, int fd, short int events)
             assert (tp->fd_array[ fd ].revents == 0);
             tp->fd_array[ fd ].fd = fd;
             tp->num_fds_used++;
+            if (fd > tp->max_fd) {
+                tp->max_fd = fd;
+            }
             events_new = events;
         }
         else {
             events_new = tp->fd_array[ fd ].events | events;
         }
         if (tp->fd_array[ fd ].events != events_new) {
-
             tp->fd_array[ fd ].events = events_new;
-
-            if (fd > tp->max_fd) {
-                tp->max_fd = fd;
-            }
             _tpoll_signal_send (tp);
         }
         rc = 0;
