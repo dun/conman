@@ -92,6 +92,7 @@ struct tpoll {
     int              timers_next_id;    /* next id to be assigned to a timer */
     pthread_mutex_t  mutex;             /* locking primitive                 */
     bool             is_blocked;        /* flag set when blocking on poll()  */
+    bool             is_realloced;      /* flag set after fd_array[] realloc */
     bool             is_signaled;       /* flag set when fd_pipe is signaled */
     bool             is_mutex_inited;   /* flag set when mutex initialized   */
 };
@@ -149,6 +150,7 @@ tpoll_create (int n)
     tp->fd_pipe[ 0 ] = tp->fd_pipe[ 1 ] = -1;
     tp->timers_active = NULL;
     tp->is_blocked = false;
+    tp->is_realloced = false;
     tp->is_signaled = false;
     tp->is_mutex_inited = false;
 
@@ -568,7 +570,6 @@ tpoll (tpoll_t tp, int ms)
     _tpoll_timer_t  t;
     int             timeout;
     int             ms_diff;
-    struct pollfd  *fd_array_bak;
     int             n;
     int             e;
 
@@ -649,12 +650,7 @@ tpoll (tpoll_t tp, int ms)
             timeout = (ms_diff > 0) ? ms_diff : 0;
         }
         /*  Poll for events, discarding any on the "signaling pipe".
-         *    A copy of the fd_array ptr is made before calling poll() in order
-         *    to check if _tpoll_grow()'s realloc has changed the memory
-         *    address of the fd_array while the mutex was released.
          */
-        fd_array_bak = tp->fd_array;
-
         tp->is_blocked = true;
 
         if ((e = pthread_mutex_unlock (&tp->mutex)) != 0) {
@@ -672,7 +668,9 @@ tpoll (tpoll_t tp, int ms)
         if (n < 0) {
             break;
         }
-        if (tp->fd_array != fd_array_bak) {
+        if (tp->is_realloced) {
+            DPRINTF((25, "tpoll is_realloced.\n"));
+            tp->is_realloced = false;
             _tpoll_signal_recv (tp);
             continue;
         }
@@ -862,6 +860,7 @@ _tpoll_grow (tpoll_t tp, int num_fds_req)
     for (i = tp->num_fds_alloc; i < num_fds_tmp; i++) {
         fd_array_tmp[ i ].fd = -1;
     }
+    tp->is_realloced = true;
     tp->fd_array = fd_array_tmp;
     tp->num_fds_alloc = num_fds_tmp;
     return (0);
