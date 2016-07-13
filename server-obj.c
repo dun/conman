@@ -881,17 +881,12 @@ int read_from_obj(obj_t *obj)
         DPRINTF((1, "Attempted to read from [%s] after EOF.\n", obj->name));
         return(shutdown_obj(obj));
     }
-    /*  Do not read from an active telnet obj that is not yet in the UP state.
-     *
-     *  The state of telnet objs must be checked here since it can be either
-     *    UP or DOWN.  Before calling tpoll() in server.c:mux_io(), a telnet
-     *    obj must be either UP or PENDING in order to check for POLLIN events.
-     *    But a PENDING telnet obj will be forced into either the UP or DOWN
-     *    state via open_telnet_obj() before read_from_obj() is called.
-     *  The state of unixsock objs does not need to be checked here since it
-     *    must be UP.
+    /*  Do not read from a telnet obj that is not yet in the UP state.
+     *  When the non-blocking connect completes, the fd becomes writable;
+     *    when connection establishment fails, it becomes readable & writable.
+     *  The completion of a PENDING connection is handled in write_to_obj().
      */
-    if (is_telnet_obj(obj) && obj->aux.telnet.state != CONMAN_TELNET_UP) {
+    if (is_telnet_obj(obj) && (obj->aux.telnet.state != CONMAN_TELNET_UP)) {
         return(0);
     }
 again:
