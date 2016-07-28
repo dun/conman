@@ -35,9 +35,11 @@
 
 #include <sys/types.h>                  /* include before in.h for bsd */
 #include <netinet/in.h>                 /* for struct sockaddr_in            */
-#include <pthread.h>
+#include <pthread.h>                    /* for pthread_mutex_t               */
+#include <stdio.h>                      /* for FILE                          */
 #include <termios.h>                    /* for struct termios, speed_t       */
 #include <time.h>                       /* for time_t                        */
+#include <unistd.h>                     /* for pid_t                         */
 #include "common.h"
 #include "list.h"
 #include "tpoll.h"
