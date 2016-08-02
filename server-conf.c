@@ -80,6 +80,7 @@ enum server_conf_toks {
     SERVER_CONF_SERVER,
     SERVER_CONF_SYSLOG,
     SERVER_CONF_TCPWRAPPERS,
+    SERVER_CONF_TESTOPTS,
     SERVER_CONF_TIMESTAMP
 };
 
@@ -114,6 +115,7 @@ static char *server_conf_strs[] = {
     "SERVER",
     "SYSLOG",
     "TCPWRAPPERS",
+    "TESTOPTS",
     "TIMESTAMP",
     NULL
 };
@@ -177,6 +179,7 @@ typedef struct console_strs {
 #if WITH_FREEIPMI
     char *iopts;
 #endif /* WITH_FREEIPMI */
+    char *topts;
 } console_strs_t;
 
 
@@ -247,6 +250,9 @@ server_conf_t * create_server_conf(void)
     conf->numIpmiObjs = 0;
 #endif /* WITH_FREEIPMI */
 
+    if (init_test_opts(&conf->globalTestOpts) < 0) {
+        log_err(0, "Unable to initialize default test options");
+    }
     conf->enableCoreDump = 0;
     conf->enableKeepAlive = 1;
     conf->enableLoopBack = 0;
@@ -574,8 +580,8 @@ static void signal_daemon(server_conf_t *conf)
 
 static void parse_console_directive(server_conf_t *conf, Lex l)
 {
-/*  CONSOLE NAME="<str>" DEV="<file>" \
- *    [LOG="<file>"] [LOGOPTS="<str>"] [SEROPTS="<str>"] [IPMIOPTS="<str>"]
+/*  CONSOLE NAME="<str>" DEV="<file>" [LOG="<file>"]
+ *    [LOGOPTS="<str>"] [SEROPTS="<str>"] [IPMIOPTS="<str>"] [TESTOPTS="<str>"]
  *  Note: IPMIOPTS is only available if WITH_FREEIPMI is defined.
  */
     char *directive;                    /* name of directive being parsed */
@@ -698,6 +704,20 @@ static void parse_console_directive(server_conf_t *conf, Lex l)
             break;
 #endif /* WITH_FREEIPMI */
 
+        case SERVER_CONF_TESTOPTS:
+            if (lex_next(l) != '=') {
+                snprintf(err, sizeof(err), "unexpected '=' after %s keyword",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            }
+            else if (lex_next(l) != LEX_STR) {
+                snprintf(err, sizeof(err), "expected STRING for %s value",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            }
+            else {
+                replace_string(&con.topts, lex_text(l));
+            }
+            break;
+
         case LEX_EOF:
         case LEX_EOL:
             done = 1;
@@ -735,6 +755,7 @@ static void parse_console_directive(server_conf_t *conf, Lex l)
 #if WITH_FREEIPMI
     destroy_string(con.iopts);
 #endif /* WITH_FREEIPMI */
+    destroy_string(con.topts);
     return;
 }
 
@@ -758,6 +779,7 @@ static int process_console(server_conf_t *conf, console_strs_t *con_p,
     ipmiopt_t    ipmiopts;
 #endif /* WITH_FREEIPMI */
     logopt_t     logopts;
+    test_opt_t   testopts;
     obj_t       *logfile;
 
     assert(conf != NULL);
@@ -873,6 +895,22 @@ static int process_console(server_conf_t *conf, console_strs_t *con_p,
         host = NULL;
     }
 #endif /* WITH_FREEIPMI */
+    else if (is_test_dev(arg0)) {
+        if (list_count(args) != 1) {
+            snprintf(errbuf, errbuflen,
+                "console [%s] dev string has too many args", con_p->name);
+            goto err;
+        }
+        testopts = conf->globalTestOpts;
+        if (con_p->topts && parse_test_opts(
+                &testopts, con_p->topts, errbuf, errbuflen) < 0) {
+            goto err;
+        }
+        if (!(console = create_test_obj(
+                conf, con_p->name, &testopts, errbuf, errbuflen))) {
+            goto err;
+        }
+    }
     else {
         snprintf(errbuf, errbuflen,
             "console [%s] device \"%s\" type unrecognized",
@@ -1013,6 +1051,22 @@ static void parse_global_directive(server_conf_t *conf, Lex l)
             }
             break;
 #endif /* WITH_FREEIPMI */
+
+        case SERVER_CONF_TESTOPTS:
+            if (lex_next(l) != '=') {
+                snprintf(err, sizeof(err), "expected '=' after %s keyword",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            }
+            else if ((lex_next(l) != LEX_STR)
+                    || is_empty_string(lex_text(l))) {
+                snprintf(err, sizeof(err), "expected STRING for %s value",
+                    server_conf_strs[LEX_UNTOK(tok)]);
+            }
+            else {
+                parse_test_opts(&conf->globalTestOpts, lex_text(l),
+                    err, sizeof(err));
+            }
+            break;
 
         case LEX_EOF:
         case LEX_EOL:

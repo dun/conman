@@ -88,6 +88,7 @@ enum obj_type {                         /* type of auxiliary obj             */
     CONMAN_OBJ_TELNET   = 0x10,
     CONMAN_OBJ_UNIXSOCK = 0x20,
     CONMAN_OBJ_IPMI     = 0x40,
+    CONMAN_OBJ_TEST     = 0x80,
     CONMAN_OBJ_LAST_ENTRY
 };
 
@@ -214,6 +215,21 @@ typedef struct ipmi_obj {               /* IPMI AUX OBJ DATA:                */
 } ipmi_obj_t;
 #endif /* WITH_FREEIPMI */
 
+typedef struct test_opt {               /* TEST OBJ OPTIONS:                 */
+    int              numBytes;          /*  num bytes to output per burst    */
+    int              msecMax;           /*  max msecs between bursts, or -1  */
+    int              msecMin;           /*  min msecs between bursts, or -1  */
+    int              probability;       /*  %-probability of burst, [0-100]  */
+} test_opt_t;
+
+typedef struct test_obj {               /* TEST AUX OBJ DATA:                */
+    test_opt_t       opts;              /*  test obj options                 */
+    struct base_obj *logfile;           /*  log obj ref for console replay   */
+    int              timer;             /*  timer id for next burst          */
+    int              numLeft;           /*  num bytes remaining in burst     */
+    char             lastChar;          /*  last char output by test console */
+} test_obj_t;
+
 typedef union aux_obj {
     client_obj_t     client;
     logfile_obj_t    logfile;
@@ -224,6 +240,7 @@ typedef union aux_obj {
 #if WITH_FREEIPMI
     ipmi_obj_t       ipmi;
 #endif /* WITH_FREEIPMI */
+    test_obj_t       test;
 } aux_obj_t;
 
 typedef struct base_obj {               /* BASE OBJ:                         */
@@ -273,6 +290,7 @@ typedef struct server_conf {
     ipmiopt_t        globalIpmiOpts;    /* global opts for ipmi objects      */
     int              numIpmiObjs;       /* number of ipmi consoles in config */
 #endif /* WITH_FREEIPMI */
+    test_opt_t       globalTestOpts;    /* global opts for test objs         */
     unsigned         enableCoreDump:1;  /* true if core dumps are enabled    */
     unsigned         enableKeepAlive:1; /* true if using TCP keep-alive      */
     unsigned         enableLoopBack:1;  /* true if only listening on loopback*/
@@ -329,7 +347,8 @@ typedef struct client_args {
     CONMAN_OBJ_SERIAL   |     \
     CONMAN_OBJ_TELNET   |     \
     CONMAN_OBJ_UNIXSOCK |     \
-    CONMAN_OBJ_IPMI           \
+    CONMAN_OBJ_IPMI     |     \
+    CONMAN_OBJ_TEST           \
   )
 #define is_client_obj(OBJ)   (OBJ->type == CONMAN_OBJ_CLIENT)
 #define is_ipmi_obj(OBJ)     (OBJ->type == CONMAN_OBJ_IPMI)
@@ -337,6 +356,7 @@ typedef struct client_args {
 #define is_process_obj(OBJ)  (OBJ->type == CONMAN_OBJ_PROCESS)
 #define is_serial_obj(OBJ)   (OBJ->type == CONMAN_OBJ_SERIAL)
 #define is_telnet_obj(OBJ)   (OBJ->type == CONMAN_OBJ_TELNET)
+#define is_test_obj(OBJ)     (OBJ->type == CONMAN_OBJ_TEST)
 #define is_unixsock_obj(OBJ) (OBJ->type == CONMAN_OBJ_UNIXSOCK)
 #define is_console_obj(OBJ)  (OBJ->type &  CONMAN_OBJ_IS_CONSOLE)
 
@@ -476,6 +496,23 @@ int open_telnet_obj(obj_t *telnet);
 int process_telnet_escapes(obj_t *telnet, void *src, int len);
 
 int send_telnet_cmd(obj_t *telnet, int cmd, int opt);
+
+
+/*  server-test.c
+ */
+int is_test_dev(const char *dev);
+
+int init_test_opts(test_opt_t *opts);
+
+int parse_test_opts(test_opt_t *opts, const char *str,
+    char *errbuf, int errlen);
+
+obj_t * create_test_obj(server_conf_t *conf, char *name,
+    test_opt_t *opts, char *errbuf, int errlen);
+
+int open_test_obj(obj_t *test);
+
+int read_test_obj(obj_t *test);
 
 
 /*  server-unixsock.c

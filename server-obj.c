@@ -233,6 +233,8 @@ void destroy_obj(obj_t *obj)
         x_pthread_mutex_destroy(&obj->aux.ipmi.mutex);
         break;
 #endif /* WITH_FREEIPMI */
+    case CONMAN_OBJ_TEST:
+        break;
     default:
         log_err(0, "INTERNAL: Unrecognized object [%s] type=%d",
             obj->name, obj->type);
@@ -288,6 +290,9 @@ void reopen_obj(obj_t *obj)
 #endif /* WITH_FREEIPMI */
     else if (is_client_obj(obj)) {
         ; /* no-op */
+    }
+    else if (is_test_obj(obj)) {
+        open_test_obj(obj);
     }
     else {
         log_err(0, "INTERNAL: Cannot re-open unrecognized object [%s] type=%d",

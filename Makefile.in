@@ -62,6 +62,7 @@ SERVER_OBJS=	\
 		server-serial.o \
 		server-sock.o \
 		server-telnet.o \
+		server-test.o \
 		server-unixsock.o \
 		$(IPMI_OBJS) \
 		inevent.o \
