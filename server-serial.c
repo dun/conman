@@ -40,6 +40,7 @@
 #include "list.h"
 #include "log.h"
 #include "server.h"
+#include "tpoll.h"
 #include "util-file.h"
 #include "util-str.h"
 

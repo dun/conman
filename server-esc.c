@@ -38,6 +38,7 @@
 #include "list.h"
 #include "log.h"
 #include "server.h"
+#include "tpoll.h"
 #include "util-str.h"
 #include "util.h"
 #include "wrapper.h"
