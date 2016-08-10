@@ -59,6 +59,7 @@ static char * find_trailing_int_str(char *str);
 #ifndef NDEBUG
 static int validate_obj_links(obj_t *obj);
 #endif /* !NDEBUG */
+static int num_bytes_buffered(obj_t *obj);
 
 
 obj_t * create_obj(
@@ -149,13 +150,7 @@ void destroy_obj(obj_t *obj)
     assert(obj != NULL);
     DPRINTF((10, "Destroying object [%s].\n", obj->name));
 
-    if (obj->bufInPtr < obj->bufOutPtr) {
-        n = (&obj->buf[OBJ_BUF_SIZE] - obj->bufOutPtr)
-            + (obj->bufInPtr - obj->buf);
-    }
-    else {
-        n = obj->bufInPtr - obj->bufOutPtr;
-    }
+    n = num_bytes_buffered(obj);
     if (n > 0) {
         log_msg(LOG_WARNING,
             "Destroying [%s] with %d byte%s of unwritten data",
@@ -799,6 +794,8 @@ int shutdown_obj(obj_t *obj)
  *  Returns -1 if the obj is ready to be removed from the master objs list
  *    and destroyed; o/w, returns 0.
  */
+    int n;
+
     assert(obj != NULL);
 
     DPRINTF((20, "Entered shutdown_obj: [%s]\n", obj->name));
@@ -827,9 +824,14 @@ int shutdown_obj(obj_t *obj)
     /*  Flush the obj's buffer.
      */
     x_pthread_mutex_lock(&obj->bufLock);
+    n = num_bytes_buffered(obj);
     obj->bufInPtr = obj->bufOutPtr = obj->buf;
     x_pthread_mutex_unlock(&obj->bufLock);
-
+    if (n > 0) {
+        log_msg(LOG_WARNING,
+            "Flushed %d byte%s of unwritten data from [%s]",
+            n, (n == 1 ? "" : "s"), obj->name);
+    }
     /*  Prepare this obj for destruction by unlinking it from all others.
      *    It will be removed from the master objs list by mux_io(),
      *    and the objs list destructor will destroy the obj.
@@ -1018,18 +1020,10 @@ int write_obj_data(obj_t *obj, const void *src, int len, int isInfo)
      *  Data in the circular-buffer will be overwritten if needed since
      *    this routine must not block.
      *  Since an obj's circular-buffer is empty when (bufInPtr == bufOutPtr),
-     *    subtract one byte from 'avail' to account for this sentinel.
+     *    subtract one byte to account for this sentinel.
      */
-    if (obj->bufOutPtr == obj->bufInPtr) {
-        avail = OBJ_BUF_SIZE - 1;
-    }
-    else if (obj->bufOutPtr > obj->bufInPtr) {
-        avail = obj->bufOutPtr - obj->bufInPtr - 1;
-    }
-    else {
-        avail = (&obj->buf[OBJ_BUF_SIZE] - obj->bufInPtr) +
-            (obj->bufOutPtr - obj->buf) - 1;
-    }
+    avail = OBJ_BUF_SIZE - 1 - num_bytes_buffered(obj);
+
     /*  Copy first chunk of data (ie, up to the end of the buffer).
      */
     m = MIN(len, &obj->buf[OBJ_BUF_SIZE] - obj->bufInPtr);
@@ -1190,4 +1184,24 @@ again:
     x_pthread_mutex_unlock(&obj->bufLock);
 
     return(isDead ? shutdown_obj(obj) : 0);
+}
+
+
+static int num_bytes_buffered(obj_t *obj)
+{
+/*  Returns the number of bytes of buffered data in 'obj' waiting to be
+ *    written out to the file descriptor.
+ */
+    int n;
+
+    assert(obj != NULL);
+
+    if (obj->bufInPtr >= obj->bufOutPtr) {
+        n = obj->bufInPtr - obj->bufOutPtr;
+    }
+    else {
+        n = (&obj->buf[OBJ_BUF_SIZE] - obj->bufOutPtr) +
+            (obj->bufInPtr - obj->buf);
+    }
+    return(n);
 }
