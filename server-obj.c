@@ -872,6 +872,7 @@ int read_from_obj(obj_t *obj)
  */
     unsigned char buf[(OBJ_BUF_SIZE / 2) - 1];
     int n;
+    int isEmpty;
     ListIterator i;
     obj_t *reader;
 
@@ -879,13 +880,6 @@ int read_from_obj(obj_t *obj)
 
     if (obj->fd < 0) {
         return(0);
-    }
-    if (obj->gotEOF) {
-        /*
-         *  This code path can happen on POLLHUP or POLLERR.
-         */
-        DPRINTF((1, "Attempted to read from [%s] after EOF.\n", obj->name));
-        return(shutdown_obj(obj));
     }
     /*  Do not read from a telnet obj that is not yet in the UP state.
      *  When the non-blocking connect completes, the fd becomes writable;
@@ -909,8 +903,13 @@ again:
     }
     else if (n == 0) {
         DPRINTF((15, "Read EOF from [%s].\n", obj->name));
+        if (obj->gotEOF) {
+            log_msg(LOG_WARNING, "Read EOF from [%s] after gotEOF", obj->name);
+        }
         obj->gotEOF = 1;
-        return(0);
+        tpoll_clear(tp_global, obj->fd, POLLIN);
+        isEmpty = (obj->bufInPtr == obj->bufOutPtr);
+        return(isEmpty ? shutdown_obj(obj) : 0);
     }
     else {
         DPRINTF((15, "Read %d bytes from [%s].\n", n, obj->name));
