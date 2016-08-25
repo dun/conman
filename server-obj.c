@@ -974,20 +974,6 @@ int write_obj_data(obj_t *obj, const void *src, int len, int isInfo)
             len, (len == 1 ? "" : "s"), obj->name);
         return(0);
     }
-    /*  If the obj is a disconnected console connection,
-     *    data will be discarded so perform a no-op here.
-     */
-    if ( ( is_telnet_obj(obj) &&
-           obj->aux.telnet.state != CONMAN_TELNET_UP ) ||
-         ( is_unixsock_obj(obj) &&
-           obj->aux.unixsock.state != CONMAN_UNIXSOCK_UP ) ||
-         ( is_process_obj(obj) &&
-           obj->aux.process.state != CONMAN_PROCESS_UP ) ||
-         ( is_console_obj(obj) && (obj->fd < 0) ) )
-    {
-        DPRINTF((1, "Attempted to write to disconnected [%s].\n", obj->name));
-        return(0);
-    }
     /*  An obj's circular-buffer is empty when (bufInPtr == bufOutPtr).
      *    Thus, it can hold at most (OBJ_BUF_SIZE - 1) bytes of data.
      */
