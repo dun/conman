@@ -934,12 +934,7 @@ again:
             i = list_iterator_create(obj->readers);
             while ((reader = list_next(i))) {
 
-                if (reader->gotEOF) {
-                    log_msg(LOG_INFO,
-                        "Unable to write %d bytes to [%s]: EOF is set",
-                        n, reader->name);
-                }
-                else if (is_logfile_obj(reader)) {
+                if (is_logfile_obj(reader)) {
                     write_log_data(reader, buf, n);
                 }
                 else {
