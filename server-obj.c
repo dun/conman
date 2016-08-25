@@ -970,8 +970,9 @@ int write_obj_data(obj_t *obj, const void *src, int len, int isInfo)
      *    no more data can be written into its buffer.
      */
     if (obj->gotEOF) {
-        DPRINTF((1, "Attempted to write to [%s] after EOF.\n", obj->name));
-        return(shutdown_obj(obj));
+        log_msg(LOG_INFO, "Attempted to write %d byte%s to [%s] after EOF",
+            len, (len == 1 ? "" : "s"), obj->name);
+        return(0);
     }
     /*  If the obj is a disconnected console connection,
      *    data will be discarded so perform a no-op here.
