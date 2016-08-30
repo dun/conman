@@ -798,7 +798,7 @@ static void disconnect_ipmi_obj(obj_t *ipmi)
     /*  Notify linked objs when transitioning from an UP state.
      */
     if (ipmi->aux.ipmi.state == CONMAN_IPMI_UP) {
-        write_notify_msg(ipmi, LOG_NOTICE,
+        write_notify_msg(ipmi, LOG_INFO,
             "Console [%s] disconnected from <%s>",
             ipmi->name, ipmi->aux.ipmi.host);
     }

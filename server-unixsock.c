@@ -267,7 +267,7 @@ static int connect_unixsock_obj(obj_t *unixsock)
 
     /*  Notify linked objs when transitioning into an UP state.
      */
-    write_notify_msg(unixsock, LOG_NOTICE, "Console [%s] connected to \"%s\"",
+    write_notify_msg(unixsock, LOG_INFO, "Console [%s] connected to \"%s\"",
         unixsock->name, auxp->dev);
     DPRINTF((9, "Opened [%s] unixsock: fd=%d dev=%s.\n",
             unixsock->name, unixsock->fd, auxp->dev));
@@ -306,7 +306,7 @@ static int disconnect_unixsock_obj(obj_t *unixsock)
      */
     if (auxp->state == CONMAN_UNIXSOCK_UP) {
         auxp->state = CONMAN_UNIXSOCK_DOWN;
-        write_notify_msg(unixsock, LOG_NOTICE,
+        write_notify_msg(unixsock, LOG_INFO,
             "Console [%s] disconnected from \"%s\"",
             unixsock->name, auxp->dev);
     }

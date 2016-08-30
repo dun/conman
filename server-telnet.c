@@ -314,7 +314,7 @@ static void disconnect_telnet_obj(obj_t *telnet)
     /*  Notify linked objs when transitioning from an UP state.
      */
     if (telnet->aux.telnet.state == CONMAN_TELNET_UP) {
-        write_notify_msg(telnet, LOG_NOTICE,
+        write_notify_msg(telnet, LOG_INFO,
             "Console [%s] disconnected from <%s:%d>",
             telnet->name, telnet->aux.telnet.host, telnet->aux.telnet.port);
     }
