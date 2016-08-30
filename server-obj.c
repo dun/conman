@@ -1152,12 +1152,12 @@ again:
             }
             if ((errno != EAGAIN) && (errno != EWOULDBLOCK)) {
                 /*
-                 *  Mark obj for shutdown.
+                 *  If an error occurs while writing to the obj's fd,
+                 *    trigger a shutdown of the obj by setting 'isDead'.
                  */
                 log_msg(LOG_INFO, "Unable to write to [%s]: %s",
                     obj->name, strerror(errno));
-                obj->gotEOF = 1;
-                obj->bufInPtr = obj->bufOutPtr = obj->buf;
+                isDead = 1;
             }
         }
         else if (n > 0) {
@@ -1168,11 +1168,9 @@ again:
             }
         }
     }
-    /*  If the gotEOF flag in enabled, no additional data can be
-     *    written into the buffer.  And if (bufInPtr == bufOutPtr),
-     *    all data in the buffer has been written out to its fd.
-     *    Thus, the object is ready to be closed, so return a code to
-     *    notify mux_io() that the obj can be deleted from the objs list.
+    /*  If the gotEOF flag in set, no additional data can be written into the
+     *    buffer.  And if (bufInPtr == bufOutPtr), all buffered data has been
+     *    written out to its fd.  As such, the object is ready for shutdown.
      */
     if (obj->gotEOF && (obj->bufInPtr == obj->bufOutPtr)) {
         isDead = 1;
