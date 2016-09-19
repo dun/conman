@@ -94,6 +94,7 @@ int main(int argc, char *argv[])
     pid_t pgid = -1;
     server_conf_t *conf;
     int log_priority = LOG_INFO;
+    char ** const environ_bak = environ;
 
 #ifndef NDEBUG
     log_priority = LOG_DEBUG;
@@ -164,6 +165,9 @@ int main(int argc, char *argv[])
     }
     log_msg(LOG_NOTICE, "Stopping ConMan daemon %s (pid %d)",
         VERSION, (int) getpid());
+
+    free(environ);
+    environ = environ_bak;
     exit(0);
 }
 
