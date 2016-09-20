@@ -514,11 +514,9 @@ static void perform_suspend(obj_t *client)
  *    into its circular-buffer; if the client does not resume before
  *    the buffer wraps around, data will be lost.
  */
-    int gotSuspend;
-
     assert(is_client_obj(client));
 
-    gotSuspend = client->aux.client.gotSuspend ^= 1;
+    client->aux.client.gotSuspend ^= 1;
 
     if (client->aux.client.gotSuspend) {
         tpoll_clear(tp_global, client->fd, POLLOUT);
@@ -530,7 +528,7 @@ static void perform_suspend(obj_t *client)
     /*  FIXME: Do check_console_state() here looking for downed telnets.
      *    Should it check the state of all readers & writers?
      */
-    DPRINTF((5, "%s output to client [%s].\n",
-        (gotSuspend ? "Suspending" : "Resuming"), client->name));
+    log_msg(LOG_INFO, "Client <%s> %s", client->name,
+        (client->aux.client.gotSuspend ? "suspended" : "resumed"));
     return;
 }
