@@ -263,6 +263,7 @@ int open_test_obj(obj_t *test)
     auxp->timer = tpoll_timeout_relative(tp_global,
         (callback_f) read_test_obj, test, 0);
 
+    (void) opts;                /* suppress unused-but-set-variable warning */
     DPRINTF((9, "Opened [%s] test: bytes=%d max=%d min=%d prob=%d.\n",
         test->name, opts->numBytes, opts->msecMax, opts->msecMin,
         opts->probability));
