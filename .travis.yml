@@ -1,0 +1,23 @@
+language: c
+
+sudo: false
+
+compiler:
+- gcc
+- clang
+
+env:
+  global:
+  - CFLAGS='-Werror -pedantic-errors'
+  matrix:
+  - CONFIGURE_OPTS='--enable-debug --with-tcp-wrappers'
+  - CONFIGURE_OPTS='--disable-debug --with-tcp-wrappers'
+
+addons:
+  apt:
+    packages:
+    - libwrap0-dev
+    - colormake
+
+script:
+- ./configure ${CONFIGURE_OPTS} && colormake -e -k
