@@ -193,7 +193,7 @@ static int connect_unixsock_obj(obj_t *unixsock)
     unixsock_obj_t     *auxp;
     struct stat         st;
     struct sockaddr_un  saddr;
-    int                 rc;
+    int                 n;
 
     assert(unixsock != NULL);
     assert(is_unixsock_obj(unixsock));
@@ -219,23 +219,25 @@ static int connect_unixsock_obj(obj_t *unixsock)
      *    not being a socket.
      */
     if (!S_ISSOCK(st.st_mode)) {
-        log_msg(LOG_INFO, "Console [%s] device \"%s\" is not a socket",
-            unixsock->name, auxp->dev, strerror(errno));
+        log_msg(LOG_NOTICE, "Console [%s] device \"%s\" is not a socket",
+            unixsock->name, auxp->dev);
         return(disconnect_unixsock_obj(unixsock));
     }
 #endif /* S_ISSOCK */
 
     memset(&saddr, 0, sizeof(saddr));
     saddr.sun_family = AF_UNIX;
-    rc = strlcpy(saddr.sun_path, auxp->dev, sizeof(saddr.sun_path));
-    assert(rc < sizeof(saddr.sun_path));
-
+    n = strlcpy(saddr.sun_path, auxp->dev, sizeof(saddr.sun_path));
+    if (n >= sizeof(saddr.sun_path)) {
+        log_msg(LOG_NOTICE,
+            "Console [%s] device path exceeds %d-byte maximum",
+            unixsock->name, (int) sizeof(saddr.sun_path) - 1);
+        return(disconnect_unixsock_obj(unixsock));
+    }
     if ((unixsock->fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
-        /*
-         *  This error should probably not be considered fatal,
-         *    but since it is elsewhere in the code, it is here as well.
-         */
-        log_err(errno, "Unable to create console [%s] socket", unixsock->name);
+        log_msg(LOG_INFO, "Console [%s] cannot create socket: %s",
+            unixsock->name, strerror(errno));
+        return(disconnect_unixsock_obj(unixsock));
     }
     set_fd_nonblocking(unixsock->fd);
     set_fd_closed_on_exec(unixsock->fd);
@@ -245,8 +247,7 @@ static int connect_unixsock_obj(obj_t *unixsock)
      */
     if (connect(unixsock->fd,
             (struct sockaddr *) &saddr, sizeof(saddr)) < 0) {
-        log_msg(LOG_INFO,
-            "Console [%s] cannot connect to device \"%s\": %s",
+        log_msg(LOG_INFO, "Console [%s] cannot connect to device \"%s\": %s",
             unixsock->name, auxp->dev, strerror(errno));
         return(disconnect_unixsock_obj(unixsock));
     }
@@ -296,8 +297,7 @@ static int disconnect_unixsock_obj(obj_t *unixsock)
     if (unixsock->fd >= 0) {
         tpoll_clear(tp_global, unixsock->fd, POLLIN | POLLOUT);
         if (close(unixsock->fd) < 0) {
-            log_msg(LOG_WARNING,
-                "Unable to close console [%s] socket \"%s\": %s",
+            log_msg(LOG_WARNING, "Console [%s] cannot close device \"%s\": %s",
                 unixsock->name, auxp->dev, strerror(errno));
         }
         unixsock->fd = -1;
@@ -313,8 +313,7 @@ static int disconnect_unixsock_obj(obj_t *unixsock)
     /*  Set timer for establishing new connection.
      */
     auxp->timer = tpoll_timeout_relative(tp_global,
-        (callback_f) connect_unixsock_obj, unixsock,
-        auxp->delay * 1000);
+        (callback_f) connect_unixsock_obj, unixsock, auxp->delay * 1000);
 
     if (auxp->delay < UNIXSOCK_MAX_TIMEOUT) {
         auxp->delay = MIN(auxp->delay * 2, UNIXSOCK_MAX_TIMEOUT);
