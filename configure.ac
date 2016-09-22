@@ -297,7 +297,7 @@ dnl
 AC_MSG_CHECKING(for ConMan daemon host name)
 AC_ARG_WITH(conman-host,
   AS_HELP_STRING([--with-conman-host=HOST],
-    [default host name of daemon [[127.0.0.1]]]),
+    [default host name of daemon [127.0.0.1]]),
   [ if test -n "$withval" -a "$withval" != yes -a "$withval" != no; then
       CONMAN_HOST="$withval"
     fi
@@ -314,7 +314,7 @@ dnl
 AC_MSG_CHECKING(for ConMan daemon port number)
 AC_ARG_WITH(conman-port,
   AS_HELP_STRING([--with-conman-port=PORT],
-    [default port number of daemon [[7890]]]),
+    [default port number of daemon [7890]]),
   [ if test `expr match "$withval" '[[0-9]]*$'` -gt 0; then
       CONMAN_PORT="$withval"
     fi
