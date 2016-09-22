@@ -829,6 +829,7 @@ int shutdown_obj(obj_t *obj)
     x_pthread_mutex_lock(&obj->bufLock);
     n = num_bytes_buffered(obj);
     obj->bufInPtr = obj->bufOutPtr = obj->buf;
+    obj->gotEOF = 0;
     x_pthread_mutex_unlock(&obj->bufLock);
     if (n > 0) {
         log_msg(LOG_WARNING,
