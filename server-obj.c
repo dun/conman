@@ -1148,16 +1148,18 @@ again:
             }
         }
     }
-    /*  If the gotEOF flag in set, no additional data can be written into the
-     *    buffer.  And if (bufInPtr == bufOutPtr), all buffered data has been
-     *    written out to its fd.  As such, the object is ready for shutdown.
-     */
-    if (obj->gotEOF && (obj->bufInPtr == obj->bufOutPtr)) {
-        isDead = 1;
-    }
-    /*  Notify tpoll that all available data has been written.
+    /*  If all buffered data has been written out to the fd...
      */
     if (obj->bufInPtr == obj->bufOutPtr) {
+        /*
+         *  If the gotEOF flag is set, no additional data can be written into
+         *    the buffer.  As such, the object is ready for shutdown.
+         */
+        if (obj->gotEOF) {
+            isDead = 1;
+        }
+        /*  Notify tpoll that all available data has been written.
+         */
         tpoll_clear(tp_global, obj->fd, POLLOUT);
     }
     /*  Assert the buffer's input and output ptrs are valid upon exit.
