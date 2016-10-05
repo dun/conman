@@ -826,8 +826,8 @@ static int process_console(server_conf_t *conf, console_strs_t *con_p,
                 conf, con_p->name, path, errbuf, errbuflen))) {
             goto err;
         }
-        free(host);
-        host = NULL;
+        free(path);
+        path = NULL;
     }
     else if (is_telnet_dev(arg0, &host, &port)) {
         if (list_count(args) != 1) {
