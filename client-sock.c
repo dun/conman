@@ -68,6 +68,7 @@ int connect_to_server(client_conf_t *conf)
         conf->errnum = CONMAN_ERR_LOCAL;
         conf->errmsg = create_format_string(
             "Unable to resolve host <%s>", conf->req->host);
+        (void) close(sd);
         return(-1);
     }
 
@@ -87,6 +88,7 @@ int connect_to_server(client_conf_t *conf)
         conf->errmsg = create_format_string(
             "Unable to connect to <%s:%d>: %s",
             conf->req->fqdn, conf->req->port, strerror(errno));
+        (void) close(sd);
         return(-1);
     }
     conf->req->sd = sd;
