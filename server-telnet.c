@@ -551,9 +551,7 @@ static int process_telnet_cmd(obj_t *telnet, int cmd, int opt)
             log_msg(LOG_NOTICE,
                 "Received telnet cmd %s %s from console [%s]",
                 telcmds[cmd - TELCMD_FIRST],
-                (TELOPT_OK(opt)
-                    ? telopts[opt - TELOPT_FIRST]
-                    : opt2str(opt, opt_buf, sizeof(opt_buf))),
+                telopts[opt - TELOPT_FIRST],
                 telnet->name);
         }
         break;
