@@ -401,12 +401,19 @@ static void perform_reset(obj_t *client)
 {
 /*  Resets all consoles for which this client has write-access.
  */
+    int dev_null;
     ListIterator i;
     obj_t *console;
     char cmd[MAX_LINE];
-    int fd;
 
     assert(is_client_obj(client));
+
+    dev_null = open("/dev/null", O_RDWR);
+    if (dev_null < 0) {
+        log_msg(LOG_WARNING,
+            "Unable to open \"/dev/null\" for console reset: %s",
+            strerror(errno));
+    }
 
     i = list_iterator_create(client->readers);
     while ((console = list_next(i))) {
@@ -438,12 +445,18 @@ static void perform_reset(obj_t *client)
         }
         else if (console->resetCmdPid == 0) {
             setpgid(console->resetCmdPid, 0);
-            fd = open("/dev/null", O_RDWR);
-            (void) dup2(fd, STDIN_FILENO);
-            (void) dup2(fd, STDOUT_FILENO);
-            (void) dup2(fd, STDERR_FILENO);
-            if (fd > STDERR_FILENO) {
-                (void) close(fd);
+            if (dev_null < 0) {
+                (void) close(STDIN_FILENO);
+                (void) close(STDOUT_FILENO);
+                (void) close(STDERR_FILENO);
+            }
+            else {
+                (void) dup2(dev_null, STDIN_FILENO);
+                (void) dup2(dev_null, STDOUT_FILENO);
+                (void) dup2(dev_null, STDERR_FILENO);
+                if (dev_null > STDERR_FILENO) {
+                    (void) close(dev_null);
+                }
             }
             execl("/bin/sh", "sh", "-c", cmd, (char *) NULL);
             _exit(127);                 /* execl() error */
@@ -470,6 +483,12 @@ static void perform_reset(obj_t *client)
         }
     }
     list_iterator_destroy(i);
+
+    if ((dev_null >= 0) && (close(dev_null) < 0)) {
+        log_msg(LOG_WARNING,
+            "Unable to close \"/dev/null\" for console reset: %s",
+            strerror(errno));
+    }
     return;
 }
 
