@@ -584,29 +584,33 @@ static void parse_console_directive(server_conf_t *conf, Lex l)
  *    [LOGOPTS="<str>"] [SEROPTS="<str>"] [IPMIOPTS="<str>"] [TESTOPTS="<str>"]
  *  Note: IPMIOPTS is only available if WITH_FREEIPMI is defined.
  */
-    char *directive;                    /* name of directive being parsed */
+    const char *directive;              /* name of directive being parsed */
     int tok;
+    const char *tokstr;
     int done = 0;
     char err[MAX_LINE] = "";
     console_strs_t con;
 
     memset(&con, 0, sizeof(con));
 
-    directive = server_conf_strs[LEX_UNTOK(lex_prev(l))];
-
+    directive = lex_tok_to_str(l, lex_prev(l));
+    if (!directive) {
+        log_err(0, "Unable to lookup string for console directive");
+    }
     while (!done && !*err) {
         tok = lex_next(l);
+        tokstr = lex_tok_to_str(l, tok);
         switch(tok) {
 
         case SERVER_CONF_NAME:
             if (lex_next(l) != '=') {
-                snprintf(err, sizeof(err), "expected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected '=' after %s keyword", tokstr);
             }
             else if ((lex_next(l) != LEX_STR)
                     || is_empty_string(lex_text(l))) {
-                snprintf(err, sizeof(err), "expected STRING for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected STRING for %s value", tokstr);
             }
             else {
                 replace_string(&con.name, lex_text(l));
@@ -615,13 +619,13 @@ static void parse_console_directive(server_conf_t *conf, Lex l)
 
         case SERVER_CONF_DEV:
             if (lex_next(l) != '=') {
-                snprintf(err, sizeof(err), "expected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected '=' after %s keyword", tokstr);
             }
             else if ((lex_next(l) != LEX_STR)
                     || is_empty_string(lex_text(l))) {
-                snprintf(err, sizeof(err), "expected STRING for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected STRING for %s value", tokstr);
             }
             else {
                 replace_string(&con.dev, lex_text(l));
@@ -630,19 +634,18 @@ static void parse_console_directive(server_conf_t *conf, Lex l)
 
         case SERVER_CONF_LOG:
             if (lex_next(l) != '=') {
-                snprintf(err, sizeof(err), "expected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected '=' after %s keyword", tokstr);
             }
             else if (lex_next(l) != LEX_STR) {
-                snprintf(err, sizeof(err), "expected STRING for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected STRING for %s value", tokstr);
             }
 #ifdef DO_CONF_ESCAPE_ERROR
             else if (strchr(lex_text(l), DEPRECATED_CONF_ESCAPE)) {
                 snprintf(err, sizeof(err),
                     "ignoring %s %s value with deprecated '%c' -- use '%%N'",
-                    directive, server_conf_strs[LEX_UNTOK(tok)],
-                    DEPRECATED_CONF_ESCAPE);
+                    directive, tokstr, DEPRECATED_CONF_ESCAPE);
             }
 #endif /* DO_CONF_ESCAPE_ERROR */
             else if (is_empty_string(lex_text(l))) {
@@ -660,13 +663,13 @@ static void parse_console_directive(server_conf_t *conf, Lex l)
 
         case SERVER_CONF_LOGOPTS:
             if (lex_next(l) != '=') {
-                snprintf(err, sizeof(err), "expected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected '=' after %s keyword", tokstr);
             }
             else if ((lex_next(l) != LEX_STR)
                     || is_empty_string(lex_text(l))) {
-                snprintf(err, sizeof(err), "expected STRING for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected STRING for %s value", tokstr);
             }
             else {
                 replace_string(&con.lopts, lex_text(l));
@@ -675,13 +678,13 @@ static void parse_console_directive(server_conf_t *conf, Lex l)
 
         case SERVER_CONF_SEROPTS:
             if (lex_next(l) != '=') {
-                snprintf(err, sizeof(err), "expected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected '=' after %s keyword", tokstr);
             }
             else if ((lex_next(l) != LEX_STR)
                     || is_empty_string(lex_text(l))) {
-                snprintf(err, sizeof(err), "expected STRING for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected STRING for %s value", tokstr);
             }
             else {
                 replace_string(&con.sopts, lex_text(l));
@@ -691,12 +694,12 @@ static void parse_console_directive(server_conf_t *conf, Lex l)
 #if WITH_FREEIPMI
         case SERVER_CONF_IPMIOPTS:
             if (lex_next(l) != '=') {
-                snprintf(err, sizeof(err), "unexpected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "unexpected '=' after %s keyword", tokstr);
             }
             else if (lex_next(l) != LEX_STR) {
-                snprintf(err, sizeof(err), "expected STRING for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected STRING for %s value", tokstr);
             }
             else {
                 replace_string(&con.iopts, lex_text(l));
@@ -706,12 +709,12 @@ static void parse_console_directive(server_conf_t *conf, Lex l)
 
         case SERVER_CONF_TESTOPTS:
             if (lex_next(l) != '=') {
-                snprintf(err, sizeof(err), "unexpected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "unexpected '=' after %s keyword", tokstr);
             }
             else if (lex_next(l) != LEX_STR) {
-                snprintf(err, sizeof(err), "expected STRING for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected STRING for %s value", tokstr);
             }
             else {
                 replace_string(&con.topts, lex_text(l));
@@ -955,25 +958,29 @@ err:
 
 static void parse_global_directive(server_conf_t *conf, Lex l)
 {
-    char *directive;                    /* name of directive being parsed */
+    const char *directive;              /* name of directive being parsed */
     int tok;
+    const char *tokstr;
     int done = 0;
     char err[MAX_LINE] = "";
 
-    directive = server_conf_strs[LEX_UNTOK(lex_prev(l))];
-
+    directive = lex_tok_to_str(l, lex_prev(l));
+    if (!directive) {
+        log_err(0, "Unable to lookup string for global directive");
+    }
     while (!done && !*err) {
         tok = lex_next(l);
+        tokstr = lex_tok_to_str(l, tok);
         switch(tok) {
 
         case SERVER_CONF_LOG:
             if (lex_next(l) != '=') {
-                snprintf(err, sizeof(err), "expected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected '=' after %s keyword", tokstr);
             }
             else if (lex_next(l) != LEX_STR) {
-                snprintf(err, sizeof(err), "expected STRING for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected STRING for %s value", tokstr);
             }
             else if (is_empty_string(lex_text(l))) {
                 /*
@@ -986,15 +993,14 @@ static void parse_global_directive(server_conf_t *conf, Lex l)
             else if (strchr(lex_text(l), DEPRECATED_CONF_ESCAPE)) {
                 snprintf(err, sizeof(err),
                     "ignoring %s %s value with deprecated '%c' -- use '%%N'",
-                    directive, server_conf_strs[LEX_UNTOK(tok)],
-                    DEPRECATED_CONF_ESCAPE);
+                    directive, tokstr, DEPRECATED_CONF_ESCAPE);
             }
 #endif /* DO_CONF_ESCAPE_ERROR */
             else if (!strstr(lex_text(l), "%N")
                     && !strstr(lex_text(l), "%D")) {
                 snprintf(err, sizeof(err),
                     "ignoring %s %s value without '%%N' or '%%D'",
-                    directive, server_conf_strs[LEX_UNTOK(tok)]);
+                    directive, tokstr);
             }
             else {
                 destroy_string(conf->globalLogName);
@@ -1004,13 +1010,13 @@ static void parse_global_directive(server_conf_t *conf, Lex l)
 
         case SERVER_CONF_LOGOPTS:
             if (lex_next(l) != '=') {
-                snprintf(err, sizeof(err), "expected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected '=' after %s keyword", tokstr);
             }
             else if ((lex_next(l) != LEX_STR)
                     || is_empty_string(lex_text(l))) {
-                snprintf(err, sizeof(err), "expected STRING for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected STRING for %s value", tokstr);
             }
             else {
                 parse_logfile_opts(&conf->globalLogOpts, lex_text(l),
@@ -1020,13 +1026,13 @@ static void parse_global_directive(server_conf_t *conf, Lex l)
 
         case SERVER_CONF_SEROPTS:
             if (lex_next(l) != '=') {
-                snprintf(err, sizeof(err), "expected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected '=' after %s keyword", tokstr);
             }
             else if ((lex_next(l) != LEX_STR)
                     || is_empty_string(lex_text(l))) {
-                snprintf(err, sizeof(err), "expected STRING for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected STRING for %s value", tokstr);
             }
             else {
                 parse_serial_opts(&conf->globalSerOpts, lex_text(l),
@@ -1037,13 +1043,13 @@ static void parse_global_directive(server_conf_t *conf, Lex l)
 #if WITH_FREEIPMI
         case SERVER_CONF_IPMIOPTS:
             if (lex_next(l) != '=') {
-                snprintf(err, sizeof(err), "expected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected '=' after %s keyword", tokstr);
             }
             else if ((lex_next(l) != LEX_STR)
                     || is_empty_string(lex_text(l))) {
-                snprintf(err, sizeof(err), "expected STRING for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected STRING for %s value", tokstr);
             }
             else {
                 parse_ipmi_opts(&conf->globalIpmiOpts, lex_text(l),
@@ -1054,13 +1060,13 @@ static void parse_global_directive(server_conf_t *conf, Lex l)
 
         case SERVER_CONF_TESTOPTS:
             if (lex_next(l) != '=') {
-                snprintf(err, sizeof(err), "expected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected '=' after %s keyword", tokstr);
             }
             else if ((lex_next(l) != LEX_STR)
                     || is_empty_string(lex_text(l))) {
-                snprintf(err, sizeof(err), "expected STRING for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected STRING for %s value", tokstr);
             }
             else {
                 parse_test_opts(&conf->globalTestOpts, lex_text(l),
@@ -1096,8 +1102,9 @@ static void parse_global_directive(server_conf_t *conf, Lex l)
 
 static void parse_server_directive(server_conf_t *conf, Lex l)
 {
-    char *directive;
+    const char *directive;              /* name of directive being parsed */
     int tok;
+    const char *tokstr;
     int done = 0;
     char err[MAX_LINE] = "";
     char *p;
@@ -1109,16 +1116,19 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
     const int isPidFileNameSet = (conf->pidFileName != NULL);
     const int isPortSet = (conf->port > 0);
 
-    directive = server_conf_strs[LEX_UNTOK(lex_prev(l))];
-
+    directive = lex_tok_to_str(l, lex_prev(l));
+    if (!directive) {
+        log_err(0, "Unable to lookup string for server directive");
+    }
     while (!done && !*err) {
         tok = lex_next(l);
+        tokstr = lex_tok_to_str(l, tok);
         switch(tok) {
 
         case SERVER_CONF_COREDUMP:
             if (lex_next(l) != '=') {
-                snprintf(err, sizeof(err), "expected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected '=' after %s keyword", tokstr);
             }
             else if (lex_next(l) == SERVER_CONF_ON) {
                 conf->enableCoreDump = 1;
@@ -1127,31 +1137,31 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
                 conf->enableCoreDump = 0;
             }
             else {
-                snprintf(err, sizeof(err), "expected ON or OFF for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected ON or OFF for %s value", tokstr);
             }
             break;
 
         case SERVER_CONF_COREDUMPDIR:
             if (lex_next(l) != '=') {
-                snprintf(err, sizeof(err), "expected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected '=' after %s keyword", tokstr);
             }
             else if ((lex_next(l) != LEX_STR)) {
-                snprintf(err, sizeof(err), "expected STRING for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected STRING for %s value", tokstr);
             }
             else if (is_empty_string(lex_text(l))) {
                 destroy_string(conf->coreDumpDir);
                 conf->coreDumpDir = NULL;
             }
             else if (stat(lex_text(l), &st) < 0) {
-                snprintf(err, sizeof(err), "cannot stat %s \"%s\"",
-                    server_conf_strs[LEX_UNTOK(tok)], lex_text(l));
+                snprintf(err, sizeof(err),
+                    "cannot stat %s \"%s\"", tokstr, lex_text(l));
             }
             else if (!S_ISDIR(st.st_mode)) {
-                snprintf(err, sizeof(err), "invalid %s \"%s\" not a directory",
-                    server_conf_strs[LEX_UNTOK(tok)], lex_text(l));
+                snprintf(err, sizeof(err),
+                    "invalid %s \"%s\" not a directory", tokstr, lex_text(l));
             }
             else {
                 p = (lex_text(l)[0] != '/')
@@ -1171,16 +1181,16 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
 
         case SERVER_CONF_EXECPATH:
             if (lex_next(l) != '=') {
-                snprintf(err, sizeof(err), "expected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected '=' after %s keyword", tokstr);
             }
             else if ((lex_next(l) != LEX_STR)) {
-                snprintf(err, sizeof(err), "expected STRING for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected STRING for %s value", tokstr);
             }
             else if (strlen(lex_text(l)) >= PATH_MAX) {
-                snprintf(err, sizeof(err), "exceeded max length for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "exceeded max length for %s value", tokstr);
             }
             else if (is_empty_string(lex_text(l))) {
                 destroy_string(conf->execPath);
@@ -1194,8 +1204,8 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
 
         case SERVER_CONF_KEEPALIVE:
             if (lex_next(l) != '=') {
-                snprintf(err, sizeof(err), "expected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected '=' after %s keyword", tokstr);
             }
             else if (lex_next(l) == SERVER_CONF_ON) {
                 conf->enableKeepAlive = 1;
@@ -1204,19 +1214,19 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
                 conf->enableKeepAlive = 0;
             }
             else {
-                snprintf(err, sizeof(err), "expected ON or OFF for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected ON or OFF for %s value", tokstr);
             }
             break;
 
         case SERVER_CONF_LOGDIR:
             if (lex_next(l) != '=') {
-                snprintf(err, sizeof(err), "expected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected '=' after %s keyword", tokstr);
             }
             else if ((lex_next(l) != LEX_STR)) {
-                snprintf(err, sizeof(err), "expected STRING for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected STRING for %s value", tokstr);
             }
             else if (is_empty_string(lex_text(l))) {
                 destroy_string(conf->logDirName);
@@ -1233,13 +1243,13 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
 
         case SERVER_CONF_LOGFILE:
             if (lex_next(l) != '=') {
-                snprintf(err, sizeof(err), "expected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected '=' after %s keyword", tokstr);
             }
             else if ((lex_next(l) != LEX_STR)
                     || is_empty_string(lex_text(l))) {
-                snprintf(err, sizeof(err), "expected STRING for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected STRING for %s value", tokstr);
             }
             else {
                 destroy_string(conf->logFileName);
@@ -1254,8 +1264,7 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
                     *p++ = '\0';
                     if ((n = lookup_syslog_priority(p)) < 0) {
                         snprintf(err, sizeof(err),
-                            "invalid %s priority \"%s\"",
-                            server_conf_strs[LEX_UNTOK(tok)], p);
+                            "invalid %s priority \"%s\"", tokstr, p);
                     }
                     else {
                         conf->logFileLevel = n;
@@ -1266,8 +1275,8 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
 
         case SERVER_CONF_LOOPBACK:
             if (lex_next(l) != '=') {
-                snprintf(err, sizeof(err), "expected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected '=' after %s keyword", tokstr);
             }
             else if (lex_next(l) == SERVER_CONF_ON) {
                 conf->enableLoopBack = 1;
@@ -1276,19 +1285,19 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
                 conf->enableLoopBack = 0;
             }
             else {
-                snprintf(err, sizeof(err), "expected ON or OFF for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected ON or OFF for %s value", tokstr);
             }
             break;
 
         case SERVER_CONF_NOFILE:
             if (lex_next(l) != '=') {
-                snprintf(err, sizeof(err), "expected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected '=' after %s keyword", tokstr);
             }
             else if (lex_next(l) != LEX_INT) {
-                snprintf(err, sizeof(err), "expected INTEGER for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected INTEGER for %s value", tokstr);
             }
             else {
                 n = atoi(lex_text(l));
@@ -1298,13 +1307,13 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
 
         case SERVER_CONF_PIDFILE:
             if (lex_next(l) != '=') {
-                snprintf(err, sizeof(err), "expected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected '=' after %s keyword", tokstr);
             }
             else if ((lex_next(l) != LEX_STR)
                     || is_empty_string(lex_text(l))) {
-                snprintf(err, sizeof(err), "expected STRING for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected STRING for %s value", tokstr);
             }
             else if (!isPidFileNameSet) {
                 destroy_string(conf->pidFileName);
@@ -1320,16 +1329,16 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
 
         case SERVER_CONF_PORT:
             if (lex_next(l) != '=') {
-                snprintf(err, sizeof(err), "expected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected '=' after %s keyword", tokstr);
             }
             else if (lex_next(l) != LEX_INT) {
-                snprintf(err, sizeof(err), "expected INTEGER for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected INTEGER for %s value", tokstr);
             }
             else if ((n = atoi(lex_text(l))) <= 0) {
-                snprintf(err, sizeof(err), "invalid %s value %d",
-                    server_conf_strs[LEX_UNTOK(tok)], n);
+                snprintf(err, sizeof(err),
+                    "invalid %s value %d", tokstr, n);
             }
             else if (!isPortSet) {
                 conf->port = n;
@@ -1338,20 +1347,19 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
 
         case SERVER_CONF_RESETCMD:
             if (lex_next(l) != '=') {
-                snprintf(err, sizeof(err), "expected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected '=' after %s keyword", tokstr);
             }
             else if ((lex_next(l) != LEX_STR)
                     || is_empty_string(lex_text(l))) {
-                snprintf(err, sizeof(err), "expected STRING for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected STRING for %s value", tokstr);
             }
 #ifdef DO_CONF_ESCAPE_ERROR
             else if (strchr(lex_text(l), DEPRECATED_CONF_ESCAPE)) {
                 snprintf(err, sizeof(err),
                     "ignoring %s %s value with deprecated '%c' -- use '%%N'",
-                    directive, server_conf_strs[LEX_UNTOK(tok)],
-                    DEPRECATED_CONF_ESCAPE);
+                    directive, tokstr, DEPRECATED_CONF_ESCAPE);
             }
 #endif /* DO_CONF_ESCAPE_ERROR */
             else {
@@ -1362,17 +1370,17 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
 
         case SERVER_CONF_SYSLOG:
             if (lex_next(l) != '=') {
-                snprintf(err, sizeof(err), "expected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected '=' after %s keyword", tokstr);
             }
             else if ((lex_next(l) != LEX_STR)
                     || is_empty_string(lex_text(l))) {
-                snprintf(err, sizeof(err), "expected STRING for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected STRING for %s value", tokstr);
             }
             else if ((n = lookup_syslog_facility(lex_text(l))) < 0) {
-                snprintf(err, sizeof(err), "invalid %s facility \"%s\"",
-                    server_conf_strs[LEX_UNTOK(tok)], lex_text(l));
+                snprintf(err, sizeof(err),
+                    "invalid %s facility \"%s\"", tokstr, lex_text(l));
             }
             else {
                 conf->syslogFacility = n;
@@ -1382,12 +1390,11 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
         case SERVER_CONF_TCPWRAPPERS:
 #if ! WITH_TCP_WRAPPERS
             snprintf(err, sizeof(err),
-                "%s keyword requires compile-time support",
-                server_conf_strs[LEX_UNTOK(tok)]);
+                "%s keyword requires compile-time support", tokstr);
 #else /* WITH_TCP_WRAPPERS */
             if (lex_next(l) != '=') {
-                snprintf(err, sizeof(err), "expected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected '=' after %s keyword", tokstr);
             }
             else if (lex_next(l) == SERVER_CONF_ON) {
                 conf->enableTCPWrap = 1;
@@ -1396,24 +1403,24 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
                 conf->enableTCPWrap = 0;
             }
             else {
-                snprintf(err, sizeof(err), "expected ON or OFF for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected ON or OFF for %s value", tokstr);
             }
 #endif /* WITH_TCP_WRAPPERS */
             break;
 
         case SERVER_CONF_TIMESTAMP:
             if (lex_next(l) != '=') {
-                snprintf(err, sizeof(err), "expected '=' after %s keyword",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected '=' after %s keyword", tokstr);
             }
             else if (lex_next(l) != LEX_INT) {
-                snprintf(err, sizeof(err), "expected INTEGER for %s value",
-                    server_conf_strs[LEX_UNTOK(tok)]);
+                snprintf(err, sizeof(err),
+                    "expected INTEGER for %s value", tokstr);
             }
             else if ((n = atoi(lex_text(l))) < 0) {
-                snprintf(err, sizeof(err), "invalid %s value %d",
-                    server_conf_strs[LEX_UNTOK(tok)], n);
+                snprintf(err, sizeof(err),
+                    "invalid %s value %d", tokstr, n);
             }
             else {
                 conf->tStampMinutes = n;
@@ -1444,8 +1451,7 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
                 if (conf->tStampMinutes < 0) {
                     conf->tStampMinutes = 0;
                     snprintf(err, sizeof(err),
-                        "expected (m|d|h) qualifier for %s value",
-                        server_conf_strs[LEX_UNTOK(tok)]);
+                        "expected (m|d|h) qualifier for %s value", tokstr);
                 }
             }
             break;

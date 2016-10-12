@@ -67,7 +67,7 @@ enum common_tokens {
     LEX_EOL = 256,                      /* end-of-line token                 */
     LEX_INT,                            /* integer token: ([+-]?[0-9]+)      */
     LEX_STR,                            /* string token                      */
-    LEX_TOK_OFFSET                      /* (cf. LEX_UNTOK macro)             */
+    LEX_TOK_OFFSET                      /* enum value at which toks[] begin  */
 };
 
 
@@ -123,7 +123,7 @@ int lex_next(Lex l);
  *  Single-character tokens (eg, punctuation) are specified by
  *    their ASCII code.  Common tokens are specified by the
  *    common_token enumeration.  Tokens specified by the (toks)
- *    array of strings begin at LEX_TOK_OFFSET.  (cf. LEX_UNTOK macro).
+ *    array of strings begin at LEX_TOK_OFFSET.
  */
 
 int lex_prev(Lex l);
@@ -139,6 +139,12 @@ int lex_line(Lex l);
 const char * lex_text(Lex l);
 /*
  *  Returns the string corresponding to the last token returned by lex_next().
+ */
+
+const char * lex_tok_to_str(Lex l, int tok);
+/*
+ *  Returns the string from the lex_create() toks[] array corresponding to the
+ *    token (tok), or NULL if tok is outside of the toks[] array bounds.
  */
 
 

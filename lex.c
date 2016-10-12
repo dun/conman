@@ -256,6 +256,26 @@ const char * lex_text(Lex l)
 }
 
 
+const char * lex_tok_to_str(Lex l, int tok)
+{
+    int i;
+
+    assert(l != NULL);
+    assert(l->magic == LEX_MAGIC);
+    assert(l->toks != NULL);
+    assert(l->toks[l->numtoks] == NULL);
+
+    if (!l || !l->toks) {
+        return(NULL);
+    }
+    i = tok - LEX_TOK_OFFSET;
+    if ((i >= 0) && (i < l->numtoks)) {
+        return((const char *) l->toks[i]);
+    }
+    return(NULL);
+}
+
+
 #if ! HAVE_STRCASECMP
 static int xstrcasecmp(const char *s1, const char *s2)
 {
@@ -358,6 +378,7 @@ void lex_parse_test(char *buf, char *toks[])
     Lex l;
     int tok;
     int newline = 1;
+    const char *p;
 
     if (!buf || !(l = lex_create(buf, toks)))
         return;
@@ -386,8 +407,8 @@ void lex_parse_test(char *buf, char *toks[])
         default:
             if (tok < LEX_TOK_OFFSET)
                 printf("CHR(%c) ", lex_text(l)[0]);
-            else if (toks)
-                printf("TOK(%d:%s) ", tok, toks[LEX_UNTOK(tok)]);
+            else if ((p = lex_tok_to_str(l, tok)))
+                printf("TOK(%d:%s) ", tok, p);
             else
                 printf("\nINTERNAL ERROR: line=%d, tok=%d, str=\"%s\"\n",
                     lex_line(l), lex_prev(l), lex_text(l));
