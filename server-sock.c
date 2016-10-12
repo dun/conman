@@ -723,7 +723,7 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
     if (errnum == CONMAN_ERR_NONE) {
 
         n = append_format_string(buf, sizeof(buf), "%s",
-            proto_strs[LEX_UNTOK(CONMAN_TOK_OK)]);
+            LEX_TOK2STR(proto_strs, CONMAN_TOK_OK));
 
         /*  If consoles have been defined by this point, the "response"
          *    is to the request as opposed to the greeting.
@@ -733,14 +733,14 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
 
             if (req->enableReset) {
                 n = append_format_string(buf, sizeof(buf), " %s=%s",
-                    proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
-                    proto_strs[LEX_UNTOK(CONMAN_TOK_RESET)]);
+                    LEX_TOK2STR(proto_strs, CONMAN_TOK_OPTION),
+                    LEX_TOK2STR(proto_strs, CONMAN_TOK_RESET));
             }
             i = list_iterator_create(req->consoles);
             while ((console = list_next(i))) {
                 n = strlcpy(tmp, console->name, sizeof(tmp));
                 n = append_format_string(buf, sizeof(buf), " %s='%s'",
-                    proto_strs[LEX_UNTOK(CONMAN_TOK_CONSOLE)],
+                    LEX_TOK2STR(proto_strs, CONMAN_TOK_CONSOLE),
                     lex_encode(tmp));
             }
             list_iterator_destroy(i);
@@ -751,9 +751,9 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
     else {
         n = strlcpy(tmp, (errmsg ? errmsg : "unspecified error"), sizeof(tmp));
         n = snprintf(buf, sizeof(buf), "%s %s=%d %s='%s'\n",
-            proto_strs[LEX_UNTOK(CONMAN_TOK_ERROR)],
-            proto_strs[LEX_UNTOK(CONMAN_TOK_CODE)], errnum,
-            proto_strs[LEX_UNTOK(CONMAN_TOK_MESSAGE)], lex_encode(tmp));
+            LEX_TOK2STR(proto_strs, CONMAN_TOK_ERROR),
+            LEX_TOK2STR(proto_strs, CONMAN_TOK_CODE), errnum,
+            LEX_TOK2STR(proto_strs, CONMAN_TOK_MESSAGE), lex_encode(tmp));
         log_msg(LOG_NOTICE, "Client <%s@%s:%d> request failed: %s",
             req->user, req->fqdn, req->port, errmsg);
     }

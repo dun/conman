@@ -105,12 +105,14 @@ int send_greeting(client_conf_t *conf)
     assert(conf->req->user != NULL);
 
     n = append_format_string(buf, sizeof(buf), "%s %s='%s'",
-        proto_strs[LEX_UNTOK(CONMAN_TOK_HELLO)],
-        proto_strs[LEX_UNTOK(CONMAN_TOK_USER)], lex_encode(conf->req->user));
+        LEX_TOK2STR(proto_strs, CONMAN_TOK_HELLO),
+        LEX_TOK2STR(proto_strs, CONMAN_TOK_USER),
+        lex_encode(conf->req->user));
 
     if (conf->req->tty) {
         n = append_format_string(buf, sizeof(buf), " %s='%s'",
-            proto_strs[LEX_UNTOK(CONMAN_TOK_TTY)], lex_encode(conf->req->tty));
+            LEX_TOK2STR(proto_strs, CONMAN_TOK_TTY),
+            lex_encode(conf->req->tty));
     }
 
     n = append_format_string(buf, sizeof(buf), "\n");
@@ -157,13 +159,13 @@ int send_req(client_conf_t *conf)
 
     switch(conf->req->command) {
     case CONMAN_CMD_QUERY:
-        cmd = proto_strs[LEX_UNTOK(CONMAN_TOK_QUERY)];
+        cmd = LEX_TOK2STR(proto_strs, CONMAN_TOK_QUERY);
         break;
     case CONMAN_CMD_MONITOR:
-        cmd = proto_strs[LEX_UNTOK(CONMAN_TOK_MONITOR)];
+        cmd = LEX_TOK2STR(proto_strs, CONMAN_TOK_MONITOR);
         break;
     case CONMAN_CMD_CONNECT:
-        cmd = proto_strs[LEX_UNTOK(CONMAN_TOK_CONNECT)];
+        cmd = LEX_TOK2STR(proto_strs, CONMAN_TOK_CONNECT);
         break;
     default:
         log_err(0, "INTERNAL: Invalid command=%d", conf->req->command);
@@ -174,29 +176,29 @@ int send_req(client_conf_t *conf)
 
     if (conf->req->enableQuiet) {
         n = append_format_string(buf, sizeof(buf), " %s=%s",
-            proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
-            proto_strs[LEX_UNTOK(CONMAN_TOK_QUIET)]);
+            LEX_TOK2STR(proto_strs, CONMAN_TOK_OPTION),
+            LEX_TOK2STR(proto_strs, CONMAN_TOK_QUIET));
     }
     if (conf->req->enableRegex) {
         n = append_format_string(buf, sizeof(buf), " %s=%s",
-            proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
-            proto_strs[LEX_UNTOK(CONMAN_TOK_REGEX)]);
+            LEX_TOK2STR(proto_strs, CONMAN_TOK_OPTION),
+            LEX_TOK2STR(proto_strs, CONMAN_TOK_REGEX));
     }
     if (conf->req->command == CONMAN_CMD_CONNECT) {
         if (conf->req->enableForce) {
             n = append_format_string(buf, sizeof(buf), " %s=%s",
-                proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
-                proto_strs[LEX_UNTOK(CONMAN_TOK_FORCE)]);
+                LEX_TOK2STR(proto_strs, CONMAN_TOK_OPTION),
+                LEX_TOK2STR(proto_strs, CONMAN_TOK_FORCE));
         }
         if (conf->req->enableJoin) {
             n = append_format_string(buf, sizeof(buf), " %s=%s",
-                proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
-                proto_strs[LEX_UNTOK(CONMAN_TOK_JOIN)]);
+                LEX_TOK2STR(proto_strs, CONMAN_TOK_OPTION),
+                LEX_TOK2STR(proto_strs, CONMAN_TOK_JOIN));
         }
         if (conf->req->enableBroadcast) {
             n = append_format_string(buf, sizeof(buf), " %s=%s",
-                proto_strs[LEX_UNTOK(CONMAN_TOK_OPTION)],
-                proto_strs[LEX_UNTOK(CONMAN_TOK_BROADCAST)]);
+                LEX_TOK2STR(proto_strs, CONMAN_TOK_OPTION),
+                LEX_TOK2STR(proto_strs, CONMAN_TOK_BROADCAST));
         }
     }
 
@@ -205,7 +207,8 @@ int send_req(client_conf_t *conf)
      */
     while ((str = list_pop(conf->req->consoles))) {
         n = append_format_string(buf, sizeof(buf), " %s='%s'",
-            proto_strs[LEX_UNTOK(CONMAN_TOK_CONSOLE)], lex_encode(str));
+            LEX_TOK2STR(proto_strs, CONMAN_TOK_CONSOLE),
+            lex_encode(str));
         free(str);
     }
 

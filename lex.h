@@ -85,13 +85,12 @@ typedef struct lexer_state *Lex;
 **  Macros  **
 \************/
 
-#define LEX_UNTOK(tok) \
-    ( ((int) (tok) < (int) LEX_TOK_OFFSET) ? (tok) : ((tok) - LEX_TOK_OFFSET) )
+#define LEX_TOK2STR(tokstrs,tok) ((tokstrs)[(tok) - LEX_TOK_OFFSET])
 /*
- *  LEX_TOK_OFFSET specifies the next available enumeration at which
- *    the array of strings supplied to lex_create (toks) can begin.
- *  LEX_UNTOK(tok) undoes this offset adjustment and returns the
- *    offset corresponding to this token within the (toks) array.
+ *  Returns a string in the (tokstrs) array corresponding to the token (tok).
+ *  Only use when (tok) is known to be a valid array index corresponding to a
+ *    string in the (tokstrs) array of strings since no bounds-checking is
+ *    performed.
  */
 
 
