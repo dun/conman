@@ -198,8 +198,10 @@ obj_t * create_test_obj(server_conf_t *conf, char *name,
     i = list_iterator_create(conf->objs);
     while ((test = list_next(i))) {
         if (is_console_obj(test) && !strcmp(test->name, name)) {
-            snprintf(errbuf, errlen,
-                "console [%s] specifies duplicate console name", name);
+            if ((errbuf != NULL) && (errlen > 0)) {
+                snprintf(errbuf, errlen,
+                    "console [%s] specifies duplicate console name", name);
+            }
             break;
         }
     }

@@ -149,8 +149,10 @@ obj_t * create_logfile_obj(server_conf_t *conf, char *name,
     list_iterator_destroy(i);
 
     if (logfile) {
-        snprintf(errbuf, errlen, "console [%s] already logging to \"%s\"",
-            logfile->aux.logfile.console->name, pname);
+        if ((errbuf != NULL) && (errlen > 0)) {
+            snprintf(errbuf, errlen, "console [%s] already logging to \"%s\"",
+                logfile->aux.logfile.console->name, pname);
+        }
         return(NULL);
     }
     logfile = create_obj(conf, name, -1, CONMAN_OBJ_LOGFILE);

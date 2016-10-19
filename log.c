@@ -192,7 +192,7 @@ static void log_aux(int errnum, int priority, char *msgbuf, int msgbuflen,
     int n;
 
     p = sbuf = pbuf = buf;
-    len = sizeof(buf) - 1;              /* reserve char for terminating '\n' */
+    len = sizeof(buf) - 1;              /* reserve char for trailing newline */
 
     t = 0;
     get_localtime(&t, &tm);
@@ -204,7 +204,7 @@ static void log_aux(int errnum, int priority, char *msgbuf, int msgbuflen,
     p = sbuf = pbuf += n;
     len -= n;
 
-    if ((prefix = log_prefix(priority))) {
+    if ((len > 0) && (prefix = log_prefix(priority))) {
         int m = 10 - strlen(prefix);
         if (m <= 0) {
             m = 1;
@@ -218,15 +218,17 @@ static void log_aux(int errnum, int priority, char *msgbuf, int msgbuflen,
         len -= n;
     }
 
-    n = vsnprintf(p, len, format, vargs);
-    if ((n < 0) || (n >= len)) {
-        n = len - 1;
+    if (len > 0) {
+        n = vsnprintf(p, len, format, vargs);
+        if ((n < 0) || (n >= len)) {
+            n = len - 1;
+        }
+        p += n;
+        len -= n;
     }
-    p += n;
-    len -= n;
 
     if (format[strlen(format) - 1] != '\n') {
-        if ((errnum > 0) && (len > 0)) {
+        if ((len > 0) && (errnum > 0)) {
             n = snprintf(p, len, ": %s", strerror(errnum));
             if ((n < 0) || (n >= len)) {
                 n = len - 1;
@@ -234,10 +236,10 @@ static void log_aux(int errnum, int priority, char *msgbuf, int msgbuflen,
             p += n;
             len -= n;
         }
-        strcat(p, "\n");
+        strcat(p, "\n");        /* space was reserved above for this newline */
     }
 
-    if (msgbuf && (msgbuflen > 0)) {
+    if ((msgbuf != NULL) && (msgbuflen > 0)) {
         strncpy(msgbuf, sbuf, msgbuflen);
         msgbuf[msgbuflen - 1] = '\0';
     }

@@ -318,6 +318,9 @@ int format_obj_string(char *buf, int buflen, obj_t *obj, const char *fmt)
     assert (buf != NULL);
     assert (fmt != NULL);
 
+    if ((buf == NULL) || (fmt == NULL)) {
+        return(-1);
+    }
     psrc = fmt;
     pdst = buf;
     n = buflen;
@@ -360,6 +363,7 @@ int format_obj_string(char *buf, int buflen, obj_t *obj, const char *fmt)
                     }
                 }
                 else if (is_telnet_obj(obj)) {
+                    assert(n > 0);
                     m = snprintf (pdst, n, "%s:%d",
                         obj->aux.telnet.host, obj->aux.telnet.port);
                     if ((m < 0) || (m >= n))
@@ -372,6 +376,7 @@ int format_obj_string(char *buf, int buflen, obj_t *obj, const char *fmt)
                 }
                 break;
             case 'P':                   /* daemon's pid */
+                assert(n > 0);
                 m = snprintf (pdst, n, "%d", (int) getpid());
                 if ((m < 0) || (m >= n))
                     n = 0;
@@ -395,6 +400,7 @@ int format_obj_string(char *buf, int buflen, obj_t *obj, const char *fmt)
             case 'S':                   /* second (00-61) */
                 /* fall-thru */
             case 's':                   /* seconds since unix epoch */
+                assert(n > 0);
                 if (!(m = strftime (pdst, n, tfmt, &tm)))
                     n = 0;
                 else {
@@ -550,16 +556,15 @@ int write_notify_msg(obj_t *console, int priority, char *fmt, ...)
         }
     }
 
-    if (len < strlen(CONMAN_MSG_SUFFIX) + 1) {
+    assert(len >= 0);
+    if ((size_t) len < strlen(CONMAN_MSG_SUFFIX) + 1) {
         p = buf + sizeof(buf) - strlen(CONMAN_MSG_SUFFIX) - 1;
         if (p < buf)
             p = buf;
         len = buf + sizeof(buf) - p;
+        log_msg(LOG_WARNING, "Truncated notify message");
     }
-    n = snprintf(p, len, "%s", CONMAN_MSG_SUFFIX);
-    if ((n < 0) || (n >= len)) {
-        log_msg(LOG_ERR, "INTERNAL: Exceeded write_notify_msg buffer");
-    }
+    (void) snprintf(p, len, "%s", CONMAN_MSG_SUFFIX);
 
     notify_console_objs(console, buf);
     return(0);

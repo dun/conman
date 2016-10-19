@@ -103,8 +103,11 @@ obj_t * create_unixsock_obj(server_conf_t *conf, char *name, char *dev,
      */
     n = max_unixsock_dev_strlen();
     if (strlen(dev) > n) {
-        snprintf(errbuf, errlen,
-            "console [%s] exceeds maximum device length of %d bytes", name, n);
+        if ((errbuf != NULL) && (errlen > 0)) {
+            snprintf(errbuf, errlen,
+                "console [%s] exceeds maximum device length of %d bytes",
+                name, n);
+        }
         return(NULL);
     }
     /*  Check for duplicate console and device names.
@@ -112,14 +115,19 @@ obj_t * create_unixsock_obj(server_conf_t *conf, char *name, char *dev,
     i = list_iterator_create(conf->objs);
     while ((unixsock = list_next(i))) {
         if (is_console_obj(unixsock) && !strcmp(unixsock->name, name)) {
-            snprintf(errbuf, errlen,
-                "console [%s] specifies duplicate console name", name);
+            if ((errbuf != NULL) && (errlen > 0)) {
+                snprintf(errbuf, errlen,
+                    "console [%s] specifies duplicate console name", name);
+            }
             break;
         }
         if (is_unixsock_obj(unixsock)
                 && !strcmp(unixsock->aux.unixsock.dev, dev)) {
-            snprintf(errbuf, errlen,
-                "console [%s] specifies duplicate device \"%s\"", name, dev);
+            if ((errbuf != NULL) && (errlen > 0)) {
+                snprintf(errbuf, errlen,
+                    "console [%s] specifies duplicate device \"%s\"",
+                    name, dev);
+            }
             break;
         }
     }

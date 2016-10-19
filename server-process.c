@@ -169,8 +169,10 @@ obj_t * create_process_obj(server_conf_t *conf, char *name, List args,
     i = list_iterator_create(conf->objs);
     while ((process = list_next(i))) {
         if (is_console_obj(process) && !strcmp(process->name, name)) {
-            snprintf(errbuf, errlen,
-                "console [%s] specifies duplicate console name", name);
+            if ((errbuf != NULL) && (errlen > 0)) {
+                snprintf(errbuf, errlen,
+                    "console [%s] specifies duplicate console name", name);
+            }
             break;
         }
     }

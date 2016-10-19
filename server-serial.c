@@ -340,13 +340,18 @@ obj_t * create_serial_obj(server_conf_t *conf, char *name,
     i = list_iterator_create(conf->objs);
     while ((serial = list_next(i))) {
         if (is_console_obj(serial) && !strcmp(serial->name, name)) {
-            snprintf(errbuf, errlen,
-                "console [%s] specifies duplicate console name", name);
+            if ((errbuf != NULL) && (errlen > 0)) {
+                snprintf(errbuf, errlen,
+                    "console [%s] specifies duplicate console name", name);
+            }
             break;
         }
         if (is_serial_obj(serial) && !strcmp(serial->aux.serial.dev, dev)) {
-            snprintf(errbuf, errlen,
-                "console [%s] specifies duplicate device \"%s\"", name, dev);
+            if ((errbuf != NULL) && (errlen > 0)) {
+                snprintf(errbuf, errlen,
+                    "console [%s] specifies duplicate device \"%s\"",
+                    name, dev);
+            }
             break;
         }
     }

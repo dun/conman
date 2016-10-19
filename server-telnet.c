@@ -107,8 +107,10 @@ obj_t * create_telnet_obj(server_conf_t *conf, char *name,
     assert((host != NULL) && (host[0] != '\0'));
 
     if (port <= 0) {
-        snprintf(errbuf, errlen,
-            "console [%s] specifies invalid port \"%d\"", name, port);
+        if ((errbuf != NULL) && (errlen > 0)) {
+            snprintf(errbuf, errlen,
+                "console [%s] specifies invalid port \"%d\"", name, port);
+        }
         return(NULL);
     }
     /*  Check for duplicate console names.
@@ -116,8 +118,10 @@ obj_t * create_telnet_obj(server_conf_t *conf, char *name,
     i = list_iterator_create(conf->objs);
     while ((telnet = list_next(i))) {
         if (is_console_obj(telnet) && !strcmp(telnet->name, name)) {
-            snprintf(errbuf, errlen,
-                "console [%s] specifies duplicate console name", name);
+            if ((errbuf != NULL) && (errlen > 0)) {
+                snprintf(errbuf, errlen,
+                    "console [%s] specifies duplicate console name", name);
+            }
             break;
         }
     }
@@ -578,6 +582,8 @@ static int process_telnet_cmd(obj_t *telnet, int cmd, int opt)
 
 static char * opt2str(int opt, char *buf, int buflen)
 {
-    snprintf(buf, buflen, "OPT:%d", opt);
+    if ((buf != NULL) && (buflen > 0)) {
+        snprintf(buf, buflen, "OPT:%d", opt);
+    }
     return(buf);
 }
