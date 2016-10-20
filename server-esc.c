@@ -294,53 +294,77 @@ static void perform_log_replay(obj_t *client)
     logfile = get_console_logfile_obj(console);
 
     if (!logfile) {
+        assert(len > 0);
         n = snprintf((char *) ptr, len,
             "%sConsole [%s] is not being logged -- cannot replay%s",
             CONMAN_MSG_PREFIX, console->name, CONMAN_MSG_SUFFIX);
         if ((n < 0) || (n >= len)) {
             log_msg(LOG_WARNING,
-                "Insufficient buffer to write message to console %s log",
+                "Insufficient buffer to write message to console [%s] log",
                 console->name);
             return;
         }
         ptr += n;
+        len -= n;
     }
     else {
         assert(is_logfile_obj(logfile));
+        assert(len > 0);
         n = snprintf((char *) ptr, len, "%sBegin log replay of console [%s]%s",
             CONMAN_MSG_PREFIX, console->name, CONMAN_MSG_SUFFIX);
-        if ((n < 0) || (n >= len) || (sizeof(buf) <= 2*n - 2)) {
+        if ((n < 0) || (n >= len)) {
             log_msg(LOG_WARNING,
-                "Insufficient buffer to replay console %s log for %s",
+                "Insufficient buffer to replay console [%s] log for <%s>",
                 console->name, client->name);
             return;
         }
         ptr += n;
+        len -= n;
         /*
-         *  Since we now know the length of the "begin" message, reserve
-         *    space in 'buf' for the "end" message by doubling its length.
+         *  Reserve space in 'buf' for the "End log replay" message
+         *    (which is 2 bytes less than the "Begin log replay" message).
          */
-        len -= 2*n - 2;
-
+        len -= n - 2;
+        if (len <= 0) {
+            log_msg(LOG_WARNING,
+                "Insufficient buffer to replay console [%s] log for <%s>",
+                console->name, client->name);
+            return;
+        }
         x_pthread_mutex_lock(&logfile->bufLock);
 
         /*  Compute the number of bytes to replay.
          *  If the console's circular-buffer has not yet wrapped around,
          *    don't wrap back into uncharted buffer territory.
+         *  The result is bounded by the value of LOG_REPLAY_LEN and the
+         *    amount of buffer space remaining in 'buf'.
          */
-        if (!logfile->gotBufWrap)
-            n = MIN(LOG_REPLAY_LEN, logfile->bufInPtr - logfile->buf);
-        else
-            n = MIN(LOG_REPLAY_LEN, OBJ_BUF_SIZE - 1);
-        n = MIN(n, len);
+        if (!logfile->gotBufWrap) {
+            n = logfile->bufInPtr - logfile->buf;
+        }
+        else {
+            n = OBJ_BUF_SIZE - 1;
+        }
+        if (n < 0) {
+            n = 0;
+        }
+        if (n > LOG_REPLAY_LEN) {
+            n = LOG_REPLAY_LEN;
+        }
+        if (n > len) {
+            n = len;
+        }
 
         p = logfile->bufInPtr - n;
         if (p >= logfile->buf) {        /* no wrap needed */
+            assert(n > 0);
             memcpy(ptr, p, n);
             ptr += n;
         }
         else {                          /* wrap backwards */
             m = logfile->buf - p;
+            assert(m > 0);
+            assert(m <= n);
             p = &logfile->buf[OBJ_BUF_SIZE] - m;
             memcpy(ptr, p, m);
             ptr += m;
@@ -351,10 +375,10 @@ static void perform_log_replay(obj_t *client)
 
         x_pthread_mutex_unlock(&logfile->bufLock);
 
-        /*  Must recompute 'len' since we already subtracted space reserved
-         *    for this string.  We could get away with just sprintf() here.
+        /*  Recompute 'len' since space was already reserved for it above.
          */
         len = &buf[sizeof(buf)] - ptr;
+        assert(len > 0);
         n = snprintf((char *) ptr, len, "%sEnd log replay of console [%s]%s",
             CONMAN_MSG_PREFIX, console->name, CONMAN_MSG_SUFFIX);
         assert((n >= 0) && (n < len));
