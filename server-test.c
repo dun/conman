@@ -107,8 +107,9 @@ int parse_test_opts(
     }
     if (strlcpy(buf, str, sizeof(buf)) >= sizeof(buf)) {
         if ((errbuf != NULL) && (errlen > 0)) {
-            snprintf(errbuf, errlen, "testopts string exceeds %d-byte maximum",
-                (int) sizeof(buf) - 1);
+            snprintf(errbuf, errlen,
+                "testopts string exceeds %lu-byte maximum",
+                (unsigned long) sizeof(buf) - 1);
         }
         return(-1);
     }

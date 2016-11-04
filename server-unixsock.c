@@ -105,8 +105,8 @@ obj_t * create_unixsock_obj(server_conf_t *conf, char *name, char *dev,
     if (strlen(dev) > n) {
         if ((errbuf != NULL) && (errlen > 0)) {
             snprintf(errbuf, errlen,
-                "console [%s] exceeds maximum device length of %d bytes",
-                name, n);
+                "console [%s] exceeds maximum device length of %lu bytes",
+                name, (unsigned long) n);
         }
         return(NULL);
     }
@@ -238,8 +238,8 @@ static int connect_unixsock_obj(obj_t *unixsock)
     n = strlcpy(saddr.sun_path, auxp->dev, sizeof(saddr.sun_path));
     if (n >= sizeof(saddr.sun_path)) {
         log_msg(LOG_NOTICE,
-            "Console [%s] device path exceeds %d-byte maximum",
-            unixsock->name, (int) sizeof(saddr.sun_path) - 1);
+            "Console [%s] device path exceeds %lu-byte maximum",
+            unixsock->name, (unsigned long) sizeof(saddr.sun_path) - 1);
         return(disconnect_unixsock_obj(unixsock));
     }
     if ((unixsock->fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
