@@ -71,7 +71,7 @@ int is_process_dev(const char *dev, const char *cwd,
     }
     else if ((dev[0] != '/') && (cwd != NULL)) {
         n = snprintf(buf, sizeof(buf), "%s/%s", cwd, dev);
-        if ((n < 0) || (n >= sizeof(buf))) {
+        if ((n < 0) || ((size_t) n >= sizeof(buf))) {
             return(0);
         }
         dev = buf;
@@ -128,14 +128,14 @@ static int search_exec_path(const char *path, const char *src,
             continue;
         }
         n = snprintf(file_buf, sizeof(file_buf), "%s/%s", p, src);
-        if ((n < 0) || (n >= sizeof(file_buf))) {
+        if ((n < 0) || ((size_t) n >= sizeof(file_buf))) {
             continue;
         }
         if (access(file_buf, X_OK) < 0) {
             continue;
         }
         if ((dst != NULL) && (dstlen > 0)) {
-            if (strlcpy(dst, file_buf, dstlen) >= dstlen) {
+            if (strlcpy(dst, file_buf, dstlen) >= (size_t) dstlen) {
                 return(1);
             }
         }

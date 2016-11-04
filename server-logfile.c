@@ -374,7 +374,7 @@ int write_log_data(obj_t *log, const void *src, int len)
     int n = 0;
 
     assert(is_logfile_obj(log));
-    assert(sizeof(buf) >= minbuf);
+    assert(sizeof(buf) >= (size_t) minbuf);
 
     /*  If no additional processing is needed, listen to Biff Tannen:
      *    "make like a tree and get outta here".

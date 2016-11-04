@@ -45,7 +45,7 @@
 #include "util-str.h"
 
 
-static int max_unixsock_dev_strlen(void);
+static size_t max_unixsock_dev_strlen(void);
 static int connect_unixsock_obj(obj_t *unixsock);
 static int disconnect_unixsock_obj(obj_t *unixsock);
 static void reset_unixsock_delay(obj_t *unixsock);
@@ -70,7 +70,7 @@ int is_unixsock_dev(const char *dev, const char *cwd, char **path_ref)
     }
     if ((dev[0] != '/') && (cwd != NULL)) {
         n = snprintf(buf, sizeof(buf), "%s/%s", cwd, dev);
-        if ((n < 0) || (n >= sizeof(buf))) {
+        if ((n < 0) || ((size_t) n >= sizeof(buf))) {
             return(0);
         }
         dev = buf;
@@ -88,7 +88,7 @@ obj_t * create_unixsock_obj(server_conf_t *conf, char *name, char *dev,
 /*  Creates a new unix domain object and adds it to the master objs list.
  *  Returns the new objects, or NULL on error.
  */
-    int           n;
+    size_t        n;
     ListIterator  i;
     obj_t        *unixsock;
     int           rv;
@@ -177,7 +177,7 @@ int open_unixsock_obj(obj_t *unixsock)
 }
 
 
-static int max_unixsock_dev_strlen(void)
+static size_t max_unixsock_dev_strlen(void)
 {
 /*  Returns the maximum string length allowed for a unix domain device.
  *
@@ -201,7 +201,7 @@ static int connect_unixsock_obj(obj_t *unixsock)
     unixsock_obj_t     *auxp;
     struct stat         st;
     struct sockaddr_un  saddr;
-    int                 n;
+    size_t              n;
 
     assert(unixsock != NULL);
     assert(is_unixsock_obj(unixsock));

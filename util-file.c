@@ -207,20 +207,29 @@ ssize_t write_n(int fd, void *buf, size_t n)
 
 ssize_t read_line(int fd, void *buf, size_t maxlen)
 {
-    ssize_t n, rc;
+    size_t n;
+    ssize_t rv;
     unsigned char c, *p;
 
+    if (buf == NULL) {
+        errno = EINVAL;
+        return(-1);
+    }
+    if (maxlen == 0) {
+        return(0);
+    }
+    maxlen--;                           /* reserve space for NUL-termination */
     n = 0;
     p = buf;
-    while (n < maxlen - 1) {            /* reserve space for NUL-termination */
-
-        if ((rc = read(fd, &c, 1)) == 1) {
+    while (n < maxlen) {
+        rv = read(fd, &c, sizeof(c));
+        if (rv == 1) {
             n++;
             *p++ = c;
             if (c == '\n')
                 break;                  /* store newline, like fgets() */
         }
-        else if (rc == 0) {
+        else if (rv == 0) {
             if (n == 0)                 /* EOF, no data read */
                 return(0);
             else                        /* EOF, some data read */
@@ -234,7 +243,7 @@ ssize_t read_line(int fd, void *buf, size_t maxlen)
     }
 
     *p = '\0';                          /* NUL-terminate, like fgets() */
-    return(n);
+    return((ssize_t) n);
 }
 
 
@@ -242,7 +251,7 @@ char *
 get_dir_name (const char *srcpath, char *dstdir, size_t dstdirlen)
 {
     const char *p;
-    int         len;
+    size_t      len;
 
     if ((srcpath == NULL) || (dstdir == NULL)) {
         errno = EINVAL;
@@ -278,11 +287,11 @@ get_dir_name (const char *srcpath, char *dstdir, size_t dstdirlen)
     /*  Otherwise, copy the directory string into dstdir.
      */
     else {
-        len = p - srcpath + 1;
-
-        /*  Protect against integer overflows and buffer overruns.
+        /*  'p' now points at the last char to copy, so +1 to include that
+         *    last char, then add the terminating null char afterwards.
          */
-        if ((len <= 0) || (len >= dstdirlen)) {
+        len = p - srcpath + 1;
+        if (len >= dstdirlen) {
             errno = ENAMETOOLONG;
             return (NULL);
         }

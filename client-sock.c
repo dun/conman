@@ -443,7 +443,7 @@ void display_consoles(client_conf_t *conf, int fd)
     i = list_iterator_create(conf->req->consoles);
     while ((p = list_next(i))) {
         n = snprintf(buf, sizeof(buf), "%s\n", p);
-        if (n < 0 || n >= sizeof(buf))
+        if ((n < 0) || ((size_t) n >= sizeof(buf)))
             log_err(0, "Got console list buffer overrun");
         if (write_n(fd, buf, n) < 0)
             log_err(errno, "Unable to write to fd=%d", fd);

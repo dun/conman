@@ -156,11 +156,12 @@ char * host_addr4_to_name(const struct in_addr *addr, char *dst, int dstlen)
     if (!(hptr = get_host_by_addr((char *) addr, 4, AF_INET,
       buf, sizeof(buf), NULL)))
         return(NULL);
-    if (strlen(hptr->h_name) >= dstlen) {
+    if ((dstlen <= 0) || (strlen(hptr->h_name) >= (size_t) dstlen)) {
         errno = ERANGE;
         return(NULL);
     }
-    strcpy(dst, hptr->h_name);
+    strncpy(dst, hptr->h_name, dstlen);
+    dst[dstlen - 1] = '\0';
     return(dst);
 }
 
@@ -186,11 +187,12 @@ char * host_name_to_cname(const char *src, char *dst, int dstlen)
     if (!(hptr = get_host_by_addr((char *) &addr, 4, AF_INET,
       buf, sizeof(buf), NULL)))
         return(NULL);
-    if (strlen(hptr->h_name) >= dstlen) {
+    if ((dstlen <= 0) || (strlen(hptr->h_name) >= (size_t) dstlen)) {
         errno = ERANGE;
         return(NULL);
     }
-    strcpy(dst, hptr->h_name);
+    strncpy(dst, hptr->h_name, dstlen);
+    dst[dstlen - 1] = '\0';
     return(dst);
 }
 

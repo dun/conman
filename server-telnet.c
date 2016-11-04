@@ -484,7 +484,7 @@ int send_telnet_cmd(obj_t *telnet, int cmd, int opt)
         *p++ = opt;
     }
 
-    assert((p > buf) && ((p - buf) <= sizeof(buf)));
+    assert((p > buf) && ((size_t) (p - buf) <= sizeof(buf)));
     if (write_obj_data(telnet, buf, p - buf, 0) <= 0)
         return(-1);
 

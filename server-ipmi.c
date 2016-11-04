@@ -360,7 +360,7 @@ static int process_ipmi_opt_username(
 
         n = strlcpy(iopts->username, str, sizeof(iopts->username));
 
-        if (n >= sizeof(iopts->username)) {
+        if ((size_t) n >= sizeof(iopts->username)) {
             if ((errbuf != NULL) && (errlen > 0)) {
                 snprintf(errbuf, errlen,
                     "IPMI username exceeds %d-byte maximum",
@@ -677,11 +677,11 @@ static int parse_key(char *dst, const char *src, size_t dstlen)
     }
     else {
         n = strlcpy(dst, src, dstlen);
-        if (n >= dstlen) {
+        if ((size_t) n >= dstlen) {
             return(-1);
         }
     }
-    assert(n < dstlen);
+    assert((n >= 0) && ((size_t) n < dstlen));
     return(n);
 }
 

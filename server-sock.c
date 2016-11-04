@@ -547,7 +547,8 @@ static int query_consoles_via_regex(
         if (!is_console_obj(obj))
             continue;
         if (!regexec(&rex, obj->name, 1, &match, 0)
-          && (match.rm_so == 0) && (match.rm_eo == strlen(obj->name)))
+          && (match.rm_so == 0)
+          && (match.rm_eo == (int) strlen(obj->name)))
             list_append(matches, obj);
     }
     list_iterator_destroy(i);
@@ -760,7 +761,7 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
 
     /*  FIXME: Gracefully handle buffer overruns.
      */
-    if ((n < 0) || (n >= sizeof(buf))) {
+    if ((n < 0) || ((size_t) n >= sizeof(buf))) {
         log_msg(LOG_WARNING,
             "Client <%s@%s:%d> request terminated by buffer overrun",
             req->user, req->fqdn, req->port);

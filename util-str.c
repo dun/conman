@@ -334,7 +334,7 @@ char * create_time_delta_string(time_t t0, time_t t1)
     else {
         n = snprintf(buf, sizeof(buf), "%ds", seconds);
     }
-    assert((n >= 0) && (n < sizeof(buf)));
+    assert((n >= 0) && ((size_t) n < sizeof(buf)));
     return(create_string(buf));
 }
 

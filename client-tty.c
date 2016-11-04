@@ -224,7 +224,7 @@ static int read_from_stdin(client_conf_t *conf)
         mode = CHR;
 
     *p++ = c;
-    assert((p > buf) && ((p - buf) <= sizeof(buf)));
+    assert((p > buf) && ((size_t) (p - buf) <= sizeof(buf)));
 
     /*  Do not send chars across the socket if we are in MONITOR mode.
      *    The server would discard them anyways, but why waste resources.
@@ -629,7 +629,7 @@ static void locally_echo_esc(char e, char c)
     p = write_esc_char(e, p);
     p = write_esc_char(c, p);
 
-    assert((p - buf) <= sizeof(buf));
+    assert((p > buf) && ((size_t) (p - buf) <= sizeof(buf)));
 
     if (write_n(STDOUT_FILENO, buf, p - buf) < 0)
         log_err(errno, "Unable to write to stdout");
@@ -687,7 +687,7 @@ static void locally_display_status(client_conf_t *conf, char *msg)
             msg, CONMAN_MSG_SUFFIX);
     }
 
-    if ((n < 0) || (n >= sizeof(buf)))  /* append CR/LF if buf was truncated */
+    if ((n < 0) || ((size_t) n >= sizeof(buf)))
         strcpy(&buf[sizeof(buf) - 3], "\r\n");
     if (write_n(STDOUT_FILENO, buf, strlen(buf)) < 0)
         log_err(errno, "Unable to write to stdout");

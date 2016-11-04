@@ -311,7 +311,7 @@ int read_test_obj(obj_t *test)
         if (auxp->numLeft == 0) {
             auxp->numLeft = opts->numBytes;
         }
-        n = MIN(auxp->numLeft, sizeof(buf));
+        n = MIN(auxp->numLeft, (int) sizeof(buf));
 
         for (m = 0; m < n; m++) {
             buf[m] = ++auxp->lastChar;

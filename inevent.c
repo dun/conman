@@ -314,7 +314,7 @@ retry_read:
         unsigned int i = 0;
         uint32_t     event_mask = IN_CREATE | IN_MOVED_TO;
 
-        while (i < len) {
+        while (i < (unsigned int) len) {
 
             struct inotify_event *event_ptr;
             inevent_t            *inevent_ptr;
