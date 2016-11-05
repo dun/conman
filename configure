@@ -4195,7 +4195,7 @@ fi
 if test "$debug" = yes; then
   test -z "$ac_test_CFLAGS" && CFLAGS=
   test "$ac_cv_prog_cc_g" = yes && DEBUG_CFLAGS="-g"
-  test "$GCC" = yes && DEBUG_CFLAGS="$DEBUG_CFLAGS -Wall"
+  test "$GCC" = yes && DEBUG_CFLAGS="$DEBUG_CFLAGS -Wall -Wsign-compare"
 else
 
 $as_echo "#define NDEBUG 1" >>confdefs.h

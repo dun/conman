@@ -162,7 +162,7 @@ AC_ARG_ENABLE(debug,
 if test "$debug" = yes; then
   test -z "$ac_test_CFLAGS" && CFLAGS=
   test "$ac_cv_prog_cc_g" = yes && DEBUG_CFLAGS="-g"
-  test "$GCC" = yes && DEBUG_CFLAGS="$DEBUG_CFLAGS -Wall"
+  test "$GCC" = yes && DEBUG_CFLAGS="$DEBUG_CFLAGS -Wall -Wsign-compare"
 else
   AC_DEFINE(NDEBUG, 1, [Define if you are building a production release.])
 fi
