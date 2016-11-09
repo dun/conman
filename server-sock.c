@@ -209,6 +209,8 @@ static int resolve_addr(server_conf_t *conf, req_t *req, int sd)
             return(-1);
         }
     }
+#else /* !WITH_TCP_WRAPPERS */
+    (void) gotHostName;         /* suppress unused-but-set-variable warning */
 #endif /* WITH_TCP_WRAPPERS */
 
     return(0);
