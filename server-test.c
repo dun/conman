@@ -148,7 +148,7 @@ static int process_test_opt(
         }
         return(-1);
     }
-    c = toupper(str[0]);
+    c = toupper((int) str[0]);
     p = str + 2;
     l = strtol(p, &endp, 0);
     if ((*endp != '\0') || (errno == ERANGE) || (l < 0) || (l > INT_MAX)) {

@@ -294,7 +294,7 @@ static int process_ipmi_opt(
         }
         return(-1);
     }
-    c = toupper(str[0]);
+    c = toupper((int) str[0]);
     p = str + 2;
     switch (c) {
         case 'U':
@@ -333,7 +333,7 @@ static int is_ipmi_opt_tag(const char *str)
     if ((str == NULL) || (str[0] == '\0') || (str[1] != ':')) {
         return(0);
     }
-    switch (toupper(str[0])) {
+    switch (toupper((int) str[0])) {
         case 'U': case 'P': case 'K': case 'L': case 'C': case 'W':
             return(1);
     }
