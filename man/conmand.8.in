@@ -71,11 +71,11 @@ This is useful for \fBlogrotate\fR configurations.
 Terminate the daemon.
 
 .SH SECURITY
-Connections to the server are not authenticated, and communications
-between client and server are not encrypted.  When time allows, this will
-be addressed in a future release.  Until then, the recommendation is to bind
-the server's listen socket to the loopback address (by specifying "\fBserver
-loopback=on\fR" in conman.conf) and restrict access to the server host.
+Connections to the server are not authenticated, and communications between
+client and server are not encrypted.  Until this is addressed in a future
+release, the recommendation is to bind the server's listen socket to the
+loopback address (by specifying "\fBserver loopback=on\fR" in conman.conf)
+and restrict access to the server host.
 
 .SH NOTES
 Log messages are sent to standard-error until after the configuration file

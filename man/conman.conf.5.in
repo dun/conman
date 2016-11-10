@@ -57,7 +57,7 @@ with the \fBsyslog\fR keyword, messages will be sent to both locations.
 \fBloopback\fR \fB=\fR (\fBon\fR|\fBoff\fR)
 Specifies whether the daemon will bind its socket to the loopback address,
 thereby only accepting local client connections directed to that address
-(127.0.0.1).  The default is \fBoff\fR.
+(127.0.0.1).  The default is \fBon\fR.
 .TP
 \fBnofile\fR \fB=\fR \fIinteger\fR
 Specifies the maximum number of open files for the daemon.  If set to 0, use

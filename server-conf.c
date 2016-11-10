@@ -255,7 +255,7 @@ server_conf_t * create_server_conf(void)
     }
     conf->enableCoreDump = 0;
     conf->enableKeepAlive = 1;
-    conf->enableLoopBack = 0;
+    conf->enableLoopBack = 1;
     conf->enableTCPWrap = 0;
     conf->enableVerbose = 0;
     conf->enableZeroLogs = 0;
