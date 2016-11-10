@@ -157,6 +157,7 @@ Copyright (C) 2007-2016 Lawrence Livermore National Security, LLC.
 .br
 Copyright (C) 2001-2007 The Regents of the University of California.
 
+.SH LICENSE
 ConMan is free software: you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free
 Software Foundation, either version 3 of the License, or (at your option)
