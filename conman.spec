@@ -64,6 +64,7 @@ rm -rf "%{buildroot}"
 %doc AUTHORS
 %doc DISCLAIMER*
 %doc FAQ
+%doc KEYS
 %doc NEWS
 %doc README
 %doc THANKS
