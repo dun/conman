@@ -1,29 +1,16 @@
-While ConMan has been originally written by Chris Dunlap <cdunlap@llnl.gov>,
+While ConMan has been primarily written by Chris Dunlap <cdunlap@llnl.gov>,
 the following people have contributed in its development:
 
-  Natalie Protasevich <nprotasevich@lnxi.com>
-  - initial IPMI SOL implementation using external processes
+Brian J. Murrell <brian.murrell@sun.com>
+Christopher D. Maestas <cdmaestas@gmail.com>
+Dave Love <d.love@liverpool.ac.uk>
+Dmitry Monakhov <dmonakhov@openvz.org>
+Levi Pearson <lpearson@lnxi.com>
+Marc Girard <marc.girard@bull.net>
+Mark Pettit <mpettit@twitter.com>
+Mark Salyzyn <mark_salyzyn@xyratex.com>
+Matthieu Perotin <matthieu.perotin@bull.net>
+Mike T. Spangler <mike.t.spangler@boeing.com>
+Natalie Protasevich <nprotasevich@lnxi.com>
+Wendy Palm <wendy@cray.com>
 
-  Levi Pearson <lpearson@lnxi.com>
-  - subsequent IPMI SOL implementation using FreeIPMI's libipmiconsole
-
-  Brian J. Murrell <brian.murrell@sun.com>
-  - initial Unix domain socket implementation
-
-  Mike T. Spangler <mike.t.spangler@boeing.com>
-  - testing of hp-ilo.exp
-
-  Christopher D. Maestas <cdmaestas@gmail.com>
-  - hp-lo100.exp
-
-  Dave Love <d.love@liverpool.ac.uk>
-  - sun-elom.exp
-
-  Matthieu Perotin <matthieu.perotin@bull.net>
-  - IPMI SOL bugfixes
-
-  Marc Girard <marc.girard@bull.net>
-  - console logfile lock/nolock option
-
-  Dmitry Monakhov <dmonakhov@openvz.org>
-  - unixsock exponential timeout
