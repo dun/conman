@@ -80,10 +80,11 @@ int parse_string(char *src, char **dst_p, char **ptr_p, char *quote_p);
  *  Note that (src) is modified by this routine!
  */
 
-size_t append_format_string(char *dst, size_t size, const char *fmt, ...);
+int append_format_string(char *dst, size_t size, const char *fmt, ...);
 /*
  *  Appends the string specified by the format-string (fmt) to a
  *    NUL-terminated string (dst) within a buffer of size (size).
+ *    If (size) > 0, (dst) will be NUL-terminated upon return.
  *  Note that (size) is the full size of (dst), not the space remaining.
  *  Returns the new length of the NUL-terminated string (dst),
  *    or -1 if truncation occurred.

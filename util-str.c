@@ -173,40 +173,45 @@ int parse_string(char *src, char **dst_p, char **ptr_p, char *quote_p)
 }
 
 
-size_t append_format_string(char *dst, size_t size, const char *fmt, ...)
+int append_format_string(char *dst, size_t size, const char *fmt, ...)
 {
     char *p;
-    int nAvail;
-    int lenOrig;
+    size_t num_left;
+    size_t num_orig;
     va_list vargs;
     int n;
 
-    assert(dst != NULL);
-    if (!fmt || !size) {
+    if ((dst == NULL) || (fmt == NULL)) {
+        errno = EINVAL;
+        return(-1);
+    }
+    if (size == 0) {
         return(0);
     }
     p = dst;
-    nAvail = size;
-    while (*p && (nAvail > 0)) {
-        p++, nAvail--;
+    num_left = size;
+    while ((*p != '\0') && (num_left > 0)) {
+        p++;
+        num_left--;
     }
-    /*  Assert (dst) was NUL-terminated.  If (nAvail == 0), no NUL was found.
+    /*  If (num_left == 0), dst[] is full but requires null-termination.
+     *  If (num_left == 1), dst[] is full but is already null-terminated.
      */
-    assert(nAvail != 0);
-    if (nAvail <= 1) {                  /* dst is full, only room for NUL */
+    if (num_left <= 1) {
+        dst[size - 1] = '\0';
         return(-1);
     }
-    lenOrig = p - dst;
+    num_orig = p - dst;
+    assert(num_left + num_orig == size);
 
     va_start(vargs, fmt);
-    n = vsnprintf(p, nAvail, fmt, vargs);
+    n = vsnprintf(p, num_left, fmt, vargs);
     va_end(vargs);
 
-    if ((n < 0) || (n >= nAvail)) {
-        dst[size - 1] = '\0';           /* ensure dst is NUL-terminated */
+    if ((n < 0) || ((size_t) n >= num_left)) {
         return(-1);
     }
-    return(lenOrig + n);
+    return((int) num_orig + n);
 }
 
 
