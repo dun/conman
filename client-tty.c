@@ -393,55 +393,53 @@ static int perform_help_esc(client_conf_t *conf, char c)
     int n;
 
     write_esc_char(conf->escapeChar, esc);
-    n = append_format_string(buf, sizeof(buf),
+    (void) append_format_string(buf, sizeof(buf),
         "\r\nSupported ConMan Escape Sequences:\r\n");
 
     write_esc_char(ESC_CHAR_HELP, tmp);
-    n = append_format_string(buf, sizeof(buf),
+    (void) append_format_string(buf, sizeof(buf),
         "  %2s%-2s -  Display this help message.\r\n", esc, tmp);
 
     write_esc_char(ESC_CHAR_CLOSE, tmp);
-    n = append_format_string(buf, sizeof(buf),
+    (void) append_format_string(buf, sizeof(buf),
         "  %2s%-2s -  Terminate the connection.\r\n", esc, tmp);
 
-    n = append_format_string(buf, sizeof(buf),
+    (void) append_format_string(buf, sizeof(buf),
         "  %2s%-2s -  Send the escape character.\r\n", esc, esc);
 
     if (conf->req->command == CONMAN_CMD_CONNECT) {
         write_esc_char(ESC_CHAR_BREAK, tmp);
-        n = append_format_string(buf, sizeof(buf),
+        (void) append_format_string(buf, sizeof(buf),
             "  %2s%-2s -  Transmit a serial-break.\r\n", esc, tmp);
     }
 
-    /*  XXX: gnats:100 del char kludge
-     */
     if (conf->req->command == CONMAN_CMD_CONNECT) {
         write_esc_char(ESC_CHAR_DEL, tmp);
-        n = append_format_string(buf, sizeof(buf),
+        (void) append_format_string(buf, sizeof(buf),
             "  %2s%-2s -  Transmit a DEL character.\r\n", esc, tmp);
     }
 
     if (conf->req->command == CONMAN_CMD_CONNECT) {
         write_esc_char(ESC_CHAR_ECHO, tmp);
-        n = append_format_string(buf, sizeof(buf),
+        (void) append_format_string(buf, sizeof(buf),
             "  %2s%-2s -  %s echoing of client input.\r\n", esc, tmp,
             conf->req->enableEcho ? "Disable" : "Enable");
     }
 
     if (conf->req->command == CONMAN_CMD_MONITOR) {
         write_esc_char(ESC_CHAR_FORCE, tmp);
-        n = append_format_string(buf, sizeof(buf),
+        (void) append_format_string(buf, sizeof(buf),
             "  %2s%-2s -  Force write-privileges (console-stealing).\r\n",
             esc, tmp);
     }
 
     write_esc_char(ESC_CHAR_INFO, tmp);
-    n = append_format_string(buf, sizeof(buf),
+    (void) append_format_string(buf, sizeof(buf),
         "  %2s%-2s -  Display connection information.\r\n", esc, tmp);
 
     if (conf->req->command == CONMAN_CMD_MONITOR) {
         write_esc_char(ESC_CHAR_JOIN, tmp);
-        n = append_format_string(buf, sizeof(buf),
+        (void) append_format_string(buf, sizeof(buf),
             "  %2s%-2s -  Join write-privileges (console-sharing).\r\n",
             esc, tmp);
     }
@@ -450,43 +448,62 @@ static int perform_help_esc(client_conf_t *conf, char c)
      */
     if (!conf->req->enableBroadcast) {
         write_esc_char(ESC_CHAR_REPLAY, tmp);
-        n = append_format_string(buf, sizeof(buf),
+        (void) append_format_string(buf, sizeof(buf),
             "  %2s%-2s -  Replay up to the last %d bytes of the log.\r\n",
             esc, tmp, LOG_REPLAY_LEN);
     }
 
-    if ((conf->req->command == CONMAN_CMD_CONNECT)
-      && (!conf->req->enableBroadcast)) {
+    if ((conf->req->command == CONMAN_CMD_CONNECT) &&
+        (!conf->req->enableBroadcast)
+       ) {
         write_esc_char(ESC_CHAR_MONITOR, tmp);
-        n = append_format_string(buf, sizeof(buf),
+        (void) append_format_string(buf, sizeof(buf),
             "  %2s%-2s -  Monitor without write-privileges (read-only).\r\n",
             esc, tmp);
     }
 
     write_esc_char(ESC_CHAR_QUIET, tmp);
-    if (conf->req->enableQuiet)
-        n = append_format_string(buf, sizeof(buf), "  %2s%-2s -  "
+    if (conf->req->enableQuiet) {
+        (void) append_format_string(buf, sizeof(buf), "  %2s%-2s -  "
             "Disable quiet-mode (display info msgs).\r\n", esc, tmp);
-    else
-        n = append_format_string(buf, sizeof(buf), "  %2s%-2s -  "
+    }
+    else {
+        (void) append_format_string(buf, sizeof(buf), "  %2s%-2s -  "
             "Enable quiet-mode (suppress info msgs).\r\n", esc, tmp);
+    }
 
-    if ((conf->req->command == CONMAN_CMD_CONNECT)
-      && (conf->req->enableReset)) {
+    if ((conf->req->command == CONMAN_CMD_CONNECT) &&
+        (conf->req->enableReset)
+       ) {
         write_esc_char(ESC_CHAR_RESET, tmp);
-        n = append_format_string(buf, sizeof(buf), "  %2s%-2s -  "
+        (void) append_format_string(buf, sizeof(buf), "  %2s%-2s -  "
             "Reset node%s associated with this console.\r\n", esc, tmp,
             (list_count(conf->req->consoles) == 1 ? "" : "s"));
     }
 
+    /*  Store the retval of the last write into 'buf' to check for buffer
+     *    truncation as well as the final string length to write via write_n().
+     */
     write_esc_char(ESC_CHAR_SUSPEND, tmp);
     n = append_format_string(buf, sizeof(buf),
         "  %2s%-2s -  Suspend the client.\r\n", esc, tmp);
 
-    if (n < 0)                          /* append CR/LF if buf was truncated */
-        strcpy(&buf[sizeof(buf) - 3], "\r\n");
-    if (write_n(STDOUT_FILENO, buf, strlen(buf)) < 0)
+    /*  If writes into 'buf' have become truncated at any point, the final
+     *    call to append_format_string() will still return -1.  If truncation
+     *    has occurred, ensure the buffer is terminated with a CR/LF and write
+     *    as much of the help message that the local buffer will allow.
+     */
+    if (n == -1) {
+        const char * const end_str = "+\r\n";
+        const size_t end_len = strlen(end_str) + 1;
+        assert(sizeof(buf) >= end_len);
+        strncpy(&buf[sizeof(buf) - end_len], end_str, end_len);
+        n = sizeof(buf) - 1;
+    }
+    assert((size_t) n == strlen(buf));
+    if (write_n(STDOUT_FILENO, buf, n) < 0) {
         log_err(errno, "Unable to write to stdout");
+    }
     return(1);
 }
 
