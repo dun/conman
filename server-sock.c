@@ -727,10 +727,11 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
 
         n = append_format_string(buf, sizeof(buf), "%s",
             LEX_TOK2STR(proto_strs, CONMAN_TOK_OK));
-
+        if (n == -1) {
+            goto overrun;
+        }
         /*  If consoles have been defined by this point, the "response"
          *    is to the request as opposed to the greeting.
-         *  Yeah, it's a bit of a kludge.
          */
         if (list_count(req->consoles) > 0) {
 
@@ -738,36 +739,45 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
                 n = append_format_string(buf, sizeof(buf), " %s=%s",
                     LEX_TOK2STR(proto_strs, CONMAN_TOK_OPTION),
                     LEX_TOK2STR(proto_strs, CONMAN_TOK_RESET));
+                if (n == -1) {
+                    goto overrun;
+                }
             }
             i = list_iterator_create(req->consoles);
             while ((console = list_next(i))) {
                 n = strlcpy(tmp, console->name, sizeof(tmp));
+                if ((size_t) n >= sizeof(tmp)) {
+                    goto overrun;
+                }
                 n = append_format_string(buf, sizeof(buf), " %s='%s'",
                     LEX_TOK2STR(proto_strs, CONMAN_TOK_CONSOLE),
                     lex_encode(tmp));
+                if (n == -1) {
+                    goto overrun;
+                }
             }
             list_iterator_destroy(i);
         }
 
         n = append_format_string(buf, sizeof(buf), "\n");
+        if (n == -1) {
+            goto overrun;
+        }
     }
     else {
         n = strlcpy(tmp, (errmsg ? errmsg : "unspecified error"), sizeof(tmp));
+        if ((size_t) n >= sizeof(tmp)) {
+            goto overrun;
+        }
         n = snprintf(buf, sizeof(buf), "%s %s=%d %s='%s'\n",
             LEX_TOK2STR(proto_strs, CONMAN_TOK_ERROR),
             LEX_TOK2STR(proto_strs, CONMAN_TOK_CODE), errnum,
             LEX_TOK2STR(proto_strs, CONMAN_TOK_MESSAGE), lex_encode(tmp));
+        if ((n < 0) || ((size_t) n >= sizeof(buf))) {
+            goto overrun;
+        }
         log_msg(LOG_NOTICE, "Client <%s@%s:%d> request failed: %s",
             req->user, req->fqdn, req->port, errmsg);
-    }
-
-    /*  FIXME: Gracefully handle buffer overruns.
-     */
-    if ((n < 0) || ((size_t) n >= sizeof(buf))) {
-        log_msg(LOG_WARNING,
-            "Client <%s@%s:%d> request terminated by buffer overrun",
-            req->user, req->fqdn, req->port);
-        return(-1);
     }
 
     /*  Write response to client.
@@ -780,6 +790,12 @@ static int send_rsp(req_t *req, int errnum, char *errmsg)
 
     DPRINTF((5, "Sent response: %s", buf));
     return(0);
+
+overrun:
+    log_msg(LOG_WARNING,
+        "Client <%s@%s:%d> request terminated due to buffer overrun",
+        req->user, req->fqdn, req->port);
+    return(-1);
 }
 
 
