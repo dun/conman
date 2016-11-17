@@ -1,6 +1,7 @@
-### ConMan: The Console Manager
-
 [![Build Status](https://travis-ci.org/dun/conman.svg?branch=master)](https://travis-ci.org/dun/conman)
+[![Coverity Scan](https://scan.coverity.com/projects/dun-conman/badge.svg)](https://scan.coverity.com/projects/dun-conman)
+
+### ConMan: The Console Manager
 
 ConMan is a serial console management program designed to support a large
 number of console devices and simultaneous users.
@@ -18,23 +19,7 @@ Its features include:
 - allowing clients to share or steal console write privileges
 - broadcasting client output to multiple consoles
 
-#### License:
-ConMan is [free software](https://www.gnu.org/philosophy/free-sw.html):
-you can redistribute it and/or modify it under the terms of the
-[GNU General Public License](https://www.gnu.org/licenses/gpl-3.0.html)
-as published by the Free Software Foundation, either version 3 of the License,
-or (at your option) any later version.
-
-#### Keys:
-Releases are signed with the following GPG key:
-```text
-  pub   4096R/0x3B7ECB2B30DE0871 2011-10-01
-        Key fingerprint = A441 880C 3D4C 7C36 C5DD  41E1 3B7E CB2B 30DE 0871
-  uid                            Chris Dunlap <chris.m.dunlap@gmail.com>
-  uid                            Chris Dunlap <cdunlap@llnl.gov>
-  uid                            Chris Dunlap <dun@imsa.edu>
-  sub   4096R/0x48A5CADDECA74B8A 2011-10-01
-```
-
-#### Homepage:
-https://dun.github.io/conman/
+Links:
+- [Man Pages](../../wiki/Man-Pages)
+- [License Information](../../wiki/License-Info)
+- [Latest Release](../../releases/latest)
