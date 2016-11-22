@@ -1,5 +1,5 @@
 Name:		conman
-Version:	0.2.7
+Version:	0.2.8
 Release:	1%{?dist}
 
 Summary:	ConMan: The Console Manager
@@ -66,6 +66,7 @@ rm -rf "%{buildroot}"
 %doc FAQ
 %doc KEYS
 %doc NEWS
+%doc PLATFORMS
 %doc README
 %doc THANKS
 %config(noreplace) %{_sysconfdir}/conman.conf

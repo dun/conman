@@ -1,3 +1,20 @@
+conman-0.2.8 (2016-11-22):
+- Changed project homepage to <https://dun.github.io/conman/>. (#21)
+- Changed conman.conf default loopback setting to ON.
+- Changed rpm spec file from sysvinit to systemd.
+- Added 'server nofile' config directive to increase NOFILE limit. (#17)
+- Added '-P' cmdline opt to daemon for specifying pidfile. (#20)
+- Added test console device to aid in development and testing.
+- Fixed telnet option negotiation loop. (#9)
+- Fixed arbitrary limit on number of IPMI SOL consoles. (#15)
+- Fixed 4-character limit on timezones. (#16)
+- Fixed 1-second delay when connecting the client to a console.
+- Fixed UDS console reconnect delay to use exponential timeout.
+- Fixed UDS console reconnect delay to require min connect time before reset.
+- Fixed UDS console resource leak of pathname during config processing.
+- Fixed all gcc, clang, and Coverity Scan warnings.
+- Improved scalability of daemon.
+
 conman-0.2.7 (2011-04-21):
 - Fixed concurrency bugs in IPMI SOL connections.
 - Added support for IPMI SOL workaround flags and whatnot.
