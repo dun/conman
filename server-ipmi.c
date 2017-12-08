@@ -927,9 +927,9 @@ static int create_ipmi_ctx(obj_t *ipmi)
     protocol_config.acceptable_packet_errors_count = -1;
     protocol_config.maximum_retransmission_count = -1;
 
-    engine_config.engine_flags = 0;
-    engine_config.behavior_flags = 0;
-    engine_config.debug_flags = 0;
+    engine_config.engine_flags = IPMICONSOLE_ENGINE_DEFAULT;
+    engine_config.behavior_flags = IPMICONSOLE_BEHAVIOR_DEFAULT;
+    engine_config.debug_flags = IPMICONSOLE_DEBUG_DEFAULT;
 
     /*  A context cannot be submitted to the ipmiconsole engine more than once,
      *    so create a new context if one already exists.
