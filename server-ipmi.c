@@ -561,7 +561,7 @@ static int process_ipmi_opt_workaround(
     assert(iopts != NULL);
     assert(str != NULL);
 
-    if (str[0] == '\0') {
+    if ((str[0] == '\0') || !strcasecmp(str, "default")) {
         flag = IPMICONSOLE_WORKAROUND_DEFAULT;
     }
     else if (!strcasecmp(str, "authcap")) {
@@ -582,6 +582,21 @@ static int process_ipmi_opt_workaround(
     else if (!strcasecmp(str, "integritycheckvalue")) {
         flag = IPMICONSOLE_WORKAROUND_NON_EMPTY_INTEGRITY_CHECK_VALUE;
     }
+#ifdef IPMICONSOLE_WORKAROUND_NO_CHECKSUM_CHECK
+    else if (!strcasecmp(str, "nochecksumcheck")) {
+        flag = IPMICONSOLE_WORKAROUND_NO_CHECKSUM_CHECK;
+    }
+#endif /* IPMICONSOLE_WORKAROUND_NO_CHECKSUM_CHECK */
+#ifdef IPMICONSOLE_WORKAROUND_SERIAL_ALERTS_DEFERRED
+    else if (!strcasecmp(str, "serialalertsdeferred")) {
+        flag = IPMICONSOLE_WORKAROUND_SERIAL_ALERTS_DEFERRED;
+    }
+#endif /* IPMICONSOLE_WORKAROUND_SERIAL_ALERTS_DEFERRED */
+#ifdef IPMICONSOLE_WORKAROUND_INCREMENT_SOL_PACKET_SEQUENCE
+    else if (!strcasecmp(str, "solpacketseq")) {
+        flag = IPMICONSOLE_WORKAROUND_INCREMENT_SOL_PACKET_SEQUENCE;
+    }
+#endif /* IPMICONSOLE_WORKAROUND_INCREMENT_SOL_PACKET_SEQUENCE */
     else if (!strcasecmp(str, "solpayloadsize")) {
         flag = IPMICONSOLE_WORKAROUND_IGNORE_SOL_PAYLOAD_SIZE;
     }
@@ -590,6 +605,14 @@ static int process_ipmi_opt_workaround(
     }
     else if (!strcasecmp(str, "solstatus")) {
         flag = IPMICONSOLE_WORKAROUND_SKIP_SOL_ACTIVATION_STATUS;
+    }
+#ifdef IPMICONSOLE_WORKAROUND_SKIP_CHANNEL_PAYLOAD_SUPPORT
+    else if (!strcasecmp(str, "solchannelsupport")) {
+        flag = IPMICONSOLE_WORKAROUND_SKIP_CHANNEL_PAYLOAD_SUPPORT;
+    }
+#endif /* IPMICONSOLE_WORKAROUND_SKIP_CHANNEL_PAYLOAD_SUPPORT */
+    else if (!strcasecmp(str, "none")) {
+        flag = 0;
     }
     else {
         unsigned int  u;

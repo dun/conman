@@ -193,11 +193,12 @@ Refer to \fBipmiconsole(8)\fR for a list of supported IDs.
 .br
 .sp
 \fBW\fR:\fIworkaround_flag\fR - a string or integer for an IPMI workaround.
-The following strings are recognized: "authcap", "intel20", "supermicro20",
-"sun20", "opensesspriv", "integritycheckvalue", "solpayloadsize", "solport",
-and "solstatus".  Refer to \fBipmiconsole(8)\fR for more information on
-these workarounds.  This substring may be repeated in order to specify
-multiple workarounds.
+The following strings are recognized: "authcap", "integritycheckvalue",
+"intel20", "nochecksumcheck", "opensesspriv", "serialalertsdeferred",
+"solchannelsupport", "solpacketseq", "solpayloadsize", "solport", "solstatus",
+"sun20", "supermicro20", "default", and "none".  Refer to \fBipmiconsole(8)\fR
+for more information on these workarounds.  This substring may be repeated
+in order to specify multiple workarounds.
 .br
 .sp
 Both the \fIpassword\fR and \fIK_g\fR values can be specified in either ASCII
