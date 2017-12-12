@@ -164,7 +164,7 @@ int init_ipmi_opts(ipmiopt_t *iopts)
     memset(iopts, 0, sizeof(ipmiopt_t));
     iopts->privilegeLevel = -1;
     iopts->cipherSuite = -1;
-    iopts->workaroundFlags = 0;
+    iopts->workaroundFlags = IPMICONSOLE_WORKAROUND_DEFAULT;
     return(0);
 }
 
@@ -556,47 +556,40 @@ static int process_ipmi_opt_workaround(
  *  Returns 0 and updates the 'iopts' struct on success; o/w, returns -1
  *    (writing an error message into buffer 'errbuf' of length 'errlen').
  */
+    unsigned int flag;
+
     assert(iopts != NULL);
     assert(str != NULL);
 
     if (str[0] == '\0') {
-        iopts->workaroundFlags = 0;
+        flag = IPMICONSOLE_WORKAROUND_DEFAULT;
     }
     else if (!strcasecmp(str, "authcap")) {
-        iopts->workaroundFlags |=
-            IPMICONSOLE_WORKAROUND_AUTHENTICATION_CAPABILITIES;
+        flag = IPMICONSOLE_WORKAROUND_AUTHENTICATION_CAPABILITIES;
     }
     else if (!strcasecmp(str, "intel20")) {
-        iopts->workaroundFlags |=
-            IPMICONSOLE_WORKAROUND_INTEL_2_0_SESSION;
+        flag = IPMICONSOLE_WORKAROUND_INTEL_2_0_SESSION;
     }
     else if (!strcasecmp(str, "supermicro20")) {
-        iopts->workaroundFlags |=
-            IPMICONSOLE_WORKAROUND_SUPERMICRO_2_0_SESSION;
+        flag = IPMICONSOLE_WORKAROUND_SUPERMICRO_2_0_SESSION;
     }
     else if (!strcasecmp(str, "sun20")) {
-        iopts->workaroundFlags |=
-            IPMICONSOLE_WORKAROUND_SUN_2_0_SESSION;
+        flag = IPMICONSOLE_WORKAROUND_SUN_2_0_SESSION;
     }
     else if (!strcasecmp(str, "opensesspriv")) {
-        iopts->workaroundFlags |=
-            IPMICONSOLE_WORKAROUND_OPEN_SESSION_PRIVILEGE;
+        flag = IPMICONSOLE_WORKAROUND_OPEN_SESSION_PRIVILEGE;
     }
     else if (!strcasecmp(str, "integritycheckvalue")) {
-        iopts->workaroundFlags |=
-            IPMICONSOLE_WORKAROUND_NON_EMPTY_INTEGRITY_CHECK_VALUE;
+        flag = IPMICONSOLE_WORKAROUND_NON_EMPTY_INTEGRITY_CHECK_VALUE;
     }
     else if (!strcasecmp(str, "solpayloadsize")) {
-        iopts->workaroundFlags |=
-            IPMICONSOLE_WORKAROUND_IGNORE_SOL_PAYLOAD_SIZE;
+        flag = IPMICONSOLE_WORKAROUND_IGNORE_SOL_PAYLOAD_SIZE;
     }
     else if (!strcasecmp(str, "solport")) {
-        iopts->workaroundFlags |=
-            IPMICONSOLE_WORKAROUND_IGNORE_SOL_PORT;
+        flag = IPMICONSOLE_WORKAROUND_IGNORE_SOL_PORT;
     }
     else if (!strcasecmp(str, "solstatus")) {
-        iopts->workaroundFlags |=
-            IPMICONSOLE_WORKAROUND_SKIP_SOL_ACTIVATION_STATUS;
+        flag = IPMICONSOLE_WORKAROUND_SKIP_SOL_ACTIVATION_STATUS;
     }
     else {
         unsigned int  u;
@@ -619,12 +612,18 @@ static int process_ipmi_opt_workaround(
             }
             return(-1);
         }
-        else if (u == 0) {
-            iopts->workaroundFlags = 0;
-        }
         else {
-            iopts->workaroundFlags |= u;
+            flag = u;
         }
+    }
+
+    if ((flag == 0) ||
+        (flag == IPMICONSOLE_WORKAROUND_DEFAULT) ||
+        (iopts->workaroundFlags == IPMICONSOLE_WORKAROUND_DEFAULT)) {
+        iopts->workaroundFlags = flag;
+    }
+    else {
+        iopts->workaroundFlags |= flag;
     }
     return(0);
 }
@@ -927,9 +926,9 @@ static int create_ipmi_ctx(obj_t *ipmi)
     protocol_config.acceptable_packet_errors_count = -1;
     protocol_config.maximum_retransmission_count = -1;
 
-    engine_config.engine_flags = 0;
-    engine_config.behavior_flags = 0;
-    engine_config.debug_flags = 0;
+    engine_config.engine_flags = IPMICONSOLE_ENGINE_DEFAULT;
+    engine_config.behavior_flags = IPMICONSOLE_BEHAVIOR_DEFAULT;
+    engine_config.debug_flags = IPMICONSOLE_DEBUG_DEFAULT;
 
     /*  A context cannot be submitted to the ipmiconsole engine more than once,
      *    so create a new context if one already exists.
