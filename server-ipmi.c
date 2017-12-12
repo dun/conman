@@ -1029,8 +1029,9 @@ static void fail_ipmi_connect(obj_t *ipmi)
     else {
         int e = ipmiconsole_ctx_errnum(ipmi->aux.ipmi.ctx);
         log_msg(LOG_INFO,
-            "Unable to connect to <%s> via IPMI for [%s]: %s",
-            ipmi->aux.ipmi.host, ipmi->name, ipmiconsole_ctx_strerror(e));
+            "Unable to connect to <%s> via IPMI for [%s]%s%s",
+            ipmi->aux.ipmi.host, ipmi->name, (e ? ": " : ""),
+            (e ? ipmiconsole_ctx_strerror(e) : ""));
     }
     /*  Set timer for establishing new connection attempt.
      *  Any existing timer should have already been cancelled at the start of
