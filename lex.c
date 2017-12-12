@@ -122,7 +122,7 @@ Lex lex_create(void *buf, char *toks[])
     l->prev = 0;
     l->line = 0;
     l->gotEOL = 1;
-    assert(l->magic = LEX_MAGIC);       /* set magic via assert abuse */
+    assert((l->magic = LEX_MAGIC));     /* set magic via assert abuse */
     return(l);
 }
 
@@ -132,7 +132,7 @@ void lex_destroy(Lex l)
     assert(l != NULL);
     assert(l->magic == LEX_MAGIC);
 
-    assert(l->magic = 1);               /* clear magic via assert abuse */
+    assert((l->magic = 1));             /* clear magic via assert abuse */
     free(l);
     return;
 }
