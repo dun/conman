@@ -18,18 +18,23 @@ Requires(postun): systemd
 
 %description
 ConMan is a serial console management program designed to support a large
-number of console devices and simultaneous users.  It supports:
-  - local serial devices
-  - remote terminal servers (via the telnet protocol)
-  - IPMI Serial-Over-LAN (via FreeIPMI)
-  - Unix domain sockets
-  - external processes (eg, using Expect for telnet/ssh/ipmi-sol connections)
+number of console devices and simultaneous users.
 
-Its features include:
-  - logging (and optionally timestamping) console device output to file
-  - connecting to consoles in monitor (R/O) or interactive (R/W) mode
-  - allowing clients to share or steal console write privileges
-  - broadcasting client output to multiple consoles
+Supported console types:
+- Local serial devices
+- Remote terminal servers (via the telnet protocol)
+- IPMI Serial-Over-LAN (via FreeIPMI's libipmiconsole)
+- External processes (e.g., Expect)
+- Unix domain sockets
+
+Features:
+- Mapping symbolic names to console devices
+- Logging (and optionally timestamping) console output to file
+- Connecting to a console in monitor (R/O) or interactive (R/W) mode
+- Connecting to multiple consoles for broadcasting (W/O) client output
+- Sharing a console session amongst multiple simultaneous clients
+- Allowing clients to share or steal console "write" privileges
+- Executing Expect scripts across multiple consoles in parallel
 
 %prep
 %setup -q
