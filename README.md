@@ -27,6 +27,5 @@ Features:
 Links:
 - [Man Pages](../../wiki/Man-Pages)
 - [License Information](../../wiki/License-Info)
-- [Atom feed for Releases](../../releases.atom)
 - [Verifying Releases](../../wiki/Verifying-Releases)
 - [Latest Release](../../releases/latest)
