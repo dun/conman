@@ -1,3 +1,7 @@
+conman-0.2.9 (2017-12-14):
+- Allowed IPMI defaults to be overridden via libipmiconsole.conf. (#27)
+- Updated recognized strings for IPMI workaround-flags.
+
 conman-0.2.8 (2016-11-22):
 - Changed project homepage to <https://dun.github.io/conman/>. (#21)
 - Changed conman.conf default loopback setting to ON.
