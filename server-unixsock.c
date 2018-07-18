@@ -46,8 +46,10 @@
 
 
 static size_t max_unixsock_dev_strlen(void);
+static int connect_unixsock_obj_int(obj_t *unixsock, int reset_delay);
 static int connect_unixsock_obj(obj_t *unixsock);
 static int disconnect_unixsock_obj(obj_t *unixsock);
+static int open_unixsock_obj_reset_delay(obj_t *unixsock);
 static void reset_unixsock_delay(obj_t *unixsock);
 
 extern tpoll_t tp_global;               /* defined in server.c */
@@ -147,7 +149,7 @@ obj_t * create_unixsock_obj(server_conf_t *conf, char *name, char *dev,
     list_append(conf->objs, unixsock);
 
     rv = inevent_add(unixsock->aux.unixsock.dev,
-        (inevent_cb_f) open_unixsock_obj, unixsock);
+        (inevent_cb_f) open_unixsock_obj_reset_delay, unixsock);
     if (rv < 0) {
         log_msg(LOG_INFO,
             "Console [%s] unable to register device \"%s\" for inotify events",
@@ -157,7 +159,7 @@ obj_t * create_unixsock_obj(server_conf_t *conf, char *name, char *dev,
 }
 
 
-int open_unixsock_obj(obj_t *unixsock)
+static int open_unixsock_obj_int(obj_t *unixsock, int reset_delay)
 {
 /*  (Re)opens the specified 'unixsock' obj.
  *  Returns 0 if the console is successfully opened; o/w, returns -1.
@@ -171,11 +173,18 @@ int open_unixsock_obj(obj_t *unixsock)
         rc = disconnect_unixsock_obj(unixsock);
     }
     else {
-        rc = connect_unixsock_obj(unixsock);
+        rc = connect_unixsock_obj_int(unixsock, reset_delay);
     }
     return(rc);
 }
 
+int open_unixsock_obj(obj_t *unixsock) {
+  return open_unixsock_obj_int(unixsock, 0);
+}
+
+int open_unixsock_obj_reset_delay(obj_t *unixsock) {
+  return open_unixsock_obj_int(unixsock, 1);
+}
 
 static size_t max_unixsock_dev_strlen(void)
 {
@@ -193,7 +202,7 @@ static size_t max_unixsock_dev_strlen(void)
 }
 
 
-static int connect_unixsock_obj(obj_t *unixsock)
+static int connect_unixsock_obj_int(obj_t *unixsock, int reset_delay)
 {
 /*  Opens a connection to the specified (unixsock) obj.
  *  Returns 0 if the connection is successfully completed; o/w, returns -1.
@@ -257,6 +266,8 @@ static int connect_unixsock_obj(obj_t *unixsock)
             (struct sockaddr *) &saddr, sizeof(saddr)) < 0) {
         log_msg(LOG_INFO, "Console [%s] cannot connect to device \"%s\": %s",
             unixsock->name, auxp->dev, strerror(errno));
+	if (reset_delay)
+	    reset_unixsock_delay(unixsock);
         return(disconnect_unixsock_obj(unixsock));
     }
     /*  Write-locking the unix domain socket appears ineffective.  But since
@@ -284,6 +295,9 @@ static int connect_unixsock_obj(obj_t *unixsock)
     return(0);
 }
 
+static int connect_unixsock_obj(obj_t *unixsock) {
+  return connect_unixsock_obj_int(unixsock, 0);
+}
 
 static int disconnect_unixsock_obj(obj_t *unixsock)
 {
