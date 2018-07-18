@@ -45,6 +45,7 @@
 #include "util-str.h"
 
 
+static int open_unixsock_obj_via_inotify(obj_t *unixsock);
 static size_t max_unixsock_dev_strlen(void);
 static int connect_unixsock_obj(obj_t *unixsock);
 static int disconnect_unixsock_obj(obj_t *unixsock);
@@ -140,6 +141,7 @@ obj_t * create_unixsock_obj(server_conf_t *conf, char *name, char *dev,
     unixsock->aux.unixsock.logfile = NULL;
     unixsock->aux.unixsock.timer = -1;
     unixsock->aux.unixsock.state = CONMAN_UNIXSOCK_DOWN;
+    unixsock->aux.unixsock.isViaInotify = 0;
     unixsock->aux.unixsock.delay = UNIXSOCK_MIN_TIMEOUT;
     /*
      *  Add obj to the master conf->objs list.
@@ -147,7 +149,7 @@ obj_t * create_unixsock_obj(server_conf_t *conf, char *name, char *dev,
     list_append(conf->objs, unixsock);
 
     rv = inevent_add(unixsock->aux.unixsock.dev,
-        (inevent_cb_f) open_unixsock_obj, unixsock);
+        (inevent_cb_f) open_unixsock_obj_via_inotify, unixsock);
     if (rv < 0) {
         log_msg(LOG_INFO,
             "Console [%s] unable to register device \"%s\" for inotify events",
@@ -174,6 +176,23 @@ int open_unixsock_obj(obj_t *unixsock)
         rc = connect_unixsock_obj(unixsock);
     }
     return(rc);
+}
+
+
+static int open_unixsock_obj_via_inotify(obj_t *unixsock)
+{
+/*  Opens the specified 'unixsock' obj via an inotify callback.
+ *  Returns 0 if the console is successfully opened; o/w, returns -1.
+ */
+    unixsock_obj_t *auxp;
+
+    assert(unixsock != NULL);
+    assert(is_unixsock_obj(unixsock));
+
+    auxp = &(unixsock->aux.unixsock);
+    auxp->isViaInotify = 1;
+
+    return(open_unixsock_obj(unixsock));
 }
 
 
@@ -250,11 +269,21 @@ static int connect_unixsock_obj(obj_t *unixsock)
     set_fd_nonblocking(unixsock->fd);
     set_fd_closed_on_exec(unixsock->fd);
 
-    /*  FIXME: Check to see if connect() on a nonblocking unix domain socket
+    /*  If a connect() triggered via an inotify event fails, reset the
+     *    reconnect delay to its minimum to quickly re-attempt the connection.
+     *    This handles the case where the remote has successfully called bind()
+     *    (triggering the inotify event) but has not yet called listen().
+     *  FIXME: Check to see if connect() on a nonblocking unix domain socket
      *    can return EINPROGRESS.  I don't think it can.
      */
     if (connect(unixsock->fd,
             (struct sockaddr *) &saddr, sizeof(saddr)) < 0) {
+        if (auxp->isViaInotify) {
+            auxp->isViaInotify = 0;
+            auxp->delay = UNIXSOCK_MIN_TIMEOUT;
+            DPRINTF((15, "Reset [%s] reconnect delay due to inotify event\n",
+                unixsock->name));
+        }
         log_msg(LOG_INFO, "Console [%s] cannot connect to device \"%s\": %s",
             unixsock->name, auxp->dev, strerror(errno));
         return(disconnect_unixsock_obj(unixsock));
