@@ -180,6 +180,7 @@ typedef struct unixsock_obj {           /* UNIXSOCK AUX OBJ DATA:            */
     int              timer;             /*  timer id for reconnects          */
     int              delay;             /*  secs 'til next reconnect attempt */
     unsigned         state:1;           /*  unixsock_state_t conn state      */
+    unsigned         isViaInotify:1;    /*  true if triggered via inotify    */
 } unixsock_obj_t;
 
 /*  Refer to struct ipmiconsole_ipmi_config in <ipmiconsole.h>.
