@@ -25,7 +25,7 @@ addons:
       name: "dun/conman"
       description: "ConMan: The Console Manager"
     notification_email: cdunlap@llnl.gov
-    build_command_prepend: "./configure"
+    build_command_prepend: "./bootstrap && ./configure"
     build_command: "make"
     branch_pattern: coverity_scan
 
@@ -34,4 +34,4 @@ before_install:
 
 script:
 - test "${TRAVIS_BRANCH}" != 'coverity_scan' || exit 0
-- ./configure ${CONFIGURE_OPTS} && colormake -e -k
+- ./bootstrap && ./configure ${CONFIGURE_OPTS} && colormake -e -k
