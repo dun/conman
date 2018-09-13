@@ -1,4 +1,4 @@
-.TH CONMAND 8 "@DATE@" "@PROJECT@-@VERSION@" "ConMan: The Console Manager"
+.TH CONMAND 8 "@DATE@" "@PACKAGE@-@VERSION@" "ConMan: The Console Manager"
 
 .SH NAME
 conmand \- ConMan daemon

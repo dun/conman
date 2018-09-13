@@ -79,6 +79,10 @@
 #define UNIXSOCK_MAX_TIMEOUT            60
 #define UNIXSOCK_MIN_TIMEOUT            1
 
+#ifndef CONMAN_CONF
+#define CONMAN_CONF                     SYSCONFDIR "/conman.conf"
+#endif /* !CONMAN_CONF */
+
 
 enum obj_type {                         /* type of auxiliary obj             */
     CONMAN_OBJ_CLIENT   = 0x01,

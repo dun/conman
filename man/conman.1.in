@@ -1,4 +1,4 @@
-.TH CONMAN 1 "@DATE@" "@PROJECT@-@VERSION@" "ConMan: The Console Manager"
+.TH CONMAN 1 "@DATE@" "@PACKAGE@-@VERSION@" "ConMan: The Console Manager"
 
 .SH NAME
 conman \- ConMan client

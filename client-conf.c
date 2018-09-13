@@ -220,7 +220,7 @@ void process_client_cmd_line(int argc, char *argv[], client_conf_t *conf)
             conf->enableVerbose = 1;
             break;
         case 'V':
-            printf("%s-%s%s\n", PROJECT, VERSION, CLIENT_FEATURES);
+            printf("%s-%s%s\n", PACKAGE, VERSION, CLIENT_FEATURES);
             exit(0);
         case '?':                       /* invalid option */
             log_err(0, "CMDLINE: invalid option \"%c\"", optopt);

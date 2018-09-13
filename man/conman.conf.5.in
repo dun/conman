@@ -1,4 +1,4 @@
-.TH CONMAN.CONF 5 "@DATE@" "@PROJECT@-@VERSION@" "ConMan: The Console Manager"
+.TH CONMAN.CONF 5 "@DATE@" "@PACKAGE@-@VERSION@" "ConMan: The Console Manager"
 
 .SH NAME
 conman.conf \- ConMan daemon configuration file
@@ -232,7 +232,7 @@ or IPv4 address, and \fIport\fR is the remote port number).
 An external process-based connection is defined by the "\fIpath\fR
 \fIargs\fR" format (where \fIpath\fR is the pathname to an executable
 file/script, and any additional \fIargs\fR are space-delimited); the
-\fI@prefix@/lib/@PROJECT@/exec\fR directory contains scripts for various
+\fI@prefix@/lib/@PACKAGE@/exec\fR directory contains scripts for various
 console types.
 .br
 .sp

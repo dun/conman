@@ -37,6 +37,17 @@
 #  define _PATH_STDPATH "/usr/bin:/bin:/usr/sbin:/sbin"
 #endif /* !_PATH_STDPATH */
 
+/*  CONMAN_HOST is the default host name or IP address of the server.
+ */
+#ifndef CONMAN_HOST
+#define CONMAN_HOST             "127.0.0.1"
+#endif /* !CONMAN_HOST */
+
+/*  CONMAN_PORT is the default TCP port number of the server.
+ */
+#ifndef CONMAN_PORT
+#define CONMAN_PORT             "7890"
+#endif /* !CONMAN_PORT */
 
 /*  Default escape char for the client.
  */
@@ -94,12 +105,6 @@
 #  define FEATURE_DEBUG ""
 #endif /* !NDEBUG */
 
-#if WITH_DMALLOC
-#  define FEATURE_DMALLOC " DMALLOC"
-#else
-#  define FEATURE_DMALLOC ""
-#endif /* WITH_DMALLOC */
-
 #if WITH_FREEIPMI
 #  define FEATURE_FREEIPMI " FREEIPMI"
 #else
@@ -113,9 +118,9 @@
 #endif /* WITH_TCP_WRAPPERS */
 
 #define CLIENT_FEATURES \
-    (FEATURE_DEBUG FEATURE_DMALLOC)
+    (FEATURE_DEBUG)
 #define SERVER_FEATURES \
-    (FEATURE_DEBUG FEATURE_DMALLOC FEATURE_FREEIPMI FEATURE_TCP_WRAPPERS)
+    (FEATURE_DEBUG FEATURE_FREEIPMI FEATURE_TCP_WRAPPERS)
 
 #if ! HAVE_SOCKLEN_T
 typedef int socklen_t;                  /* socklen_t is uint32_t in Posix.1g */

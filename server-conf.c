@@ -364,7 +364,7 @@ void process_cmdline(server_conf_t *conf, int argc, char *argv[])
             conf->enableVerbose = 1;
             break;
         case 'V':
-            printf("%s-%s%s\n", PROJECT, VERSION, SERVER_FEATURES);
+            printf("%s-%s%s\n", PACKAGE, VERSION, SERVER_FEATURES);
             exit(0);
         case 'z':
             conf->enableZeroLogs = 1;
