@@ -1,17 +1,15 @@
-ConMan 0.2.9 has been built on the following systems:
+ConMan 0.3.0 has been built on the following systems:
 
-- CentOS 6.9
-- CentOS 7.4.1708
-- Debian 9.3
-- Fedora 27
-- FreeBSD 11.1
-- NetBSD 7.1
-- OpenBSD 6.2
-- Ubuntu 16.04.3 LTS
-- Ubuntu 17.10
+- CentOS 6.10
+- CentOS 7.5.1804
+- Debian 9.5
+- Fedora 28
+- FreeBSD 11.2
+- NetBSD 7.1.2
+- OpenBSD 6.3
+- Ubuntu 18.04.1 LTS
 
 
 RPMs have been built and tested on the following systems:
 
-- CentOS 7.4.1708
-- Fedora 27
+- CentOS 7.5.1804
