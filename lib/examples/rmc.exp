@@ -10,8 +10,8 @@
 ###############################################################################
 
 set env(PATH) "/bin:/usr/bin:/usr/local/bin"
-source /usr/lib/conman/conman.exp
-source /usr/lib/conman/alpha.exp
+source /usr/share/conman/lib/conman.exp
+source /usr/share/conman/lib/alpha.exp
 log_user 0
 
 set cmd [lindex $argv 0]

@@ -114,7 +114,7 @@ common_sources = \
 	util-str.c \
 	util-str.h
 
-pkgdataexamplesdir = $(prefix)/lib/$(PACKAGE)/examples
+pkgdataexamplesdir = $(pkgdatadir)/examples
 
 dist_pkgdataexamples_DATA = \
 	lib/examples/README
@@ -128,7 +128,7 @@ dist_pkgdataexamples_SCRIPTS = \
 	lib/examples/srm.exp \
 	lib/examples/wtf.exp
 
-pkgdataexecdir = $(prefix)/lib/$(PACKAGE)/exec
+pkgdataexecdir = $(pkgdatadir)/exec
 
 dist_pkgdataexec_DATA = \
 	lib/exec/README
@@ -146,7 +146,7 @@ dist_pkgdataexec_SCRIPTS = \
 	lib/exec/sun-ilom.exp \
 	lib/exec/sun-v20z-v40z.exp
 
-pkgdatalibdir = $(prefix)/lib/$(PACKAGE)
+pkgdatalibdir = $(pkgdatadir)/lib
 
 dist_pkgdatalib_SCRIPTS = \
 	lib/alpha.exp \

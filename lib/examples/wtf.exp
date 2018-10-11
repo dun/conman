@@ -10,7 +10,7 @@
 ###############################################################################
 
 set env(PATH) "/bin:/usr/bin:/usr/local/bin"
-source /usr/lib/conman/conman.exp
+source /usr/share/conman/lib/conman.exp
 log_user 0
 
 proc print_console_state {spawn_id output_id console} {

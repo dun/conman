@@ -34,7 +34,7 @@
 ###############################################################################
 
 set env(PATH) "/bin:/usr/bin:/usr/local/bin"
-source /usr/lib/conman/conman.exp
+source /usr/share/conman/lib/conman.exp
 exp_internal 0
 log_user 0
 

@@ -78,6 +78,6 @@ rm -rf "%{buildroot}"
 %config(noreplace) %{_sysconfdir}/logrotate.d/conman
 %{_bindir}/*
 %{_sbindir}/*
-%{_prefix}/lib/*
+%{_datadir}/*
 %{_mandir}/*/*
 %{_unitdir}/conman.service
