@@ -229,11 +229,10 @@ the "\fIhost\fR:\fIport\fR" format (where \fIhost\fR is the remote hostname
 or IPv4 address, and \fIport\fR is the remote port number).
 .br
 .sp
-An external process-based connection is defined by the "\fIpath\fR
-\fIargs\fR" format (where \fIpath\fR is the pathname to an executable
-file/script, and any additional \fIargs\fR are space-delimited); the
-\fI@datadir@/@PACKAGE@/exec\fR directory contains scripts for various
-console types.
+An external process-based connection is defined by the "\fIpath\fR \fIargs\fR"
+format (where \fIpath\fR is the pathname to an executable file/script, and
+any additional \fIargs\fR are space-delimited); the \fI@pkgdatadir@/exec\fR
+directory contains scripts for various console types.
 .br
 .sp
 A local Unix domain socket connection is defined by the "unix:\fIpath\fR"

@@ -6,8 +6,8 @@ After=time-sync.target
 
 [Service]
 Type=forking
-ExecStart=/usr/sbin/conmand -P /var/run/conmand.pid
-PIDFile=/var/run/conmand.pid
+ExecStart=@sbindir@/conmand -P @localstatedir@/run/conmand.pid
+PIDFile=@localstatedir@/run/conmand.pid
 LimitNOFILE=infinity
 Restart=on-abort
 

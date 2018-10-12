@@ -12,6 +12,7 @@ AC_CONFIG_SRCDIR([server.c])
 
 # checks for programs
 AC_PROG_CC
+AC_PROG_SED
 X_AC_ENABLE_DEBUG
 
 # checks for libraries
@@ -55,11 +56,5 @@ AC_REPLACE_FUNCS([ \
 
 # checks for system services
 
-AC_CONFIG_FILES([ \
-  Makefile \
-  etc/conman.init \
-  man/conman.1 \
-  man/conman.conf.5 \
-  man/conmand.8 \
-])
+AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

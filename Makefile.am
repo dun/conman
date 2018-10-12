@@ -20,9 +20,24 @@ EXTRA_DIST = \
 	conman.spec \
 	etc/conman.conf \
 	etc/conman.init.in \
+	etc/conman.logrotate.in \
+	etc/conman.service.in \
+	etc/conman.sysconfig.in \
+	man/conman.1.in \
+	man/conman.conf.5.in \
+	man/conmand.8.in
+
+SUBSTITUTE_FILES = \
+	etc/conman.init \
 	etc/conman.logrotate \
 	etc/conman.service \
-	etc/conman.sysconfig
+	etc/conman.sysconfig \
+	man/conman.1 \
+	man/conman.conf.5 \
+	man/conmand.8
+
+noinst_DATA = \
+	$(SUBSTITUTE_FILES)
 
 bin_PROGRAMS = \
 	conman
@@ -152,16 +167,51 @@ dist_pkgdatalib_SCRIPTS = \
 	scripts/lib/alpha.exp \
 	scripts/lib/conman.exp
 
+$(SUBSTITUTE_FILES): Makefile
+	@$(MKDIR_P) `dirname "$(builddir)/$@"`
+	$(AM_V_GEN)$(substitute) < "$(srcdir)/$@.in" > "$(builddir)/$@"
+
+substitute = $(SED) \
+	-e 's,[@]bindir[@],$(bindir),g' \
+	-e 's,[@]datadir[@],$(datadir),g' \
+	-e 's,[@]datarootdir[@],$(datarootdir),g' \
+	-e 's,[@]docdir[@],$(docdir),g' \
+	-e 's,[@]dvidir[@],$(dvidir),g' \
+	-e 's,[@]exec_prefix[@],$(exec_prefix),g' \
+	-e 's,[@]htmldir[@],$(htmldir),g' \
+	-e 's,[@]includedir[@],$(includedir),g' \
+	-e 's,[@]infodir[@],$(infodir),g' \
+	-e 's,[@]libdir[@],$(libdir),g' \
+	-e 's,[@]libexecdir[@],$(libexecdir),g' \
+	-e 's,[@]localedir[@],$(localedir),g' \
+	-e 's,[@]localstatedir[@],$(localstatedir),g' \
+	-e 's,[@]mandir[@],$(mandir),g' \
+	-e 's,[@]oldincludedir[@],$(oldincludedir),g' \
+	-e 's,[@]pdfdir[@],$(pdfdir),g' \
+	-e 's,[@]pkgdatadir[@],$(pkgdatadir),g' \
+	-e 's,[@]pkgincludedir[@],$(pkgincludedir),g' \
+	-e 's,[@]pkglibdir[@],$(pkglibdir),g' \
+	-e 's,[@]pkglibexecdir[@],$(pkglibexecdir),g' \
+	-e 's,[@]prefix[@],$(prefix),g' \
+	-e 's,[@]psdir[@],$(psdir),g' \
+	-e 's,[@]runstatedir[@],$(runstatedir),g' \
+	-e 's,[@]sbindir[@],$(sbindir),g' \
+	-e 's,[@]sharedstatedir[@],$(sharedstatedir),g' \
+	-e 's,[@]sysconfdir[@],$(sysconfdir),g' \
+	-e 's,[@]DATE[@],$(DATE),g' \
+	-e 's,[@]PACKAGE[@],$(PACKAGE),g' \
+	-e 's,[@]VERSION[@],$(VERSION),g'
+
 install-data-local: install-logrotate install-systemd install-sysvinit
 
-install-logrotate:
+install-logrotate: etc/conman.logrotate
 	$(MKDIR_P) $(DESTDIR)$(sysconfdir)/logrotate.d
-	$(INSTALL_DATA) $(top_srcdir)/etc/conman.logrotate \
+	$(INSTALL_DATA) $(top_builddir)/etc/conman.logrotate \
 	  $(DESTDIR)$(sysconfdir)/logrotate.d/$(PACKAGE)
 
-install-systemd:
+install-systemd: etc/conman.service
 	$(MKDIR_P) $(DESTDIR)$(prefix)/lib/systemd/system
-	$(INSTALL_DATA) $(top_srcdir)/etc/conman.service \
+	$(INSTALL_DATA) $(top_builddir)/etc/conman.service \
 	  $(DESTDIR)$(prefix)/lib/systemd/system/$(PACKAGE).service
 
 install-sysvinit: install-sysvinit-conf
@@ -169,10 +219,10 @@ install-sysvinit: install-sysvinit-conf
 	$(INSTALL_SCRIPT) $(top_builddir)/etc/conman.init \
 	  $(DESTDIR)$(sysconfdir)/init.d/$(PACKAGE)
 
-install-sysvinit-conf:
+install-sysvinit-conf: etc/conman.init etc/conman.sysconfig
 	test -d /etc/sysconfig && d=sysconfig || d=default; \
 	  $(MKDIR_P) $(DESTDIR)$(sysconfdir)/$${d}; \
-	  $(INSTALL_DATA) $(top_srcdir)/etc/conman.sysconfig \
+	  $(INSTALL_DATA) $(top_builddir)/etc/conman.sysconfig \
 	    $(DESTDIR)$(sysconfdir)/$${d}/$(PACKAGE)
 
 uninstall-local:
@@ -182,12 +232,16 @@ uninstall-local:
 	-test -d /etc/sysconfig && d=sysconfig || d=default; \
 	  cd "$(DESTDIR)$(sysconfdir)/$${d}" && rm -f $(PACKAGE)
 
+CLEANFILES = \
+	$(SUBSTITUTE_FILES)
+
 DISTCLEANFILES = \
 	config.h.in~ \
 	$(PACKAGE)-*.tar*
 
 distclean-local:
 	-rm -rf autom4te.cache/
+	-rmdir etc/ man/ 2>/dev/null || :
 
 MAINTAINERCLEANFILES = \
 	Makefile.in \

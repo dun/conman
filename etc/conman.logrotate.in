@@ -3,10 +3,9 @@
 ##
 
 ##
-# Example logrotate entry for ConMan.
-#   Be sure to create the /var/log/conman/ and /var/log/conman.old/ dirs.
+# Example logrotate entry.
 ##
-# /var/log/conman/* {
+# @localstatedir@/log/conman/* {
 #   compress
 #   missingok
 #   nocopytruncate
@@ -14,7 +13,7 @@
 #   nodelaycompress
 #   nomail
 #   notifempty
-#   olddir /var/log/conman.old/
+#   olddir @localstatedir@/log/conman.old/
 #   rotate 4
 #   sharedscripts
 #   size=5M

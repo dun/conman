@@ -16,5 +16,8 @@
 /conman
 /conmand
 /etc/conman.init
+/etc/conman.logrotate
+/etc/conman.service
+/etc/conman.sysconfig
 /man/*.[1-9]
 /stamp-h1

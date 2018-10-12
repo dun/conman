@@ -1,7 +1,7 @@
 ##
 # Specify an alternative configuration file.
 ##
-# CONFIG="/etc/conman.conf"
+# CONFIG="@sysconfdir@/conman.conf"
 
 ##
 # Pass additional command-line options to the daemon.
@@ -11,7 +11,7 @@
 ##
 # Specify where the daemon's PID is written.
 ##
-# PIDFILE="/var/run/conmand.pid"
+# PIDFILE="@localstatedir@/run/conmand.pid"
 
 ##
 # Adjust the scheduling priority of the daemon.
