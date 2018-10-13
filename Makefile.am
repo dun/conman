@@ -198,6 +198,9 @@ substitute = $(SED) \
 	-e 's,[@]sbindir[@],$(sbindir),g' \
 	-e 's,[@]sharedstatedir[@],$(sharedstatedir),g' \
 	-e 's,[@]sysconfdir[@],$(sysconfdir),g' \
+	-e 's,[@]CONMAN_CONF[@],$(CONMAN_CONF),g' \
+	-e 's,[@]CONMAN_HOST[@],$(CONMAN_HOST),g' \
+	-e 's,[@]CONMAN_PORT[@],$(CONMAN_PORT),g' \
 	-e 's,[@]DATE[@],$(DATE),g' \
 	-e 's,[@]PACKAGE[@],$(PACKAGE),g' \
 	-e 's,[@]VERSION[@],$(VERSION),g'
