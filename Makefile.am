@@ -117,40 +117,40 @@ common_sources = \
 pkgdataexamplesdir = $(pkgdatadir)/examples
 
 dist_pkgdataexamples_DATA = \
-	lib/examples/README
+	scripts/examples/README
 
 dist_pkgdataexamples_SCRIPTS = \
-	lib/examples/boot_alpha.exp \
-	lib/examples/mac.exp \
-	lib/examples/rmc.exp \
-	lib/examples/shell_cmd_1.exp \
-	lib/examples/shell_cmd_n.exp \
-	lib/examples/srm.exp \
-	lib/examples/wtf.exp
+	scripts/examples/boot_alpha.exp \
+	scripts/examples/mac.exp \
+	scripts/examples/rmc.exp \
+	scripts/examples/shell_cmd_1.exp \
+	scripts/examples/shell_cmd_n.exp \
+	scripts/examples/srm.exp \
+	scripts/examples/wtf.exp
 
 pkgdataexecdir = $(pkgdatadir)/exec
 
 dist_pkgdataexec_DATA = \
-	lib/exec/README
+	scripts/exec/README
 
 dist_pkgdataexec_SCRIPTS = \
-	lib/exec/cyclades-ssh.exp \
-	lib/exec/cyclades-telnet.exp \
-	lib/exec/hp-ilo.exp \
-	lib/exec/hp-lo100.exp \
-	lib/exec/ibm-bc.exp \
-	lib/exec/ipmiconsole.exp \
-	lib/exec/ipmitool.exp \
-	lib/exec/ssh.exp \
-	lib/exec/sun-elom.exp \
-	lib/exec/sun-ilom.exp \
-	lib/exec/sun-v20z-v40z.exp
+	scripts/exec/cyclades-ssh.exp \
+	scripts/exec/cyclades-telnet.exp \
+	scripts/exec/hp-ilo.exp \
+	scripts/exec/hp-lo100.exp \
+	scripts/exec/ibm-bc.exp \
+	scripts/exec/ipmiconsole.exp \
+	scripts/exec/ipmitool.exp \
+	scripts/exec/ssh.exp \
+	scripts/exec/sun-elom.exp \
+	scripts/exec/sun-ilom.exp \
+	scripts/exec/sun-v20z-v40z.exp
 
 pkgdatalibdir = $(pkgdatadir)/lib
 
 dist_pkgdatalib_SCRIPTS = \
-	lib/alpha.exp \
-	lib/conman.exp
+	scripts/lib/alpha.exp \
+	scripts/lib/conman.exp
 
 install-data-local: install-logrotate install-systemd install-sysvinit
 
