@@ -37,6 +37,12 @@
 #  define _PATH_STDPATH "/usr/bin:/bin:/usr/sbin:/sbin"
 #endif /* !_PATH_STDPATH */
 
+/*  QUOTE(s) converts [s] into a string constant via stringizing.
+ *    https://gcc.gnu.org/onlinedocs/cpp/Stringizing.html
+ */
+#define QUOTE(s)                STRINGIZE(s)
+#define STRINGIZE(s)            #s
+
 /*  CONMAN_HOST is the default host name or IP address of the server.
  */
 #ifndef CONMAN_HOST

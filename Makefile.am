@@ -73,7 +73,7 @@ conman_SOURCES = \
 	$(common_sources)
 
 conmand_CPPFLAGS = \
-	-DSYSCONFDIR='"$(sysconfdir)"' \
+	-DSYSCONFDIR='$(sysconfdir)' \
 	-DWITH_OOMF \
 	-DWITH_PTHREADS
 

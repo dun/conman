@@ -80,7 +80,7 @@
 #define UNIXSOCK_MIN_TIMEOUT            1
 
 #ifndef CONMAN_CONF
-#define CONMAN_CONF                     SYSCONFDIR "/conman.conf"
+#define CONMAN_CONF                     QUOTE(SYSCONFDIR) "/conman.conf"
 #endif /* !CONMAN_CONF */
 
 
