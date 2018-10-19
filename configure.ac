@@ -1,5 +1,6 @@
 # ConMan configure.ac
 
+AC_PREREQ([2.61])
 AC_INIT([ConMan], [0.3.0])
 AC_SUBST([DATE], [2018-09-15])
 AC_SUBST([CONMAN_CONF], [\${sysconfdir}/conman.conf])
@@ -7,9 +8,12 @@ AC_SUBST([CONMAN_HOST], [127.0.0.1])
 AC_SUBST([CONMAN_PORT], [7890])
 
 AC_CONFIG_AUX_DIR([build-aux])
-AM_INIT_AUTOMAKE([dist-xz foreign])
+m4_ifdef([dist-xz],
+  [AM_INIT_AUTOMAKE([1.10 foreign dist-xz])],
+  [AM_INIT_AUTOMAKE([1.10 foreign])])
 AM_MAINTAINER_MODE
-AM_SILENT_RULES([yes])
+m4_ifdef([AM_SILENT_RULES],
+  [AM_SILENT_RULES([yes])])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([server.c])
