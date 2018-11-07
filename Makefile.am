@@ -36,6 +36,14 @@ SUBSTITUTE_FILES = \
 	man/conman.conf.5 \
 	man/conmand.8
 
+etc/conman.init: etc/conman.init.in
+etc/conman.logrotate: etc/conman.logrotate.in
+etc/conman.service: etc/conman.service.in
+etc/conman.sysconfig: etc/conman.sysconfig.in
+man/conman.1: man/conman.1.in
+man/conman.conf.5: man/conman.conf.5.in
+man/conmand.8: man/conmand.8.in
+
 noinst_DATA = \
 	$(SUBSTITUTE_FILES)
 
