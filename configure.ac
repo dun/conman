@@ -20,6 +20,8 @@ AC_CONFIG_SRCDIR([server.c])
 
 # checks for programs
 AC_PROG_CC
+AC_PROG_INSTALL
+AC_PROG_MKDIR_P
 AC_PROG_SED
 X_AC_ENABLE_DEBUG
 
