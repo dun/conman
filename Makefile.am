@@ -225,12 +225,12 @@ install-systemd: etc/conman.service
 	$(INSTALL_DATA) $(top_builddir)/etc/conman.service \
 	  $(DESTDIR)$(prefix)/lib/systemd/system/$(PACKAGE).service
 
-install-sysvinit: install-sysvinit-conf
+install-sysvinit: etc/conman.init install-sysvinit-conf
 	$(MKDIR_P) $(DESTDIR)$(sysconfdir)/init.d
 	$(INSTALL_SCRIPT) $(top_builddir)/etc/conman.init \
 	  $(DESTDIR)$(sysconfdir)/init.d/$(PACKAGE)
 
-install-sysvinit-conf: etc/conman.init etc/conman.sysconfig
+install-sysvinit-conf: etc/conman.sysconfig
 	test -d /etc/sysconfig && d=sysconfig || d=default; \
 	  $(MKDIR_P) $(DESTDIR)$(sysconfdir)/$${d}; \
 	  $(INSTALL_DATA) $(top_builddir)/etc/conman.sysconfig \
