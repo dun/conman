@@ -137,6 +137,10 @@ common_sources = \
 	util-str.c \
 	util-str.h
 
+# For dependency on SYSCONFDIR via the #define for CONMAN_CONF.
+#
+conmand-server-conf.$(OBJEXT): Makefile
+
 pkgdataexamplesdir = $(pkgdatadir)/examples
 
 dist_pkgdataexamples_DATA = \
