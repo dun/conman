@@ -2,10 +2,10 @@
 
 AC_PREREQ([2.61])
 AC_INIT([ConMan], [0.3.0])
-AC_SUBST([DATE], [2018-09-15])
-AC_SUBST([CONMAN_CONF], [\${sysconfdir}/conman.conf])
-AC_SUBST([CONMAN_HOST], [127.0.0.1])
-AC_SUBST([CONMAN_PORT], [7890])
+AC_SUBST([DATE], ["2018-09-15"])
+AC_SUBST([CONMAN_CONF], ["\${sysconfdir}/conman.conf"])
+AC_SUBST([CONMAN_HOST], ["127.0.0.1"])
+AC_SUBST([CONMAN_PORT], ["7890"])
 
 AC_CONFIG_AUX_DIR([build-aux])
 m4_ifdef([dist-xz],
