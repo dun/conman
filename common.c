@@ -1,6 +1,6 @@
 /*****************************************************************************
  *  Written by Chris Dunlap <cdunlap@llnl.gov>.
- *  Copyright (C) 2007-2018 Lawrence Livermore National Security, LLC.
+ *  Copyright (C) 2007-2019 Lawrence Livermore National Security, LLC.
  *  Copyright (C) 2001-2007 The Regents of the University of California.
  *  UCRL-CODE-2002-009.
  *
@@ -42,7 +42,7 @@ const char *conman_license = \
     "https://dun.github.io/conman/\n"                                         \
     "\n"                                                                      \
     "Written by Chris Dunlap <cdunlap@llnl.gov>.\n"                           \
-    "Copyright (C) 2007-2018 Lawrence Livermore National Security, LLC.\n"    \
+    "Copyright (C) 2007-2019 Lawrence Livermore National Security, LLC.\n"    \
     "Copyright (C) 2001-2007 The Regents of the University of California.\n"  \
     "\n"                                                                      \
     "ConMan is free software: you can redistribute it and/or modify it\n"     \
