@@ -400,6 +400,12 @@ int format_obj_string(char *buf, int buflen, obj_t *obj, const char *fmt)
             case 'S':                   /* second (00-61) */
                 /* fall-thru */
             case 's':                   /* seconds since unix epoch */
+                /* fall-thru */
+            case 'G':                   /* ISO 8601 week-based 4-digit year */
+                /* fall-thru */
+            case 'g':                   /* ISO 8601 week-based 2-digit year */
+                /* fall-thru */
+            case 'V':                   /* ISO 8601 week number (01-53) */
                 assert(n > 0);
                 if (!(m = strftime (pdst, n, tfmt, &tm)))
                     n = 0;

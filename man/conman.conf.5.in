@@ -304,6 +304,21 @@ The seconds as a 2-digit number (00-61).
 \fB%s\fR
 The number of seconds since the Epoch.
 .TP
+\fB%G\fR
+The ISO 8601 week-based year as a 4-digit number with the century.
+See \fB%V\fR for the corresponding ISO 8601 week number.
+.TP
+\fB%g\fR
+The ISO 8601 week-based year as a 2-digit number without the century.
+See \fB%V\fR for the corresponding ISO 8601 week number.
+.TP
+\fB%V\fR
+The ISO 8601 week number (01-53).  Weeks start on a Monday.  Week 01 is
+the first week where four or more days fall within the new year.  When the
+first calendar week has fewer than four days, it is counted as the last
+week of the previous year.  See \fB%g\fR or \fB%G\fR for the corresponding
+ISO 8601 week-based year.
+.TP
 \fB%%\fR
 A literal '%' character.
 .PP
