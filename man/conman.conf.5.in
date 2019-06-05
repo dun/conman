@@ -45,7 +45,7 @@ and \fBconsole log\fR directives.
 \fBlogfile\fR \fB=\fR "\fIfile\fR[,\fIpriority\fR]"
 Specifies the file to which log messages are appended if the daemon is
 not running in the foreground.  This string undergoes conversion specifier
-expansion (cf., \fBCONVERSION SPECIFICATIONS\fR) each time the file is opened.
+expansion (see \fBCONVERSION SPECIFICATIONS\fR) each time the file is opened.
 If an absolute pathname is not given, the file's location is relative
 to either \fBlogdir\fR (if defined) or the current working directory.
 Intermediate directories will be created as needed.  The filename may
@@ -77,7 +77,7 @@ Specifies the port on which the daemon will listen for client connections.
 Specifies a command string to be invoked by a subshell upon receipt
 of the client's "reset" escape.  Multiple commands within a string
 may be separated with semicolons.  This string undergoes conversion
-specifier expansion (cf., \fBCONVERSION SPECIFICATIONS\fR) and will be
+specifier expansion (see \fBCONVERSION SPECIFICATIONS\fR) and will be
 invoked multiple times if the client is connected to multiple consoles.
 .TP
 \fBsyslog\fR \fB=\fR "\fIfacility\fR"
@@ -104,7 +104,7 @@ following key/value pairs:
 .TP
 \fBlog\fR \fB=\fR "\fIfile\fR"
 Specifies the default log file to use for each \fBconsole\fR
-directive.  This string undergoes conversion specifier expansion (cf.,
+directive.  This string undergoes conversion specifier expansion (see
 \fBCONVERSION SPECIFICATIONS\fR) each time the file is opened; it must
 contain either '\fB%N\fR' or '\fB%D\fR'.  If an absolute pathname is
 not given, the file's location is relative to either \fBlogdir\fR (if
@@ -249,7 +249,7 @@ The '\fB%N\fR' character sequence will be replaced by the console name.
 .TP
 \fBlog\fR \fB=\fR "\fIfile\fR"
 Specifies the file where console output is logged.  This string undergoes
-conversion specifier expansion (cf., \fBCONVERSION SPECIFICATIONS\fR) each
+conversion specifier expansion (see \fBCONVERSION SPECIFICATIONS\fR) each
 time the file is opened.  If an absolute pathname is not given, the file's
 location is relative to either \fBlogdir\fR (if defined) or the current
 working directory.  Intermediate directories will be created as needed.
@@ -257,13 +257,13 @@ An empty log string (i.e., \fBlog\fR="") disables logging, overriding the
 \fBglobal log\fR name.
 .TP
 \fBlogopts\fR \fB=\fR "\fIstring\fR"
-This keyword is optional (cf., \fBGLOBAL DIRECTIVES\fR).
+This keyword is optional (see \fBGLOBAL DIRECTIVES\fR).
 .TP
 \fBseropts\fR \fB=\fR "\fIstring\fR"
-This keyword is optional (cf., \fBGLOBAL DIRECTIVES\fR).
+This keyword is optional (see \fBGLOBAL DIRECTIVES\fR).
 .TP
 \fBipmiopts\fR \fB=\fR "\fIstring\fR"
-This keyword is optional (cf., \fBGLOBAL DIRECTIVES\fR).
+This keyword is optional (see \fBGLOBAL DIRECTIVES\fR).
 
 .SH CONVERSION SPECIFICATIONS
 A conversion specifier is a two-character sequence beginning with

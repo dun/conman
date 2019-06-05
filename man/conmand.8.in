@@ -80,7 +80,7 @@ and restrict access to the server host.
 .SH NOTES
 Log messages are sent to standard-error until after the configuration file
 has been read, at which time future messages are discarded unless either
-the \fBlogfile\fR or \fBsyslog\fR keyword has been specified (cf.,
+the \fBlogfile\fR or \fBsyslog\fR keyword has been specified (see
 \fBconman.conf(5)\fR).
 .PP
 If the configuration file is modified while the daemon is running and a
