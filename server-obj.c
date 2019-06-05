@@ -385,27 +385,22 @@ int format_obj_string(char *buf, int buflen, obj_t *obj, const char *fmt)
                     pdst += m;
                 }
                 break;
-            case 'Y':                   /* year with century (0000-9999) */
-                /* fall-thru */
-            case 'y':                   /* year without century (00-99) */
-                /* fall-thru */
-            case 'm':                   /* month (01-12) */
-                /* fall-thru */
             case 'd':                   /* day of month (01-31) */
-                /* fall-thru */
-            case 'H':                   /* hour (00-23) */
-                /* fall-thru */
-            case 'M':                   /* minute (00-59) */
-                /* fall-thru */
-            case 'S':                   /* second (00-61) */
-                /* fall-thru */
-            case 's':                   /* seconds since unix epoch */
-                /* fall-thru */
-            case 'G':                   /* ISO 8601 week-based 4-digit year */
-                /* fall-thru */
             case 'g':                   /* ISO 8601 week-based 2-digit year */
-                /* fall-thru */
+            case 'G':                   /* ISO 8601 week-based 4-digit year */
+            case 'H':                   /* hour (00-23) */
+            case 'j':                   /* day of year (001-366) */
+            case 'm':                   /* month (01-12) */
+            case 'M':                   /* minute (00-59) */
+            case 's':                   /* seconds since Epoch */
+            case 'S':                   /* second (00-60) */
+            case 'u':                   /* day of week with Mon=1 (1-7) */
+            case 'U':                   /* week number since 1st Sun (00-53) */
             case 'V':                   /* ISO 8601 week number (01-53) */
+            case 'w':                   /* day of week with Sun=0 (0-6) */
+            case 'W':                   /* week number since 1st Mon (00-53) */
+            case 'y':                   /* year w/o century (00-99) */
+            case 'Y':                   /* year w/ century */
                 assert(n > 0);
                 if (!(m = strftime (pdst, n, tfmt, &tm)))
                     n = 0;

@@ -270,47 +270,53 @@ A conversion specifier is a two-character sequence beginning with
 a '\fB%\fR' character.  The second character in the sequence specifies the
 type of conversion to be applied.  The following specifiers are supported:
 .TP
-\fB%N\fR
-The console name (from the \fBname\fR string).
+\fB%d\fR
+The day of the month as a 2-digit number (01-31).
 .TP
 \fB%D\fR
 The console device basename (from the \fBdev\fR string),
 with leading directory components removed.
 .TP
-\fB%P\fR
-The daemon's process identifier.
-.TP
-\fB%Y\fR
-The year as a 4-digit number with the century.
-.TP
-\fB%y\fR
-The year as a 2-digit number without the century.
-.TP
-\fB%m\fR
-The month as a 2-digit number (01-12).
-.TP
-\fB%d\fR
-The day of the month as a 2-digit number (01-31).
-.TP
-\fB%H\fR
-The hour as a 2-digit number using a 24-hour clock (00-23).
-.TP
-\fB%M\fR
-The minute as a 2-digit number (00-59).
-.TP
-\fB%S\fR
-The seconds as a 2-digit number (00-61).
-.TP
-\fB%s\fR
-The number of seconds since the Epoch.
+\fB%g\fR
+The ISO 8601 week-based year as a 2-digit number without the century.
+See \fB%V\fR for the corresponding ISO 8601 week number.
 .TP
 \fB%G\fR
 The ISO 8601 week-based year as a 4-digit number with the century.
 See \fB%V\fR for the corresponding ISO 8601 week number.
 .TP
-\fB%g\fR
-The ISO 8601 week-based year as a 2-digit number without the century.
-See \fB%V\fR for the corresponding ISO 8601 week number.
+\fB%H\fR
+The hour as a 2-digit number (00-23).
+.TP
+\fB%j\fR
+The day of the year as a 3-digit number (001-366).
+.TP
+\fB%m\fR
+The month as a 2-digit number (01-12).
+.TP
+\fB%M\fR
+The minute as a 2-digit number (00-59).
+.TP
+\fB%N\fR
+The console name (from the \fBname\fR string).
+.TP
+\fB%P\fR
+The daemon's process ID.
+.TP
+\fB%s\fR
+The number of seconds since the Epoch (1970-01-01 00:00:00 UTC).
+.TP
+\fB%S\fR
+The second as a 2-digit number (00-60).  (The range is up to 60 to allow for
+occasional leap seconds.)
+.TP
+\fB%u\fR
+The day of the week as a number (1-7), with Monday being 1.  See also \fB%w\fR.
+.TP
+\fB%U\fR
+The week number as a 2-digit number (00-53), starting with the first Sunday
+of the year as the first day of week 01; previous days in the new year are
+in week 00.  See also \fB%V\fR and \fB%W\fR.
 .TP
 \fB%V\fR
 The ISO 8601 week number (01-53).  Weeks start on a Monday.  Week 01 is
@@ -319,13 +325,27 @@ first calendar week has fewer than four days, it is counted as the last
 week of the previous year.  See \fB%g\fR or \fB%G\fR for the corresponding
 ISO 8601 week-based year.
 .TP
+\fB%w\fR
+The day of the week as a number (0-6), with Sunday being 0.  See also \fB%u\fR.
+.TP
+\fB%W\fR
+The week number as a 2-digit number (00-53), starting with the first Monday
+of the year as the first day of week 01; previous days in the new year are
+in week 00.  See also \fB%U\fR and \fB%V\fR.
+.TP
+\fB%y\fR
+The year as a 2-digit number without the century.
+.TP
+\fB%Y\fR
+The year as a 4-digit number with the century.
+.TP
 \fB%%\fR
-A literal '%' character.
+A single '%' character.
 .PP
 The console name (\fB%N\fR) and device (\fB%D\fR) specifiers are "sanitized"
 in that non-printable characters and the forward-slash (/) character are
 replaced with underscores.
-
+.PP
 Conversion specifiers within console log filenames are evaluated when the file
 is opened; this occurs when \fBconmand\fR first starts and whenever it receives
 a \fBSIGHUP\fR.
