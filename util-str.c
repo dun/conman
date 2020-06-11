@@ -296,7 +296,7 @@ char * create_time_delta_string(time_t t0, time_t t1)
 {
     long n;
     int years, weeks, days, hours, minutes, seconds;
-    char buf[25];
+    char buf[32];
 
     if (t1 == (time_t) -1) {
         if (time(&t1) == (time_t) -1) {
