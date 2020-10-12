@@ -6,6 +6,7 @@ compiler:
 - gcc
 - clang
 
+
 env:
   global:
   # Encrypted COVERITY_SCAN_TOKEN
