@@ -19,7 +19,6 @@ addons:
   apt:
     packages:
     - libwrap0-dev
-    - colormake
   coverity_scan:
     project:
       name: "dun/conman"
@@ -34,4 +33,4 @@ before_install:
 
 script:
 - test "${TRAVIS_BRANCH}" != 'coverity_scan' || exit 0
-- ./bootstrap && ./configure ${CONFIGURE_OPTS} && colormake -e -k && colormake -e distcheck
+- ./bootstrap && ./configure ${CONFIGURE_OPTS} && make -e -k && make -e distcheck
