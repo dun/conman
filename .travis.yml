@@ -1,5 +1,7 @@
 dist: focal
 
+arch: amd64
+
 language: c
 
 compiler:
@@ -15,6 +17,11 @@ env:
   jobs:
   - CONFIGURE_FLAGS="--enable-debug --with-tcp-wrappers"
   - CONFIGURE_FLAGS="--disable-debug --with-tcp-wrappers"
+
+jobs:
+  include:
+  - arch: arm64
+  - arch: ppc64le
 
 addons:
   apt:
