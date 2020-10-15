@@ -15,8 +15,8 @@ env:
   - CFLAGS="-Werror -pedantic-errors"
   - DISTCHECK_CONFIGURE_FLAGS='${CONFIGURE_FLAGS}'
   jobs:
-  - CONFIGURE_FLAGS="--enable-debug --with-tcp-wrappers"
-  - CONFIGURE_FLAGS="--disable-debug --with-tcp-wrappers"
+  - CONFIGURE_FLAGS="--enable-debug --with-freeipmi --with-tcp-wrappers"
+  - CONFIGURE_FLAGS="--disable-debug --with-freeipmi --with-tcp-wrappers"
 
 jobs:
   include:
@@ -26,6 +26,8 @@ jobs:
 addons:
   apt:
     packages:
+    - libfreeipmi-dev
+    - libipmiconsole-dev
     - libwrap0-dev
   coverity_scan:
     project:
