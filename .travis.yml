@@ -1,6 +1,8 @@
-language: c
+dist: focal
 
-sudo: false
+arch: amd64
+
+language: c
 
 compiler:
 - gcc
@@ -10,16 +12,23 @@ env:
   global:
   # Encrypted COVERITY_SCAN_TOKEN
   - secure: "qtJOKoo/li81EBBHpNMNgHLVW6ORTqQV6qU+dJNRbDc387bTWoKhFC5EInJeAYSbwWU5zCdEGUjQGzFaVYxo/t1pMvtSJkIeyeuHRVNLn5rycizZJESjluaFf0E3IqxxGib4R1v9hqJANkzsb7K/efEuWpgzdeFTJw9tTGsLtaSUFxjGjNJ4v0qyr+w9WEzAg5nwEBPW8SAM5jBMPD4soYJ09IFEoUTGMjT7IQEvD7rs1Yog7w6BKPfKAAAt1r3d4E6f4WWlYCsg2NFrClahe5sZZZ0nhNxOfXjl6mu3vnMwpyx5hyMklpuspdmt4OWP/PKaBMMCa5tcNx82gpbtdCggqUXp6ajki3FcG3o6O8aBW7YS5hLsyqqDa3uPPBjXUB2DW/Oq0HsQn1TVc2byoCh3BuHZJjVG+MLyFYLOvGqdnBBDpAQcZMxCJJc6VhYJAtRpif/J0QjFApaHYmf50Yl3ZywhaRjYVgacXUoXx21VCshIu5CPVocnnvS65FU79BOVWwS9i7/fC2rXYqjwjBaxKEGk9IwkFE+e83cBgiTZEYTNqFNDxWHyTn0Cuw7tf4hQIdIC8/5aOCegWHE/MP6dnEZr3OuF10BF249ddA4fCw1Us6UWzQALnZ4yqhGzx+FLsz9dhpUpj3vnE0INZT9Cz9SlVeLSltZDkyY1/TM="
-  - CFLAGS='-Werror -pedantic-errors'
-  matrix:
-  - CONFIGURE_OPTS='--enable-debug --with-tcp-wrappers'
-  - CONFIGURE_OPTS='--disable-debug --with-tcp-wrappers'
+  - CFLAGS="-Werror -pedantic-errors"
+  - DISTCHECK_CONFIGURE_FLAGS='${CONFIGURE_FLAGS}'
+  jobs:
+  - CONFIGURE_FLAGS="--enable-debug --with-freeipmi --with-tcp-wrappers"
+  - CONFIGURE_FLAGS="--disable-debug --with-freeipmi --with-tcp-wrappers"
+
+jobs:
+  include:
+  - arch: arm64
+  - arch: ppc64le
 
 addons:
   apt:
     packages:
+    - libfreeipmi-dev
+    - libipmiconsole-dev
     - libwrap0-dev
-    - colormake
   coverity_scan:
     project:
       name: "dun/conman"
@@ -30,8 +39,8 @@ addons:
     branch_pattern: coverity_scan
 
 before_install:
-- test "${TRAVIS_BRANCH}" != 'coverity_scan' -o "${TRAVIS_JOB_NUMBER##*.}" = '1' || exit 0
+- test "${TRAVIS_BRANCH}" != "coverity_scan" -o "${TRAVIS_JOB_NUMBER##*.}" = "1" || exit 0
 
 script:
-- test "${TRAVIS_BRANCH}" != 'coverity_scan' || exit 0
-- ./bootstrap && ./configure ${CONFIGURE_OPTS} && colormake -e -k && colormake -e distcheck
+- test "${TRAVIS_BRANCH}" != "coverity_scan" || exit 0
+- ./bootstrap && ./configure ${CONFIGURE_FLAGS} && make -e -k && make -e distcheck

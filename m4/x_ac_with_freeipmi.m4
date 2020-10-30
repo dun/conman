@@ -25,7 +25,7 @@ AC_DEFUN_ONCE([X_AC_WITH_FREEIPMI],
         [have_freeipmi=yes])])
   AS_IF(
     [test "x${have_freeipmi}" = xyes],
-    [AC_SUBST([FREEIPMIOBJS], [server-ipmi.\$\(OBJEXT\)])
+    [AC_SUBST([FREEIPMIOBJS], [conmand-server-ipmi.\$\(OBJEXT\)])
       AC_SUBST([FREEIPMILIBS], [-lipmiconsole])
       AC_DEFINE([HAVE_IPMICONSOLE_H], [1],
         [Define to 1 if you have the <ipmiconsole.h> header file.])
