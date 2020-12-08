@@ -1,6 +1,5 @@
 [![GitHub Release](https://img.shields.io/github/release/dun/conman.svg)](https://github.com/dun/conman/releases/latest)
 [![Packaging status](https://repology.org/badge/tiny-repos/conman.svg)](https://repology.org/metapackage/conman)
-[![Build Status](https://travis-ci.org/dun/conman.svg?branch=master)](https://travis-ci.org/dun/conman)
 [![Coverity Scan](https://scan.coverity.com/projects/dun-conman/badge.svg)](https://scan.coverity.com/projects/dun-conman)
 
 ### ConMan: The Console Manager
