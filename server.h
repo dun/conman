@@ -198,6 +198,9 @@ typedef struct ipmi_opt {                               /* IPMI OBJ OPTIONS: */
     int              privilegeLevel;                    /*  auth priv level  */
     int              cipherSuite;                       /*  cipher suite id  */
     unsigned int     workaroundFlags;                   /*  workaround flags */
+    unsigned         isUsernameSet:1;  /* check libipmiconsole.conf if unset */
+    unsigned         isPasswordSet:1;  /* check libipmiconsole.conf if unset */
+    unsigned         isKgSet:1;        /* check libipmiconsole.conf if unset */
 } ipmiopt_t;
 
 typedef struct ipmiconsole_ctx ipmictx_t;

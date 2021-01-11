@@ -164,13 +164,14 @@ be overridden on a per-console basis by specifying the \fBCONSOLE\fR
 the "\-\-with\-freeipmi" option.
 .br
 .sp
-The \fBIPMIOPTS\fR string is parsed into comma-delimited substrings where each
-substring is of the form "\fIX\fR:\fIVALUE\fR".  "\fIX\fR" is a
-single-character case-insensitive key specifying the option type, and
+The \fBIPMIOPTS\fR string is parsed into comma-delimited substrings
+where each substring is of the form "\fIX\fR:\fIVALUE\fR".  "\fIX\fR" is
+a single-character case-insensitive key specifying the option type, and
 "\fIVALUE\fR" is its corresponding value.  The IPMI default will be used if
-either "\fIVALUE\fR" is omitted from the substring ("\fIX\fR:") or the
-substring is omitted altogether.  Note that since the \fBIPMIOPTS\fR string is
-delimited by commas, substring values cannot contain commas.
+a key is not specified.  The \fB/etc/freeipmi/libipmiconsole.conf\fR file
+can contain alternate default values; see \fBlibipmiconsole.conf(5)\fR.
+Note that since the \fBIPMIOPTS\fR string is delimited by commas, substring
+values cannot contain commas.
 .br
 .sp
 The valid \fBIPMIOPTS\fR substrings include the following (in any order):

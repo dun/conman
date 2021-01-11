@@ -375,6 +375,7 @@ static int process_ipmi_opt_username(
             return(-1);
         }
     }
+    iopts->isUsernameSet = 1;
     return(0);
 }
 
@@ -413,6 +414,7 @@ static int process_ipmi_opt_password(
             return(-1);
         }
     }
+    iopts->isPasswordSet = 1;
     return(0);
 }
 
@@ -453,6 +455,7 @@ static int process_ipmi_opt_k_g(
         }
         iopts->kgLen = n;
     }
+    iopts->isKgSet = 1;
     return(0);
 }
 
@@ -760,11 +763,21 @@ obj_t * create_ipmi_obj(server_conf_t *conf, char *name,
      */
     list_append(conf->objs, ipmi);
 
-    DPRINTF((10,
-        " IPMI [%s] H:%s U:%s P:%s K:%s L:%d C:%d W:0x%X\n",
-        ipmi->name, ipmi->aux.ipmi.host, ipmi->aux.ipmi.iconf.username,
-        ipmi->aux.ipmi.iconf.password, ipmi->aux.ipmi.iconf.kg,
-        ipmi->aux.ipmi.iconf.privilegeLevel, ipmi->aux.ipmi.iconf.cipherSuite,
+    DPRINTF((11,
+        "Created IPMI [%s] H:%s U:%s P:%s K:%s L:%d C:%d W:0x%X\n",
+        ipmi->name,
+        ipmi->aux.ipmi.host,
+        (ipmi->aux.ipmi.iconf.isUsernameSet
+            ? ipmi->aux.ipmi.iconf.username
+            : "[D]"),
+        (ipmi->aux.ipmi.iconf.isPasswordSet
+            ? ipmi->aux.ipmi.iconf.password
+            : "[D]"),
+        (ipmi->aux.ipmi.iconf.isKgSet
+            ? (char *) ipmi->aux.ipmi.iconf.kg
+            : "[D]"),
+        ipmi->aux.ipmi.iconf.privilegeLevel,
+        ipmi->aux.ipmi.iconf.cipherSuite,
         ipmi->aux.ipmi.iconf.workaroundFlags));
     return(ipmi);
 }
@@ -933,10 +946,18 @@ static int create_ipmi_ctx(obj_t *ipmi)
     struct ipmiconsole_protocol_config protocol_config;
     struct ipmiconsole_engine_config engine_config;
 
-    ipmi_config.username = ipmi->aux.ipmi.iconf.username;
-    ipmi_config.password = ipmi->aux.ipmi.iconf.password;
-    ipmi_config.k_g = ipmi->aux.ipmi.iconf.kg;
-    ipmi_config.k_g_len = ipmi->aux.ipmi.iconf.kgLen;
+    ipmi_config.username = ipmi->aux.ipmi.iconf.isUsernameSet
+        ? ipmi->aux.ipmi.iconf.username
+        : NULL;
+    ipmi_config.password = ipmi->aux.ipmi.iconf.isPasswordSet
+        ? ipmi->aux.ipmi.iconf.password
+        : NULL;
+    ipmi_config.k_g = ipmi->aux.ipmi.iconf.isKgSet
+        ? ipmi->aux.ipmi.iconf.kg
+        : NULL;
+    ipmi_config.k_g_len = ipmi->aux.ipmi.iconf.isKgSet
+        ? ipmi->aux.ipmi.iconf.kgLen
+        : 0;
     ipmi_config.privilege_level = ipmi->aux.ipmi.iconf.privilegeLevel;
     ipmi_config.cipher_suite_id = ipmi->aux.ipmi.iconf.cipherSuite;
     ipmi_config.workaround_flags = ipmi->aux.ipmi.iconf.workaroundFlags;
