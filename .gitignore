@@ -6,7 +6,10 @@
 /TAGS
 /aclocal.m4
 /autom4te.cache
-/build-aux
+/build-aux/compile
+/build-aux/depcomp
+/build-aux/install-sh
+/build-aux/missing
 /config.cache
 /config.h
 /config.h.in
@@ -14,6 +17,7 @@
 /config.status
 /configure
 /conman
+/conman.spec
 /conmand
 /etc/conman.init
 /etc/conman.logrotate

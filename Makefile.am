@@ -17,7 +17,9 @@ EXTRA_DIST = \
 	README.md \
 	THANKS \
 	bootstrap \
-	conman.spec \
+	build-aux/gen-date \
+	build-aux/gen-version \
+	conman.spec.in \
 	etc/conman.conf \
 	etc/conman.init.in \
 	etc/conman.logrotate.in \
@@ -28,6 +30,7 @@ EXTRA_DIST = \
 	man/conmand.8.in
 
 SUBSTITUTE_FILES = \
+	conman.spec \
 	etc/conman.init \
 	etc/conman.logrotate \
 	etc/conman.service \
@@ -36,6 +39,12 @@ SUBSTITUTE_FILES = \
 	man/conman.conf.5 \
 	man/conmand.8
 
+dist-hook: conman.spec
+	$(INSTALL_DATA) conman.spec '$(distdir)/conman.spec'
+	echo $(VERSION) > '$(distdir)/.dist-version'
+	echo $(DATE) > '$(distdir)/.dist-date'
+
+conman.spec: conman.spec.in
 etc/conman.init: etc/conman.init.in
 etc/conman.logrotate: etc/conman.logrotate.in
 etc/conman.service: etc/conman.service.in
@@ -267,6 +276,3 @@ MAINTAINERCLEANFILES = \
 	build-aux/missing \
 	config.h.in \
 	configure
-
-maintainer-clean-local:
-	-rmdir build-aux/ 2>/dev/null || :

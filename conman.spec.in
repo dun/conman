@@ -1,5 +1,5 @@
 Name:		conman
-Version:	0.3.0
+Version:	@VERSION@
 Release:	1%{?dist}
 
 Summary:	ConMan: The Console Manager

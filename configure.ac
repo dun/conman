@@ -1,8 +1,8 @@
 # ConMan configure.ac
 
 AC_PREREQ([2.61])
-AC_INIT([ConMan], [0.3.0])
-AC_SUBST([DATE], ["2018-09-15"])
+AC_INIT([ConMan], m4_esyscmd([build-aux/gen-version]))
+AC_SUBST([DATE], m4_esyscmd([build-aux/gen-date]))
 AC_SUBST([CONMAN_CONF], ["\${sysconfdir}/conman.conf"])
 AC_SUBST([CONMAN_HOST], ["127.0.0.1"])
 AC_SUBST([CONMAN_PORT], ["7890"])
