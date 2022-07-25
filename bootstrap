@@ -1,3 +1,4 @@
 #!/bin/sh
 set -e
 autoreconf --force --install --verbose --warnings=all
+sed -ne "s/^PACKAGE_STRING='\([^']*\)'$/\1/p" configure
