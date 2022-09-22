@@ -2,13 +2,21 @@ Name:		conman
 Version:	@VERSION@
 Release:	1%{?dist}
 
+# Disable source file verification by default.
+%bcond_with verify
+
 Summary:	ConMan: The Console Manager
 License:	GPLv3+
 URL:		https://dun.github.io/conman/
 Source0:	https://github.com/dun/conman/releases/download/%{name}-%{version}/%{name}-%{version}.tar.xz
+%if %{with verify}
+Source1:	https://github.com/dun/conman/releases/download/%{name}-%{version}/%{name}-%{version}.tar.xz.asc
+Source2:	https://github.com/dun.gpg
+%endif
 
 BuildRequires:	freeipmi-devel >= 1.0.4
 BuildRequires:	gcc
+BuildRequires:	gnupg2
 BuildRequires:	make
 BuildRequires:	%{?el7:systemd}%{!?el7:systemd-rpm-macros}
 Requires:	expect
@@ -37,6 +45,9 @@ Features:
 - Executing Expect scripts across multiple consoles in parallel
 
 %prep
+%if %{with verify}
+%{gpgverify} --keyring='%{SOURCE2}' --signature='%{SOURCE1}' --data='%{SOURCE0}'
+%endif
 %setup -q
 
 %build
