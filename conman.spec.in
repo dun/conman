@@ -51,7 +51,7 @@ Features:
 %setup -q
 
 %build
-%configure
+%configure runstatedir=%{_rundir}
 %make_build
 
 %install

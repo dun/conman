@@ -12,6 +12,8 @@ AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([server.c])
 
+X_AC_RUNSTATEDIR
+
 AM_INIT_AUTOMAKE([1.11 foreign dist-xz no-dist-gzip])
 AM_MAINTAINER_MODE
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
