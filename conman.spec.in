@@ -14,9 +14,7 @@ BuildRequires:	%{?el7:systemd}%{!?el7:systemd-rpm-macros}
 Requires:	expect
 Requires:	logrotate
 Requires:	perl
-Requires(post): systemd
-Requires(preun): systemd
-Requires(postun): systemd
+%{?systemd_requires}
 
 %description
 ConMan is a serial console management program designed to support a large
