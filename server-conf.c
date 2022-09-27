@@ -345,7 +345,7 @@ void process_cmdline(server_conf_t *conf, int argc, char *argv[])
             exit(0);
         case 'p':
             if ((conf->port = atoi(optarg)) <= 0) {
-                log_err(0, "CMDLINE: invalid port \"%d\"", conf->port);
+                log_err(0, "CMDLINE: invalid port \"%s\"", optarg);
             }
             break;
         case 'P':
