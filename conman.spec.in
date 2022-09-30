@@ -70,7 +70,6 @@ rm -f %{buildroot}%{_sysconfdir}/sysconfig/conman
 %systemd_postun_with_restart conman.service
 
 %files
-%{!?_licensedir:%global license %doc}
 %license COPYING
 %doc AUTHORS
 %doc DISCLAIMER.LLNS
