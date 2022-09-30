@@ -297,6 +297,7 @@ CLEANFILES = \
 
 DISTCLEANFILES = \
 	config.h.in~ \
+	configure~ \
 	$(PACKAGE)-*.tar*
 
 distclean-local:
