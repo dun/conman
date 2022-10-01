@@ -10,7 +10,7 @@ Source0:	https://github.com/dun/conman/releases/download/%{name}-%{version}/%{na
 BuildRequires:	freeipmi-devel >= 1.0.4
 BuildRequires:	gcc
 BuildRequires:	make
-BuildRequires:	systemd
+BuildRequires:	%{?el7:systemd}%{!?el7:systemd-rpm-macros}
 Requires:	expect
 Requires:	logrotate
 Requires:	perl
