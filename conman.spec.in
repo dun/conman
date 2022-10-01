@@ -39,10 +39,10 @@ Features:
 
 %build
 %configure
-make %{?_smp_mflags}
+%make_build
 
 %install
-make install DESTDIR="%{buildroot}"
+%make_install
 rm -f %{buildroot}%{_sysconfdir}/init.d/conman
 rm -f %{buildroot}%{_sysconfdir}/default/conman
 rm -f %{buildroot}%{_sysconfdir}/sysconfig/conman
