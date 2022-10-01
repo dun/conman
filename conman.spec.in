@@ -43,9 +43,9 @@ make %{?_smp_mflags}
 
 %install
 make install DESTDIR="%{buildroot}"
-rm -f %{buildroot}/%{_sysconfdir}/init.d/conman
-rm -f %{buildroot}/%{_sysconfdir}/default/conman
-rm -f %{buildroot}/%{_sysconfdir}/sysconfig/conman
+rm -f %{buildroot}%{_sysconfdir}/init.d/conman
+rm -f %{buildroot}%{_sysconfdir}/default/conman
+rm -f %{buildroot}%{_sysconfdir}/sysconfig/conman
 
 %post
 %systemd_post conman.service
