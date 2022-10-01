@@ -3,7 +3,6 @@ Version:	@VERSION@
 Release:	1%{?dist}
 
 Summary:	ConMan: The Console Manager
-Group:		Applications/System
 License:	GPLv3+
 URL:		https://dun.github.io/conman/
 Source0:	https://github.com/dun/conman/releases/download/%{name}-%{version}/%{name}-%{version}.tar.xz
@@ -43,15 +42,10 @@ Features:
 make %{?_smp_mflags}
 
 %install
-rm -rf "%{buildroot}"
-mkdir -p "%{buildroot}"
 make install DESTDIR="%{buildroot}"
 rm -f %{buildroot}/%{_sysconfdir}/init.d/conman
 rm -f %{buildroot}/%{_sysconfdir}/default/conman
 rm -f %{buildroot}/%{_sysconfdir}/sysconfig/conman
-
-%clean
-rm -rf "%{buildroot}"
 
 %post
 %systemd_post conman.service
