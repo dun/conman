@@ -219,6 +219,9 @@ substitute = $(SED) \
 	-e 's|[@]sbindir[@]|$(sbindir)|g' \
 	-e 's|[@]sharedstatedir[@]|$(sharedstatedir)|g' \
 	-e 's|[@]sysconfdir[@]|$(sysconfdir)|g' \
+	-e 's|[@]sysconfigdir[@]|$(sysconfigdir)|g' \
+	-e 's|[@]systemdunitdir[@]|$(systemdunitdir)|g' \
+	-e 's|[@]sysvinitddir[@]|$(sysvinitddir)|g' \
 	-e 's|[@]CONMAN_CONF[@]|$(CONMAN_CONF)|g' \
 	-e 's|[@]CONMAN_HOST[@]|$(CONMAN_HOST)|g' \
 	-e 's|[@]CONMAN_PORT[@]|$(CONMAN_PORT)|g' \
@@ -226,7 +229,10 @@ substitute = $(SED) \
 	-e 's|[@]PACKAGE[@]|$(PACKAGE)|g' \
 	-e 's|[@]VERSION[@]|$(VERSION)|g'
 
-install-data-local: install-logrotate install-systemd install-sysvinit
+install-data-hook: install-logrotate install-systemd install-sysvinit
+
+uninstall-local: uninstall-systemd uninstall-sysvinit
+	-cd "$(DESTDIR)$(sysconfdir)/logrotate.d" && rm -f $(PACKAGE)
 
 install-logrotate: etc/conman.logrotate
 	$(MKDIR_P) $(DESTDIR)$(sysconfdir)/logrotate.d
@@ -234,27 +240,55 @@ install-logrotate: etc/conman.logrotate
 	  $(DESTDIR)$(sysconfdir)/logrotate.d/$(PACKAGE)
 
 install-systemd: etc/conman.service
-	$(MKDIR_P) $(DESTDIR)$(prefix)/lib/systemd/system
-	$(INSTALL_DATA) $(top_builddir)/etc/conman.service \
-	  $(DESTDIR)$(prefix)/lib/systemd/system/$(PACKAGE).service
+	@if test 'x$(systemdunitdir)' != x; then \
+	  echo $(MKDIR_P) "'$(DESTDIR)$(systemdunitdir)'"; \
+	  $(MKDIR_P) '$(DESTDIR)$(systemdunitdir)'; \
+	  echo $(INSTALL_DATA) "'$(top_builddir)/etc/conman.service'" \
+	      "'$(DESTDIR)$(systemdunitdir)/$(PACKAGE).service'"; \
+	  $(INSTALL_DATA) '$(top_builddir)/etc/conman.service' \
+	      '$(DESTDIR)$(systemdunitdir)/$(PACKAGE).service'; \
+	fi
+
+uninstall-systemd:
+	@if test 'x$(systemdunitdir)' != x; then \
+	  echo " ( cd '$(DESTDIR)$(systemdunitdir)'" \
+	      "&& rm -f '$(PACKAGE).service' )"; \
+	  ( cd '$(DESTDIR)$(systemdunitdir)' && rm -f '$(PACKAGE).service' ); \
+	fi
 
 install-sysvinit: etc/conman.init install-sysvinit-conf
-	$(MKDIR_P) $(DESTDIR)$(sysconfdir)/init.d
-	$(INSTALL_SCRIPT) $(top_builddir)/etc/conman.init \
-	  $(DESTDIR)$(sysconfdir)/init.d/$(PACKAGE)
+	@if test 'x$(sysvinitddir)' != x; then \
+	  echo $(MKDIR_P) "'$(DESTDIR)$(sysvinitddir)'"; \
+	  $(MKDIR_P) '$(DESTDIR)$(sysvinitddir)'; \
+	  echo $(INSTALL_SCRIPT) "'$(top_builddir)/etc/conman.init'" \
+	      "'$(DESTDIR)$(sysvinitddir)/$(PACKAGE)'"; \
+	  $(INSTALL_SCRIPT) '$(top_builddir)/etc/conman.init' \
+	      '$(DESTDIR)$(sysvinitddir)/$(PACKAGE)'; \
+	fi
+
+uninstall-sysvinit: uninstall-sysvinit-conf
+	@if test 'x$(sysvinitddir)' != x; then \
+	  echo " ( cd '$(DESTDIR)$(sysvinitddir)' && rm -f '$(PACKAGE)' )"; \
+	  ( cd '$(DESTDIR)$(sysvinitddir)' && rm -f '$(PACKAGE)' ); \
+	fi
 
 install-sysvinit-conf: etc/conman.sysconfig
-	test -d /etc/sysconfig && d=sysconfig || d=default; \
-	  $(MKDIR_P) $(DESTDIR)$(sysconfdir)/$${d}; \
-	  $(INSTALL_DATA) $(top_builddir)/etc/conman.sysconfig \
-	    $(DESTDIR)$(sysconfdir)/$${d}/$(PACKAGE)
+	@if test 'x$(sysvinitddir)' != x \
+	    && test 'x$(sysconfigdir)' != x; then \
+	  echo $(MKDIR_P) "'$(DESTDIR)$(sysconfigdir)'"; \
+	  $(MKDIR_P) '$(DESTDIR)$(sysconfigdir)'; \
+	  echo $(INSTALL_DATA) "'$(top_builddir)/etc/conman.sysconfig'" \
+	      "'$(DESTDIR)$(sysconfigdir)/$(PACKAGE)'"; \
+	  $(INSTALL_DATA) '$(top_builddir)/etc/conman.sysconfig' \
+	      '$(DESTDIR)$(sysconfigdir)/$(PACKAGE)'; \
+	fi
 
-uninstall-local:
-	-cd "$(DESTDIR)$(sysconfdir)/logrotate.d" && rm -f $(PACKAGE)
-	-cd "$(DESTDIR)$(prefix)/lib/systemd/system" && rm -f $(PACKAGE).service
-	-cd "$(DESTDIR)$(sysconfdir)/init.d" && rm -f $(PACKAGE)
-	-test -d /etc/sysconfig && d=sysconfig || d=default; \
-	  cd "$(DESTDIR)$(sysconfdir)/$${d}" && rm -f $(PACKAGE)
+uninstall-sysvinit-conf:
+	@if test 'x$(sysvinitddir)' != x \
+	    && test 'x$(sysconfigdir)' != x; then \
+	  echo " ( cd '$(DESTDIR)$(sysconfigdir)' && rm -f '$(PACKAGE)' )"; \
+	  ( cd '$(DESTDIR)$(sysconfigdir)' && rm -f '$(PACKAGE)' ); \
+	fi
 
 CLEANFILES = \
 	$(SUBSTITUTE_FILES)

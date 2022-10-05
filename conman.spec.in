@@ -51,14 +51,11 @@ Features:
 %setup -q
 
 %build
-%configure runstatedir=%{_rundir}
+%configure runstatedir=%{_rundir} --with-systemdunitdir=%{_unitdir}
 %make_build
 
 %install
 %make_install
-rm -f %{buildroot}%{_sysconfdir}/init.d/conman
-rm -f %{buildroot}%{_sysconfdir}/default/conman
-rm -f %{buildroot}%{_sysconfdir}/sysconfig/conman
 
 %post
 %systemd_post conman.service
