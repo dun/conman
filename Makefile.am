@@ -231,13 +231,15 @@ substitute = $(SED) \
 
 install-data-hook: install-logrotate install-systemd install-sysvinit
 
-uninstall-local: uninstall-systemd uninstall-sysvinit
-	-cd "$(DESTDIR)$(sysconfdir)/logrotate.d" && rm -f $(PACKAGE)
+uninstall-local: uninstall-logrotate uninstall-systemd uninstall-sysvinit
 
 install-logrotate: etc/conman.logrotate
-	$(MKDIR_P) $(DESTDIR)$(sysconfdir)/logrotate.d
-	$(INSTALL_DATA) $(top_builddir)/etc/conman.logrotate \
-	  $(DESTDIR)$(sysconfdir)/logrotate.d/$(PACKAGE)
+	$(MKDIR_P) '$(DESTDIR)$(sysconfdir)/logrotate.d'
+	$(INSTALL_DATA) '$(top_builddir)/etc/conman.logrotate' \
+	    '$(DESTDIR)$(sysconfdir)/logrotate.d/$(PACKAGE)'
+
+uninstall-logrotate:
+	( cd '$(DESTDIR)$(sysconfdir)/logrotate.d' && rm -f '$(PACKAGE)' )
 
 install-systemd: etc/conman.service
 	@if test 'x$(systemdunitdir)' != x; then \
