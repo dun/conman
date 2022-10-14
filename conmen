@@ -37,8 +37,6 @@ $SIG{TERM} = exit_handler;
 
 $ENV{DISPLAY}
     or die("ERROR: DISPLAY not set.\n");
-!system("which conman 1>/dev/null 2>&1")
-    or die("ERROR: conman not found in PATH.\n");
 !system("which xterm 1>/dev/null 2>&1")
     or die("ERROR: xterm not found in PATH.\n");
 
