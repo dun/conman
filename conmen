@@ -37,10 +37,10 @@ $SIG{TERM} = exit_handler;
 
 $ENV{DISPLAY}
     or die("ERROR: DISPLAY not set.\n");
-!system("which xterm 1>/dev/null 2>&1")
+!system("command -v xterm 1>/dev/null 2>&1")
     or die("ERROR: xterm not found in PATH.\n");
 
-$have_genders = !system("which nodeattr 1>/dev/null 2>&1");
+$have_genders = !system("command -v nodeattr 1>/dev/null 2>&1");
 
 print_usage() if (!@ARGV || !getopts('d:e:fg:G:hjLmqrV') || $opt_h);
 @patterns = @ARGV;
