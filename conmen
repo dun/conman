@@ -35,8 +35,6 @@ use Getopt::Std;
 
 $SIG{TERM} = exit_handler;
 
-$ENV{PATH} = "/usr/bin:/usr/local/bin:/usr/bin/X11:/usr/X11R6/bin:/usr/X/bin";
-
 $ENV{DISPLAY}
     or die("ERROR: DISPLAY not set.\n");
 !system("which conman 1>/dev/null 2>&1")
