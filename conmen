@@ -24,9 +24,9 @@
 # You should have received a copy of the GNU General Public License along
 # with ConMan.  If not, see <http://www.gnu.org/licenses/>.
 ###############################################################################
-# ConMen spawns an xterm for each of the selected consoles
+# ConMen spawns a terminal emulator for each of the selected consoles
 #   and uses the current tty as the broadcast window.
-# All of the spawned xterm clients are terminated when the
+# All of the spawned client windows are terminated when the
 #   broadcast window session is closed.
 ###############################################################################
 
@@ -37,12 +37,10 @@ $SIG{TERM} = exit_handler;
 
 $ENV{DISPLAY}
     or die("ERROR: DISPLAY not set.\n");
-!system("command -v xterm 1>/dev/null 2>&1")
-    or die("ERROR: xterm not found in PATH.\n");
 
 $have_genders = !system("command -v nodeattr 1>/dev/null 2>&1");
 
-print_usage() if (!@ARGV || !getopts('d:e:fg:G:hjLmqrV') || $opt_h);
+print_usage() if (!@ARGV || !getopts('d:e:fg:G:hjLmqrT:V') || $opt_h);
 @patterns = @ARGV;
 exec("conman", "-L") or die("ERROR: Cannot exec conman: $!\n") if ($opt_L);
 exec("conman", "-V") or die("ERROR: Cannot exec conman: $!\n") if ($opt_V);
@@ -65,7 +63,9 @@ push(@conman, ("-d", $opt_d)) if ($opt_d);
 push(@conman, ("-e", $opt_e)) if ($opt_e);
 push(@conman, ("-r")) if ($opt_r);
 
-@xterm = ("xterm");
+@xterm = ($opt_T || "xterm");
+!system("command -v $xterm[0] 1>/dev/null 2>&1")
+    or die("ERROR: Cannot exec $xterm[0]\n");
 push(@xterm, ("-geometry", $opt_G)) if ($opt_G);
 
 query_consoles();
@@ -98,13 +98,14 @@ sub print_usage
     print("  -f        Force connections (console-stealing).\n");
     print("  -g QUERY  Specify nodes matching a genders nodeattr query.\n")
         if ($have_genders);
-    print("  -G SIZE   Specify xterm geometry (eg, 80x24).\n");
+    print("  -G SIZE   Specify terminal emulator geometry (\"80x24\").\n");
     print("  -h        Display this help.\n");
     print("  -j        Join connections (console-sharing).\n");
     print("  -L        Display license information.\n");
     print("  -m        Monitor connections (read-only).\n");
     print("  -q        Query server about specified console(s).\n");
     print("  -r        Match console names via regex instead of globbing.\n");
+    print("  -T PROG   Specify terminal emulator. [xterm]\n");
     print("  -V        Display version information.\n");
     print("\n");
     exit(0);
@@ -151,11 +152,11 @@ sub spawn_consoles
     foreach $console (@consoles) {
         $name = "ConMan: $console";
         if (!defined($pid = fork)) {
-            die("ERROR: Cannot fork xterm for console $console: $!\n");
+            die("ERROR: Cannot fork $xterm[0] for console $console: $!\n");
         } elsif ($pid == 0) {
             local $SIG{TERM} = 'DEFAULT';
             exec(@xterm, "-T", $name, "-e", @conman, $mode, $console)
-                or die("ERROR: Cannot exec xterm for console $console: $!\n");
+                or die("ERROR: Cannot exec $xterm[0] for console $console: $!\n");
         } else {
             push(@pids, $pid);
         }
@@ -163,10 +164,10 @@ sub spawn_consoles
     select(undef, undef, undef, 1.0);
 
     if (!defined($pid = fork)) {
-        die("ERROR: Cannot fork xterm for console broadcast: $!\n");
+        die("ERROR: Cannot fork $xterm[0] for console broadcast: $!\n");
     } elsif ($pid == 0) {
         exec(@conman, "-b", "-j", @patterns)
-            or die("ERROR: Cannot exec xterm for console broadcast: $!\n");
+            or die("ERROR: Cannot exec $xterm[0] for console broadcast: $!\n");
     } else {
         waitpid($pid, 0);
     }
