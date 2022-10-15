@@ -124,11 +124,11 @@ sub query_consoles
         }
     }
 
-    die("ERROR: Cannot fork query: $!\n")
+    die("ERROR: Cannot fork process for console query: $!\n")
         unless defined($pid = open(QUERY, "-|"));
     if ($pid == 0) {
         exec(@conman, "-q", @patterns)
-            or die("ERROR: Cannot exec query: $!\n");
+            or die("ERROR: Cannot exec conman for console query: $!\n");
     } else {
         chomp(@consoles = <QUERY>);
         close(QUERY);
