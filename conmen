@@ -163,8 +163,6 @@ sub spawn_consoles
             push(@pids, $pid);
         }
     }
-    select(undef, undef, undef, 1.0);
-
     if (!defined($pid = fork)) {
         die("ERROR: Cannot fork $xterm[0] for console broadcast: $!\n");
     } elsif ($pid == 0) {
