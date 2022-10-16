@@ -33,6 +33,8 @@
 use Getopt::Std;
 
 
+$default_xterm = "xterm";
+
 $SIG{TERM} = exit_handler;
 
 $ENV{DISPLAY}
@@ -63,7 +65,7 @@ push(@conman, ("-d", $opt_d)) if ($opt_d);
 push(@conman, ("-e", $opt_e)) if ($opt_e);
 push(@conman, ("-r")) if ($opt_r);
 
-@xterm = ($opt_T || "xterm");
+@xterm = ($opt_T || $default_xterm);
 !system("command -v $xterm[0] 1>/dev/null 2>&1")
     or die("ERROR: Cannot exec $xterm[0]\n");
 push(@xterm, ("-geometry", $opt_G)) if ($opt_G);
@@ -105,7 +107,7 @@ sub print_usage
     print("  -m        Monitor connections (read-only).\n");
     print("  -q        Query server about specified console(s).\n");
     print("  -r        Match console names via regex instead of globbing.\n");
-    print("  -T PROG   Specify terminal emulator. [xterm]\n");
+    print("  -T PROG   Specify terminal emulator. [$default_xterm]\n");
     print("  -V        Display version information.\n");
     print("\n");
     exit(0);
