@@ -2,33 +2,6 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-EXTRA_DIST = \
-	.gitignore \
-	AUTHORS \
-	COPYING \
-	DISCLAIMER.LLNS \
-	DISCLAIMER.UC \
-	FAQ \
-	INSTALL \
-	KEYS \
-	NEWS \
-	PLATFORMS \
-	README \
-	README.md \
-	THANKS \
-	bootstrap \
-	build-aux/gen-date \
-	build-aux/gen-version \
-	conman.spec.in \
-	etc/conman.conf \
-	etc/conman.init.in \
-	etc/conman.logrotate.in \
-	etc/conman.service.in \
-	etc/conman.sysconfig.in \
-	man/conman.1.in \
-	man/conman.conf.5.in \
-	man/conmand.8.in
-
 SUBSTITUTE_FILES = \
 	conman.spec \
 	etc/conman.init \
@@ -38,11 +11,6 @@ SUBSTITUTE_FILES = \
 	man/conman.1 \
 	man/conman.conf.5 \
 	man/conmand.8
-
-dist-hook: conman.spec
-	$(INSTALL_DATA) conman.spec '$(distdir)/conman.spec'
-	echo $(VERSION) > '$(distdir)/.dist-version'
-	echo $(DATE) > '$(distdir)/.dist-date'
 
 conman.spec: conman.spec.in
 etc/conman.init: etc/conman.init.in
@@ -291,6 +259,38 @@ uninstall-sysvinit-conf:
 	  echo " ( cd '$(DESTDIR)$(sysconfigdir)' && rm -f '$(PACKAGE)' )"; \
 	  ( cd '$(DESTDIR)$(sysconfigdir)' && rm -f '$(PACKAGE)' ); \
 	fi
+
+EXTRA_DIST = \
+	.gitignore \
+	AUTHORS \
+	COPYING \
+	DISCLAIMER.LLNS \
+	DISCLAIMER.UC \
+	FAQ \
+	INSTALL \
+	KEYS \
+	NEWS \
+	PLATFORMS \
+	README \
+	README.md \
+	THANKS \
+	bootstrap \
+	build-aux/gen-date \
+	build-aux/gen-version \
+	conman.spec.in \
+	etc/conman.conf \
+	etc/conman.init.in \
+	etc/conman.logrotate.in \
+	etc/conman.service.in \
+	etc/conman.sysconfig.in \
+	man/conman.1.in \
+	man/conman.conf.5.in \
+	man/conmand.8.in
+
+dist-hook: conman.spec
+	$(INSTALL_DATA) conman.spec '$(distdir)/conman.spec'
+	echo $(VERSION) > '$(distdir)/.dist-version'
+	echo $(DATE) > '$(distdir)/.dist-date'
 
 CLEANFILES = \
 	$(SUBSTITUTE_FILES)
