@@ -288,6 +288,7 @@ T_LOG_DRIVER = \
 	env AM_TAP_AWK='$(AWK)' $(SHELL) $(top_srcdir)/build-aux/tap-driver.sh
 
 TESTS = \
+	test/0001-basic.t \
 	# End of TESTS
 
 EXTRA_DIST = \
@@ -318,6 +319,7 @@ EXTRA_DIST = \
 	man/conman.conf.5.in \
 	man/conmand.8.in \
 	test/lib-sharness \
+	test/sharness.d \
 	test/sharness.sh \
 	$(TESTS) \
 	# End of EXTRA_DIST
