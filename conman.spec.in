@@ -2,6 +2,9 @@ Name:		conman
 Version:	@VERSION@
 Release:	1%{?dist}
 
+# Disable test suite by default.
+%bcond_with check
+
 # Disable source file verification by default.
 %bcond_with verify
 
@@ -18,6 +21,7 @@ BuildRequires:	freeipmi-devel >= 1.0.4
 BuildRequires:	gcc
 BuildRequires:	gnupg2
 BuildRequires:	make
+BuildRequires:	procps
 BuildRequires:	%{?el7:systemd}%{!?el7:systemd-rpm-macros}
 Requires:	expect
 Requires:	logrotate
@@ -53,6 +57,11 @@ Features:
 %build
 %configure runstatedir=%{_rundir} --with-systemdunitdir=%{_unitdir}
 %make_build
+
+%check
+%if %{with check}
+%make_build check root=/tmp/conman-test-$$ verbose=t VERBOSE=t
+%endif
 
 %install
 %make_install
