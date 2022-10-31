@@ -10,6 +10,7 @@
 /build-aux/depcomp
 /build-aux/install-sh
 /build-aux/missing
+/build-aux/test-driver
 /config.cache
 /config.h
 /config.h.in
@@ -25,3 +26,7 @@
 /etc/conman.sysconfig
 /man/*.[1-9]
 /stamp-h1
+/test-results
+/test-suite.log
+/test/*.log
+/test/*.trs

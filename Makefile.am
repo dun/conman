@@ -282,6 +282,11 @@ uninstall-sysvinit-conf:
 	  ( cd '$(DESTDIR)$(sysconfigdir)' && rm -f '$(PACKAGE)' ); \
 	fi
 
+TEST_EXTENSIONS = .t
+
+TESTS = \
+	# End of TESTS
+
 EXTRA_DIST = \
 	.gitignore \
 	AUTHORS \
@@ -308,6 +313,9 @@ EXTRA_DIST = \
 	man/conman.1.in \
 	man/conman.conf.5.in \
 	man/conmand.8.in \
+	test/lib-sharness \
+	test/sharness.sh \
+	$(TESTS) \
 	# End of EXTRA_DIST
 
 dist-hook: conman.spec
@@ -318,6 +326,10 @@ dist-hook: conman.spec
 CLEANFILES = \
 	$(SUBSTITUTE_FILES) \
 	# End of CLEANFILES
+
+clean-local:
+	-rm -rf test-results
+	-rm -rf trash*directory.*
 
 DISTCLEANFILES = \
 	config.h.in~ \
@@ -336,6 +348,7 @@ MAINTAINERCLEANFILES = \
 	build-aux/depcomp \
 	build-aux/install-sh \
 	build-aux/missing \
+	build-aux/test-driver \
 	config.h.in \
 	configure \
 	# End of MAINTAINERCLEANFILES
