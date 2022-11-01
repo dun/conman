@@ -10,7 +10,8 @@ SUBSTITUTE_FILES = \
 	etc/conman.sysconfig \
 	man/conman.1 \
 	man/conman.conf.5 \
-	man/conmand.8
+	man/conmand.8 \
+	# End of SUBSTITUTE_FILES
 
 conman.spec: conman.spec.in
 etc/conman.init: etc/conman.init.in
@@ -22,32 +23,40 @@ man/conman.conf.5: man/conman.conf.5.in
 man/conmand.8: man/conmand.8.in
 
 noinst_DATA = \
-	$(SUBSTITUTE_FILES)
+	$(SUBSTITUTE_FILES) \
+	# End of noinst_DATA
 
 bin_PROGRAMS = \
-	conman
+	conman \
+	# End of bin_PROGRAMS
 
 dist_bin_SCRIPTS = \
-	conmen
+	conmen \
+	# End of dist_bin_SCRIPTS
 
 sbin_PROGRAMS = \
-	conmand
+	conmand \
+	# End of sbin_PROGRAMS
 
 dist_sysconf_DATA = \
-	etc/conman.conf
+	etc/conman.conf \
+	# End of dist_sysconf_DATA
 
 man_MANS = \
 	man/conman.1 \
 	man/conman.conf.5 \
-	man/conmand.8
+	man/conmand.8 \
+	# End of man_MANS
 
 conman_CPPFLAGS = \
 	-DWITH_OOMF \
-	-DWITH_PTHREADS
+	-DWITH_PTHREADS \
+	# End of conman_CPPFLAGS
 
 conman_LDADD = \
 	$(LIBOBJS) \
-	$(PTHREADLIBS)
+	$(PTHREADLIBS) \
+	# End of conman_LDADD
 
 conman_SOURCES = \
 	client.c \
@@ -55,22 +64,26 @@ conman_SOURCES = \
 	client-conf.c \
 	client-sock.c \
 	client-tty.c \
-	$(common_sources)
+	$(common_sources) \
+	# End of conman_SOURCES
 
 conmand_CPPFLAGS = \
 	-DSYSCONFDIR='$(sysconfdir)' \
 	-DWITH_OOMF \
-	-DWITH_PTHREADS
+	-DWITH_PTHREADS \
+	# End of conmand_CPPFLAGS
 
 conmand_DEPENDENCIES = \
-	$(FREEIPMIOBJS)
+	$(FREEIPMIOBJS) \
+	# End of conmand_DEPENDENCIES
 
 conmand_LDADD = \
 	$(FREEIPMIOBJS) \
 	$(FREEIPMILIBS) \
 	$(LIBOBJS) \
 	$(PTHREADLIBS) \
-	$(TCPWRAPPERSLIBS)
+	$(TCPWRAPPERSLIBS) \
+	# End of conmand_LDADD
 
 conmand_SOURCES = \
 	server.c \
@@ -91,10 +104,12 @@ conmand_SOURCES = \
 	tpoll.c \
 	tpoll.h \
 	wrapper.h \
-	$(common_sources)
+	$(common_sources) \
+	# End of conmand_SOURCES
 
 EXTRA_conmand_SOURCES = \
-	server-ipmi.c
+	server-ipmi.c \
+	# End of EXTRA_conmand_SOURCES
 
 common_sources = \
 	common.c \
@@ -112,7 +127,8 @@ common_sources = \
 	util-net.c \
 	util-net.h \
 	util-str.c \
-	util-str.h
+	util-str.h \
+	# End of common_sources
 
 # For dependency on SYSCONFDIR via the #define for CONMAN_CONF.
 #
@@ -121,7 +137,8 @@ conmand-server-conf.$(OBJEXT): Makefile
 pkgdataexamplesdir = $(pkgdatadir)/examples
 
 dist_pkgdataexamples_DATA = \
-	scripts/examples/README
+	scripts/examples/README \
+	# End of dist_pkgdataexamples_DATA
 
 dist_pkgdataexamples_SCRIPTS = \
 	scripts/examples/boot_alpha.exp \
@@ -130,12 +147,14 @@ dist_pkgdataexamples_SCRIPTS = \
 	scripts/examples/shell_cmd_1.exp \
 	scripts/examples/shell_cmd_n.exp \
 	scripts/examples/srm.exp \
-	scripts/examples/wtf.exp
+	scripts/examples/wtf.exp \
+	# End of dist_pkgdataexamples_SCRIPTS
 
 pkgdataexecdir = $(pkgdatadir)/exec
 
 dist_pkgdataexec_DATA = \
-	scripts/exec/README
+	scripts/exec/README \
+	# End of dist_pkgdataexec_DATA
 
 dist_pkgdataexec_SCRIPTS = \
 	scripts/exec/cyclades-ssh.exp \
@@ -148,13 +167,15 @@ dist_pkgdataexec_SCRIPTS = \
 	scripts/exec/ssh.exp \
 	scripts/exec/sun-elom.exp \
 	scripts/exec/sun-ilom.exp \
-	scripts/exec/sun-v20z-v40z.exp
+	scripts/exec/sun-v20z-v40z.exp \
+	# End of dist_pkgdataexec_SCRIPTS
 
 pkgdatalibdir = $(pkgdatadir)/lib
 
 dist_pkgdatalib_SCRIPTS = \
 	scripts/lib/alpha.exp \
-	scripts/lib/conman.exp
+	scripts/lib/conman.exp \
+	# End of dist_pkgdatalib_SCRIPTS
 
 $(SUBSTITUTE_FILES): Makefile
 	@$(MKDIR_P) `dirname "$(builddir)/$@"`
@@ -195,7 +216,8 @@ substitute = $(SED) \
 	-e 's|[@]CONMAN_PORT[@]|$(CONMAN_PORT)|g' \
 	-e 's|[@]DATE[@]|$(DATE)|g' \
 	-e 's|[@]PACKAGE[@]|$(PACKAGE)|g' \
-	-e 's|[@]VERSION[@]|$(VERSION)|g'
+	-e 's|[@]VERSION[@]|$(VERSION)|g' \
+	# End of substitute
 
 install-data-hook: install-logrotate install-systemd install-sysvinit
 
@@ -285,7 +307,8 @@ EXTRA_DIST = \
 	etc/conman.sysconfig.in \
 	man/conman.1.in \
 	man/conman.conf.5.in \
-	man/conmand.8.in
+	man/conmand.8.in \
+	# End of EXTRA_DIST
 
 dist-hook: conman.spec
 	$(INSTALL_DATA) conman.spec '$(distdir)/conman.spec'
@@ -293,12 +316,14 @@ dist-hook: conman.spec
 	echo $(DATE) > '$(distdir)/.dist-date'
 
 CLEANFILES = \
-	$(SUBSTITUTE_FILES)
+	$(SUBSTITUTE_FILES) \
+	# End of CLEANFILES
 
 DISTCLEANFILES = \
 	config.h.in~ \
 	configure~ \
-	$(PACKAGE)-*.tar*
+	$(PACKAGE)-*.tar* \
+	# End of DISTCLEANFILES
 
 distclean-local:
 	-rm -rf autom4te.cache/
@@ -312,4 +337,5 @@ MAINTAINERCLEANFILES = \
 	build-aux/install-sh \
 	build-aux/missing \
 	config.h.in \
-	configure
+	configure \
+	# End of MAINTAINERCLEANFILES
