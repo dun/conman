@@ -284,6 +284,9 @@ uninstall-sysvinit-conf:
 
 TEST_EXTENSIONS = .t
 
+T_LOG_DRIVER = \
+	env AM_TAP_AWK='$(AWK)' $(SHELL) $(top_srcdir)/build-aux/tap-driver.sh
+
 TESTS = \
 	# End of TESTS
 
@@ -304,6 +307,7 @@ EXTRA_DIST = \
 	bootstrap \
 	build-aux/gen-date \
 	build-aux/gen-version \
+	build-aux/tap-driver.sh \
 	conman.spec.in \
 	etc/conman.conf \
 	etc/conman.init.in \
@@ -348,6 +352,7 @@ MAINTAINERCLEANFILES = \
 	build-aux/depcomp \
 	build-aux/install-sh \
 	build-aux/missing \
+	build-aux/tap-driver.sh \
 	build-aux/test-driver \
 	config.h.in \
 	configure \
