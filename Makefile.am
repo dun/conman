@@ -289,6 +289,7 @@ T_LOG_DRIVER = \
 
 TESTS = \
 	test/0001-basic.t \
+	test/1000-chaos-rpm.t \
 	# End of TESTS
 
 EXTRA_DIST = \
