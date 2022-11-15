@@ -50,7 +50,7 @@ test_expect_success 'check logfile creation' '
 # Verify the expected number of consoles are configured.
 #
 test_expect_success 'check conman query' '
-    "${CONMAN}" -q >out.$$ &&
+    "${CONMAN}" -d "127.0.0.1:${CONMAND_PORT}" -q >out.$$ &&
     test "$(wc -l <out.$$)" -eq 2
 '
 

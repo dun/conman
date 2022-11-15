@@ -115,12 +115,12 @@ int main(int argc, char *argv[])
     if (!(environ = get_sane_env())) {
         log_err(ENOMEM, "Unable to create sanitized environment");
     }
-    if (conf->enableVerbose) {
-        display_configuration(conf);
-    }
     if (list_is_empty(conf->objs)) {
         log_err(0, "Configuration \"%s\" has no consoles defined",
             conf->confFileName);
+    }
+    if (conf->enableVerbose) {
+        display_configuration(conf);
     }
     if (conf->tStampMinutes > 0) {
         schedule_timestamp(conf);
@@ -142,6 +142,7 @@ int main(int argc, char *argv[])
 
     log_msg(LOG_NOTICE, "Starting ConMan daemon %s (pid %d)",
         VERSION, (int) getpid());
+    log_msg(LOG_INFO, "Listening on TCP port %d", conf->port);
 
 #if WITH_FREEIPMI
     ipmi_init(conf->numIpmiObjs);
@@ -500,8 +501,6 @@ static void display_configuration(server_conf_t *conf)
     }
     list_iterator_destroy(i);
 
-    fprintf(stderr, "\nStarting ConMan daemon %s (pid %d)\n",
-        VERSION, (int) getpid());
     fprintf(stderr, "Configuration: %s\n", conf->confFileName);
     fprintf(stderr, "Options:");
 
@@ -545,7 +544,6 @@ static void display_configuration(server_conf_t *conf)
         fprintf(stderr, " None");
     }
     fprintf(stderr, "\n");
-    fprintf(stderr, "Listening on port %d\n", conf->port);
     fprintf(stderr, "Monitoring %d console%s\n", n, ((n == 1) ? "" : "s"));
     fprintf(stderr, "\n");
     return;
@@ -666,6 +664,15 @@ static void create_listen_socket(server_conf_t *conf)
     }
     if (listen(ld, 10) < 0) {
         log_err(errno, "Unable to listen on port %d", conf->port);
+    }
+    /* Retrieve the ephemeral port number bound to the listen socket.
+     */
+    if (conf->port == 0) {
+        socklen_t addrlen = sizeof(addr);
+        if (getsockname(ld, (struct sockaddr *) &addr, &addrlen) < 0) {
+            log_err(errno, "Unable to get listen socket address");
+        }
+        conf->port = ntohs(addr.sin_port);
     }
     conf->ld = ld;
     tpoll_set(conf->tp, conf->ld, POLLIN);

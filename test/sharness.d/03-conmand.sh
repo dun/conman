@@ -29,6 +29,7 @@ conmand_setup()
 	server logfile="${CONMAND_LOGFILE}"
 	server pidfile="${CONMAND_PIDFILE}"
 	server loopback=on
+	server port=0
 	global log="${prefix}console.%N.log.$$"
 	global testopts="b:1,m:10,n:10,p:100"
 	console name="test1" dev="test:"
@@ -38,12 +39,18 @@ conmand_setup()
 
 # Start the daemon process after ensuring the previous daemon process has
 #   exited.
+# Provide [CONMAND_PORT].
 #
 conmand_start()
 {
     conmand_kill
     test_debug "echo \"${CONMAND}\" -c \"${CONMAND_CONFIG}\" $*"
     "${CONMAND}" -c "${CONMAND_CONFIG}" "$@"
+    cat "${CONMAND_LOGFILE}"
+    CONMAND_PORT=$(sed -n -e '/Listening/ s/.*port \([0-9]*\)/\1/p' \
+            < "${CONMAND_LOGFILE}")
+    test_debug "echo CONMAND_PORT=\"${CONMAND_PORT}\""
+    test "x${CONMAND_PORT}" != x
 }
 
 # Stop the daemon process.

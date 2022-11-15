@@ -228,7 +228,7 @@ server_conf_t * create_server_conf(void)
      *    '-k' and '-r' cmdline options.
      */
     conf->fd = -1;
-    conf->port = 0;
+    conf->port = -1;
     conf->ld = -1;
     conf->objs = list_create((ListDelF) destroy_obj);
     if (!(conf->tp = tpoll_create(0))) {
@@ -344,7 +344,7 @@ void process_cmdline(server_conf_t *conf, int argc, char *argv[])
             printf("%s", conman_license);
             exit(0);
         case 'p':
-            if ((conf->port = atoi(optarg)) <= 0) {
+            if ((conf->port = atoi(optarg)) < 0) {
                 log_err(0, "CMDLINE: invalid port \"%s\"", optarg);
             }
             break;
@@ -462,7 +462,7 @@ void process_config(server_conf_t *conf)
     lex_destroy(l);
     free(buf);
 
-    if (conf->port <= 0) {              /* port not set so use default */
+    if (conf->port < 0) {               /* port not set so use default */
         conf->port = atoi(CONMAN_PORT);
     }
     if (conf->logFileName) {
@@ -1114,7 +1114,7 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
     /* Prevent command-line options from being overridden by the config file.
      */
     const int isPidFileNameSet = (conf->pidFileName != NULL);
-    const int isPortSet = (conf->port > 0);
+    const int isPortSet = (conf->port >= 0);
 
     directive = lex_tok_to_str(l, lex_prev(l));
     if (!directive) {
@@ -1336,7 +1336,7 @@ static void parse_server_directive(server_conf_t *conf, Lex l)
                 snprintf(err, sizeof(err),
                     "expected INTEGER for %s value", tokstr);
             }
-            else if ((n = atoi(lex_text(l))) <= 0) {
+            else if ((n = atoi(lex_text(l))) < 0) {
                 snprintf(err, sizeof(err),
                     "invalid %s value %d", tokstr, n);
             }
