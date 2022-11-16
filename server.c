@@ -137,12 +137,16 @@ int main(int argc, char *argv[])
         else {
             log_set_file(NULL, 0, 0);
         }
-        end_daemonize(fd);
     }
-
+    /*  Write startup log messages before end_daemonize().
+     */
     log_msg(LOG_NOTICE, "Starting ConMan daemon %s (pid %d)",
         VERSION, (int) getpid());
     log_msg(LOG_INFO, "Listening on TCP port %d", conf->port);
+
+    if (!conf->enableForeground) {
+        end_daemonize(fd);
+    }
 
 #if WITH_FREEIPMI
     ipmi_init(conf->numIpmiObjs);
