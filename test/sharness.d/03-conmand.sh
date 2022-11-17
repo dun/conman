@@ -59,7 +59,7 @@ conmand_stop()
     test_debug "echo \"${CONMAND}\" -c \"${CONMAND_CONFIG}\" -k $*"
     "${CONMAND}" -c "${CONMAND_CONFIG}" -k "$@"
     test "x${pid}" != x || return 1
-    for i in $(seq 1 50); do
+    for i in $(test_seq 1 50); do
         sleep 0.1
         ps -p "${pid}" -ww | grep conmand >/dev/null 2>&1 || return 0
     done
