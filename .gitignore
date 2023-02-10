@@ -29,5 +29,5 @@
 /stamp-h1
 /test-results
 /test-suite.log
-/test/*.log
-/test/*.trs
+/tests/*.log
+/tests/*.trs
