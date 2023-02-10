@@ -31,7 +31,7 @@ bin_PROGRAMS = \
 	# End of bin_PROGRAMS
 
 dist_bin_SCRIPTS = \
-	conmen \
+	scripts/bin/conmen \
 	# End of dist_bin_SCRIPTS
 
 sbin_PROGRAMS = \
@@ -59,11 +59,11 @@ conman_LDADD = \
 	# End of conman_LDADD
 
 conman_SOURCES = \
-	client.c \
-	client.h \
-	client-conf.c \
-	client-sock.c \
-	client-tty.c \
+	src/client-conf.c \
+	src/client-sock.c \
+	src/client-tty.c \
+	src/client.c \
+	src/client.h \
 	$(common_sources) \
 	# End of conman_SOURCES
 
@@ -86,48 +86,48 @@ conmand_LDADD = \
 	# End of conmand_LDADD
 
 conmand_SOURCES = \
-	server.c \
-	server.h \
-	server-conf.c \
-	server-esc.c \
-	server-logfile.c \
-	server-obj.c \
-	server-process.c \
-	server-serial.c \
-	server-sock.c \
-	server-telnet.c \
-	server-test.c \
-	server-unixsock.c \
-	bool.h \
-	inevent.c \
-	inevent.h \
-	tpoll.c \
-	tpoll.h \
-	wrapper.h \
+	src/bool.h \
+	src/inevent.c \
+	src/inevent.h \
+	src/server-conf.c \
+	src/server-esc.c \
+	src/server-logfile.c \
+	src/server-obj.c \
+	src/server-process.c \
+	src/server-serial.c \
+	src/server-sock.c \
+	src/server-telnet.c \
+	src/server-test.c \
+	src/server-unixsock.c \
+	src/server.c \
+	src/server.h \
+	src/tpoll.c \
+	src/tpoll.h \
+	src/wrapper.h \
 	$(common_sources) \
 	# End of conmand_SOURCES
 
 EXTRA_conmand_SOURCES = \
-	server-ipmi.c \
+	src/server-ipmi.c \
 	# End of EXTRA_conmand_SOURCES
 
 common_sources = \
-	common.c \
-	common.h \
-	lex.c \
-	lex.h \
-	list.c \
-	list.h \
-	log.c \
-	log.h \
-	util.c \
-	util.h \
-	util-file.c \
-	util-file.h \
-	util-net.c \
-	util-net.h \
-	util-str.c \
-	util-str.h \
+	src/common.c \
+	src/common.h \
+	src/lex.c \
+	src/lex.h \
+	src/list.c \
+	src/list.h \
+	src/log.c \
+	src/log.h \
+	src/util-file.c \
+	src/util-file.h \
+	src/util-net.c \
+	src/util-net.h \
+	src/util-str.c \
+	src/util-str.h \
+	src/util.c \
+	src/util.h \
 	# End of common_sources
 
 # For dependency on SYSCONFDIR via the #define for CONMAN_CONF.

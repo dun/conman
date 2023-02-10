@@ -9,8 +9,9 @@ AC_SUBST([CONMAN_PORT], ["7890"])
 
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_LIBOBJ_DIR([portable])
 AC_CONFIG_MACRO_DIR([m4])
-AC_CONFIG_SRCDIR([server.c])
+AC_CONFIG_SRCDIR([src/server.c])
 AC_REQUIRE_AUX_FILE([tap-driver.sh])
 
 X_AC_RUNSTATEDIR
@@ -18,7 +19,7 @@ X_AC_WITH_SYSTEMDUNITDIR
 X_AC_WITH_SYSVINITDDIR
 X_AC_WITH_SYSCONFIGDIR
 
-AM_INIT_AUTOMAKE([1.12 foreign dist-xz no-dist-gzip])
+AM_INIT_AUTOMAKE([1.12 dist-xz foreign no-dist-gzip subdir-objects])
 AM_MAINTAINER_MODE
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
