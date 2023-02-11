@@ -51,7 +51,7 @@ test_expect_success 'check logfile creation' '
 #
 test_expect_success 'check conman query' '
     "${CONMAN}" -d "127.0.0.1:${CONMAND_PORT}" -q >out.$$ &&
-    test "$(wc -l <out.$$)" -eq 2
+    test "$(wc -l <out.$$)" -eq "${CONMAND_CONSOLE_COUNT}"
 '
 
 # Stop the daemon.
@@ -90,7 +90,8 @@ test_expect_success 'check logfile for errors' '
 #
 test_expect_success 'check console logfile creation' '
     ls -l ${CONMAND_CONSOLE_GLOB} &&
-    test "$(ls ${CONMAND_CONSOLE_GLOB} | wc -l)" -eq 2 &&
+    test "$(ls ${CONMAND_CONSOLE_GLOB} | wc -l)" \
+            -eq "${CONMAND_CONSOLE_COUNT}" &&
     for f in ${CONMAND_CONSOLE_GLOB}; do test -s "$f"; done
 '
 

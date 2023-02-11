@@ -122,7 +122,7 @@ test_expect_success CONMAN_RPM 'install rpm' '
     test_set_prereq CONMAN_INSTALL
 '
 
-# Create a config with 2 test consoles that output 1 byte every 10ms.
+# Create a config with test consoles that output 1 byte every 10ms.
 #
 test_expect_success CONMAN_INSTALL 'create config' '
     cat >conman.conf.$$ <<-EOF && sudo cp conman.conf.$$ /etc/conman.conf
@@ -149,7 +149,7 @@ test_expect_success CONMAN_INSTALL 'check service status' '
 #
 test_expect_success CONMAN_INSTALL 'query conman' '
     conman -q >out.$$ &&
-    test "$(wc -l <out.$$)" -eq 2
+    test "$(wc -l <out.$$)" -eq "$(grep -i ^console /etc/conman.conf | wc -l)"
 '
 
 # Stop the conman service.

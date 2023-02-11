@@ -5,8 +5,8 @@
 #   which can cause problems with advisory lockfiles.  It is not necessary to
 #   relocate the pidfile, but not doing so could make it lonely since
 #   everything else is potentially moved.
-# Provide [CONMAND_CONFIG], [CONMAND_LOGFILE], [CONMAND_PIDFILE], and
-#   [CONMAND_CONSOLE_GLOB].
+# Provide [CONMAND_CONFIG], [CONMAND_LOGFILE], [CONMAND_PIDFILE],
+#   [CONMAND_CONSOLE_GLOB], and [CONMAND_CONSOLE_COUNT].
 #
 conmand_setup()
 {
@@ -35,6 +35,8 @@ conmand_setup()
 	console name="test1" dev="test:"
 	console name="test2" dev="test:"
 	EOF
+
+    CONMAND_CONSOLE_COUNT=$(grep -i ^console "${CONMAND_CONFIG}" | wc -l)
 }
 
 # Start the daemon process after ensuring the previous daemon process has
