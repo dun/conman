@@ -21,7 +21,7 @@ X_AC_WITH_SYSCONFIGDIR
 
 AM_INIT_AUTOMAKE([1.12 dist-xz foreign no-dist-gzip subdir-objects])
 AM_MAINTAINER_MODE
-m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
+AM_SILENT_RULES([yes])
 
 # checks for programs
 AC_PROG_CC
