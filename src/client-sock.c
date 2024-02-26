@@ -294,7 +294,7 @@ int recv_rsp(client_conf_t *conf)
         return(0);
     if (conf->errnum == CONMAN_ERR_NONE) {
         conf->errnum = CONMAN_ERR_LOCAL;
-        conf->errmsg = create_format_string("Received invalid reponse from"
+        conf->errmsg = create_format_string("Received invalid response from"
             " <%s:%d>", conf->req->host, conf->req->port);
     }
     return(-1);
