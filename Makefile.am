@@ -172,7 +172,7 @@ dist_pkgdataexec_SCRIPTS = \
 
 pkgdatalibdir = $(pkgdatadir)/lib
 
-dist_pkgdatalib_SCRIPTS = \
+dist_pkgdatalib_DATA = \
 	scripts/lib/alpha.exp \
 	scripts/lib/conman.exp \
 	# End of dist_pkgdatalib_SCRIPTS
