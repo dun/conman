@@ -21,7 +21,7 @@ following key/value pairs:
 \fBcoredump\fR \fB=\fR (\fBon\fR|\fBoff\fR)
 Specifies whether the daemon should generate a core dump file.  This file
 will be created in the current working directory (or '/' when running in the
-background) unless you also set \fBcoredumpdir\fR.  The default is \fboff\fR.
+background) unless you also set \fBcoredumpdir\fR.  The default is \fBoff\fR.
 .TP
 \fBcoredumpdir\fR \fB=\fR "\fIdirectory\fR"
 Specifies the directory where the daemon tries to write core dump files.
